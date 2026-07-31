@@ -98,7 +98,10 @@
       "Bash(git -C /home/jordy/Projects/JordyLab/.claude remote -v)",
       "Bash(git -C /home/jordy/Projects/JordyLab/.claude log --oneline -3)",
       "Bash(git -C /home/jordy/Projects/JordyLab/.opencode remote add origin git@github.com:jordy-swinnen/.opencode-jordylab.git)",
-      "Bash(git -C /home/jordy/Projects/JordyLab/.opencode push -u origin main)"
+      "Bash(git -C /home/jordy/Projects/JordyLab/.opencode push -u origin main)",
+      "Bash(mkdir -p .claude/skills/dual-agent-config/references .claude/skills/dual-agent-config/scripts)",
+      "Bash(git mv *)",
+      "Bash(rmdir .claude/dual-agent-config/references .claude/dual-agent-config/scripts .claude/dual-agent-config)"
     ]
   }
 }

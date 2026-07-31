@@ -9,6 +9,7 @@ Skills (invoke with `/skill-name`):
 - `/modularity-check` — run Spring Modulith boundary tests and fix violations
 - `/new-module` — scaffold a full module (backend DDD structure + frontend Nx libs)
 - `/ai-endpoint` — wire up a ResilientAiService integration for a module
+- `/dual-agent-config` — set up and audit shared config so Claude Code and OpenCode read the same rules/skills/MCP servers
 - `trading-guard` — background rules for the trading module (human-in-the-loop enforcement, not user-invocable)
 
 Agents (run automatically by Claude):
