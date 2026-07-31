@@ -22,8 +22,8 @@ Review the provided code or files against all JordyLab conventions.
 
 1. Read `coding-master-prompt.md` in the project root for the full conventions baseline
 2. Identify the language/framework of each file
-3. Apply the relevant rules (java.md, angular.md, python.md, flyway.md)
-4. Check architecture rules from CLAUDE.md (module boundaries, DDD structure, AI routing)
+3. Apply the relevant rules from the subproject AGENTS.md (jordylab-be/AGENTS.md, jordylab-fe/AGENTS.md, garmin-sync-service/AGENTS.md)
+4. Check architecture rules from the root AGENTS.md (module boundaries, DDD structure, AI routing)
 5. Report findings grouped by severity:
 
 ### Severity Levels

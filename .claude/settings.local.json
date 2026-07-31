@@ -2,9 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew compileJava:*)",
-      "Bash(jar tf /Users/jordy/.gradle/caches/modules-2/files-2.1/org.springframework.ai/spring-ai-advisors-vector-store/1.1.2/17d4b52530f92f18794c37cbbca2643c93346866/spring-ai-advisors-vector-store-1.1.2.jar)",
+      "Bash(jar tf /home/jordy/.gradle/caches/modules-2/files-2.1/org.springframework.ai/spring-ai-advisors-vector-store/1.1.2/17d4b52530f92f18794c37cbbca2643c93346866/spring-ai-advisors-vector-store-1.1.2.jar)",
       "Bash(jar tf:*)",
-      "Bash(javap -classpath /Users/jordy/.gradle/caches/modules-2/files-2.1/org.springframework.ai/spring-ai-advisors-vector-store/1.1.2/17d4b52530f92f18794c37cbbca2643c93346866/spring-ai-advisors-vector-store-1.1.2.jar org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor)",
+      "Bash(javap -classpath /home/jordy/.gradle/caches/modules-2/files-2.1/org.springframework.ai/spring-ai-advisors-vector-store/1.1.2/17d4b52530f92f18794c37cbbca2643c93346866/spring-ai-advisors-vector-store-1.1.2.jar org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor)",
       "Bash(npx nx g:*)",
       "Bash(npm install:*)",
       "Bash(npm search:*)",
@@ -93,7 +93,7 @@
       "Bash(./gradlew test:*)",
       "Bash(jobs)",
       "Bash(jobs -l)",
-      "Bash(chmod +x /Users/jordy/Projects/JordyLab/.claude/hooks/post-java-modularity-check.sh)",
+      "Bash(chmod +x /home/jordy/Projects/JordyLab/.claude/hooks/post-java-modularity-check.sh)",
       "Bash(rm /home/jordy/Projects/JordyLab/.claude/rules/java.md /home/jordy/Projects/JordyLab/.claude/rules/flyway.md /home/jordy/Projects/JordyLab/.claude/rules/angular.md /home/jordy/Projects/JordyLab/.claude/rules/python.md)",
       "Bash(git -C /home/jordy/Projects/JordyLab/.claude remote -v)",
       "Bash(git -C /home/jordy/Projects/JordyLab/.claude log --oneline -3)",

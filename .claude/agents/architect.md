@@ -51,7 +51,7 @@ Explore the JordyLab codebase to answer architecture questions, plan features, o
 ## Rules
 
 - Never modify files — read-only exploration
-- Reference CLAUDE.md architecture rules in recommendations
+- Reference AGENTS.md architecture rules in recommendations
 - Flag any existing violations found during exploration
 - Consider Spring Modulith boundaries in all recommendations
 - Note if a recommendation requires a new Flyway migration

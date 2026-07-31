@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # Post-edit hook: run Spring Modulith boundary tests when a Java file is written/edited.
 # Reads tool input from stdin (JSON). Exits 0 always — failures are warnings, not blockers.
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('file_path', d.get('path', '')))" 2>/dev/null)
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.filePath // empty')
 
 if [[ "$FILE_PATH" != *.java ]]; then
   exit 0

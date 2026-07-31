@@ -19,7 +19,7 @@ fi
 
 # Block edits to lock files
 BASENAME=$(basename "$FILE_PATH")
-if [[ "$BASENAME" == "bun.lockb" || "$BASENAME" == "package-lock.json" ]]; then
+if [[ "$BASENAME" == "bun.lock" || "$BASENAME" == "bun.lockb" || "$BASENAME" == "package-lock.json" ]]; then
   echo "BLOCKED: Cannot edit lock file: $BASENAME. Use the package manager to update dependencies." >&2
   exit 2
 fi

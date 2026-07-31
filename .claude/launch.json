@@ -6,7 +6,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "cd /Users/jordy/Projects/JordyLab/jordylab-be && set -a && source .env && set +a && ./gradlew bootRun"
+        "cd /home/jordy/Projects/JordyLab/jordylab-be && set -a && source .env && set +a && ./gradlew bootRun"
       ],
       "port": 8080
     },
@@ -15,7 +15,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "cd /Users/jordy/Projects/JordyLab/jordylab-fe && bunx nx serve fna"
+        "cd /home/jordy/Projects/JordyLab/jordylab-fe && bunx nx serve fna"
       ],
       "port": 4200
     }
