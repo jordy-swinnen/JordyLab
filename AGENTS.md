@@ -1,0 +1,70 @@
+# JordyLab
+
+Personal platform for financial intelligence, health/fitness tracking, game cataloging, and recipe management — built as a modular monolith with separate frontend and Python sidecar.
+
+## Repository Structure
+
+```
+AGENTS.md                  ← you are here (root)
+jordylab-be/               ← Spring Boot 4 monolith (Java 25, Gradle Kotlin DSL)
+jordylab-fe/               ← Nx Angular 21 monorepo (Bun, spartan/ui)
+garmin-sync-service/       ← Python 3.12 sidecar (Garmin Connect sync)
+```
+
+Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, garmin-sync-service) — loaded automatically when working in each subdirectory.
+
+## Modules
+
+| Module | Schema | Purpose |
+|--------|--------|---------|
+| `fna` | `finance` | Financial news aggregation, RSS ingestion, AI investment briefings |
+| `gamecatalog` | `gamecatalog` | ROM/Steam game catalog with pgvector semantic search |
+| `garmin` | `garmin` | Health/fitness data from Garmin Connect (written by Python sidecar) |
+| `recipe` | `recipe` | Self-hosted recipe management (planned) |
+| `trading` | — | AI trade signals with mandatory human-in-the-loop approval |
+| `shared` | — | Cross-module AI layer, config, utilities |
+
+## Architecture Principles
+
+- **Monolith-first** — do not extract a microservice unless there is a concrete, demonstrated need
+- Module root package = public API (facade + DTOs); sub-packages = internal — never import internals across modules
+- All AI calls route through the shared `ResilientAiService` — never instantiate `ChatClient` directly
+- Human-in-the-loop for trading: every `TradeOrder` requires explicit approval before execution
+- Each module owns its own Flyway schema with `CREATE SCHEMA IF NOT EXISTS`
+- `garmin-sync-service` writes to the `garmin` schema but does NOT own DDL — Flyway in `jordylab-be` owns all migrations
+
+## AI Routing
+
+Ollama on the main desktop (AMD RX 7900 XTX, 24GB VRAM, ROCm) is primary. Anthropic Claude API is fallback via `ResilientAiService` with health-check-and-cache pattern.
+
+| Module | Provider | Model | Rationale |
+|--------|----------|-------|-----------|
+| `fna` | Anthropic | Claude Sonnet | Financial analysis needs quality |
+| `gamecatalog` | Ollama | Mistral 7B | Descriptions are fine locally |
+| `recipe` | Ollama | Llama 3.1 8B | Cost-effective for structured tasks |
+
+## Infrastructure
+
+- **Hetzner VPS**: Docker Compose stack (Spring Boot, PostgreSQL 16 + pgvector, Traefik, Watchtower)
+- **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — Ollama inference host, `0.0.0.0:11434` (LAN only)
+- **JordyBox**: i7-9700K, RTX 2070 Super — HTPC/gaming, NFS server for ROMs
+- WireGuard connects VPS to home LAN for Ollama access
+
+## Reference Docs
+
+Read these on-demand when working on related tasks — do not load all at once.
+
+| Doc | Read when... |
+|-----|-------------|
+| `coding-master-prompt.md` | Writing or reviewing any code (Java or Angular conventions) |
+| `jordylab-infrastructure-guide.md` | Working on NFS mounts, Ollama config, Docker networking, or AI fallback |
+| `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
+| `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
+
+## Shared Gotchas
+
+- Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
+- Ollama on main desktop uses ROCm (AMD GPU), not CUDA
+- `ResilientAiService` health check only verifies Ollama is running, not that a model is loaded in VRAM
+- Docker containers need the desktop's LAN IP for Ollama — verify with `docker exec jordylab curl http://<desktop-ip>:11434/api/tags`
+- NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off

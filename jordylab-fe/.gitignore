@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Nx
+.nx/cache/
+.nx/workspace-data/
+
+# Build outputs
+dist/
+build/
+*.js.map
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+*.lcov
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bun
+.bun/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+.angular
+
+vitest.config.*.timestamp*

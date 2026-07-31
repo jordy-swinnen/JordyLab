@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "jordylab-be",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/jordy/Projects/JordyLab/jordylab-be && set -a && source .env && set +a && ./gradlew bootRun"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "jordylab-fe",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/jordy/Projects/JordyLab/jordylab-fe && bunx nx serve fna"
+      ],
+      "port": 4200
+    }
+  ]
+}

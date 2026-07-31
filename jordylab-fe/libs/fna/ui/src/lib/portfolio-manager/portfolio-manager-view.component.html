@@ -1,0 +1,138 @@
+<div class="mb-8 flex items-end justify-between">
+  <div>
+    <h2
+      class="text-3xl tracking-tight text-foreground"
+      style="font-family: 'Instrument Serif', serif"
+    >
+      Portfolio
+    </h2>
+    <span class="text-xs uppercase tracking-widest text-muted-foreground">
+      {{ positions().length }} positions
+    </span>
+  </div>
+  @if (hasAnyPrices()) {
+    <div class="text-right">
+      <p class="text-xs uppercase tracking-widest text-muted-foreground">
+        Total Worth
+      </p>
+      <p
+        class="text-2xl tabular-nums text-primary"
+        style="font-family: 'IBM Plex Mono', monospace"
+      >
+        €{{ totalWorth() | number: '1.2-2' }}
+      </p>
+    </div>
+  }
+</div>
+
+<div class="overflow-hidden rounded-xl border border-border bg-card/50">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border bg-muted/30">
+        <th
+          class="px-5 py-3 text-left text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
+        >
+          Ticker
+        </th>
+        <th
+          class="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
+        >
+          Shares
+        </th>
+        <th
+          class="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
+        >
+          Last Price
+        </th>
+        <th
+          class="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
+        >
+          Updated
+        </th>
+        <th class="px-5 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (position of positions(); track position.id) {
+        <tr
+          class="group border-b border-border/50 transition-colors duration-150 hover:bg-accent/40"
+        >
+          <td class="px-5 py-3.5">
+            <span
+              class="font-medium text-foreground"
+              style="font-family: 'IBM Plex Mono', monospace"
+            >
+              {{ position.ticker }}
+            </span>
+          </td>
+          <td
+            class="px-5 py-3.5 text-right tabular-nums text-foreground/80"
+            style="font-family: 'IBM Plex Mono', monospace"
+          >
+            {{ position.shareCount | number: '1.0-4' }}
+          </td>
+          <td class="px-5 py-3.5 text-right">
+            @if (position.lastPrice !== null) {
+              <span
+                class="tabular-nums text-primary"
+                style="font-family: 'IBM Plex Mono', monospace"
+              >
+                €{{ position.lastPrice | number: '1.2-2' }}
+              </span>
+            } @else {
+              <span class="text-muted-foreground/50">—</span>
+            }
+          </td>
+          <td class="px-5 py-3.5 text-right text-xs text-muted-foreground">
+            @if (position.lastPriceFetchedAt) {
+              {{ position.lastPriceFetchedAt | date: 'short' }}
+            } @else {
+              <span class="text-muted-foreground/50">—</span>
+            }
+          </td>
+          <td class="px-5 py-3.5 text-right">
+            <button
+              hlmBtn
+              variant="ghost"
+              size="sm"
+              class="text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive group-hover:opacity-100"
+              (click)="deletePosition.emit(position.id)"
+            >
+              Remove
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <!-- Add position form -->
+  <div class="border-t border-border bg-muted/20 px-5 py-4">
+    <div class="flex items-center gap-3">
+      <input
+        type="text"
+        class="h-9 w-36 rounded-lg border border-input bg-background/50 px-3 text-sm text-foreground transition-colors duration-150 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        style="font-family: 'IBM Plex Mono', monospace"
+        placeholder="TICKER"
+        [value]="newTicker()"
+        (input)="newTicker.set($any($event.target).value)"
+      />
+      <input
+        type="number"
+        class="h-9 w-28 rounded-lg border border-input bg-background/50 px-3 text-sm text-foreground transition-colors duration-150 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        style="font-family: 'IBM Plex Mono', monospace"
+        placeholder="Shares"
+        [value]="newShares()"
+        (input)="newShares.set(+$any($event.target).value || null)"
+      />
+      <button
+        hlmBtn
+        size="sm"
+        class="glow-primary hover:glow-primary transition-shadow duration-300"
+        (click)="onAddPosition()"
+      >
+        Add Position
+      </button>
+    </div>
+  </div>
+</div>

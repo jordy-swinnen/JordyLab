@@ -1,0 +1,20 @@
+{
+  "name": "fna-ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/fna/ui/src",
+  "prefix": "lib",
+  "projectType": "library",
+  "tags": ["scope:fna", "type:ui"],
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "../../../coverage/libs/fna/ui"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

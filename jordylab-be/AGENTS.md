@@ -1,0 +1,250 @@
+# Commands
+
+```bash
+./gradlew build                                   # Full build + tests
+./gradlew test                                     # All tests
+./gradlew :test --tests "*ModularityTests*"        # Verify module boundaries
+./gradlew bootRun                                  # Run with DevTools
+docker compose up -d                               # Start PostgreSQL (pgvector)
+```
+
+Run `ModularityTests` after any structural change — this is the build-time boundary check.
+
+**Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.0-M2 — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
+
+# Java Code Style
+
+- Never use `var` — always declare explicit types
+- Add a blank line before every `return` statement
+- Method order: public first, then package-private, then private
+- Prefer `record` for DTOs and value objects
+- Prefer `@Builder` over manual constructors — write no hand-written constructors
+- Use Lombok: `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`, `@Getter`, `@UtilityClass`
+- Avoid `@Data` — use `record` or `@Getter`/`@Setter` when mutation is needed
+- Use immutable domain objects; mutable entities only when JPA requires
+- Use full descriptive names — no abbreviations or single-letter identifiers
+- Use RestClient, not WebClient with `.block()`
+- Use HttpClient interfaces with RestClient
+- Early returns over deep nesting
+
+# Spring Modulith
+
+- Module root package = public API (facade + DTOs), sub-packages = internal
+- Use `@NamedInterface` for shared sub-packages exposed to other modules
+- Cross-module communication through public facades only — never import internal packages
+- Schema-per-module: each Flyway migration targets its own schema
+
+# Package Structure
+
+Every module follows this layout exactly — do not invent sub-packages:
+
+```
+{module}/
+  {Module}Facade.java          ← public API, only class accessible from other modules
+  {Module}Dto.java             ← public DTO record, only if shared across modules
+  domain/
+    repository/                ← JPA repository interfaces only
+    {Entity}.java              ← one file per aggregate root
+  rest/
+    client/                    ← outbound HTTP clients (RestClient-based)
+    controller/
+      model/                   ← request/response records scoped to this controller
+      {X}Controller.java
+  service/                     ← application services orchestrating domain + clients
+  util/                        ← stateless helpers, always @UtilityClass
+```
+
+- `domain/` contains entities and repository interfaces — no service logic ever
+- DTOs used only within a controller live in `rest/controller/model/` — never in `domain/`
+- DTOs shared across modules are declared in the module root package only
+- If a new sub-package feels necessary, stop and ask — do not invent structure
+
+# DDD Entities
+
+- IDs are always `UUID`, never `Long` or other primitives
+- All entities extend `AbstractAggregateRoot<T>`
+- `@Getter` at class level only; field-level `@Setter` only when the return type is itself
+  immutable (primitive, String, UUID, etc.) — otherwise write a named mutation method
+- JPA requires a no-arg constructor: always `@NoArgsConstructor(access = AccessLevel.PROTECTED)`
+- `@AllArgsConstructor(access = AccessLevel.PRIVATE)` to support `@Builder`
+- Builder is the sole creation path — use `@Builder` with a partial inner `XxxBuilder` class
+  that overrides `build()` — this is the only place `Preconditions.checkArgument` guards live,
+  and where `if (id == null) id = UUID.randomUUID()` is assigned
+- Never put Preconditions guards anywhere else (not in constructors, not in setters)
+- Domain events: call `registerEvent(new SomeEvent(...))` inside mutation methods —
+  never expose the events list directly
+- `equals`/`hashCode` based on `id` and `getClass()` — never Lombok `@EqualsAndHashCode`
+- Audit fields (`createdDate`, `lastModifiedDate`) come from the abstract base class —
+  never declare them in the entity itself
+- Domain logic belongs in the entity — named methods over raw getters for anything
+  beyond simple field access
+- Follow the canonical entity structure below before creating a new entity
+
+## Entity Canonical Structure
+
+```java
+@Entity
+@Table(name = "some_entity")
+@Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class SomeEntity extends AbstractAggregateRoot<SomeEntity> {
+
+    @Id
+    private UUID id;
+
+    @Column(nullable = false)
+    private String name;
+
+    // @Setter only when the type is immutable (String, UUID, primitive, etc.)
+    @Setter
+    private String description;
+
+    // Named mutation method — never a raw setter for mutable state
+    public void updateName(String newName) {
+        Preconditions.checkArgument(StringUtils.hasText(newName), "name must not be blank");
+        this.name = newName;
+        registerEvent(new SomeEntityNameUpdated(this.id, newName));
+    }
+
+    // Lombok generates all .field() methods — only build() is hand-written
+    public static class SomeEntityBuilder {
+        public SomeEntity build() {
+            Preconditions.checkArgument(StringUtils.hasText(name), "name is required");
+            if (id == null) id = UUID.randomUUID();
+
+            return new SomeEntity(id, name, description);
+        }
+    }
+}
+```
+
+**Entity rules:**
+- Replace `SomeEntity` / `some_entity` / `SomeEntityBuilder` with the actual entity name
+- `id` is always `UUID` — never `Long` or any other type
+- `@Getter` is class-level — never repeat it on individual fields
+- Only add `@Setter` to fields whose type is immutable (String, UUID, primitives) — everything else gets a named mutation method
+- `Preconditions.checkArgument` lives exclusively in `build()` — nowhere else
+- `registerEvent(...)` is called inside mutation methods — never exposed directly
+- Audit fields (`createdDate`, `lastModifiedDate`) are inherited — never declare them here
+- The partial builder class name must exactly match `<EntityName>Builder` for Lombok to merge it
+
+**equals/hashCode:**
+- Never write `equals`/`hashCode` by hand — never use Lombok `@EqualsAndHashCode`
+- `equals`/`hashCode` are inherited from `BaseEntity` — never override them in concrete entities
+- Correctness is verified by the `EqualsVerifier` test instead
+- Always suppress three warnings: `SURROGATE_KEY`, `IDENTICAL_COPY_FOR_VERSIONED_ENTITY`, and `STRICT_HASHCODE`
+
+## Entity Test Canonical Structure
+
+Every entity must ship with a corresponding test class — it is part of the definition of done.
+
+```java
+class SomeEntityTest {
+
+    @Test
+    void buildSomeEntity() {
+        SomeEntity entity = SomeEntity.builder()
+                .name("test name")
+                .build();
+
+        assertThat(entity.getName()).isEqualTo("test name");
+        assertThat(entity.getId()).isNotNull();
+    }
+
+    @Test
+    void buildWithoutName() {
+        assertThatThrownBy(() -> SomeEntity.builder().build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void buildWithBlankName() {
+        assertThatThrownBy(() -> SomeEntity.builder().name(" ").build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void equals() {
+        EqualsVerifier.forClass(SomeEntity.class)
+                .usingGetClass()
+                .suppress(Warning.SURROGATE_KEY)
+                .suppress(Warning.IDENTICAL_COPY_FOR_VERSIONED_ENTITY)
+                .suppress(Warning.STRICT_HASHCODE)
+                .verify();
+    }
+}
+```
+
+**Entity test rules:**
+- Cover the happy path build with assertions on every field set
+- Cover null and blank cases separately for every required field
+- The `equals()` test uses `EqualsVerifier` — never assert equals/hashCode manually
+- Test class is package-private, lives in the same package as the entity under `src/test/`
+
+# Testing
+
+- JUnit 5, AssertJ, Mockito, Testcontainers, WireMock, MockMvc
+- Use `assertSoftly` for multiple assertions in a single test
+- Never use `any()` in Mockito — use explicit values or `ArgumentCaptor`
+- Annotate inline JSON with `@Language("JSON")`
+- Use `@ApplicationModuleTest` for module integration tests (boots only target + shared)
+- Write descriptive test method names explaining the scenario
+- Follow the canonical TestBuilder structure below before creating a test fixture class
+
+## TestBuilder Canonical Structure
+
+```java
+@UtilityClass
+class SomeObjectTestBuilder {
+
+    // Public static fields — expose all defaults here for use in assertions
+    public static final UUID DEFAULT_ID = UUID.fromString("4f675aad-fa21-4b3b-9555-1b698b4e0c0a");
+    public static final String DEFAULT_NAME = "John Example";
+    public static final Instant DEFAULT_CREATED_DATE = Instant.parse("2025-01-13T00:00:00Z");
+
+    // Returns a fully built default object — use when the test does not need customisation
+    public static SomeObject aDefaultSomeObject() {
+        return aSomeObject().build();
+    }
+
+    // Returns a pre-filled builder — use when a test needs to override one or more fields
+    public static SomeObject.SomeObjectBuilder aSomeObject() {
+        return SomeObject.builder()
+                .id(DEFAULT_ID)
+                .name(DEFAULT_NAME)
+                .createdDate(DEFAULT_CREATED_DATE);
+    }
+}
+```
+
+**TestBuilder rules:**
+- Class is package-private (no `public` modifier), annotated with `@UtilityClass`
+- All default values are `public static final` fields declared at the top of the class — never inline literals inside the builder method
+- Assertions in tests reference these constants directly, so a value change propagates automatically
+- `aDefault{Object}()` calls `a{Object}().build()` — never duplicates field assignments
+- `a{Object}()` returns the Lombok builder pre-filled with all defaults
+- Default values must be fixed and realistic — hardcoded UUIDs, fixed `Instant` strings, meaningful strings — never random, never `Instant.now()`
+- Replace `SomeObject` with the actual class name throughout, including the builder method names
+
+# Flyway Migration Rules
+
+- Every migration starts with `CREATE SCHEMA IF NOT EXISTS <schema>;` + `SET search_path TO <schema>;`
+- Naming: `V<yyyyMMdd>__<description>.sql`
+- Never modify already-applied migrations — create a new migration instead
+
+# Schema Ownership
+
+- `finance` → jordylab-be
+- `gamecatalog` → jordylab-be
+- `garmin` → jordylab-be (NOT garmin-sync-service)
+- `recipe` → jordylab-be
+
+# pgvector
+
+- Use `vector(1536)` column type with `vector_cosine_ops` index operator class
+
+# Spring Boot 4
+
+- Require `spring-boot-starter-flyway` dependency, not just `flyway-core`

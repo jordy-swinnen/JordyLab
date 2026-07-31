@@ -1,0 +1,95 @@
+<div class="mb-8 flex items-baseline justify-between">
+  <h2
+    class="text-3xl tracking-tight text-foreground"
+    style="font-family: 'Instrument Serif', serif"
+  >
+    Latest Articles
+  </h2>
+  <span class="text-xs uppercase tracking-widest text-muted-foreground">
+    {{ articles().length }} stories
+  </span>
+</div>
+
+@if (articles().length === 0) {
+  <div class="flex items-center gap-3 py-12 text-muted-foreground">
+    <span
+      class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"
+    ></span>
+    <span class="text-sm">Fetching latest articles…</span>
+  </div>
+} @else {
+  <div class="space-y-2">
+    @for (article of articles(); track article.id; let i = $index) {
+      <a
+        [href]="article.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="group flex items-start gap-4 rounded-lg border border-transparent px-4 py-3.5 transition-all duration-200 hover:border-border hover:bg-card"
+        [style.animation-delay]="i * 30 + 'ms'"
+        style="animation: fadeInUp 0.4s ease-out both"
+      >
+        <div
+          class="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full transition-colors duration-200"
+          [class]="
+            article.feedName === 'ECB Press Releases'
+              ? 'bg-amber-500'
+              : article.feedName === 'Politico Europe'
+                ? 'bg-sky-500'
+                : 'bg-primary'
+          "
+        ></div>
+        <div class="min-w-0 flex-1">
+          <h3
+            class="text-[15px] font-medium leading-snug text-foreground/90 transition-colors duration-200 group-hover:text-foreground"
+          >
+            {{ article.title }}
+          </h3>
+          <div
+            class="mt-1 flex items-center gap-3 text-xs text-muted-foreground"
+          >
+            <span
+              class="font-medium uppercase tracking-wider"
+              [class]="
+                article.feedName === 'ECB Press Releases'
+                  ? 'text-amber-500/70'
+                  : article.feedName === 'Politico Europe'
+                    ? 'text-sky-500/70'
+                    : 'text-primary/70'
+              "
+            >
+              {{ article.feedName }}
+            </span>
+            <span class="text-border">·</span>
+            <span>{{ article.publishedAt | date: 'MMM d, h:mm a' }}</span>
+          </div>
+        </div>
+        <svg
+          class="mt-1 h-4 w-4 flex-shrink-0 text-muted-foreground/0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
+          />
+        </svg>
+      </a>
+    }
+  </div>
+}
+
+<style>
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

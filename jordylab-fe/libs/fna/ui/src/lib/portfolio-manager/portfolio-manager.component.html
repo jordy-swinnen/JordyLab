@@ -1,0 +1,7 @@
+<lib-portfolio-manager-view
+  [positions]="positions()"
+  [totalWorth]="totalWorth()"
+  [hasAnyPrices]="hasAnyPrices()"
+  (addPosition)="addPosition($event)"
+  (deletePosition)="deletePosition($event)"
+/>
