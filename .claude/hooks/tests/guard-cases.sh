@@ -75,6 +75,12 @@ check block "docker compose down --volumes"
 check pass  "docker compose down"
 check pass  "docker compose up -d"
 
+echo "cross-command false positives (chained commands must not leak flags/targets across segments)"
+check pass  "ls /home/jordy && rm -rf build/"
+check pass  "docker compose down; ls -v"
+check pass  "grep -f patterns.txt file.txt && git clean -n"
+check block "git push origin --force"
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]
