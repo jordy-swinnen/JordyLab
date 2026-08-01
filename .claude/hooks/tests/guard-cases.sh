@@ -130,6 +130,25 @@ check block "git push -uf origin main"
 check block "git push -fu origin main"
 check pass  "git push origin feature-flag-x"
 
+echo "heredocs and multi-line commands are tokenized properly, not line-by-line"
+check pass  "cat <<'EOF'
+rm -rf /home/user/tmp
+EOF"
+check pass  "cat <<EOF
+Just a note about rm -rf /home
+EOF"
+check block "cat <<EOF
+\$(rm -rf /home)
+EOF"
+
+echo "command substitution is recursed into and checked as a real invocation"
+check block "echo \$(rm -rf /home)"
+check block "echo \`rm -rf /home\`"
+check pass  "echo \"\$(rm --help)\""
+
+echo "backslash-escaped quotes are tokenized correctly, not treated as real quote boundaries"
+check pass  "echo \"she said \\\"rm -rf /home\\\" as a joke\""
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]

@@ -7,5 +7,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Python
+__pycache__/
+*.pyc
+
 # Packaged skill export artifact (built from .claude/skills/dual-agent-config/)
 .claude/.skill
