@@ -95,6 +95,14 @@ check pass  "echo \"please confirm -rf /home before proceeding\""
 check pass  "digit clean -f"
 check pass  "docker compose down --env-file .env-vault"
 
+echo "recursive rm without an explicit force flag (still destructive non-interactively)"
+check block "rm -r /"
+check block "rm -r ~"
+check block "rm -r \$HOME"
+check block "rm --recursive /home/jordy"
+check pass  "rm -r build/"
+check pass  "rm -r node_modules/"
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]

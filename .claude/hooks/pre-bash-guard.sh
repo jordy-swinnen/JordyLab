@@ -9,14 +9,17 @@ if [[ -z "$COMMAND" ]]; then
   exit 0
 fi
 
-# Block rm -rf/-fr (recursive + force, any flag order/spelling/spacing) targeting
-# root, home, or system-level paths. Project-relative targets (e.g. "rm -rf build/")
-# are intentionally left alone. Recursive and force are matched as independent,
-# space-bounded tokens rather than one adjacency-dependent regex, so any number
-# of intervening flags (e.g. "rm -r -v -f /home/x") is still caught, and neither
-# token can match inside an unrelated word (e.g. "confirm").
+# Block recursive rm (with or without an explicit force flag) targeting root,
+# home, or system-level paths. Project-relative targets (e.g. "rm -rf build/")
+# are intentionally left alone. Force is deliberately NOT required: an agent
+# invocation is always non-interactive, and GNU "rm -r" without "-f" still
+# deletes every regular file recursively with no prompt (it only stumbles on
+# individual write-protected files) — so "rm -r /" is still catastrophic.
+# Recursive is matched as an independent, space-bounded token rather than
+# part of an adjacency-dependent regex, so any number of intervening flags
+# (e.g. "rm -r -v /home/x") is still caught, and it can't match inside an
+# unrelated word (e.g. "confirm").
 RM_RECURSIVE_RE='(^|[[:space:]])(-[a-zA-Z]*r[a-zA-Z]*|--recursive)([[:space:]]|$)'
-RM_FORCE_RE='(^|[[:space:]])(-[a-zA-Z]*f[a-zA-Z]*|--force)([[:space:]]|$)'
 RM_DANGEROUS_TARGET_RE='(^|[[:space:]])(/|~|~/[^[:space:]]*|\$HOME[^[:space:]]*|\.|\./|\.\.|\.\./|\*|/home[^[:space:]]*|/etc[^[:space:]]*|/usr[^[:space:]]*|/var[^[:space:]]*|/bin[^[:space:]]*|/boot[^[:space:]]*|/opt[^[:space:]]*|/root[^[:space:]]*)([[:space:]]|$)'
 
 # Each rule below is checked against a single command segment (see the split
@@ -26,8 +29,8 @@ RM_DANGEROUS_TARGET_RE='(^|[[:space:]])(/|~|~/[^[:space:]]*|\$HOME[^[:space:]]*|
 check_segment() {
   local seg="$1"
 
-  if echo "$seg" | grep -qE '\brm\b' && echo "$seg" | grep -qE "$RM_RECURSIVE_RE" && echo "$seg" | grep -qE "$RM_FORCE_RE" && echo "$seg" | grep -qE "$RM_DANGEROUS_TARGET_RE"; then
-    echo "BLOCKED: Destructive rm -rf against a root/home/system path is not allowed." >&2
+  if echo "$seg" | grep -qE '\brm\b' && echo "$seg" | grep -qE "$RM_RECURSIVE_RE" && echo "$seg" | grep -qE "$RM_DANGEROUS_TARGET_RE"; then
+    echo "BLOCKED: Destructive recursive rm against a root/home/system path is not allowed." >&2
     return 2
   fi
 

@@ -50,7 +50,7 @@
     },
     "edit": {
       "*": "allow",
-      "**/db/migration/V[0-9]*": "deny",
+      "**/db/migration/V[0-9]*": "ask",
       "**/bun.lock": "deny",
       "**/bun.lockb": "deny",
       "**/package-lock.json": "deny",
