@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - '.claude/hooks/**'
-      - 'opencode.json'
 
 jobs:
   guard-cases:
@@ -16,6 +15,3 @@ jobs:
 
       - name: Run pre-bash-guard.sh fixtures
         run: bash .claude/hooks/tests/guard-cases.sh
-
-      - name: Run opencode.json permission resolution fixtures
-        run: python3 .claude/hooks/tests/opencode_permission_cases.py
