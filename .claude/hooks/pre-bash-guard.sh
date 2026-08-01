@@ -68,15 +68,18 @@ check_segment() {
     return 2
   fi
 
-  # Block git push --force / -f as a COMPLETE flag, but allow --force-with-lease
-  # alone. Checked unconditionally (not "only if --force-with-lease is absent"):
-  # git applies last-flag-wins semantics, so "--force-with-lease --force" (or
-  # the reverse order) is still an unconditional force push despite mentioning
-  # --force-with-lease. The trailing boundary requires whitespace/end-of-string
-  # rather than \b, since \b treats the hyphen in "--force-with-lease" as a
-  # boundary too and would wrongly match that flag on its own.
+  # Block git push --force / -f as a COMPLETE flag or combined short-flag
+  # cluster (-uf, -fu, ...), but allow --force-with-lease alone. Checked
+  # unconditionally (not "only if --force-with-lease is absent"): git applies
+  # last-flag-wins semantics, so "--force-with-lease --force" (or the reverse
+  # order) is still an unconditional force push despite mentioning
+  # --force-with-lease. The long-form boundary requires whitespace/end-of-
+  # string rather than \b, since \b treats the hyphen in "--force-with-lease"
+  # as a boundary too and would wrongly match that flag on its own; the
+  # short-form side matches any single-dash cluster containing "f" (mirroring
+  # the git clean check above) so bundled flags like -uf can't slip through.
   if echo "$seg" | grep -qE "${CMD_PREFIX_RE}git\b\s+push\b"; then
-    if echo "$seg" | grep -qE -- '(^|[[:space:]])--force([[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)'; then
+    if echo "$seg" | grep -qE -- '(^|[[:space:]])--force([[:space:]]|$)|(^|[[:space:]])-[a-zA-Z]*f[a-zA-Z]*([[:space:]]|$)'; then
       echo "BLOCKED: git push --force is not allowed. Use --force-with-lease if you must force push." >&2
       return 2
     fi

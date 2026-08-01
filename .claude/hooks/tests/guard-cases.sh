@@ -125,6 +125,11 @@ check pass  "echo \"warning | rm -rf /home/user/tmp is dangerous\""
 check pass  "echo 'a && b'"
 check pass  "ls /home/jordy && rm -rf build/"
 
+echo "combined short flags must not evade the git push force check"
+check block "git push -uf origin main"
+check block "git push -fu origin main"
+check pass  "git push origin feature-flag-x"
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]
