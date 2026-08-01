@@ -113,6 +113,18 @@ echo "real invocations wrapped in common prefixes must still block"
 check block "sudo rm -rf /"
 check block "VAR=1 rm -rf /home/jordy"
 
+echo "git push force-with-lease must not suppress a separately-present real force flag"
+check block "git push --force-with-lease --force origin main"
+check block "git push --force --force-with-lease origin main"
+check pass  "git push --force-with-lease"
+
+echo "separator characters inside a quoted string must not create a spurious segment"
+check pass  "echo \"warning; rm -rf /home/user/tmp is dangerous\""
+check pass  "echo \"warning && rm -rf /home/user/tmp is dangerous\""
+check pass  "echo \"warning | rm -rf /home/user/tmp is dangerous\""
+check pass  "echo 'a && b'"
+check pass  "ls /home/jordy && rm -rf build/"
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]

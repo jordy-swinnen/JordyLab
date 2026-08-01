@@ -68,13 +68,17 @@ check_segment() {
     return 2
   fi
 
-  # Block git push --force / -f, but explicitly allow --force-with-lease.
+  # Block git push --force / -f as a COMPLETE flag, but allow --force-with-lease
+  # alone. Checked unconditionally (not "only if --force-with-lease is absent"):
+  # git applies last-flag-wins semantics, so "--force-with-lease --force" (or
+  # the reverse order) is still an unconditional force push despite mentioning
+  # --force-with-lease. The trailing boundary requires whitespace/end-of-string
+  # rather than \b, since \b treats the hyphen in "--force-with-lease" as a
+  # boundary too and would wrongly match that flag on its own.
   if echo "$seg" | grep -qE "${CMD_PREFIX_RE}git\b\s+push\b"; then
-    if ! echo "$seg" | grep -qE -- '--force-with-lease\b'; then
-      if echo "$seg" | grep -qE -- '--force\b|(^|[[:space:]])-f([[:space:]]|$)'; then
-        echo "BLOCKED: git push --force is not allowed. Use --force-with-lease if you must force push." >&2
-        return 2
-      fi
+    if echo "$seg" | grep -qE -- '(^|[[:space:]])--force([[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)'; then
+      echo "BLOCKED: git push --force is not allowed. Use --force-with-lease if you must force push." >&2
+      return 2
     fi
   fi
 
@@ -96,13 +100,52 @@ check_segment() {
   return 0
 }
 
-# Split on command separators (longest alternatives first so "||" isn't
-# consumed as two "|"s) and evaluate each piece independently.
+# Splits $1 on ; && || | into one segment per line, but only treats a
+# separator as a real split point when it appears outside single or double
+# quotes — a plain text-based split (e.g. sed) can't tell a real command
+# separator from the same character appearing inside a quoted string (e.g.
+# echo "warning; rm -rf /home is dangerous"), and would otherwise split that
+# quoted text into a fragment that looks like a genuine rm invocation. Does
+# NOT handle backslash-escaped quotes or command substitution/backticks —
+# an accepted residual gap, same class as this hook's other quote-unaware
+# limitations, that would need real shell tokenization to close fully.
+split_segments() {
+  local s="$1"
+  local i=0 len=${#s} c c2
+  local in_single=0 in_double=0
+  local buf=""
+  while (( i < len )); do
+    c="${s:i:1}"
+    if [[ "$in_single" -eq 0 && "$in_double" -eq 0 ]]; then
+      c2="${s:i:2}"
+      if [[ "$c2" == "&&" || "$c2" == "||" ]]; then
+        printf '%s\n' "$buf"
+        buf=""
+        i=$((i + 2))
+        continue
+      elif [[ "$c" == ";" || "$c" == "|" ]]; then
+        printf '%s\n' "$buf"
+        buf=""
+        i=$((i + 1))
+        continue
+      fi
+    fi
+    if [[ "$in_double" -eq 0 && "$c" == "'" ]]; then
+      in_single=$((1 - in_single))
+    elif [[ "$in_single" -eq 0 && "$c" == '"' ]]; then
+      in_double=$((1 - in_double))
+    fi
+    buf+="$c"
+    i=$((i + 1))
+  done
+  printf '%s\n' "$buf"
+}
+
 while IFS= read -r segment; do
   [[ -z "$segment" ]] && continue
   if ! check_segment "$segment"; then
     exit 2
   fi
-done < <(printf '%s\n' "$COMMAND" | sed -E 's/(&&|\|\||;|\|)/\n/g')
+done < <(split_segments "$COMMAND")
 
 exit 0
