@@ -67,11 +67,18 @@ check block "git push -f origin main"
 check pass  "git push --force-with-lease"
 check pass  "git push origin main"
 
-echo "DDL"
-check block "DROP TABLE users"
-check block "drop table users"
-check block "TRUNCATE orders"
+echo "DDL is only checked against a real DB-client invocation, not any mention of the phrase"
+check block "psql -c \"DROP TABLE users\""
+check block "psql -c \"drop table users\""
+check block "mysql -e \"TRUNCATE orders\""
+check block "sqlite3 db.sqlite \"DROP TABLE users\""
 check pass  "SELECT * FROM users"
+check pass  "DROP TABLE users"
+check pass  "drop table users"
+check pass  "TRUNCATE orders"
+check pass  "git commit -m \"fix: DROP TABLE users typo in migration\""
+check pass  "grep -r TRUNCATE src/"
+check pass  "echo \"never run DROP TABLE in prod\""
 
 echo "docker compose down"
 check block "docker compose down -v"
@@ -154,6 +161,20 @@ check pass  "echo \"\$(rm --help)\""
 
 echo "backslash-escaped quotes are tokenized correctly, not treated as real quote boundaries"
 check pass  "echo \"she said \\\"rm -rf /home\\\" as a joke\""
+
+echo "root-level wildcard delete"
+check block "rm -rf /*"
+
+echo "heredoc DDL gating follows what the heredoc is actually attached to"
+check block "psql <<EOF
+DROP TABLE users;
+EOF"
+check pass  "cat <<EOF
+Just a note: DROP TABLE is dangerous
+EOF"
+check block "bash <<EOF
+rm -rf /home
+EOF"
 
 echo
 echo "$pass_count passed, $fail_count failed"

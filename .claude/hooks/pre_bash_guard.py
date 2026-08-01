@@ -13,17 +13,22 @@ as a class rather than one repro at a time.
 
 Scanner handles: single/double quotes (correct backslash semantics per
 context), heredocs (<<WORD / <<-WORD; body is opaque unless the delimiter is
-unquoted, in which case its embedded substitutions are still scanned since
-they're genuinely executed), here-strings (<<<), command substitution
-($(...) and `...`, recursed into and checked as their own commands), and
-control operators (; && || | &) as command boundaries.
+unquoted, in which case it's re-scanned as either a script -- if attached to
+an ordinary command -- or raw SQL, checked with an ungated DDL-only scan --
+if attached to a recognized DB-client invocation like psql), here-strings
+(<<<), command substitution ($(...) and `...`, recursed into and checked as
+their own commands), and control operators (; && || | &) as command
+boundaries.
 
 Known, accepted residual gaps (rare in agent-issued commands, and this
 scanner's job is finding real command boundaries/arguments, not full shell
 semantics): process substitution <(...)/>(...), arithmetic $(( )), ANSI-C
-$'...' quoting, brace expansion, extended globs, and variable expansion
-(so a literal token like "$HOME" is matched as text, not its expanded
-value -- same limitation the previous implementation had).
+$'...' quoting, brace expansion, extended globs, variable expansion (so a
+literal token like "$HOME" is matched as text, not its expanded value --
+same limitation the previous implementation had), and DDL wrapped in a
+container invocation (e.g. "docker exec db psql -c 'DROP TABLE x'" is not
+unwrapped to find the inner psql call -- the DDL check only looks at the
+directly-resolved program of each command).
 """
 from __future__ import annotations
 
@@ -41,8 +46,23 @@ class Scanner:
         self.text = text
         self.n = len(text)
 
-    def scan(self) -> tuple[list[list[str]], list[list[str]]]:
-        """Returns (commands, substitution_commands)."""
+    def scan(self) -> tuple[list[list[str]], list[list[str]], list[list[str]], list[list[str]]]:
+        """Returns (commands, substitution_commands, heredoc_commands, raw_sql_commands).
+
+        substitution_commands are commands found inside $(...)/`...` -- these
+        are genuine invocations (same footing as top-level commands: their
+        own DDL check is gated to a recognized DB-client program, same as
+        anything else).
+
+        A heredoc's body is only meaningfully "commands" if the heredoc is
+        attached to something that executes it as a script (e.g. bash
+        <<EOF); those go in heredoc_commands and get the normal, gated
+        checks. When the heredoc is attached to a recognized DB-client
+        invocation (psql <<EOF, ...) the body is raw SQL, not shell
+        commands -- its first "word" isn't a program name, so gating a DDL
+        check on it would never fire. Those go in raw_sql_commands and get
+        an ungated DDL-only check instead.
+        """
         i = 0
         n = self.n
         text = self.text
@@ -50,8 +70,10 @@ class Scanner:
         cur_tokens: list[str] = []
         cur_word: list[str] | None = None
         quote: str | None = None
-        pending_heredocs: list[tuple[str, bool, bool]] = []
+        pending_heredocs: list[tuple[str, bool, bool, bool]] = []
         sub_commands: list[list[str]] = []
+        heredoc_commands: list[list[str]] = []
+        raw_sql_commands: list[list[str]] = []
 
         def end_word():
             nonlocal cur_word
@@ -114,6 +136,13 @@ class Scanner:
                 j += 1
             return text[start:j], j
 
+        def merge_substitution(inner: str) -> None:
+            sc, ssc, shc, srsc = Scanner(inner).scan()
+            sub_commands.extend(sc)
+            sub_commands.extend(ssc)
+            heredoc_commands.extend(shc)
+            raw_sql_commands.extend(srsc)
+
         while i < n:
             c = text[i]
 
@@ -138,17 +167,13 @@ class Scanner:
                     i += 2
                 elif c == "$" and text[i + 1 : i + 2] == "(":
                     inner, new_i = extract_balanced(i + 2, "(", ")")
-                    sc, ssc = Scanner(inner).scan()
-                    sub_commands.extend(sc)
-                    sub_commands.extend(ssc)
+                    merge_substitution(inner)
                     start_word()
                     cur_word.append("$(...)")
                     i = new_i
                 elif c == "`":
                     inner, new_i = extract_balanced_backtick(i + 1)
-                    sc, ssc = Scanner(inner).scan()
-                    sub_commands.extend(sc)
-                    sub_commands.extend(ssc)
+                    merge_substitution(inner)
                     start_word()
                     cur_word.append("`...`")
                     i = new_i
@@ -177,18 +202,14 @@ class Scanner:
                 continue
             if c == "$" and text[i + 1 : i + 2] == "(":
                 inner, new_i = extract_balanced(i + 2, "(", ")")
-                sc, ssc = Scanner(inner).scan()
-                sub_commands.extend(sc)
-                sub_commands.extend(ssc)
+                merge_substitution(inner)
                 start_word()
                 cur_word.append("$(...)")
                 i = new_i
                 continue
             if c == "`":
                 inner, new_i = extract_balanced_backtick(i + 1)
-                sc, ssc = Scanner(inner).scan()
-                sub_commands.extend(sc)
-                sub_commands.extend(ssc)
+                merge_substitution(inner)
                 start_word()
                 cur_word.append("`...`")
                 i = new_i
@@ -228,7 +249,9 @@ class Scanner:
                         j += 1
                 end_word()
                 cur_tokens.append("<<HEREDOC")
-                pending_heredocs.append(("".join(delim_chars), strip_tabs, delim_quoted))
+                owner_prog, _ = resolve_program(cur_tokens[:-1])
+                owner_is_db_client = owner_prog in DB_CLIENT_PROGRAMS
+                pending_heredocs.append(("".join(delim_chars), strip_tabs, delim_quoted, owner_is_db_client))
                 i = j
                 continue
 
@@ -246,7 +269,7 @@ class Scanner:
                 end_word()
                 if pending_heredocs:
                     i += 1
-                    for delim, strip_tabs, delim_quoted in pending_heredocs:
+                    for delim, strip_tabs, delim_quoted, owner_is_db_client in pending_heredocs:
                         body_lines: list[str] = []
                         while i <= n:
                             eol = text.find("\n", i)
@@ -263,9 +286,21 @@ class Scanner:
                             if eol == -1:
                                 break
                         if not delim_quoted:
-                            sc, ssc = Scanner("\n".join(body_lines)).scan()
-                            sub_commands.extend(sc)
-                            sub_commands.extend(ssc)
+                            body_text = "\n".join(body_lines)
+                            if owner_is_db_client:
+                                # Raw SQL, not shell commands -- the body's
+                                # "first word" isn't a program name, so this
+                                # gets an ungated DDL-only check rather than
+                                # being tokenized as an invocation.
+                                raw_sql_commands.append([body_text])
+                            else:
+                                # Genuinely a script (e.g. bash <<EOF): tokenize
+                                # and check like any other command.
+                                sc, ssc, shc, srsc = Scanner(body_text).scan()
+                                heredoc_commands.extend(sc)
+                                sub_commands.extend(ssc)
+                                heredoc_commands.extend(shc)
+                                raw_sql_commands.extend(srsc)
                     pending_heredocs = []
                 else:
                     i += 1
@@ -276,22 +311,23 @@ class Scanner:
             i += 1
 
         end_command()
-        return commands, sub_commands
-
-
-def all_commands(text: str) -> list[list[str]]:
-    """Every simple command in the string, including ones found inside
-    command substitutions (since those genuinely execute)."""
-    commands, sub_commands = Scanner(text).scan()
-    return commands + sub_commands
+        return commands, sub_commands, heredoc_commands, raw_sql_commands
 
 
 # ---------------------------------------------------------------------------
 # Destructive-command checks
 # ---------------------------------------------------------------------------
 
-DANGEROUS_TARGETS = {"/", "~", ".", "..", "*", "./", "../"}
+DANGEROUS_TARGETS = {"/", "/*", "~", ".", "..", "*", "./", "../"}
 DANGEROUS_PREFIXES = ("~/", "$HOME", "/home", "/etc", "/usr", "/var", "/bin", "/boot", "/opt", "/root")
+
+# Programs whose arguments are legitimately raw SQL, so a mention of DROP/
+# TRUNCATE there is a real DDL statement rather than a description of one in
+# a commit message, grep pattern, or echo string. Gates check_ddl for
+# top-level and substitution-derived commands (heredoc-derived commands are
+# already-confirmed script/data content, so their DDL check stays ungated —
+# see Scanner.scan's docstring).
+DB_CLIENT_PROGRAMS = {"psql", "mysql", "mariadb", "sqlite3"}
 
 VAR_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 DDL_RE = re.compile(r"\b(DROP\s+(TABLE|SCHEMA|DATABASE)|TRUNCATE)\b", re.IGNORECASE)
@@ -333,20 +369,28 @@ def resolve_program(tokens: list[str]) -> tuple[str | None, list[str]]:
     return tokens[i], tokens[i + 1 :]
 
 
-def check_ddl(tokens: list[str]) -> str | None:
+def check_ddl(tokens: list[str], gated: bool) -> str | None:
     # DDL keywords are multiple words (e.g. "DROP TABLE"); when unquoted
     # these arrive as separate tokens, so join before matching rather than
-    # checking each token in isolation.
+    # checking each token in isolation. When gated, only fires if this
+    # command's own resolved program is a recognized DB client -- otherwise
+    # "DROP TABLE" inside a commit message, grep pattern, or echo string
+    # (all real invocations of an unrelated program) would be mistaken for
+    # an actual DDL statement.
+    if gated:
+        prog, _ = resolve_program(tokens)
+        if prog not in DB_CLIENT_PROGRAMS:
+            return None
     if DDL_RE.search(" ".join(tokens)):
         return "Direct DDL (DROP/TRUNCATE) is not allowed. Use Flyway migrations instead."
     return None
 
 
-def check_command(tokens: list[str]) -> str | None:
+def check_command(tokens: list[str], *, gate_ddl: bool = True) -> str | None:
     if not tokens:
         return None
 
-    ddl = check_ddl(tokens)
+    ddl = check_ddl(tokens, gated=gate_ddl)
     if ddl:
         return ddl
 
@@ -391,10 +435,18 @@ def check_command(tokens: list[str]) -> str | None:
 
 
 def check(command: str) -> str | None:
-    for tokens in all_commands(command):
-        msg = check_command(tokens)
+    commands, substitution_commands, heredoc_commands, raw_sql_commands = Scanner(command).scan()
+
+    for tokens in commands + substitution_commands + heredoc_commands:
+        msg = check_command(tokens, gate_ddl=True)
         if msg:
             return msg
+
+    for tokens in raw_sql_commands:
+        msg = check_ddl(tokens, gated=False)
+        if msg:
+            return msg
+
     return None
 
 
