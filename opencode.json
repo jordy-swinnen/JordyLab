@@ -15,5 +15,17 @@
         "Authorization": "Bearer {env:GITHUB_PAT}"
       }
     }
+  },
+  "agent": {
+    "sdd-plan": {
+      "mode": "primary",
+      "model": "z-ai/glm-5.2",
+      "permission": { "edit": "allow", "bash": "allow" }
+    },
+    "sdd-build": {
+      "mode": "primary",
+      "model": "ollama/qwen3.6:27b",
+      "permission": { "edit": "allow", "bash": "allow" }
+    }
   }
 }
