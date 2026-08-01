@@ -16,16 +16,89 @@
       }
     }
   },
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm -rf *": "ask",
+      "rm -rf /*": "deny",
+      "rm -fr /*": "deny",
+      "rm -rf ~*": "deny",
+      "rm -rf $HOME*": "deny",
+      "rm -rf .": "deny",
+      "rm -rf ./": "deny",
+      "*--no-preserve-root*": "deny",
+      "git reset --hard*": "deny",
+      "git clean -*f*": "deny",
+      "git push --force": "deny",
+      "git push --force *": "deny",
+      "git push -f*": "deny",
+      "*DROP TABLE*": "deny",
+      "*DROP SCHEMA*": "deny",
+      "*DROP DATABASE*": "deny",
+      "*TRUNCATE *": "deny",
+      "*drop table*": "deny",
+      "*drop schema*": "deny",
+      "*drop database*": "deny",
+      "*truncate *": "deny",
+      "docker compose*down*-v*": "deny",
+      "docker-compose*down*-v*": "deny"
+    },
+    "edit": {
+      "*": "allow",
+      "**/db/migration/V[0-9]*": "deny",
+      "**/bun.lock": "deny",
+      "**/bun.lockb": "deny",
+      "**/package-lock.json": "deny",
+      "**/.env*": "deny",
+      "**/.git/**": "deny"
+    }
+  },
   "agent": {
     "sdd-plan": {
       "mode": "primary",
       "model": "z-ai/glm-5.2",
-      "permission": { "edit": "allow", "bash": "allow" }
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "specs/**": "allow",
+          ".specify/memory/**": "allow"
+        },
+        "bash": {
+          "*": "ask",
+          ".specify/scripts/bash/*": "allow",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git branch*": "allow",
+          "git rev-parse*": "allow",
+          "rm -rf /*": "deny",
+          "rm -fr /*": "deny",
+          "rm -rf ~*": "deny",
+          "rm -rf $HOME*": "deny",
+          "rm -rf .": "deny",
+          "rm -rf ./": "deny",
+          "*--no-preserve-root*": "deny",
+          "git reset --hard*": "deny",
+          "git clean -*f*": "deny",
+          "git push --force": "deny",
+          "git push --force *": "deny",
+          "git push -f*": "deny",
+          "*DROP TABLE*": "deny",
+          "*DROP SCHEMA*": "deny",
+          "*DROP DATABASE*": "deny",
+          "*TRUNCATE *": "deny",
+          "*drop table*": "deny",
+          "*drop schema*": "deny",
+          "*drop database*": "deny",
+          "*truncate *": "deny",
+          "docker compose*down*-v*": "deny",
+          "docker-compose*down*-v*": "deny"
+        }
+      }
     },
     "sdd-build": {
       "mode": "primary",
-      "model": "ollama/qwen3.6:27b",
-      "permission": { "edit": "allow", "bash": "allow" }
+      "model": "ollama/qwen3.6:27b"
     }
   }
 }
