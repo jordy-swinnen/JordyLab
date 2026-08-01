@@ -9,7 +9,7 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class CiReviewVerification {
 
-    public static String describe(int count) {
+    public static String describe(final int count) {
         var label = count == 1 ? "item" : "items";
         return count + " " + label;
     }
