@@ -1,6 +1,6 @@
-import { Component, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { FnaApiService } from '@jordylab-fe/fna/api';
+import { Component, inject, signal } from '@angular/core';
+import { catchError, of } from 'rxjs';
+import { ArticleSummary, FnaApiService } from '@jordylab-fe/fna/api';
 import { ArticleListViewComponent } from './article-list-view.component';
 
 @Component({
@@ -11,5 +11,23 @@ import { ArticleListViewComponent } from './article-list-view.component';
 })
 export class ArticleListComponent {
   #api = inject(FnaApiService);
-  articles = toSignal(this.#api.getArticles(), { initialValue: [] });
+  articles = signal<ArticleSummary[]>([]);
+  error = signal<string | null>(null);
+  loading = signal(true);
+
+  constructor() {
+    this.#api
+      .getArticles()
+      .pipe(
+        catchError(() => {
+          this.error.set('Failed to load articles.');
+          this.loading.set(false);
+          return of([]);
+        })
+      )
+      .subscribe((articles) => {
+        this.articles.set(articles);
+        this.loading.set(false);
+      });
+  }
 }

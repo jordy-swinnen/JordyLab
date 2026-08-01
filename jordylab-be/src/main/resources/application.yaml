@@ -10,3 +10,12 @@ spring:
       chat:
         options:
           model: claude-sonnet-4-20250514
+
+jordylab:
+  ai:
+    health-check-ttl-seconds: 30
+    health-check-timeout-seconds: 2
+    modules:
+      fna:
+        provider: anthropic
+        model: claude-sonnet-4-20250514

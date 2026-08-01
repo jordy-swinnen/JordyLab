@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { catchError, of } from 'rxjs';
 import { FnaApiService, Briefing } from '@jordylab-fe/fna/api';
 import { BriefingDisplayViewComponent } from './briefing-display-view.component';
 
@@ -13,18 +14,40 @@ export class BriefingDisplayComponent implements OnInit {
 
   briefing = signal<Briefing | null>(null);
   loading = signal(false);
+  error = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.loading.set(true);
     this.#api
       .getLatestBriefing()
-      .subscribe((briefing) => this.briefing.set(briefing));
+      .pipe(
+        catchError(() => {
+          this.error.set('Failed to load briefing.');
+          this.loading.set(false);
+          return of(null);
+        })
+      )
+      .subscribe((briefing) => {
+        this.briefing.set(briefing);
+        this.loading.set(false);
+      });
   }
 
   generate(): void {
     this.loading.set(true);
-    this.#api.triggerBriefing().subscribe((briefing) => {
-      this.briefing.set(briefing);
-      this.loading.set(false);
-    });
+    this.error.set(null);
+    this.#api
+      .triggerBriefing()
+      .pipe(
+        catchError(() => {
+          this.error.set('Failed to generate briefing.');
+          this.loading.set(false);
+          return of(null);
+        })
+      )
+      .subscribe((briefing) => {
+        this.briefing.set(briefing);
+        this.loading.set(false);
+      });
   }
 }

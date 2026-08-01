@@ -28,6 +28,9 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../../../coverage/libs/fna/api',
       provider: 'v8' as const,
+      thresholds: {
+        lines: 80,
+      },
     },
   },
 }));

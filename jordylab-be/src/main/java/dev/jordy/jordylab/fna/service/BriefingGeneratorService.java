@@ -6,6 +6,7 @@ import dev.jordy.jordylab.fna.domain.PortfolioPosition;
 import dev.jordy.jordylab.fna.domain.repository.ArticleRepository;
 import dev.jordy.jordylab.fna.domain.repository.BriefingRepository;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
+import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,13 +50,18 @@ public class BriefingGeneratorService {
                 + "\n\nAnalyse how today's news affects my portfolio positions, summarise the broader European market themes, "
                 + "and suggest one ticker I don't currently hold that looks interesting based on today's news.";
 
-        String content = aiService.call(SYSTEM_PROMPT, userPrompt);
+        AiCallResult result = aiService.call("fna", SYSTEM_PROMPT, userPrompt);
+
+        if (!result.success()) {
+            log.error("Briefing generation failed: {}", result.failureReason());
+            return null;
+        }
 
         return briefingRepository.save(
                 Briefing.builder()
                         .generatedAt(Instant.now())
-                        .content(content)
-                        .modelUsed(aiService.getLastUsedModel())
+                        .content(result.content())
+                        .modelUsed(result.model())
                         .build()
         );
     }

@@ -1,7 +1,13 @@
-<lib-portfolio-manager-view
-  [positions]="positions()"
-  [totalWorth]="totalWorth()"
-  [hasAnyPrices]="hasAnyPrices()"
-  (addPosition)="addPosition($event)"
-  (deletePosition)="deletePosition($event)"
-/>
+@if (error()) {
+  <div class="py-12 text-center text-destructive">
+    <p class="text-sm">{{ error() }}</p>
+  </div>
+} @else {
+  <lib-portfolio-manager-view
+    [positions]="positions()"
+    [totalWorth]="totalWorth()"
+    [hasAnyPrices]="hasAnyPrices()"
+    (addPosition)="addPosition($event)"
+    (deletePosition)="deletePosition($event)"
+  />
+}

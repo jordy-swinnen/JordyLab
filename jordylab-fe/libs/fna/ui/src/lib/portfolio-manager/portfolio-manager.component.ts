@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { catchError, of } from 'rxjs';
 import { FnaApiService, PortfolioPosition } from '@jordylab-fe/fna/api';
 import { PortfolioManagerViewComponent } from './portfolio-manager-view.component';
 
@@ -12,6 +13,7 @@ export class PortfolioManagerComponent implements OnInit {
   #api = inject(FnaApiService);
 
   positions = signal<PortfolioPosition[]>([]);
+  error = signal<string | null>(null);
 
   totalWorth = computed(() => {
     return this.positions().reduce((sum, position) => {
@@ -42,8 +44,15 @@ export class PortfolioManagerComponent implements OnInit {
   }
 
   #loadPositions(): void {
+    this.error.set(null);
     this.#api
       .getPortfolio()
+      .pipe(
+        catchError(() => {
+          this.error.set('Failed to load portfolio.');
+          return of([]);
+        })
+      )
       .subscribe((positions) => this.positions.set(positions));
   }
 }
