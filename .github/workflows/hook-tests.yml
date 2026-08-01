@@ -1,0 +1,21 @@
+name: Hook Tests
+
+on:
+  pull_request:
+    paths:
+      - '.claude/hooks/**'
+
+jobs:
+  guard-cases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run pre-bash-guard.sh fixtures
+        run: bash .claude/hooks/tests/guard-cases.sh

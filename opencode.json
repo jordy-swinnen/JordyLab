@@ -15,5 +15,31 @@
         "Authorization": "Bearer {env:GITHUB_PAT}"
       }
     }
+  },
+  "agent": {
+    "sdd-plan": {
+      "mode": "primary",
+      "model": "z-ai/glm-5.2",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "specs/**": "allow",
+          ".specify/memory/**": "allow"
+        },
+        "bash": {
+          "*": "ask",
+          ".specify/scripts/bash/*": "allow",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git branch*": "allow",
+          "git rev-parse*": "allow"
+        }
+      }
+    },
+    "sdd-build": {
+      "mode": "primary",
+      "model": "ollama/qwen3.6:27b"
+    }
   }
 }
