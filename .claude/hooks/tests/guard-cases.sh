@@ -42,6 +42,12 @@ check block "rm -rf / --no-preserve-root"
 check pass  "rm -rf build/"
 check pass  "rm -rf node_modules/"
 
+echo "uppercase -R is a documented GNU rm synonym for --recursive"
+check block "rm -Rf /"
+check block "rm -R ~"
+check block "rm -Rf \$HOME"
+check pass  "rm -Rf build/"
+
 echo "git reset"
 check block "git reset --hard"
 check block "git reset --hard origin/main"
