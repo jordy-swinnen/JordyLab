@@ -81,6 +81,20 @@ check pass  "docker compose down; ls -v"
 check pass  "grep -f patterns.txt file.txt && git clean -n"
 check block "git push origin --force"
 
+echo "rm flag order/spacing (3+ tokens, long-form) and parent-dir target"
+check block "rm -r -v -f /home/jordy"
+check block "rm -rf .."
+check block "rm --recursive --force /home/jordy"
+check block "rm --recursive -f /home/jordy"
+check block "rm -r --force /home/jordy"
+check block "rm -r --verbose --force /home/jordy"
+check pass  "rm --recursive --force build/"
+
+echo "word-boundary false positives (substring matches inside unrelated words)"
+check pass  "echo \"please confirm -rf /home before proceeding\""
+check pass  "digit clean -f"
+check pass  "docker compose down --env-file .env-vault"
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]

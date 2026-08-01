@@ -9,11 +9,15 @@ if [[ -z "$COMMAND" ]]; then
   exit 0
 fi
 
-# Block rm -rf/-fr (recursive + force, in any flag order/combination) targeting
+# Block rm -rf/-fr (recursive + force, any flag order/spelling/spacing) targeting
 # root, home, or system-level paths. Project-relative targets (e.g. "rm -rf build/")
-# are intentionally left alone.
-RM_FLAGS_RE='(-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*|-r[[:space:]]+-f|-f[[:space:]]+-r|--recursive[[:space:]]+--force|--force[[:space:]]+--recursive|-r[[:space:]]+--force|--force[[:space:]]+-r|--recursive[[:space:]]+-f|-f[[:space:]]+--recursive)'
-RM_DANGEROUS_TARGET_RE='(^|[[:space:]])(/|~|~/[^[:space:]]*|\$HOME[^[:space:]]*|\.|\./|\*|/home[^[:space:]]*|/etc[^[:space:]]*|/usr[^[:space:]]*|/var[^[:space:]]*|/bin[^[:space:]]*|/boot[^[:space:]]*|/opt[^[:space:]]*|/root[^[:space:]]*)([[:space:]]|$)'
+# are intentionally left alone. Recursive and force are matched as independent,
+# space-bounded tokens rather than one adjacency-dependent regex, so any number
+# of intervening flags (e.g. "rm -r -v -f /home/x") is still caught, and neither
+# token can match inside an unrelated word (e.g. "confirm").
+RM_RECURSIVE_RE='(^|[[:space:]])(-[a-zA-Z]*r[a-zA-Z]*|--recursive)([[:space:]]|$)'
+RM_FORCE_RE='(^|[[:space:]])(-[a-zA-Z]*f[a-zA-Z]*|--force)([[:space:]]|$)'
+RM_DANGEROUS_TARGET_RE='(^|[[:space:]])(/|~|~/[^[:space:]]*|\$HOME[^[:space:]]*|\.|\./|\.\.|\.\./|\*|/home[^[:space:]]*|/etc[^[:space:]]*|/usr[^[:space:]]*|/var[^[:space:]]*|/bin[^[:space:]]*|/boot[^[:space:]]*|/opt[^[:space:]]*|/root[^[:space:]]*)([[:space:]]|$)'
 
 # Each rule below is checked against a single command segment (see the split
 # at the bottom of this file), not the raw multi-command string, so a token
@@ -22,7 +26,7 @@ RM_DANGEROUS_TARGET_RE='(^|[[:space:]])(/|~|~/[^[:space:]]*|\$HOME[^[:space:]]*|
 check_segment() {
   local seg="$1"
 
-  if echo "$seg" | grep -qE "rm[[:space:]]+${RM_FLAGS_RE}" && echo "$seg" | grep -qE "$RM_DANGEROUS_TARGET_RE"; then
+  if echo "$seg" | grep -qE '\brm\b' && echo "$seg" | grep -qE "$RM_RECURSIVE_RE" && echo "$seg" | grep -qE "$RM_FORCE_RE" && echo "$seg" | grep -qE "$RM_DANGEROUS_TARGET_RE"; then
     echo "BLOCKED: Destructive rm -rf against a root/home/system path is not allowed." >&2
     return 2
   fi
@@ -34,7 +38,7 @@ check_segment() {
   fi
 
   # Block git reset --hard
-  if echo "$seg" | grep -qE 'git\s+reset\s+--hard'; then
+  if echo "$seg" | grep -qE '\bgit\b\s+reset\s+--hard'; then
     echo "BLOCKED: git reset --hard is not allowed. Use git stash or git checkout for specific files." >&2
     return 2
   fi
@@ -42,13 +46,13 @@ check_segment() {
   # Block git clean with a force flag (-f, -fd, -fdx, --force, ...) since it
   # permanently deletes untracked files. Non-forcing dry-run/interactive forms
   # (git clean -n, git clean -i) are left alone.
-  if echo "$seg" | grep -qE 'git\s+clean\b' && echo "$seg" | grep -qE -- '-[a-zA-Z]*f[a-zA-Z]*\b|--force\b'; then
+  if echo "$seg" | grep -qE '\bgit\b\s+clean\b' && echo "$seg" | grep -qE -- '-[a-zA-Z]*f[a-zA-Z]*\b|--force\b'; then
     echo "BLOCKED: git clean -f permanently deletes untracked files and is not allowed. Use git clean -n to preview, or -i for interactive." >&2
     return 2
   fi
 
   # Block git push --force / -f, but explicitly allow --force-with-lease.
-  if echo "$seg" | grep -qE 'git\s+push\b'; then
+  if echo "$seg" | grep -qE '\bgit\b\s+push\b'; then
     if ! echo "$seg" | grep -qE -- '--force-with-lease\b'; then
       if echo "$seg" | grep -qE -- '--force\b|(^|[[:space:]])-f([[:space:]]|$)'; then
         echo "BLOCKED: git push --force is not allowed. Use --force-with-lease if you must force push." >&2
@@ -64,8 +68,10 @@ check_segment() {
   fi
 
   # Block docker compose down -v/--volumes, including the hyphenated docker-compose
-  # form and flags placed between the subcommand and "down".
-  if echo "$seg" | grep -qE '(docker\s+compose|docker-compose).*\bdown\b.*-v'; then
+  # form and flags placed between the subcommand and "down". The volumes flag is
+  # matched as a bounded token so it can't match inside an unrelated argument
+  # (e.g. "--env-file .env-vault").
+  if echo "$seg" | grep -qE '(docker\s+compose|docker-compose)' && echo "$seg" | grep -qE '\bdown\b' && echo "$seg" | grep -qE -- '(^|[[:space:]])(-v|--volumes)([[:space:]]|$)'; then
     echo "BLOCKED: docker compose down -v destroys volumes. Use docker compose down without -v." >&2
     return 2
   fi
