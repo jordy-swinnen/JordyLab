@@ -103,6 +103,16 @@ check block "rm --recursive /home/jordy"
 check pass  "rm -r build/"
 check pass  "rm -r node_modules/"
 
+echo "commands merely mentioned inside another command's argument must not block"
+check pass  "echo \"run: rm -rf /home to test\""
+check pass  "echo \"run: git clean -f to clean\""
+check pass  "echo \"run: git push --force to push\""
+check pass  "echo \"run: docker compose down -v to clean\""
+
+echo "real invocations wrapped in common prefixes must still block"
+check block "sudo rm -rf /"
+check block "VAR=1 rm -rf /home/jordy"
+
 echo
 echo "$pass_count passed, $fail_count failed"
 [[ "$fail_count" -eq 0 ]]

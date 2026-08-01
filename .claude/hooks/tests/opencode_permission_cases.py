@@ -81,6 +81,9 @@ for agent in ("sdd-build", "sdd-plan"):
     check(agent, "bash", "DROP TABLE users", {"deny"})
     check(agent, "bash", "docker compose down -v", {"deny"})
     check(agent, "bash", "docker-compose down -v", {"deny"})
+    check(agent, "bash", "git clean -f", {"deny"})
+    check(agent, "bash", "git clean -fdx", {"deny"})
+    check(agent, "bash", "git clean --force", {"deny"})
 
 print("--- safety invariant: dangerous commands never resolve to bare allow, even unenumerated ---")
 for agent in ("sdd-build", "sdd-plan"):
@@ -95,6 +98,10 @@ check("sdd-build", "bash", "rm -rf build/", {"ask", "allow"})
 check("sdd-build", "bash", "docker compose down", {"allow"})
 check("sdd-plan", "bash", "git status", {"allow"})
 check("sdd-plan", "bash", ".specify/scripts/bash/create-new-feature.sh foo", {"allow"})
+# git clean -n is an explicit dry run; the force-flag denylist must not treat
+# the "f" in an unrelated argument (e.g. an --exclude filename) as the flag.
+check("sdd-build", "bash", "git clean -n --exclude=foo.txt", {"allow"})
+check("sdd-build", "bash", "git clean -n", {"allow"})
 
 print("--- edit permissions: migration scaffolding must not be hard-blocked (glob can't express pre-edit-protect.sh's file-exists check) ---")
 check("sdd-build", "edit", "jordylab-be/src/main/resources/db/migration/V10__add_column.sql", {"ask"})
