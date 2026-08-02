@@ -37,7 +37,7 @@
 - [x] T006 [P] Create AiModuleConfig @ConfigurationProperties record in jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AiModuleConfig.java binding jordylab.ai.modules.* properties
 - [x] T007 [P] Create ProviderHealth value object in jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/ProviderHealth.java (provider, healthy, lastCheckedAt, ttlSeconds)
 - [x] T008 Create ProviderHealthCache @Component in jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/ProviderHealthCache.java with ConcurrentHashMap, TTL-based isHealthy(), recordFailure(), recordSuccess() (depends on T007)
-- [x] T009 Add per-module provider config to jordylab-be/src/main/resources/application.yml under jordylab.ai.modules.fna with provider=anthropic and model=claude-sonnet-4-20250514 (depends on T006)
+- [x] T009 Add per-module provider config to jordylab-be/src/main/resources/application.yaml under jordylab.ai.modules.fna with provider=anthropic and model=claude-sonnet-5 (depends on T006)
 
 **Checkpoint**: Foundation ready — value objects, config, and health cache exist. User story implementation can now begin.
 
@@ -61,7 +61,7 @@
 ### Implementation for User Story 1
 
 - [x] T014 [US1] Rewrite ResilientAiService in jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/ResilientAiService.java — inject AiModuleConfig + ProviderHealthCache + AnthropicChatModel; call signature returns AiCallResult; route by moduleName; consult health cache before call; map exceptions to ProviderFailureReason; record attribution per call; never throw (depends on T004, T005, T006, T008)
-- [x] T015 [US1] Update BriefingGeneratorService in jordylab-be/src/main/java/dev/jordy/jordylab/fna/service/BriefingGeneratorService.java — call aiService.call("fna", ...); inspect AiCallResult.success(); on failure log reason and return null without saving Briefing; on success save Briefing with content and modelUsed from result (depends on T014)
+- [x] T015 [US1] Update BriefingGeneratorService in jordylab-be/src/main/java/dev/jordy/jordylab/fna/service/BriefingGeneratorService.java — call aiService.call("fna", ...); inspect AiCallResult.success(); on failure log reason and throw BriefingGenerationException(failureReason) without saving Briefing (superseded T015 as originally written: returning `null` produced a live NullPointerException in FnaService.triggerBriefing() — see Phase 8); on success save Briefing with content and modelUsed from result (depends on T014)
 - [x] T016 [US1] Run `./gradlew test --tests "dev.jordy.jordylab.shared.ai.*" --tests "dev.jordy.jordylab.fna.service.BriefingGeneratorServiceTest"` and verify all pass
 
 **Checkpoint**: User Story 1 is fully functional — AI calls route per-module, health is cached, failures are normalized and explicit, briefing job does not retry.
@@ -97,14 +97,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Create fna-api service spec in jordylab-fe/libs/fna/api/src/test/ — success path with mocked HTTP response; HTTP error path (4xx/5xx) with error state assertions using @ngneat/spectator/vitest
-- [ ] T023 [P] [US3] Create fna-ui view specs in jordylab-fe/libs/fna/ui/src/test/ — one spec per routed view covering render, populated state, empty state, and error state using @ngneat/spectator/vitest
+- [x] T022 [P] [US3] Create fna-api coverage for API-backed state in jordylab-fe/libs/fna/api/src/lib/ — superseded from a single fna-api.service.spec.ts to one spec per signal store (article.store.spec.ts, briefing.store.spec.ts, portfolio.store.spec.ts) once the PR #4 review moved state out of components into stores (`/angular-signal-store`); success path with mocked HTTP response and HTTP error path per store, using @ngneat/spectator/vitest + HttpTestingController
+- [x] T023 [P] [US3] Create fna-ui view specs in jordylab-fe/libs/fna/ui/src/lib/ — one spec per routed container covering render, populated state, empty state, and error state using @ngneat/spectator/vitest; mocks provided via useValue + vi.fn() per jordylab-fe/AGENTS.md (see Phase 8)
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Run `bunx nx test fna-api` and verify the API service tests pass and coverage ≥80% for the lib
-- [ ] T025 [US3] Run `bunx nx test fna-ui` and verify all view specs pass and coverage ≥80% for the lib
-- [ ] T026 [US3] Run `./gradlew check` and verify JaCoCo coverage verification passes ≥80% on the backend (depends on US1 tests being in place)
+- [x] T024 [US3] Run `bunx nx test fna-api` and verify the API service tests pass and coverage ≥80% for the lib — 13/13 tests pass, 100% line coverage
+- [x] T025 [US3] Run `bunx nx test fna-ui` and verify all view specs pass and coverage ≥80% for the lib — 17/17 tests pass, 84.78% line coverage
+- [x] T026 [US3] Run `./gradlew check` and verify JaCoCo coverage verification passes ≥80% on the backend (depends on US1 tests being in place) — verification now runs at PACKAGE granularity, not BUNDLE (see Phase 8, FR-016c)
 
 **Checkpoint**: All views and the API service have specs. Both frontend and backend enforce 80% coverage in CI.
 
@@ -120,7 +120,7 @@
 
 - [ ] T027 [P] [US4] Audit and remove unused test infrastructure in jordylab-fe/ — identify spec files/configs that test nothing and remove them so test config reflects actual usage (FR-017)
 - [ ] T028 [P] [US4] Document the pre-release dependency decision in jordylab-be/AGENTS.md or a DECISIONS.md — Spring AI 2.0.0-M2 is a milestone release; record explicit accepted risk with pinned version or a plan to move to stable (FR-018)
-- [ ] T029 [US4] Final documentation reconciliation — verify AGENTS.md AI Routing section matches cloud-primary, per-module-config decision; remove any local-primary or fallback references for fna from AGENTS.md and jordylab-infrastructure-guide.md if it exists (SC-005)
+- [x] T029 [US4] Final documentation reconciliation — verified AGENTS.md AI Routing section already matches the cloud-primary, per-module-config decision with no local-primary/fallback references for fna; fixed the Reference Docs table, which cited three docs (jordylab-infrastructure-guide.md, jordylab-project-setup.md, jordylab-project-overview.md) that do not exist in the repo — trimmed to only coding-master-prompt.md, which does (SC-005, see Phase 8)
 
 **Checkpoint**: Documentation matches implementation. No behaviour is described that the code does not implement.
 
@@ -130,10 +130,35 @@
 
 **Purpose**: Final validation across all stories
 
-- [ ] T030 Run `./gradlew build` in jordylab-be/ — full build + tests + JaCoCo verification pass
-- [ ] T031 Run `bunx nx run-many -t lint` and `bunx nx run-many -t test --coverage` in jordylab-fe/ — lint passes, all tests pass, coverage ≥80% per lib
-- [ ] T032 [P] Run `./gradlew :test --tests "*ModularityTests*"` and verify Spring Modulith boundary tests pass with the shared/ai changes
-- [ ] T033 Run the quickstart.md validation guide end-to-end and confirm all scenarios pass
+- [x] T030 Run `./gradlew build` in jordylab-be/ — full build + tests + JaCoCo verification pass
+- [x] T031 Run `bunx nx run-many -t lint` and `bunx nx run-many -t test --coverage` in jordylab-fe/ — lint passes, all tests pass, coverage ≥80% per lib
+- [x] T032 [P] Run `./gradlew :test --tests "*ModularityTests*"` and verify Spring Modulith boundary tests pass with the shared/ai changes — 1/1 passes
+- [x] T033 Run the quickstart.md validation guide end-to-end and confirm all scenarios pass — corrected several stale statements found in the process (wrong `.yml` extension, wrong trigger/latest-briefing endpoint paths, a nonexistent `ProviderFailureReasonTest` reference, the null-return failure description); see Phase 8
+
+---
+
+## Phase 8: PR #4 Review Remediation
+
+**Purpose**: [PR #4](https://github.com/jordy-swinnen/JordyLab/pull/4) — which implemented Phases 1-7 above — collected 51 review threads (two automated reviews plus human comments) identifying real defects, convention violations, and gaps in conventions that didn't exist yet. This phase closes them out and amends the spec artifacts that either caused or permitted the defects.
+
+**Independent Test**: `./gradlew check` (backend) and `bunx nx run-many -t test lint` (frontend) both pass. See Verification section of the remediation plan for the full checklist.
+
+- [x] T034 Add `jordylab.ai.call-timeout-seconds` to AiModuleConfig and application.yaml, distinct from health-check-timeout-seconds; ResilientAiService.callWithTimeout uses it for the real inference call (FR-008a, fixes the bug where every real briefing call timed out against a 2s health-probe budget)
+- [x] T035 Cancel the in-flight Future on timeout (`future.cancel(true)`) and add `@PreDestroy` executor shutdown in ResilientAiService — the executor was never shut down and timed-out calls kept running on leaked threads
+- [x] T036 Add BriefingGenerationException (fna.service) carrying ProviderFailureReason; BriefingGeneratorService throws it instead of returning null; add a @RestControllerAdvice mapping it to 503 — fixes a live NullPointerException in FnaService.triggerBriefing() → toBriefingDto(null), reachable from POST /api/fna/briefing/trigger
+- [x] T037 [P] Remove all `any()`/inline-throwaway-ArgumentCaptor usage from ResilientAiServiceTest and BriefingGeneratorServiceTest (the only two files in the backend test tree that violated the rule); restore the fallback-prompt-content assertions BriefingGeneratorServiceTest had lost; fix consultsHealthCacheBeforeCall to actually verify the mock interaction instead of re-reading its own stub
+- [x] T038 [P] Add assertSoftly to every multi-assertion test in ResilientAiServiceTest, BriefingGeneratorServiceTest, AiModuleConfigTest; extract magic values to named constants
+- [x] T039 [P] Move the fna system prompt out of a Java text block into `prompts/fna/briefing-system.st`, loaded as a Resource and rendered via SystemPromptTemplate, per the new "Spring AI / Prompts" convention in jordylab-be/AGENTS.md
+- [x] T040 [P] Drop hand-written constructors on ResilientAiService and ProviderHealthCache in favour of @RequiredArgsConstructor; add a Clock @Bean (shared/config/ClockConfiguration) so ProviderHealthCache no longer self-constructs Clock.systemUTC()
+- [x] T041 [P] Rewrite all three fna-ui signal stores (ArticleStore, BriefingStore, PortfolioStore) per `/angular-signal-store`; strip API-calling/state logic out of the container components; delete FnaApiService (fully absorbed by the stores)
+- [x] T042 [P] Rewrite all three fna-ui component specs and the new store specs to use useValue + vi.fn() instead of hand-written mock classes + useClass, eliminating every `as unknown as ...Mock` cast; create component once in beforeEach; add libs/fna/api/src/lib/mocks/*.model.mock.ts fixture factories; fix eslint.config.mjs depConstraints (dropped the dangling type:shared tag that matched no project)
+- [x] T043 Change jacocoTestCoverageVerification from BUNDLE to PACKAGE-level enforcement (FR-016c requires per-module measurement, not a workspace aggregate); exclude the trivial Spring Boot bootstrap class; add the FnaController endpoint tests this surfaced as missing (getPortfolio, getLatestBriefing, removePosition)
+- [x] T044 Amend spec.md (FR-008a), contracts/resilient-ai-service.md (Bounds, config table, caller-integration contract — remove the "return null" option), and quickstart.md (stale `.yml` path, wrong trigger/latest endpoints, nonexistent ProviderFailureReasonTest reference, null-return description) to match the corrected implementation
+- [x] T045 Add angular-test skill (frontend testing conventions did not exist anywhere before this PR, which is why all three UI specs independently converged on the same wrong mocking pattern); fix ai-endpoint skill (wrong config path shape, `.yml` vs `.yaml`, stale "Ollama primary" claim); note the public-vs-package-private TestBuilder nuance in the test-builder skill
+- [x] T046 Add `.claude/hooks/post-test-convention-check.sh` (PostToolUse, advisory) flagging any()/inline-captor/missing-assertSoftly in edited Java tests and useClass/`as unknown as` in edited spec.ts files — the violations in T037/T042 were already written down three times over (AGENTS.md, coding-master-prompt.md, constitution.md) and happened anyway; a hook catches it at edit time instead of at review time
+- [x] T047 Add an SDD spec-conformance stage to .github/workflows/claude-pr-review.yml — read the active specs/<slug>/ directory and flag diff behaviour with no FR backing it, unimplemented in-scope FRs, contract docs describing behaviour the code doesn't have, and tasks.md checkboxes marked done that aren't; widen claude_args --allowedTools to include Glob/Grep so the review can find the active spec directory
+
+**Checkpoint**: All 51 PR #4 review threads resolved. Backend and frontend both pass their full check/test/lint suites. Spec artifacts describe the corrected behaviour, not the one that shipped in PR #4.
 
 ---
 

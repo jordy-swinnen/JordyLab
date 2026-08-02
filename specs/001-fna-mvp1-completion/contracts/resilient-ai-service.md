@@ -38,6 +38,13 @@ public AiCallResult call(String moduleName, String systemPrompt, String userProm
 - NEVER throws — all failures surface as `AiCallResult.failure(...)`.
 - NEVER records raw exception text in the failure reason (FR-007). Raw text MAY be logged at `DEBUG`/`TRACE` level but is not part of the returned contract.
 - Health probes are bounded by `health-check-timeout-seconds` (default 2s) and MUST NOT block the caller indefinitely (FR-008).
+- The real inference call — the one that produces `content` — is bounded by its own,
+  separately configured `call-timeout-seconds` (default 120s), never by
+  `health-check-timeout-seconds` (FR-008a). These two timeouts protect different
+  things: the probe timeout bounds a cheap reachability check, the call timeout
+  bounds a real completion. Reusing the probe timeout for the real call means
+  every real invocation times out in practice. On timeout, the in-flight call is
+  cancelled (`Future.cancel(true)`) rather than left running.
 
 ---
 
@@ -66,6 +73,7 @@ MVP1 supports one provider (`anthropic`). An unknown `moduleName` or an unmapped
 |-------------------|---------|-------------|
 | `jordylab.ai.health-check-ttl-seconds` | `30` | Seconds before a cached health status is considered stale |
 | `jordylab.ai.health-check-timeout-seconds` | `2` | Maximum seconds for a health probe before timeout |
+| `jordylab.ai.call-timeout-seconds` | `120` | Maximum seconds for the real inference call before timeout (FR-008a) — independent of the health-probe timeout above |
 
 ---
 
@@ -76,7 +84,14 @@ The `BriefingGeneratorService` is the only current caller. It MUST:
 1. Call `aiService.call("fna", SYSTEM_PROMPT, userPrompt)`.
 2. Inspect `AiCallResult.success()`:
    - On success: build and save a `Briefing` with `content = result.content()` and `modelUsed = result.model()`.
-   - On failure: log the normalized `failureReason`, do NOT save a `Briefing`, return `null` (or throw a caught domain exception). Do NOT retry within the same cron tick (clarification Q1: A).
+   - On failure: log the normalized `failureReason`, do NOT save a `Briefing`, and throw a
+     caught domain exception (`BriefingGenerationException`) carrying the `failureReason`.
+     Returning `null` is NOT an acceptable failure signal — every caller of
+     `generateBriefing()` (including `FnaService.triggerBriefing()`, reachable from
+     `POST /api/fna/briefing/trigger`) must be able to distinguish failure from success
+     without a null check, per constitution §II ("never fail silently"). The REST layer
+     maps `BriefingGenerationException` to a `503` response carrying the failure reason.
+     Do NOT retry within the same cron tick (clarification Q1: A).
 
 The `@Scheduled(cron = "0 30 6 * * *")` fires once daily. The next attempt is the following 06:30.
 

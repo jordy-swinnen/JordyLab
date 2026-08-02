@@ -9,7 +9,7 @@
 
 - Java 25, Gradle (wrapper included in `jordylab-be/`)
 - Bun, Nx CLI (via `bunx nx` in `jordylab-fe/`)
-- Anthropic API key configured in `jordylab-be/src/main/resources/application.yml` under `spring.ai.anthropic.api-key`
+- Anthropic API key configured in `jordylab-be/src/main/resources/application.yaml` under `spring.ai.anthropic.api-key`
 - PostgreSQL 16 + pgvector via `docker compose up -d` from `jordylab-be/`
 
 ---
@@ -23,7 +23,7 @@ cd jordylab-be
 ./gradlew test --tests "dev.jordy.jordylab.shared.ai.*"
 ```
 
-**Expected**: All `ResilientAiServiceTest`, `ProviderHealthCacheTest`, `ProviderFailureReasonTest`, `AiModuleConfigTest` pass. Tests assert per-call provider attribution, normalized failure reasons (enum values, never raw text), health-cache TTL behaviour, and bounded probe timeout.
+**Expected**: All `ResilientAiServiceTest`, `ProviderHealthCacheTest`, `AiModuleConfigTest` pass. Tests assert per-call provider attribution, normalized failure reasons (enum values, never raw text), health-cache TTL behaviour, and bounded probe *and* call timeouts (FR-008, FR-008a — two independent timeouts, not one shared budget).
 
 ### Validate briefing job failure handling
 
@@ -32,7 +32,7 @@ cd jordylab-be
 ./gradlew test --tests "dev.jordy.jordylab.fna.service.BriefingGeneratorServiceTest"
 ```
 
-**Expected**: On failure, `BriefingGeneratorService` does not save a `Briefing`, logs the normalized reason, and returns without throwing. The test asserts no `Briefing` entity is persisted and the reason is one of the five enum values.
+**Expected**: On failure, `BriefingGeneratorService` does not save a `Briefing`, logs the normalized reason, and throws `BriefingGenerationException` carrying that reason — it does not return `null`. The test asserts no `Briefing` entity is persisted, the thrown exception's reason is one of the five enum values, and `FnaService.triggerBriefing()` propagates the same exception rather than dereferencing a null result.
 
 ### Validate single-attempt cron behaviour (acceptance scenario 2)
 
@@ -93,12 +93,12 @@ cd jordylab-be
 cd jordylab-be
 ./gradlew bootRun
 # In another terminal:
-curl -X POST http://localhost:8080/api/fna/briefing/generate
+curl -X POST http://localhost:8080/api/fna/briefing/trigger
 # Or wait for the 06:30 cron if running overnight
-curl http://localhost:8080/api/fna/briefing/latest
+curl http://localhost:8080/api/fna/briefing
 ```
 
-**Expected**: A `Briefing` is returned with `content` non-empty and `modelUsed` matching the configured `jordylab.ai.modules.fna.model`. Structured logs attribute the call to provider `anthropic`, module `fna`.
+**Expected**: A `Briefing` is returned with `content` non-empty and `modelUsed` matching the configured `jordylab.ai.modules.fna.model`. Structured logs attribute the call to provider `anthropic`, module `fna`. If the provider is unreachable, `POST /api/fna/briefing/trigger` returns `503` with a JSON body naming the normalized `failureReason` (see `contracts/resilient-ai-service.md`), not a `500` from an unhandled exception.
 
 ---
 
@@ -106,5 +106,7 @@ curl http://localhost:8080/api/fna/briefing/latest
 
 After implementation, verify:
 - `AGENTS.md` AI Routing section matches the cloud-primary, per-module-config decision (already updated in the clarify phase).
-- No remaining text in `AGENTS.md` or `jordylab-infrastructure-guide.md` references local-primary routing or fallback for `fna`.
+- No remaining text in `AGENTS.md` references local-primary routing or fallback for `fna`.
 - The AI Routing table marks `gamecatalog` and `recipe` as "Deferred".
+- `AGENTS.md`'s Reference Docs table lists only files that actually exist in the repo — do not
+  cite `jordylab-infrastructure-guide.md` or any other planned-but-unwritten doc as if it exists.

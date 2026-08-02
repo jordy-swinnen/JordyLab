@@ -74,6 +74,13 @@ As the sole operator and reader of FNA, I open the briefing each morning and exp
 - **FR-006**: The system MUST record, per AI call, which provider served it and which module originated it.
 - **FR-007**: The system MUST record provider failure events with the provider name and a normalized reason drawn from a fixed, bounded set (e.g., `unreachable`, `timeout`, `rate-limited`, `auth-failed`, `unknown`). Raw exception text MUST NOT be used as the recorded reason.
 - **FR-008**: Health probes MUST time out within a bounded, configured interval and MUST NOT block callers indefinitely.
+- **FR-008a**: The real AI generation call MUST be bounded by its own configured timeout
+  (`call-timeout-seconds`), independent of the health-probe timeout
+  (`health-check-timeout-seconds`). A health-probe budget MUST NOT also govern the
+  substantive inference call — a real briefing generation regularly exceeds a
+  probe-scale timeout, and reusing one budget for both silently times out every
+  real invocation. On timeout, the in-flight call MUST be cancelled rather than
+  left running on a leaked thread.
 - **FR-009**: All AI calls in the system MUST route through the resilient service. No module may call a chat model directly.
 - **FR-010**: Provider selection MUST be configurable per module without a code change. Each module declares its provider in configuration; the resilient service routes accordingly.
 
