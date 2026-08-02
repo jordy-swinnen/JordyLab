@@ -188,6 +188,10 @@ class SomeEntityTest {
 - JUnit 5, AssertJ, Mockito, Testcontainers, WireMock, MockMvc
 - Use `assertSoftly` for multiple assertions in a single test
 - Never use `any()` in Mockito — use explicit values or `ArgumentCaptor`
+- An `ArgumentCaptor` created inline and never assigned to a variable (e.g.
+  `ArgumentCaptor.forClass(String.class).capture()` passed straight into `when(...)`) is
+  `any()` in disguise — the same rule applies. If you need a captor, assign it, and assert
+  on the captured value; if you don't need to assert on it, use the real expected value instead
 - Annotate inline JSON with `@Language("JSON")`
 - Use `@ApplicationModuleTest` for module integration tests (boots only target + shared)
 - Write descriptive test method names explaining the scenario
@@ -233,6 +237,15 @@ class SomeObjectTestBuilder {
 - Every migration starts with `CREATE SCHEMA IF NOT EXISTS <schema>;` + `SET search_path TO <schema>;`
 - Naming: `V<yyyyMMdd>__<description>.sql`
 - Never modify already-applied migrations — create a new migration instead
+
+# Spring AI / Prompts
+
+- System prompts: `.st` files under `src/main/resources/prompts/<module>/`, loaded as `Resource`, passed to `SystemPromptTemplate`
+- User prompts: built in code from runtime data, not filed
+- Use `PromptTemplate`/`SystemPromptTemplate` when the prompt has `{placeholder}` tokens to substitute; plain `SystemMessage`/`UserMessage` for fixed text with no substitution
+- Default ST delimiters (`{}`) conflict with JSON in-prompt — use `<>` delimiters when the template contains literal JSON
+- Always route through `ResilientAiService`, never `ChatClient` directly
+- Prefer an injected `Clock` bean over `Instant.now()` for anything that needs to be tested deterministically
 
 # Schema Ownership
 

@@ -16,20 +16,20 @@ class BriefingTest {
         Instant generatedAt = Instant.parse("2026-03-15T06:30:00Z");
         Briefing briefing = Briefing.builder()
                 .content("Market briefing content")
-                .modelUsed("claude-sonnet-4-20250514")
+                .modelUsed("claude-sonnet-5")
                 .generatedAt(generatedAt)
                 .build();
 
         assertThat(briefing.getId()).isNotNull();
         assertThat(briefing.getContent()).isEqualTo("Market briefing content");
-        assertThat(briefing.getModelUsed()).isEqualTo("claude-sonnet-4-20250514");
+        assertThat(briefing.getModelUsed()).isEqualTo("claude-sonnet-5");
         assertThat(briefing.getGeneratedAt()).isEqualTo(generatedAt);
     }
 
     @Test
     void buildWithoutContent() {
         assertThatThrownBy(() -> Briefing.builder()
-                .modelUsed("claude-sonnet-4-20250514")
+                .modelUsed("claude-sonnet-5")
                 .generatedAt(Instant.parse("2026-03-15T06:30:00Z"))
                 .build())
                 .isInstanceOf(IllegalArgumentException.class);
@@ -39,7 +39,7 @@ class BriefingTest {
     void buildWithBlankContent() {
         assertThatThrownBy(() -> Briefing.builder()
                 .content("  ")
-                .modelUsed("claude-sonnet-4-20250514")
+                .modelUsed("claude-sonnet-5")
                 .generatedAt(Instant.parse("2026-03-15T06:30:00Z"))
                 .build())
                 .isInstanceOf(IllegalArgumentException.class);
@@ -68,7 +68,7 @@ class BriefingTest {
     void buildWithoutGeneratedAt() {
         assertThatThrownBy(() -> Briefing.builder()
                 .content("Market briefing content")
-                .modelUsed("claude-sonnet-4-20250514")
+                .modelUsed("claude-sonnet-5")
                 .build())
                 .isInstanceOf(IllegalArgumentException.class);
     }

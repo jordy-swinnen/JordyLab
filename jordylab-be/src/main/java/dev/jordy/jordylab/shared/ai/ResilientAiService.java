@@ -1,5 +1,7 @@
 package dev.jordy.jordylab.shared.ai;
 
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -21,33 +23,25 @@ import java.util.concurrent.TimeoutException;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ResilientAiService {
 
-    private final AnthropicChatModel anthropicChatModel;
     private final AiModuleConfig aiModuleConfig;
     private final ProviderHealthCache providerHealthCache;
-    private final ExecutorService executor;
-
-    public ResilientAiService(
-            AiModuleConfig aiModuleConfig,
-            ProviderHealthCache providerHealthCache,
-            AnthropicChatModel anthropicChatModel
-    ) {
-        this.aiModuleConfig = aiModuleConfig;
-        this.providerHealthCache = providerHealthCache;
-        this.anthropicChatModel = anthropicChatModel;
-        this.executor = Executors.newCachedThreadPool();
-    }
+    private final AnthropicChatModel anthropicChatModel;
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public AiCallResult call(String moduleName, String systemPrompt, String userPrompt) {
         AiModuleConfig.ModuleProvider config = aiModuleConfig.getModuleConfig(moduleName);
         if (config == null) {
             log.warn("No AI provider configured for module: {}", moduleName);
+
             return AiCallResult.failure(moduleName, "unknown", "unknown", ProviderFailureReason.UNKNOWN);
         }
 
         if (!providerHealthCache.isHealthy(config.provider())) {
             log.warn("Provider {} is unhealthy for module {}", config.provider(), moduleName);
+
             return AiCallResult.failure(moduleName, config.provider(), config.model(), ProviderFailureReason.UNREACHABLE);
         }
 
@@ -77,9 +71,21 @@ public class ResilientAiService {
         }
     }
 
+    @PreDestroy
+    void shutdown() {
+        executor.shutdownNow();
+    }
+
     private ChatResponse callWithTimeout(Prompt prompt) throws Exception {
         Future<ChatResponse> future = executor.submit(() -> anthropicChatModel.call(prompt));
-        return future.get(aiModuleConfig.healthCheckTimeoutSeconds(), TimeUnit.SECONDS);
+
+        try {
+            return future.get(aiModuleConfig.callTimeoutSeconds(), TimeUnit.SECONDS);
+        } catch (TimeoutException exception) {
+            future.cancel(true);
+
+            throw exception;
+        }
     }
 
     private ProviderFailureReason mapExceptionToReason(Exception exception) {

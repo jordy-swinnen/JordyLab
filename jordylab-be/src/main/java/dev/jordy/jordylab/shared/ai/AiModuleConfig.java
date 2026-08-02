@@ -8,6 +8,7 @@ import java.util.Map;
 record AiModuleConfig(
         int healthCheckTtlSeconds,
         int healthCheckTimeoutSeconds,
+        int callTimeoutSeconds,
         Map<String, ModuleProvider> modules
 ) {
     record ModuleProvider(String provider, String model) {

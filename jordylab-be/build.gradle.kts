@@ -86,14 +86,24 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+// The Spring Boot bootstrap class is a single `main` method delegating to
+// SpringApplication.run — excluded from coverage like any framework entrypoint.
+val coverageExcludes = listOf("**/JordylabApplication.class")
+
 tasks.jacocoTestCoverageVerification {
+    classDirectories.setFrom(classDirectories.files.map { fileTree(it) { exclude(coverageExcludes) } })
     violationRules {
         rule {
+            element = "PACKAGE"
             limit {
                 minimum = 0.80.toBigDecimal()
             }
         }
     }
+}
+
+tasks.jacocoTestReport {
+    classDirectories.setFrom(classDirectories.files.map { fileTree(it) { exclude(coverageExcludes) } })
 }
 
 tasks.check {
