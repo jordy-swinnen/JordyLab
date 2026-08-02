@@ -35,7 +35,11 @@ class SomeObjectTestBuilder {
 
 ## Rules to follow exactly
 
-- Class is package-private (no `public` modifier), annotated with `@UtilityClass`
+- Class is package-private (no `public` modifier), annotated with `@UtilityClass`, **unless** the
+  builder is genuinely needed from tests in another package (e.g. a domain entity builder reused by
+  a service-layer test) — package-private classes are not visible cross-package, so those builders
+  must be `public class` with `public static final` fields and `public static` methods instead. Default
+  to package-private; only widen to `public` when a real cross-package caller exists
 - All default values are `public static final` fields declared at the top of the class —
   never inline literals inside the builder method
 - Assertions in tests reference these constants directly, so a value change propagates

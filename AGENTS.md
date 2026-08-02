@@ -57,9 +57,10 @@ Read these on-demand when working on related tasks — do not load all at once.
 | Doc | Read when... |
 |-----|-------------|
 | `coding-master-prompt.md` | Writing or reviewing any code (Java or Angular conventions) |
-| `jordylab-infrastructure-guide.md` | Working on NFS mounts, Ollama config, Docker networking, or AI fallback |
-| `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
-| `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
+
+Other reference docs (infrastructure guide, project setup, project overview) are planned but not
+yet written — do not cite them as if they exist. Add a row here only once the file is actually
+present in the repo.
 
 ## Shared Gotchas
 
