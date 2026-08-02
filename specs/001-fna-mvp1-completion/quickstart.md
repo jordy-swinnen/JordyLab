@@ -23,7 +23,7 @@ cd jordylab-be
 ./gradlew test --tests "dev.jordy.jordylab.shared.ai.*"
 ```
 
-**Expected**: All `ResilientAiServiceTest`, `ProviderHealthCacheTest`, `AiModuleConfigTest` pass. Tests assert per-call provider attribution, normalized failure reasons (enum values, never raw text), health-cache TTL behaviour, and bounded probe *and* call timeouts (FR-008, FR-008a — two independent timeouts, not one shared budget).
+**Expected**: All `ResilientAiServiceTest`, `ProviderHealthCacheTest`, `AiModuleConfigTest`, `RestClientConfigurationTest` pass. Tests assert per-call provider attribution, normalized failure reasons (enum values, never raw text), health-cache TTL behaviour (derived passively from real call outcomes, not a separate probe — FR-002), and the real call's timeout bound at both the app level (`call-timeout-seconds`/`Future`+interrupt, FR-008a) and the HTTP-client level (`spring.http.clients.read-timeout` backstop).
 
 ### Validate briefing job failure handling
 

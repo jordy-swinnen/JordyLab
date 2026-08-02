@@ -50,14 +50,14 @@ As the sole operator and reader of FNA, I open the briefing each morning and exp
 1. **Given** the cloud provider is reachable, **when** the daily briefing job runs, **then** a briefing is produced and metrics attribute the call to the cloud provider.
 2. **Given** the cloud provider is unreachable, **when** the daily briefing job runs, **then** the job records an explicit, named error (not a silent missing briefing), does not mark the briefing as complete, and does not retry until the next scheduled cron tick (the following 06:30).
 3. **Given** a cloud call fails mid-request, **when** the briefing job handles it, **then** the system records the failure with a reason and surfaces an explicit error; it does not silently degrade.
-4. **Given** many AI calls occur in quick succession against the same provider, **when** health status for the provider is already cached and valid, **then** no additional health probe is issued.
+4. **Given** a provider recently failed and its unhealthy status is still within the cached TTL, **when** another AI call is attempted against that provider, **then** the call fails fast from the cache without a new attempt against the provider.
 5. **Given** a developer writes an import that violates the documented library boundaries, **when** lint runs, **then** it fails and names the violated constraint.
 6. **Given** the frontend test suite runs, **when** any of the three views or the API service is exercised, **then** rendering, populated state, empty state, and error state are all covered.
 
 ### Edge cases
 
 - The cloud provider rate-limits the briefing request: the system must surface the limit explicitly as a named error and surface it as a failed briefing for that tick, not silently skip it. The next attempt is the following 06:30 cron tick.
-- Health probe itself hangs: it must time out rather than block the caller.
+- The real AI call itself hangs: it must time out (`call-timeout-seconds`, FR-008a) rather than block the caller indefinitely.
 - Backend unreachable from the frontend: each view degrades to a stated error, not an empty screen.
 
 ---
@@ -67,20 +67,26 @@ As the sole operator and reader of FNA, I open the briefing each morning and exp
 ### Functional — AI provider resilience
 
 - **FR-001**: The system MUST route all AI calls through a single resilient service that selects the provider based on per-module configuration. MVP1 wires one provider (Anthropic) for the `fna` module; the service is designed to accept additional providers without a re-architecture.
-- **FR-002**: The system MUST cache provider health status for a configurable TTL so that individual AI calls do not each incur a health probe.
+- **FR-002**: The system MUST cache provider health status for a configurable TTL so that a
+  provider known to be currently failing is short-circuited to an immediate failure result,
+  rather than being retried against on every call until the TTL expires. There is no separate
+  active health probe — health status is derived passively from the outcome of real AI calls
+  (see `ProviderHealth` in `data-model.md`).
 - **FR-003**: The system MUST treat a mid-request failure of the provider as an explicit, named error, not a silent missing briefing, and MUST surface the failure reason.
 - **FR-004**: The system MUST refresh cached health status when a runtime failure is observed.
 - **FR-005**: The system MUST fail with an explicit named error when the configured provider is unavailable, rather than silently degrading. The briefing job makes a single attempt per cron tick and does not retry until the next scheduled tick; there is no in-job retry or fallback path.
 - **FR-006**: The system MUST record, per AI call, which provider served it and which module originated it.
 - **FR-007**: The system MUST record provider failure events with the provider name and a normalized reason drawn from a fixed, bounded set (e.g., `unreachable`, `timeout`, `rate-limited`, `auth-failed`, `unknown`). Raw exception text MUST NOT be used as the recorded reason.
-- **FR-008**: Health probes MUST time out within a bounded, configured interval and MUST NOT block callers indefinitely.
+- **FR-008**: Reading cached provider health status MUST be a fast, in-memory, non-blocking
+  operation that never itself issues a network call. There is no separate active health probe
+  distinct from a real AI call (FR-002) — this requirement covers only the cache read; the bound
+  on the real call itself is FR-008a.
 - **FR-008a**: The real AI generation call MUST be bounded by its own configured timeout
-  (`call-timeout-seconds`), independent of the health-probe timeout
-  (`health-check-timeout-seconds`). A health-probe budget MUST NOT also govern the
-  substantive inference call — a real briefing generation regularly exceeds a
-  probe-scale timeout, and reusing one budget for both silently times out every
-  real invocation. On timeout, the in-flight call MUST be cancelled rather than
-  left running on a leaked thread.
+  (`call-timeout-seconds`). On timeout, the in-flight call MUST be cancelled rather than left
+  running on a leaked thread. Thread interruption alone is not a guaranteed socket-level abort
+  for the underlying HTTP client (Reactor Netty via `ReactorClientHttpRequestFactory`) — the
+  call MUST also be bounded at the HTTP-client level (`spring.http.clients.read-timeout`) as a
+  backstop.
 - **FR-009**: All AI calls in the system MUST route through the resilient service. No module may call a chat model directly.
 - **FR-010**: Provider selection MUST be configurable per module without a code change. Each module declares its provider in configuration; the resilient service routes accordingly.
 

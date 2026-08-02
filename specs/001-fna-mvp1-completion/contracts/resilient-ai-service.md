@@ -37,14 +37,19 @@ public AiCallResult call(String moduleName, String systemPrompt, String userProm
 
 - NEVER throws — all failures surface as `AiCallResult.failure(...)`.
 - NEVER records raw exception text in the failure reason (FR-007). Raw text MAY be logged at `DEBUG`/`TRACE` level but is not part of the returned contract.
-- Health probes are bounded by `health-check-timeout-seconds` (default 2s) and MUST NOT block the caller indefinitely (FR-008).
+- Reading cached health status (`isHealthy`) is a fast, in-memory, non-blocking map lookup and
+  MUST NOT block the caller (FR-008). There is no separate active health probe — health status
+  is derived passively from the outcome of real AI calls (`recordSuccess`/`recordFailure`),
+  never from an out-of-band check.
 - The real inference call — the one that produces `content` — is bounded by its own,
-  separately configured `call-timeout-seconds` (default 120s), never by
-  `health-check-timeout-seconds` (FR-008a). These two timeouts protect different
-  things: the probe timeout bounds a cheap reachability check, the call timeout
-  bounds a real completion. Reusing the probe timeout for the real call means
-  every real invocation times out in practice. On timeout, the in-flight call is
-  cancelled (`Future.cancel(true)`) rather than left running.
+  independently configured `call-timeout-seconds` (default 120s) (FR-008a). On timeout, the
+  `Future` is cancelled (`Future.cancel(true)`) rather than left running, but thread interruption
+  alone is not a guaranteed socket-level abort for the underlying HTTP client: the Anthropic call
+  runs through `AnthropicApi`'s `RestClient`, which — with only Reactor Netty on the classpath —
+  is backed by `ReactorClientHttpRequestFactory` and ultimately `Mono.block()`. Interrupting the
+  worker thread unblocks the caller but does not by itself guarantee the Netty exchange is torn
+  down. `spring.http.clients.read-timeout` (set equal to `call-timeout-seconds`) is the
+  HTTP-client-level backstop that bounds the call even if interruption doesn't propagate.
 
 ---
 
@@ -71,9 +76,10 @@ MVP1 supports one provider (`anthropic`). An unknown `moduleName` or an unmapped
 
 | Configuration key | Default | Description |
 |-------------------|---------|-------------|
-| `jordylab.ai.health-check-ttl-seconds` | `30` | Seconds before a cached health status is considered stale |
-| `jordylab.ai.health-check-timeout-seconds` | `2` | Maximum seconds for a health probe before timeout |
-| `jordylab.ai.call-timeout-seconds` | `120` | Maximum seconds for the real inference call before timeout (FR-008a) — independent of the health-probe timeout above |
+| `jordylab.ai.health-check-ttl-seconds` | `30` | Seconds before a cached health status is considered stale (no active probe — see Bounds above) |
+| `jordylab.ai.call-timeout-seconds` | `120` | Maximum seconds for the real inference call before timeout (FR-008a), app-level `Future`/interrupt bound |
+| `spring.http.clients.read-timeout` | `120s` | HTTP-client-level backstop matching `call-timeout-seconds`, for when thread interruption doesn't abort the underlying Reactor Netty exchange |
+| `spring.http.clients.connect-timeout` | `10s` | Maximum seconds to establish the TCP connection to the provider |
 
 ---
 

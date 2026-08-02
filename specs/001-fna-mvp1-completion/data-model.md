@@ -30,11 +30,11 @@ A Spring `@ConfigurationProperties` record binding `jordylab.ai.modules.*` prope
 jordylab:
   ai:
     health-check-ttl-seconds: 30
-    health-check-timeout-seconds: 2
+    call-timeout-seconds: 120
     modules:
       fna:
         provider: anthropic
-        model: claude-sonnet-4-20250514
+        model: claude-sonnet-5
 ```
 
 ### Lifecycle
@@ -53,7 +53,7 @@ A Java enum representing the bounded set of normalized failure reasons (spec FR-
 | Enum value | Trigger condition | Notes |
 |------------|-------------------|-------|
 | `UNREACHABLE` | DNS resolution failure, connection refused, unknown host | Provider is down or unreachable from the host |
-| `TIMEOUT` | `SocketTimeoutException`, health probe timeout, read timeout | Provider accepted connection but did not respond in time |
+| `TIMEOUT` | `SocketTimeoutException`, `call-timeout-seconds` exceeded, read timeout | Provider accepted connection but did not respond in time |
 | `RATE_LIMITED` | HTTP 429 from provider | Provider throttled the request |
 | `AUTH_FAILED` | HTTP 401/403 from provider | Credentials invalid or lacking permissions |
 | `UNKNOWN` | Any other exception not in the above categories | Catch-all for unrecoverable, unexpected failures |
@@ -104,24 +104,29 @@ A Java `record` returned by `ResilientAiService.call(...)` to every caller. Repl
 
 ## 4. Health status — `ProviderHealth`
 
-An immutable value object cached per provider in `ProviderHealthCache`.
+An immutable value object cached per provider in `ProviderHealthCache`. There is no separate,
+out-of-band health probe — health status is derived passively from the outcome of real AI calls.
 
 ### Fields
 
 | Field | Type | Validation | Description |
 |-------|------|------------|-------------|
 | `provider` | `String` | non-blank | Provider name |
-| `healthy` | `boolean` | — | True if the last probe succeeded |
-| `lastCheckedAt` | `Instant` | non-null | When the status was determined |
-| `ttlSeconds` | `int` | positive | Configured TTL; stale if `now - lastCheckedAt > ttlSeconds` |
+| `healthy` | `boolean` | — | True if the most recent real AI call succeeded |
+| `lastCheckedAt` | `Instant` | non-null | When the status was last updated |
+
+TTL is not stored on `ProviderHealth` itself — staleness is evaluated at read time against
+`AiModuleConfig.healthCheckTtlSeconds()`, so a single config change affects every cached entry
+uniformly.
 
 ### Lifecycle
 
-- Created by a health probe.
+- Created and replaced (never mutated) by `recordSuccess`/`recordFailure` in `ResilientAiService`,
+  called after every real AI call — not by a separate probe.
 - Cached in `ProviderHealthCache` keyed by provider name.
-- Stale entries are re-probed on the next AI call.
+- A stale entry (older than `health-check-ttl-seconds`) is treated as healthy again — the next
+  real call attempt is what determines the actual current status; no active re-probe is issued.
 - Invalidated immediately on runtime failure (FR-004) regardless of TTL.
-- Replaced (not mutated) when a new probe completes.
 
 ---
 
