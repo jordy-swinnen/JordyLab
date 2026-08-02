@@ -1,6 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "anthropic/claude-sonnet-4-6",
+  "model": "anthropic/claude-sonnet-5",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": { "baseURL": "http://localhost:11434/v1" }
+    }
+  },
   "mcp": {
     "nx-mcp": {
       "type": "local",
@@ -39,7 +45,7 @@
     },
     "sdd-build": {
       "mode": "primary",
-      "model": "ollama/qwen3.6:27b"
+      "model": "ollama/qwen3.6:27b-64k"
     }
   }
 }
