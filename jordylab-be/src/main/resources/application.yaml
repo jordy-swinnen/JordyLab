@@ -4,6 +4,15 @@ spring:
   threads:
     virtual:
       enabled: true
+  http:
+    clients:
+      connect-timeout: 10s
+      # Backstop for jordylab.ai.call-timeout-seconds: interrupting the worker thread on
+      # Future timeout doesn't guarantee the underlying Reactor Netty exchange is torn down
+      # (Mono.block() under ReactorClientHttpRequestFactory), so the HTTP client itself also
+      # bounds the call. Applies to every RestClient built from the shared builder, including
+      # Spring AI's AnthropicApi and StockPriceService's Yahoo Finance client.
+      read-timeout: 120s
   ai:
     anthropic:
       api-key: ${ANTHROPIC_API_KEY:}
@@ -14,7 +23,6 @@ spring:
 jordylab:
   ai:
     health-check-ttl-seconds: 30
-    health-check-timeout-seconds: 2
     call-timeout-seconds: 120
     modules:
       fna:

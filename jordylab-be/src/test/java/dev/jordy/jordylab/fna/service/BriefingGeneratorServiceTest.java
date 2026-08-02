@@ -57,9 +57,10 @@ class BriefingGeneratorServiceTest {
                 aiService,
                 articleRepository,
                 positionRepository,
-                briefingRepository,
-                new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH)
+                briefingRepository
         );
+        briefingGeneratorService.systemPromptResource = new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH);
+        briefingGeneratorService.init();
     }
 
     @Test

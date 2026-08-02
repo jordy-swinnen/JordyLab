@@ -8,6 +8,8 @@ import dev.jordy.jordylab.fna.domain.repository.BriefingRepository;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BriefingGeneratorService {
 
     static final String MODULE_NAME = "fna";
@@ -31,19 +34,14 @@ public class BriefingGeneratorService {
     private final ArticleRepository articleRepository;
     private final PortfolioPositionRepository positionRepository;
     private final BriefingRepository briefingRepository;
-    private final String systemPrompt;
 
-    public BriefingGeneratorService(
-            ResilientAiService aiService,
-            ArticleRepository articleRepository,
-            PortfolioPositionRepository positionRepository,
-            BriefingRepository briefingRepository,
-            @Value("classpath:prompts/fna/briefing-system.st") Resource systemPromptResource
-    ) {
-        this.aiService = aiService;
-        this.articleRepository = articleRepository;
-        this.positionRepository = positionRepository;
-        this.briefingRepository = briefingRepository;
+    @Value("classpath:prompts/fna/briefing-system.st")
+    Resource systemPromptResource;
+
+    private String systemPrompt;
+
+    @PostConstruct
+    void init() {
         this.systemPrompt = new SystemPromptTemplate(systemPromptResource).render();
     }
 

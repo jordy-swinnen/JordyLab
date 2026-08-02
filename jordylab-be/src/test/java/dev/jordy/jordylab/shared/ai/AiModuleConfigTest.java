@@ -15,7 +15,6 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 @ContextConfiguration(classes = AiConfiguration.class, initializers = ConfigDataApplicationContextInitializer.class)
 @TestPropertySource(properties = {
         "jordylab.ai.health-check-ttl-seconds=45",
-        "jordylab.ai.health-check-timeout-seconds=3",
         "jordylab.ai.call-timeout-seconds=90",
         "jordylab.ai.modules.fna.provider=anthropic",
         "jordylab.ai.modules.fna.model=claude-sonnet-5"
@@ -40,7 +39,6 @@ class AiModuleConfigTest {
     void bindsHealthCheckAndCallTimeouts() {
         assertSoftly(softly -> {
             softly.assertThat(aiModuleConfig.healthCheckTtlSeconds()).isEqualTo(45);
-            softly.assertThat(aiModuleConfig.healthCheckTimeoutSeconds()).isEqualTo(3);
             softly.assertThat(aiModuleConfig.callTimeoutSeconds()).isEqualTo(90);
         });
     }

@@ -8,7 +8,6 @@ import java.util.Map;
 class AiModuleConfigTestBuilder {
 
     public static final int DEFAULT_HEALTH_CHECK_TTL_SECONDS = 30;
-    public static final int DEFAULT_HEALTH_CHECK_TIMEOUT_SECONDS = 2;
     public static final int DEFAULT_CALL_TIMEOUT_SECONDS = 120;
 
     public static AiModuleConfig aDefaultAiModuleConfig() {
@@ -18,7 +17,6 @@ class AiModuleConfigTestBuilder {
     public static AiModuleConfig anAiModuleConfigWithTtl(int healthCheckTtlSeconds) {
         return new AiModuleConfig(
                 healthCheckTtlSeconds,
-                DEFAULT_HEALTH_CHECK_TIMEOUT_SECONDS,
                 DEFAULT_CALL_TIMEOUT_SECONDS,
                 Map.of()
         );
