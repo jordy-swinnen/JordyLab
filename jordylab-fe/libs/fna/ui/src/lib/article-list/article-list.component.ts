@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { FnaApiService } from '@jordylab-fe/fna/api';
+import { ArticleStore } from '@jordylab-fe/fna/api';
 import { ArticleListViewComponent } from './article-list-view.component';
 
 @Component({
@@ -10,6 +9,9 @@ import { ArticleListViewComponent } from './article-list-view.component';
   templateUrl: './article-list.component.html',
 })
 export class ArticleListComponent {
-  #api = inject(FnaApiService);
-  articles = toSignal(this.#api.getArticles(), { initialValue: [] });
+  #store = inject(ArticleStore);
+
+  articles = this.#store.articles;
+  loading = this.#store.loading;
+  error = this.#store.error;
 }

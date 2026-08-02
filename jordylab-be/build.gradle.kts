@@ -1,5 +1,6 @@
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "4.0.3"
     id("io.spring.dependency-management") version "1.1.7"
 }
@@ -83,4 +84,28 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// The Spring Boot bootstrap class is a single `main` method delegating to
+// SpringApplication.run — excluded from coverage like any framework entrypoint.
+val coverageExcludes = listOf("**/JordylabApplication.class")
+
+tasks.jacocoTestCoverageVerification {
+    classDirectories.setFrom(classDirectories.files.map { fileTree(it) { exclude(coverageExcludes) } })
+    violationRules {
+        rule {
+            element = "PACKAGE"
+            limit {
+                minimum = 0.80.toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.jacocoTestReport {
+    classDirectories.setFrom(classDirectories.files.map { fileTree(it) { exclude(coverageExcludes) } })
+}
+
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }

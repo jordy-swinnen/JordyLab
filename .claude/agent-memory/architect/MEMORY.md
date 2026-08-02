@@ -1,0 +1,2 @@
+- [Module state snapshot 2026-08-01](project_module_state_2026-08-01.md) — only fna+shared exist in BE/FE; garmin-sync-service has zero Python source; 3 Flyway migrations total
+- [ResilientAiService gap](finding_resilient_ai_service_gap.md) — no Ollama fallback wired up despite AGENTS.md claiming primary/fallback routing

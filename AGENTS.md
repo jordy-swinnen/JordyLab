@@ -35,13 +35,13 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 
 ## AI Routing
 
-Ollama on the main desktop (AMD RX 7900 XTX, 24GB VRAM, ROCm) is primary. Anthropic Claude API is fallback via `ResilientAiService` with health-check-and-cache pattern.
+Per-module provider selection via `ResilientAiService` with health-check-and-cache pattern. MVP1 wires one provider (Anthropic) for the `fna` module; local inference (Ollama) is deferred to a separate feature. The table below describes the target architecture — only `fna` is in scope for MVP1.
 
-| Module | Provider | Model | Rationale |
-|--------|----------|-------|-----------|
-| `fna` | Anthropic | Claude Sonnet | Financial analysis needs quality |
-| `gamecatalog` | Ollama | Mistral 7B | Descriptions are fine locally |
-| `recipe` | Ollama | Llama 3.1 8B | Cost-effective for structured tasks |
+| Module | Provider | Model | Rationale | MVP1 Status |
+|--------|----------|-------|-----------|-------------|
+| `fna` | Anthropic | Claude Sonnet | Financial analysis needs quality | **Wired** |
+| `gamecatalog` | Ollama | Mistral 7B | Descriptions are fine locally | Deferred |
+| `recipe` | Ollama | Llama 3.1 8B | Cost-effective for structured tasks | Deferred |
 
 ## Infrastructure
 
@@ -57,14 +57,15 @@ Read these on-demand when working on related tasks — do not load all at once.
 | Doc | Read when... |
 |-----|-------------|
 | `coding-master-prompt.md` | Writing or reviewing any code (Java or Angular conventions) |
-| `jordylab-infrastructure-guide.md` | Working on NFS mounts, Ollama config, Docker networking, or AI fallback |
-| `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
-| `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
+
+Other reference docs (infrastructure guide, project setup, project overview) are planned but not
+yet written — do not cite them as if they exist. Add a row here only once the file is actually
+present in the repo.
 
 ## Shared Gotchas
 
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
-- Ollama on main desktop uses ROCm (AMD GPU), not CUDA
-- `ResilientAiService` health check only verifies Ollama is running, not that a model is loaded in VRAM
-- Docker containers need the desktop's LAN IP for Ollama — verify with `docker exec jordylab curl http://<desktop-ip>:11434/api/tags`
+- Ollama on main desktop uses ROCm (AMD GPU), not CUDA — applies when local inference is wired
+- `ResilientAiService` health check only verifies Ollama is running, not that a model is loaded in VRAM — applies when local inference is wired
+- Docker containers need the desktop's LAN IP for Ollama — verify with `docker exec jordylab curl http://<desktop-ip>:11434/api/tags` (applies when local inference is wired)
 - NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off

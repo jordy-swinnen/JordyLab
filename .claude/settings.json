@@ -38,6 +38,15 @@
             "command": ".claude/hooks/post-java-modularity-check.sh"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-test-convention-check.sh"
+          }
+        ]
       }
     ]
   }

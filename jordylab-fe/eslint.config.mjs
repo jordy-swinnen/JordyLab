@@ -17,8 +17,16 @@ export default [
           allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
           depConstraints: [
             {
-              sourceTag: '*',
-              onlyDependOnLibsWithTags: ['*'],
+              sourceTag: 'type:api',
+              onlyDependOnLibsWithTags: ['type:api'],
+            },
+            {
+              sourceTag: 'type:ui',
+              onlyDependOnLibsWithTags: ['type:api', 'type:ui'],
+            },
+            {
+              sourceTag: 'scope:fna',
+              onlyDependOnLibsWithTags: ['scope:fna', 'scope:shared'],
             },
           ],
         },

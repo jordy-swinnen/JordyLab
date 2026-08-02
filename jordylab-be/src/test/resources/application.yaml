@@ -4,4 +4,4 @@ spring:
       api-key: test-key-not-used
       chat:
         options:
-          model: claude-sonnet-4-20250514
+          model: claude-sonnet-5

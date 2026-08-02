@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { FnaApiService, Briefing } from '@jordylab-fe/fna/api';
+import { Component, inject } from '@angular/core';
+import { BriefingStore } from '@jordylab-fe/fna/api';
 import { BriefingDisplayViewComponent } from './briefing-display-view.component';
 
 @Component({
@@ -8,23 +8,14 @@ import { BriefingDisplayViewComponent } from './briefing-display-view.component'
   imports: [BriefingDisplayViewComponent],
   templateUrl: './briefing-display.component.html',
 })
-export class BriefingDisplayComponent implements OnInit {
-  #api = inject(FnaApiService);
+export class BriefingDisplayComponent {
+  #store = inject(BriefingStore);
 
-  briefing = signal<Briefing | null>(null);
-  loading = signal(false);
-
-  ngOnInit(): void {
-    this.#api
-      .getLatestBriefing()
-      .subscribe((briefing) => this.briefing.set(briefing));
-  }
+  briefing = this.#store.briefing;
+  loading = this.#store.loading;
+  error = this.#store.error;
 
   generate(): void {
-    this.loading.set(true);
-    this.#api.triggerBriefing().subscribe((briefing) => {
-      this.briefing.set(briefing);
-      this.loading.set(false);
-    });
+    this.#store.generate();
   }
 }

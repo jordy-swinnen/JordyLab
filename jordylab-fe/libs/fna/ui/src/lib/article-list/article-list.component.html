@@ -1,1 +1,7 @@
-<lib-article-list-view [articles]="articles()" />
+@if (error()) {
+  <div class="py-12 text-center text-destructive">
+    <p class="text-sm">{{ error() }}</p>
+  </div>
+} @else {
+  <lib-article-list-view [articles]="articles()" [loading]="loading()" />
+}

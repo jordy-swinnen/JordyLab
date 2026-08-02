@@ -10,12 +10,16 @@
   </span>
 </div>
 
-@if (articles().length === 0) {
+@if (loading()) {
   <div class="flex items-center gap-3 py-12 text-muted-foreground">
     <span
       class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"
     ></span>
     <span class="text-sm">Fetching latest articles…</span>
+  </div>
+} @else if (articles().length === 0) {
+  <div class="py-12 text-center text-muted-foreground">
+    <p class="text-sm">No articles available.</p>
   </div>
 } @else {
   <div class="space-y-2">

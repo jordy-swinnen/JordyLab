@@ -6,23 +6,36 @@ import dev.jordy.jordylab.fna.domain.PortfolioPositionTestBuilder;
 import dev.jordy.jordylab.fna.domain.repository.ArticleRepository;
 import dev.jordy.jordylab.fna.domain.repository.BriefingRepository;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
+import dev.jordy.jordylab.shared.ai.AiCallResultTestBuilder;
+import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.core.io.ClassPathResource;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BriefingGeneratorServiceTest {
+
+    private static final String SYSTEM_PROMPT_RESOURCE_PATH = "prompts/fna/briefing-system.st";
+    private static final String SYSTEM_PROMPT =
+            new SystemPromptTemplate(new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH)).render();
+    private static final String NO_ARTICLES_FALLBACK = "No articles available yet.";
+    private static final String NO_POSITIONS_FALLBACK = "No portfolio positions configured. Provide a general European market briefing.";
+    private static final String BELGIAN_INVESTOR_PERSONA = "Belgian retail investor";
 
     @Mock
     private ResilientAiService aiService;
@@ -36,8 +49,19 @@ class BriefingGeneratorServiceTest {
     @Mock
     private BriefingRepository briefingRepository;
 
-    @InjectMocks
     private BriefingGeneratorService briefingGeneratorService;
+
+    @BeforeEach
+    void setUp() {
+        briefingGeneratorService = new BriefingGeneratorService(
+                aiService,
+                articleRepository,
+                positionRepository,
+                briefingRepository
+        );
+        briefingGeneratorService.systemPromptResource = new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH);
+        briefingGeneratorService.init();
+    }
 
     @Test
     void generatesBriefingWithArticlesAndPositions() {
@@ -47,16 +71,10 @@ class BriefingGeneratorServiceTest {
                         .build()));
         when(positionRepository.findAllByOrderByTickerAsc())
                 .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultPortfolioPosition()));
-        when(aiService.call(
-                eq("You are a financial analyst assistant for a Belgian retail investor using Bolero (KBC) as their broker.\n"
-                        + "Be concise, factual, and actionable. Focus on European and Belgian markets (BEL20, Euronext Brussels).\n"
-                        + "Structure your response with exactly these three sections:\n"
-                        + "## Portfolio Impact\n"
-                        + "## European Market Summary\n"
-                        + "## Watchlist Suggestion"),
-                contains(ArticleTestBuilder.DEFAULT_TITLE)))
-                .thenReturn("AI briefing content");
-        when(aiService.getLastUsedModel()).thenReturn("claude-sonnet-4-20250514");
+
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aDefaultSuccessResult());
 
         ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
         when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -64,21 +82,23 @@ class BriefingGeneratorServiceTest {
         Briefing result = briefingGeneratorService.generateBriefing();
 
         assertSoftly(softly -> {
-            softly.assertThat(result.getContent()).isEqualTo("AI briefing content");
-            softly.assertThat(result.getModelUsed()).isEqualTo("claude-sonnet-4-20250514");
+            softly.assertThat(result.getContent()).isEqualTo(AiCallResultTestBuilder.DEFAULT_CONTENT);
+            softly.assertThat(result.getModelUsed()).isEqualTo(AiCallResultTestBuilder.DEFAULT_MODEL);
             softly.assertThat(result.getGeneratedAt()).isNotNull();
+            softly.assertThat(userPromptCaptor.getValue()).contains(ArticleTestBuilder.DEFAULT_TITLE);
+            softly.assertThat(briefingCaptor.getValue()).isSameAs(result);
         });
     }
 
     @Test
-    void handlesEmptyArticlesWithFallbackText() {
+    void handlesEmptyArticlesAndPositionsWithFallbackText() {
         when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
         when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
 
-        ArgumentCaptor<String> systemCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> userCaptor = ArgumentCaptor.forClass(String.class);
-        when(aiService.call(systemCaptor.capture(), userCaptor.capture())).thenReturn("General briefing");
-        when(aiService.getLastUsedModel()).thenReturn("claude-sonnet-4-20250514");
+        ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), systemPromptCaptor.capture(), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aSuccessResult("General briefing"));
 
         ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
         when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -86,10 +106,43 @@ class BriefingGeneratorServiceTest {
         briefingGeneratorService.generateBriefing();
 
         assertSoftly(softly -> {
-            softly.assertThat(userCaptor.getValue()).contains("No articles available yet.");
-            softly.assertThat(userCaptor.getValue()).contains("No portfolio positions configured.");
-            softly.assertThat(systemCaptor.getValue()).contains("Belgian retail investor");
+            softly.assertThat(systemPromptCaptor.getValue()).contains(BELGIAN_INVESTOR_PERSONA);
+            softly.assertThat(userPromptCaptor.getValue()).contains(NO_ARTICLES_FALLBACK);
+            softly.assertThat(userPromptCaptor.getValue()).contains(NO_POSITIONS_FALLBACK);
             softly.assertThat(briefingCaptor.getValue().getContent()).isEqualTo("General briefing");
         });
+    }
+
+    @Test
+    void throwsAndDoesNotSaveBriefingOnAiFailure() {
+        when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
+
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aFailureResult(ProviderFailureReason.UNREACHABLE));
+
+        assertThatThrownBy(() -> briefingGeneratorService.generateBriefing())
+                .isInstanceOf(BriefingGenerationException.class)
+                .extracting(exception -> ((BriefingGenerationException) exception).getFailureReason())
+                .isEqualTo(ProviderFailureReason.UNREACHABLE);
+
+        assertThat(userPromptCaptor.getValue()).contains(NO_ARTICLES_FALLBACK);
+        verifyNoInteractions(briefingRepository);
+    }
+
+    @Test
+    void doesNotRetryWithinSameTickOnAiFailure() {
+        when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
+
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aFailureResult(ProviderFailureReason.TIMEOUT));
+
+        assertThatThrownBy(() -> briefingGeneratorService.generateBriefing())
+                .isInstanceOf(BriefingGenerationException.class);
+
+        assertThat(userPromptCaptor.getAllValues()).hasSize(1);
     }
 }

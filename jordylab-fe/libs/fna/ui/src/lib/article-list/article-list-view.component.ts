@@ -10,4 +10,5 @@ import { ArticleSummary } from '@jordylab-fe/fna/api';
 })
 export class ArticleListViewComponent {
   articles = input.required<ArticleSummary[]>();
+  loading = input.required<boolean>();
 }
