@@ -18,11 +18,11 @@ export default [
           depConstraints: [
             {
               sourceTag: 'type:api',
-              onlyDependOnLibsWithTags: ['type:api', 'type:shared'],
+              onlyDependOnLibsWithTags: ['type:api'],
             },
             {
               sourceTag: 'type:ui',
-              onlyDependOnLibsWithTags: ['type:api', 'type:ui', 'type:shared'],
+              onlyDependOnLibsWithTags: ['type:api', 'type:ui'],
             },
             {
               sourceTag: 'scope:fna',
