@@ -1,11 +1,11 @@
 {
-  "name": "fna",
+  "name": "gamecatalog",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "app",
-  "sourceRoot": "apps/fna/src",
+  "sourceRoot": "apps/gamecatalog/src",
   "tags": [
-    "scope:fna",
+    "scope:gamecatalog",
     "type:app"
   ],
   "targets": {
@@ -13,18 +13,18 @@
       "executor": "nx:run-commands",
       "cache": true,
       "inputs": [
-        "{workspaceRoot}/apps/fna/federation.config.ts",
-        "{workspaceRoot}/apps/fna/src/**/*",
-        "{workspaceRoot}/libs/fna/**/*",
+        "{workspaceRoot}/apps/gamecatalog/federation.config.ts",
+        "{workspaceRoot}/apps/gamecatalog/src/**/*",
+        "{workspaceRoot}/libs/gamecatalog/**/*",
         "{workspaceRoot}/libs/shared/**/*",
         "{workspaceRoot}/tools/federation-build.mjs"
       ],
       "outputs": [
-        "{projectRoot}/../../dist/apps/fna/browser/remoteEntry.json",
-        "{projectRoot}/../../dist/apps/fna/browser/importmap.json"
+        "{projectRoot}/../../dist/apps/gamecatalog/browser/remoteEntry.json",
+        "{projectRoot}/../../dist/apps/gamecatalog/browser/importmap.json"
       ],
       "options": {
-        "command": "node tools/federation-build.mjs --config apps/fna/federation.config.ts --output dist/apps/fna/browser --tsConfig apps/fna/tsconfig.app.json --projectName fna"
+        "command": "node tools/federation-build.mjs --config apps/gamecatalog/federation.config.ts --output dist/apps/gamecatalog/browser --tsConfig apps/gamecatalog/tsconfig.app.json --projectName gamecatalog"
       }
     },
     "build": {
@@ -36,18 +36,18 @@
         "^build"
       ],
       "options": {
-        "outputPath": "dist/apps/fna",
-        "baseHref": "/fna",
-        "browser": "apps/fna/src/main.ts",
-        "tsConfig": "apps/fna/tsconfig.app.json",
+        "outputPath": "dist/apps/gamecatalog",
+        "baseHref": "/games",
+        "browser": "apps/gamecatalog/src/main.ts",
+        "tsConfig": "apps/gamecatalog/tsconfig.app.json",
         "assets": [
           {
             "glob": "**/*",
-            "input": "apps/fna/public"
+            "input": "apps/gamecatalog/public"
           }
         ],
         "styles": [
-          "apps/fna/src/styles.css"
+          "apps/gamecatalog/src/styles.css"
         ]
       },
       "configurations": {
@@ -78,15 +78,15 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "options": {
-        "port": 4300,
-        "proxyConfig": "apps/fna/proxy.conf.json"
+        "port": 4400,
+        "proxyConfig": "apps/gamecatalog/proxy.conf.json"
       },
       "configurations": {
         "production": {
-          "buildTarget": "fna:build:production"
+          "buildTarget": "gamecatalog:build:production"
         },
         "development": {
-          "buildTarget": "fna:build:development"
+          "buildTarget": "gamecatalog:build:development"
         }
       },
       "defaultConfiguration": "development"
@@ -106,8 +106,8 @@
         "federation-build"
       ],
       "options": {
-        "buildTarget": "fna:build",
-        "staticFilePath": "dist/apps/fna/browser",
+        "buildTarget": "gamecatalog:build",
+        "staticFilePath": "dist/apps/gamecatalog/browser",
         "spa": true,
         "host": "0.0.0.0"
       }

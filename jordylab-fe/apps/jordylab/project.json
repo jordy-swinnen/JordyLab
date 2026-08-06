@@ -1,11 +1,11 @@
 {
-  "name": "fna",
+  "name": "jordylab",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "app",
-  "sourceRoot": "apps/fna/src",
+  "sourceRoot": "apps/jordylab/src",
   "tags": [
-    "scope:fna",
+    "scope:shared",
     "type:app"
   ],
   "targets": {
@@ -13,18 +13,17 @@
       "executor": "nx:run-commands",
       "cache": true,
       "inputs": [
-        "{workspaceRoot}/apps/fna/federation.config.ts",
-        "{workspaceRoot}/apps/fna/src/**/*",
-        "{workspaceRoot}/libs/fna/**/*",
+        "{workspaceRoot}/apps/jordylab/federation.config.ts",
+        "{workspaceRoot}/apps/jordylab/src/**/*",
         "{workspaceRoot}/libs/shared/**/*",
         "{workspaceRoot}/tools/federation-build.mjs"
       ],
       "outputs": [
-        "{projectRoot}/../../dist/apps/fna/browser/remoteEntry.json",
-        "{projectRoot}/../../dist/apps/fna/browser/importmap.json"
+        "{projectRoot}/../../dist/apps/jordylab/browser/remoteEntry.json",
+        "{projectRoot}/../../dist/apps/jordylab/browser/importmap.json"
       ],
       "options": {
-        "command": "node tools/federation-build.mjs --config apps/fna/federation.config.ts --output dist/apps/fna/browser --tsConfig apps/fna/tsconfig.app.json --projectName fna"
+        "command": "node tools/federation-build.mjs --config apps/jordylab/federation.config.ts --output dist/apps/jordylab/browser --tsConfig apps/jordylab/tsconfig.app.json --projectName jordylab_host --entryPoint apps/jordylab/src/main.ts"
       }
     },
     "build": {
@@ -32,22 +31,19 @@
       "outputs": [
         "{options.outputPath}"
       ],
-      "dependsOn": [
-        "^build"
-      ],
       "options": {
-        "outputPath": "dist/apps/fna",
-        "baseHref": "/fna",
-        "browser": "apps/fna/src/main.ts",
-        "tsConfig": "apps/fna/tsconfig.app.json",
+        "outputPath": "dist/apps/jordylab",
+        "baseHref": "/",
+        "browser": "apps/jordylab/src/main.ts",
+        "tsConfig": "apps/jordylab/tsconfig.app.json",
         "assets": [
           {
             "glob": "**/*",
-            "input": "apps/fna/public"
+            "input": "apps/jordylab/public"
           }
         ],
         "styles": [
-          "apps/fna/src/styles.css"
+          "apps/jordylab/src/styles.css"
         ]
       },
       "configurations": {
@@ -64,6 +60,12 @@
               "maximumError": "8kb"
             }
           ],
+          "fileReplacements": [
+            {
+              "replace": "apps/jordylab/src/environments/environment.ts",
+              "with": "apps/jordylab/src/environments/environment.prod.ts"
+            }
+          ],
           "outputHashing": "all"
         },
         "development": {
@@ -78,15 +80,15 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "options": {
-        "port": 4300,
-        "proxyConfig": "apps/fna/proxy.conf.json"
+        "port": 4200,
+        "proxyConfig": "apps/jordylab/proxy.conf.json"
       },
       "configurations": {
         "production": {
-          "buildTarget": "fna:build:production"
+          "buildTarget": "jordylab:build:production"
         },
         "development": {
-          "buildTarget": "fna:build:development"
+          "buildTarget": "jordylab:build:development"
         }
       },
       "defaultConfiguration": "development"
@@ -106,8 +108,8 @@
         "federation-build"
       ],
       "options": {
-        "buildTarget": "fna:build",
-        "staticFilePath": "dist/apps/fna/browser",
+        "buildTarget": "jordylab:build",
+        "staticFilePath": "dist/apps/jordylab/browser",
         "spa": true,
         "host": "0.0.0.0"
       }
