@@ -1,0 +1,118 @@
+{
+  "name": "gamecatalog",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/gamecatalog/src",
+  "tags": [
+    "scope:gamecatalog",
+    "type:app"
+  ],
+  "targets": {
+    "federation-build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/apps/gamecatalog/federation.config.ts",
+        "{workspaceRoot}/apps/gamecatalog/src/**/*",
+        "{workspaceRoot}/libs/gamecatalog/**/*",
+        "{workspaceRoot}/libs/shared/**/*",
+        "{workspaceRoot}/tools/federation-build.mjs"
+      ],
+      "outputs": [
+        "{projectRoot}/../../dist/apps/gamecatalog/browser/remoteEntry.json",
+        "{projectRoot}/../../dist/apps/gamecatalog/browser/importmap.json"
+      ],
+      "options": {
+        "command": "node tools/federation-build.mjs --config apps/gamecatalog/federation.config.ts --output dist/apps/gamecatalog/browser --tsConfig apps/gamecatalog/tsconfig.app.json --projectName gamecatalog"
+      }
+    },
+    "build": {
+      "executor": "./tools/executors/federation-application:default",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "dependsOn": [
+        "^build",
+        "federation-build"
+      ],
+      "options": {
+        "federationConfig": "apps/gamecatalog/federation.config.ts",
+        "outputPath": "dist/apps/gamecatalog",
+        "baseHref": "/games",
+        "browser": "apps/gamecatalog/src/main.ts",
+        "tsConfig": "apps/gamecatalog/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/gamecatalog/public"
+          }
+        ],
+        "styles": [
+          "apps/gamecatalog/src/styles.css"
+        ]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "options": {
+        "port": 4400,
+        "proxyConfig": "apps/gamecatalog/proxy.conf.json"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "gamecatalog:build:production"
+        },
+        "development": {
+          "buildTarget": "gamecatalog:build:development"
+        }
+      },
+      "defaultConfiguration": "development"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {}
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "dependsOn": [
+        "build",
+        "federation-build"
+      ],
+      "options": {
+        "buildTarget": "gamecatalog:build",
+        "staticFilePath": "dist/apps/gamecatalog/browser",
+        "spa": true,
+        "host": "0.0.0.0"
+      }
+    }
+  }
+}

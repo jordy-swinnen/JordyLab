@@ -10,14 +10,45 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@jordylab-fe/fna/api": ["libs/fna/api/src/index.ts"],
-      "@jordylab-fe/fna/ui": ["libs/fna/ui/src/index.ts"]
+      "@jordylab-fe/fna/api": [
+        "libs/fna/api/src/index.ts"
+      ],
+      "@jordylab-fe/fna/ui": [
+        "libs/fna/ui/src/index.ts"
+      ],
+      "@jordylab-fe/gamecatalog/api": [
+        "libs/gamecatalog/api/src/index.ts"
+      ],
+      "@jordylab-fe/gamecatalog/ui": [
+        "libs/gamecatalog/ui/src/index.ts"
+      ],
+      "@spartan-ng/ui-card-helm": [
+        "libs/ui/helm/ui-card-helm/src/index.ts"
+      ],
+      "@spartan-ng/ui-badge-helm": [
+        "libs/ui/helm/ui-badge-helm/src/index.ts"
+      ],
+      "@spartan-ng/ui-skeleton-helm": [
+        "libs/ui/helm/ui-skeleton-helm/src/index.ts"
+      ],
+      "@spartan-ng/ui-formfield-helm": [
+        "libs/ui/helm/ui-formfield-helm/src/index.ts"
+      ],
+      "@spartan-ng/ui-input-helm": [
+        "libs/ui/helm/ui-input-helm/src/index.ts"
+      ]
     }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
 }

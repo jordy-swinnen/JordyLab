@@ -1,0 +1,77 @@
+{
+  "realm": "jordylab",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 1800,
+  "roles": {
+    "realm": [
+      {
+        "name": "jordylab-user",
+        "description": "Default role for any user logged into JordyLab (web apps, source listings, etc.)"
+      },
+      {
+        "name": "gamecatalog-scanner",
+        "description": "Required for the downloaded scan script to POST /api/gamecatalog/ingest/scan"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "jordylab-host",
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4300/*",
+        "http://localhost:4400/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "http://localhost:4300",
+        "http://localhost:4400"
+      ],
+      "rootUrl": "http://localhost:4200",
+      "baseUrl": "http://localhost:4200",
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost:4300/*##http://localhost:4400/*"
+      }
+    },
+    {
+      "clientId": "gamecatalog-script",
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "attributes": {
+        "oauth2.device.code.grant.enabled": "true"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "jordy",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "jordy@jordylab.local",
+      "firstName": "Jordy",
+      "lastName": "Swinnen",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "jordy",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "jordylab-user",
+        "gamecatalog-scanner"
+      ]
+    }
+  ]
+}

@@ -267,3 +267,23 @@ class SomeObjectTestBuilder {
 # Spring Boot 4
 
 - Require `spring-boot-starter-flyway` dependency, not just `flyway-core`
+
+# Security / Keycloak
+
+- Backend auth is OAuth2 resource server + JWT. Issuer-uri is `${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab` in `application.yaml`.
+- Spring Security config lives in `shared/config/SecurityConfig.java`. Realm roles map to `ROLE_*` authorities via the `realm_access.roles` claim.
+- Endpoint gates:
+  - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (script, device-code client)
+  - `GET  /api/gamecatalog/ingest/script` → `hasRole("jordylab-user")` (web UI downloads it)
+  - other `/api/**` → `authenticated()` (any logged-in user)
+  - `/actuator/health`, `/actuator/info`, `/h2-console/**` → `permitAll()` (dev only)
+- CORS allowed origins configured via `jordylab.cors.allowed-origins` property (defaults to `http://localhost:4200,4300,4400` for the per-port dev servers).
+- The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan script handles its own token via Keycloak Device Authorization Grant and caches it at `~/.config/jordylab/scan/token.json`.
+
+# Game library scan flow
+
+- Users download a per-library shell script via the web UI's source-manager page → backend returns the rendered `jordylab-scan-template.sh` from `src/main/resources/scripts/`.
+- The script authenticates via Keycloak Device Authorization Grant (`POST /realms/{realm}/protocol/openid-connect/auth/device`), then POSTs a directory listing + per-source VDF contents to `/api/gamecatalog/ingest/scan`.
+- Backend `ScanService` resolves-or-creates a `ScanSource` keyed on `(hostname, libraryType)`, dispatches the listing to the matching `LibraryParser` (Steam: parses VDF; EmuDeck: walks folder structure, infers platform from parent directory name), then reconciles into the `game` table.
+- Idempotency: `ScanService` hashes the payload; same hash + source → `NO_CHANGE` (no DB churn).
+- All hot-swap of the scan pipeline goes through `LibraryParser` implementations — register a new `@Component("<SOURCE_TYPE_NAME>")` bean to support a new library.

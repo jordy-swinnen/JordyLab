@@ -13,12 +13,17 @@ spring:
       # bounds the call. Applies to every RestClient built from the shared builder, including
       # Spring AI's AnthropicApi and StockPriceService's Yahoo Finance client.
       read-timeout: 120s
-  ai:
-    anthropic:
-      api-key: ${ANTHROPIC_API_KEY:}
-      chat:
-        options:
-          model: claude-sonnet-5
+   ai:
+     anthropic:
+       api-key: ${ANTHROPIC_API_KEY:}
+       chat:
+         options:
+           model: claude-sonnet-5
+   security:
+     oauth2:
+       resourceserver:
+         jwt:
+           issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab
 
 jordylab:
   ai:
@@ -28,3 +33,24 @@ jordylab:
       fna:
         provider: anthropic
         model: claude-sonnet-5
+      gamecatalog:
+        provider: anthropic
+        model: claude-sonnet-4-20250514
+  gamecatalog:
+    artwork:
+      dir: ${GAMECATALOG_ARTWORK_DIR:/var/jordylab/artwork}
+      max-bytes: 2097152
+      external-lookup-enabled: true
+      lookup-timeout-ms: 2000
+    grace-period-days: 30
+    enrichment:
+      batch-size: 50
+      max-attempts: 3
+    chat:
+      max-result-games: 50
+    scan:
+      max-games-per-source: 10000
+      max-payload-bytes: 1048576
+      max-manifest-bytes-per-source: 262144
+  cors:
+    allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400

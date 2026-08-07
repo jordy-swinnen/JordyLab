@@ -4,13 +4,42 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/fna/src",
-  "tags": ["scope:fna"],
+  "tags": [
+    "scope:fna",
+    "type:app"
+  ],
   "targets": {
-    "build": {
-      "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+    "federation-build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/apps/fna/federation.config.ts",
+        "{workspaceRoot}/apps/fna/src/**/*",
+        "{workspaceRoot}/libs/fna/**/*",
+        "{workspaceRoot}/libs/shared/**/*",
+        "{workspaceRoot}/tools/federation-build.mjs"
+      ],
+      "outputs": [
+        "{projectRoot}/../../dist/apps/fna/browser/remoteEntry.json",
+        "{projectRoot}/../../dist/apps/fna/browser/importmap.json"
+      ],
       "options": {
+        "command": "node tools/federation-build.mjs --config apps/fna/federation.config.ts --output dist/apps/fna/browser --tsConfig apps/fna/tsconfig.app.json --projectName fna"
+      }
+    },
+    "build": {
+      "executor": "./tools/executors/federation-application:default",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "dependsOn": [
+        "^build",
+        "federation-build"
+      ],
+      "options": {
+        "federationConfig": "apps/fna/federation.config.ts",
         "outputPath": "dist/apps/fna",
+        "baseHref": "/fna",
         "browser": "apps/fna/src/main.ts",
         "tsConfig": "apps/fna/tsconfig.app.json",
         "assets": [
@@ -19,7 +48,9 @@
             "input": "apps/fna/public"
           }
         ],
-        "styles": ["apps/fna/src/styles.css"]
+        "styles": [
+          "apps/fna/src/styles.css"
+        ]
       },
       "configurations": {
         "production": {
@@ -49,6 +80,7 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "options": {
+        "port": 4300,
         "proxyConfig": "apps/fna/proxy.conf.json"
       },
       "configurations": {
@@ -71,10 +103,15 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
+      "dependsOn": [
+        "build",
+        "federation-build"
+      ],
       "options": {
         "buildTarget": "fna:build",
         "staticFilePath": "dist/apps/fna/browser",
-        "spa": true
+        "spa": true,
+        "host": "0.0.0.0"
       }
     }
   }

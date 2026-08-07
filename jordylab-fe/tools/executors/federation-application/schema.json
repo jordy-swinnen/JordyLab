@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "Federation application build",
+  "description": "Angular application build that injects native-federation shared-package externals. Wraps the stock @angular/build:application schema and adds the federationConfig field.",
+  "type": "object",
+  "allOf": [
+    { "$ref": "../../../node_modules/@angular/build/src/builders/application/schema.json" }
+  ],
+  "properties": {
+    "federationConfig": {
+      "type": "string",
+      "description": "Path to the app's federation.config.ts, relative to the workspace root. Used to derive the list of true npm shared packages to mark as external. Must be set or the executor errors out."
+    }
+  },
+  "required": ["federationConfig"]
+}
