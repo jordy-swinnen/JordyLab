@@ -2,7 +2,7 @@ name: Claude PR Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened]
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
@@ -30,12 +30,44 @@ jobs:
 
             Review this pull request against JordyLab's actual conventions,
             not generic advice. Before reviewing any file, read:
-            - AGENTS.md (root) — architecture principles, module boundaries
-            - jordylab-be/AGENTS.md — Java/Spring Modulith/Flyway conventions
-            - jordylab-fe/AGENTS.md — Angular/Nx conventions
-            - garmin-sync-service/AGENTS.md — Python conventions
-            - coding-master-prompt.md — cross-cutting code style baseline
+            - AGENTS.md (root) — architecture principles, module boundaries,
+              AI routing, secrets
+            - .claude/rules/java-spring.md — Java / Spring Boot / Modulith
+              conventions (path-scoped to **/*.java, fires on read)
+            - .claude/rules/typescript-angular.md — Angular / Nx / spartan/ui
+              conventions (path-scoped to **/*.ts + **/*.html, fires on read)
+            - .claude/rules/python.md — Python conventions for all sidecars
+              (path-scoped to **/*.py, fires on read)
+            - jordylab-be/AGENTS.md — Java/Spring Modulith/Flyway project layout
+            - jordylab-fe/AGENTS.md — Angular/Nx project layout
+            - garmin-sync-service/AGENTS.md — Python data-pump conventions
+            - gamecatalog-sync-service/AGENTS.md — Python HTTPS-push conventions
             - .specify/memory/constitution.md — project-wide coding principles
+
+            ## Spec-driven development (SDD) conformance
+
+            This repo is spec-driven: features are planned under `specs/<NNN-slug>/`
+            (spec.md, plan.md, tasks.md, contracts/) before implementation. Before
+            reviewing the diff:
+            1. Find the active spec directory. Prefer one whose slug matches the PR's
+               branch or title; otherwise use the most recently modified `specs/*/`.
+               If no `specs/` directory exists at all, skip this section entirely —
+               do not block a PR over SDD conformance on a repo with no specs yet.
+            2. Read that directory's `spec.md`, `plan.md`, `tasks.md`, and everything
+               under `contracts/`.
+            3. Cross-check the diff against them and flag, as their own review
+               comments (not folded into unrelated line comments):
+               - Behavior in the diff that isn't backed by any FR/requirement in
+                 spec.md — either the spec is stale or the change is out of scope.
+               - FRs that are clearly in this diff's scope but left unimplemented.
+               - A `contracts/*.md` file describing behavior the code doesn't
+                 actually have (e.g. a documented timeout, return contract, or
+                 config key that doesn't match the implementation) — the contract
+                 doc is supposed to be truth, not aspiration.
+               - `tasks.md` checkboxes marked `[x]` for work that isn't actually
+                 present in this diff or the existing code.
+            This is a conformance check, not a rubber stamp — if the spec and the
+            code already agree, say so briefly rather than inventing findings.
 
             Apply what those files actually say, including but not limited to:
             - Spring Modulith boundaries: module root package is the public
@@ -46,15 +78,22 @@ jobs:
               hand-written `build()`; `record` over `@Data`; entity
               equals/hashCode is inherited from BaseEntity, never
               `@EqualsAndHashCode` or Lombok-generated
-            - Testing: never `any()` in Mockito — use explicit values or
-              `ArgumentCaptor`; TestBuilder classes follow the canonical
-              `@UtilityClass` + `DEFAULT_*` + `aX()`/`aDefaultX()` shape
+            - Testing: never `any()` in Mockito — use explicit values or a
+              named, asserted `ArgumentCaptor`; an `ArgumentCaptor` created
+              inline and never assigned to a variable is `any()` in
+              disguise and is equally forbidden; TestBuilder classes follow
+              the canonical `@UtilityClass` + `DEFAULT_*` +
+              `aX()`/`aDefaultX()` shape
             - Flyway: every migration starts with `CREATE SCHEMA IF NOT
               EXISTS` and targets the correct schema; never modify an
               applied migration
             - Angular: `inject(Service)` over constructor injection; Angular
-              signals for state, never NgRx; `bun`/`bunx` only, never
-              npm/npx/yarn; Vitest + `@ngneat/spectator/vitest`, never Jest
+              signals for state, never NgRx — API-backed state lives in a
+              signal store (see `/angular-signal-store`), not scattered
+              across component fields; `bun`/`bunx` only, never npm/npx/yarn;
+              Vitest + `@ngneat/spectator/vitest`, never Jest; mock
+              dependencies with `useValue` + `vi.fn()`, never a hand-written
+              mock class + `useClass`
 
             Note: the PR branch is already checked out in the current
             working directory.
@@ -68,4 +107,4 @@ jobs:
             chat messages.
 
           claude_args: |
-            --allowedTools "Read,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"

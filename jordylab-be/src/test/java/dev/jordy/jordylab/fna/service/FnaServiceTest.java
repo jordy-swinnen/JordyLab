@@ -7,6 +7,7 @@ import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.fna.rest.controller.model.ArticleSummaryDto;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.rest.controller.model.PortfolioPositionDto;
+import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.Mockito.when;
 
@@ -119,5 +121,27 @@ class FnaServiceTest {
             softly.assertThat(dto.content()).isEqualTo(BriefingTestBuilder.DEFAULT_CONTENT);
             softly.assertThat(dto.modelUsed()).isEqualTo(BriefingTestBuilder.DEFAULT_MODEL_USED);
         });
+    }
+
+    @Test
+    void triggerBriefingReturnsMappedDtoOnSuccess() {
+        when(briefingGeneratorService.generateBriefing()).thenReturn(BriefingTestBuilder.aDefaultBriefing());
+
+        BriefingDto result = fnaService.triggerBriefing();
+
+        assertSoftly(softly -> {
+            softly.assertThat(result.id()).isEqualTo(BriefingTestBuilder.DEFAULT_ID);
+            softly.assertThat(result.content()).isEqualTo(BriefingTestBuilder.DEFAULT_CONTENT);
+            softly.assertThat(result.modelUsed()).isEqualTo(BriefingTestBuilder.DEFAULT_MODEL_USED);
+        });
+    }
+
+    @Test
+    void triggerBriefingPropagatesExceptionOnAiFailure() {
+        when(briefingGeneratorService.generateBriefing())
+                .thenThrow(new BriefingGenerationException(ProviderFailureReason.UNREACHABLE));
+
+        assertThatThrownBy(() -> fnaService.triggerBriefing())
+                .isInstanceOf(BriefingGenerationException.class);
     }
 }

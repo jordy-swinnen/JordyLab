@@ -22,6 +22,13 @@ Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 - Use zoneless mode
 - Use spartan/ui (brain + helm) for UI components
 
+# State
+
+- Use the Custom Signal Store pattern (`/angular-signal-store`) for all API-backed state — a plain `@Injectable` service in the domain's `api` lib with private writable signals, public readonly signals, and methods that call the API and mutate state directly
+- No NgRx, no `@ngrx/signals` `signalStore()` — hand-rolled services only
+- Containers `inject()` the store directly — the store *is* the facade, no separate facade layer
+- Prefer `httpResource()` only once verified stable in the installed `@angular/core` version (still `@experimental` as of 21.1.6) — default to manual signals until then
+
 # Nx Structure
 
 Three app tiers live alongside per-domain libs:
@@ -77,6 +84,11 @@ Tag new libs with the right scope + type: `--tags="scope:<domain>,type:<ui|api>"
 - In each lib's `vite.config.mts`, inline Spectator: `test.server.deps.inline: ['@ngneat/spectator']`
 - Descriptive test names explaining the scenario
 - Follow existing test patterns in the codebase
+- Never mock a dependency with a hand-written `class FooMock { ... }` + `useClass` — provide a plain object via `useValue` and mock individual methods with `vi.fn()`. For a store dependency, back its readonly signal properties with real `signal(...)` instances held at `describe` scope so tests can drive state with `.set(...)` directly, instead of injecting the mock back out and casting it
+- Never write `spectator.inject(Token) as unknown as SomeMock` — if a test needs to assert on injected state, hold a reference to the mock's own signals/spies before creating the component, not by casting the DI-resolved instance
+- Create the component once in `beforeEach`, not separately inside every `it()`
+- Fixture data lives in `libs/<domain>/api/src/lib/mocks/<interface>.model.mock.ts` — one file per interface, named after it, exporting a factory function (`aFooMock(overrides = {}) => Foo`)
+- Specs import via the barrel (`@jordylab-fe/<domain>/<layer>`), never deep-relative into another lib (`../../other-lib/src/...`)
 
 # Auth via Keycloak
 

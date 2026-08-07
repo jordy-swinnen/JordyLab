@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.fna.domain.PortfolioPosition;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,23 +18,15 @@ import java.util.Optional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class StockPriceService {
 
     private final RestClient restClient;
     private final PortfolioPositionRepository positionRepository;
-    private final String yahooFinanceBaseUrl;
     private final ObjectMapper objectMapper;
 
-    public StockPriceService(RestClient restClient,
-                             PortfolioPositionRepository positionRepository,
-                             @Value("${fna.yahoo-finance.base-url:https://query1.finance.yahoo.com}") String yahooFinanceBaseUrl,
-                             ObjectMapper objectMapper
-    ) {
-        this.restClient = restClient;
-        this.positionRepository = positionRepository;
-        this.yahooFinanceBaseUrl = yahooFinanceBaseUrl;
-        this.objectMapper = objectMapper;
-    }
+    @Value("${fna.yahoo-finance.base-url:https://query1.finance.yahoo.com}")
+    String yahooFinanceBaseUrl;
 
     public Optional<BigDecimal> fetchPrice(String ticker) {
         try {

@@ -22,10 +22,15 @@ this means Lombok `@Builder` exclusively — no manual constructors — and
 Tests are isolated and deterministic. Use `assertSoftly` for multiple
 assertions, the Test Builder pattern for fixtures, and descriptive test names
 that explain the scenario. Java tooling: JUnit 5, AssertJ, Mockito (never
-`any()` — use explicit values or `ArgumentCaptor`), Testcontainers, WireMock,
-MockMvc with `@Language("JSON")` for JSON assertions. Angular tooling: Vitest
-with `@ngneat/spectator/vitest` — never Jest — plus marble testing for
-observables.
+`any()` — use explicit values or `ArgumentCaptor`; an `ArgumentCaptor` created
+inline and never assigned to a variable is `any()` in disguise and is
+forbidden the same way — a captor must be assigned and its captured value
+asserted), Testcontainers, WireMock, MockMvc with `@Language("JSON")` for JSON
+assertions. Angular tooling: Vitest with `@ngneat/spectator/vitest` — never
+Jest — plus marble testing for observables. Never mock a dependency with a
+hand-written mock class + `useClass`; provide a plain object via `useValue`
+with `vi.fn()` for methods and real `signal(...)` instances for reactive
+state.
 
 ### V. Language & Tooling Currency
 Use the most up-to-date language and framework features: Java 25 on the
@@ -37,8 +42,10 @@ TypeScript `private` in Angular.
 <!-- Technology stack requirements -->
 
 - **Architecture patterns**: Container–Presentation component separation;
-  Angular signals for state — no NgRx store; barrel imports for clean import
-  paths; clear separation of UI, business logic, and data access layers.
+  Angular signals for state — no NgRx store; API-backed state lives in a
+  signal store (`/angular-signal-store`) in the domain's `api` lib, not in
+  the container component; barrel imports for clean import paths; clear
+  separation of UI, business logic, and data access layers.
 - **Java**: Lombok used liberally to reduce boilerplate; `@UtilityClass` for
   utility classes.
 - **Test Builders**: suffixed `TestBuilder`, marked `@UtilityClass`, exposing
@@ -53,4 +60,4 @@ per-subproject conventions, defer to the root [AGENTS.md](../../AGENTS.md)
 and the three subproject `AGENTS.md` files — this constitution covers
 project-wide coding principles, not operational detail.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-08-01
+**Version**: 1.1.0 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-08-02

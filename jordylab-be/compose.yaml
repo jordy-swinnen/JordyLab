@@ -1,3 +1,14 @@
+# Local dev infra only. The backend itself runs via `./gradlew bootRun` and reads
+# the same `.env` for the Keycloak URL, ingest token (deprecated), and artwork dir.
+#
+# The artwork directory is a host filesystem path (no compose volume here) — in
+# dev, point `GAMECATALOG_ARTWORK_DIR` at a local dir like `/tmp/jordylab-artwork`.
+# In prod (Hetzner VPS), the same env var maps a bind-mounted volume on the
+# backend container so uploaded artwork survives restarts.
+#
+# Keycloak stores its tables in a dedicated `keycloak` schema inside the shared
+# pgvector container (initialised by compose/keycloak-init.sql on first boot).
+# The dev realm is auto-imported from compose/keycloak-realm-export.json.
 services:
   ollama:
     image: 'ollama/ollama:latest'
@@ -13,3 +24,27 @@ services:
       - "org.springframework.boot.service-connection=postgres"
     ports:
       - '5432'
+    volumes:
+      - './compose/keycloak-init.sql:/docker-entrypoint-initdb.d/00-keycloak-schema.sql:ro'
+  keycloak:
+    image: 'quay.io/keycloak/keycloak:26.3.2'
+    command: ['start-dev', '--import-realm']
+    environment:
+      - 'KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN}'
+      - 'KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}'
+      - 'KC_DB=postgres'
+      - 'KC_DB_URL=jdbc:postgresql://pgvector:5432/jordylab'
+      - 'KC_DB_USERNAME=${POSTGRES_USER}'
+      - 'KC_DB_PASSWORD=${POSTGRES_PASSWORD}'
+      - 'KC_DB_SCHEMA=keycloak'
+      - 'KC_HOSTNAME=localhost'
+      - 'KC_HOSTNAME_PORT=8180'
+      - 'KC_HTTP_PORT=8080'
+    labels:
+      - "org.springframework.boot.service-connection=keycloak"
+    depends_on:
+      - pgvector
+    ports:
+      - '8180:8080'
+    volumes:
+      - './compose/keycloak-realm-export.json:/opt/keycloak/data/import/jordylab-realm.json:ro'

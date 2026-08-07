@@ -1,8 +1,8 @@
 package dev.jordy.jordylab.shared.ai;
 
+import dev.jordy.jordylab.shared.util.MutableClock;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
@@ -11,92 +11,61 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ProviderHealthCacheTest {
 
     private static final Instant NOW = Instant.parse("2026-08-01T12:00:00Z");
+    private static final String PROVIDER = "anthropic";
+    private static final int TTL_SECONDS = 30;
 
     @Test
     void healthyWhenNoEntryExists() {
-        ProviderHealthCache cache = new ProviderHealthCache(configWithTtl(30), fixedClock(NOW));
+        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
 
-        boolean result = cache.isHealthy("anthropic");
+        boolean result = cache.isHealthy(PROVIDER);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void healthyAfterSuccess() {
-        ProviderHealthCache cache = new ProviderHealthCache(configWithTtl(30), fixedClock(NOW));
+        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
 
-        cache.recordSuccess("anthropic");
-        boolean result = cache.isHealthy("anthropic");
+        cache.recordSuccess(PROVIDER);
+        boolean result = cache.isHealthy(PROVIDER);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void unhealthyAfterFailure() {
-        ProviderHealthCache cache = new ProviderHealthCache(configWithTtl(30), fixedClock(NOW));
+        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
 
-        cache.recordFailure("anthropic");
-        boolean result = cache.isHealthy("anthropic");
+        cache.recordFailure(PROVIDER);
+        boolean result = cache.isHealthy(PROVIDER);
 
         assertThat(result).isFalse();
     }
 
     @Test
     void reProbesAfterTtlExpiry() {
-        MutableClock clock = fixedClock(NOW);
-        ProviderHealthCache cache = new ProviderHealthCache(configWithTtl(30), clock);
+        MutableClock clock = fixedClock();
+        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.anAiModuleConfigWithTtl(TTL_SECONDS), clock);
 
-        cache.recordSuccess("anthropic");
-        clock.setInstant(NOW.plusSeconds(35));
-        boolean result = cache.isHealthy("anthropic");
+        cache.recordSuccess(PROVIDER);
+        clock.setInstant(NOW.plusSeconds(TTL_SECONDS + 5));
+        boolean result = cache.isHealthy(PROVIDER);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void failureInvalidatesCachedHealth() {
-        ProviderHealthCache cache = new ProviderHealthCache(configWithTtl(30), fixedClock(NOW));
+        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
 
-        cache.recordSuccess("anthropic");
-        cache.recordFailure("anthropic");
+        cache.recordSuccess(PROVIDER);
+        cache.recordFailure(PROVIDER);
 
-        assertThat(cache.isHealthy("anthropic")).isFalse();
+        assertThat(cache.isHealthy(PROVIDER)).isFalse();
     }
 
-    private AiModuleConfig configWithTtl(int ttlSeconds) {
-        return new AiModuleConfig(ttlSeconds, 2, java.util.Map.of());
-    }
-
-    private MutableClock fixedClock(Instant instant) {
-        return new MutableClock(instant, ZoneOffset.UTC);
-    }
-
-    private static final class MutableClock extends Clock {
-        private Instant instant;
-        private final ZoneOffset zone;
-
-        MutableClock(Instant instant, ZoneOffset zone) {
-            this.instant = instant;
-            this.zone = zone;
-        }
-
-        void setInstant(Instant instant) {
-            this.instant = instant;
-        }
-
-        @Override
-        public ZoneOffset getZone() {
-            return zone;
-        }
-
-        @Override
-        public Clock withZone(java.time.ZoneId zoneId) {
-            return new MutableClock(instant, ZoneOffset.of(zoneId.getId()));
-        }
-
-        @Override
-        public Instant instant() {
-            return instant;
-        }
+    private MutableClock fixedClock() {
+        return new MutableClock(NOW, ZoneOffset.UTC);
     }
 }

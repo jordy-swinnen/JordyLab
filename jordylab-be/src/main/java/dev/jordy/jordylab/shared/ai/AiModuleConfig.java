@@ -7,7 +7,7 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "jordylab.ai")
 record AiModuleConfig(
         int healthCheckTtlSeconds,
-        int healthCheckTimeoutSeconds,
+        int callTimeoutSeconds,
         Map<String, ModuleProvider> modules
 ) {
     record ModuleProvider(String provider, String model) {

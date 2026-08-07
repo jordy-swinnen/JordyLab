@@ -1,9 +1,10 @@
-package dev.jordy.jordylab.fna.domain;
+package dev.jordy.jordylab.fna.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import dev.jordy.jordylab.fna.domain.PortfolioPosition;
+import dev.jordy.jordylab.fna.domain.PortfolioPositionTestBuilder;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
-import dev.jordy.jordylab.fna.service.StockPriceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +32,8 @@ class StockPriceServiceTest {
     @BeforeEach
     void setUp() {
         RestClient restClient = RestClient.builder().build();
-        stockPriceService = new StockPriceService(restClient, positionRepository, "http://localhost:9999", new ObjectMapper());
+        stockPriceService = new StockPriceService(restClient, positionRepository, new ObjectMapper());
+        stockPriceService.yahooFinanceBaseUrl = "http://localhost:9999";
     }
 
     @Test

@@ -5,7 +5,13 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '**/out-tsc', '**/vitest.config.*.timestamp*'],
+    ignores: [
+      '**/dist',
+      '**/out-tsc',
+      '**/vitest.config.*.timestamp*',
+      // Vendored spartan/ui helm source: upstream code checked in for styling, not maintained here
+      'libs/ui/helm/**/*',
+    ],
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
@@ -18,15 +24,23 @@ export default [
           depConstraints: [
             {
               sourceTag: 'type:api',
-              onlyDependOnLibsWithTags: ['type:api', 'type:shared'],
+              onlyDependOnLibsWithTags: ['type:api'],
             },
             {
               sourceTag: 'type:ui',
-              onlyDependOnLibsWithTags: ['type:api', 'type:ui', 'type:shared'],
+              onlyDependOnLibsWithTags: ['type:api', 'type:ui'],
+            },
+            {
+              sourceTag: 'type:app',
+              onlyDependOnLibsWithTags: ['scope:fna', 'scope:gamecatalog', 'scope:shared'],
             },
             {
               sourceTag: 'scope:fna',
               onlyDependOnLibsWithTags: ['scope:fna', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:gamecatalog',
+              onlyDependOnLibsWithTags: ['scope:gamecatalog', 'scope:shared'],
             },
           ],
         },

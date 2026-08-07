@@ -9,6 +9,8 @@ Skills (invoke with `/skill-name`):
 - `/modularity-check` — run Spring Modulith boundary tests and fix violations
 - `/new-module` — scaffold a full module (backend DDD structure + frontend Nx libs)
 - `/ai-endpoint` — wire up a ResilientAiService integration for a module
+- `/angular-signal-store` — generate an NgRx-free signal-based state service for an Angular domain
+- `/angular-test` — Angular/Vitest testing conventions (mocking, spec structure, mock fixtures)
 - `/dual-agent-config` — set up and audit shared config so Claude Code and OpenCode read the same rules/skills/MCP servers
 - `trading-guard` — background rules for the trading module (human-in-the-loop enforcement, not user-invocable)
 
@@ -18,4 +20,4 @@ Agents (run automatically by Claude):
 - `architect` — read-only codebase exploration for architecture questions
 
 MCP servers:
-- `nx-mcp` — configured in `jordylab-fe/.mcp.json` (Nx graph, project info)
+- `nx-mcp` — configured in `.mcp.json` (repo root; also defines the `github` MCP server)

@@ -8,8 +8,12 @@ import dev.jordy.jordylab.fna.domain.repository.BriefingRepository;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BriefingGeneratorService {
 
-    private static final String SYSTEM_PROMPT = """
-            You are a financial analyst assistant for a Belgian retail investor using Bolero (KBC) as their broker.
-            Be concise, factual, and actionable. Focus on European and Belgian markets (BEL20, Euronext Brussels).
-            Structure your response with exactly these three sections:
-            ## Portfolio Impact
-            ## European Market Summary
-            ## Watchlist Suggestion""";
+    static final String MODULE_NAME = "fna";
 
     private static final int MAX_CONTENT_PREVIEW = 500;
 
@@ -36,6 +34,16 @@ public class BriefingGeneratorService {
     private final ArticleRepository articleRepository;
     private final PortfolioPositionRepository positionRepository;
     private final BriefingRepository briefingRepository;
+
+    @Value("classpath:prompts/fna/briefing-system.st")
+    Resource systemPromptResource;
+
+    private String systemPrompt;
+
+    @PostConstruct
+    void init() {
+        this.systemPrompt = new SystemPromptTemplate(systemPromptResource).render();
+    }
 
     @Scheduled(cron = "0 30 6 * * *")
     public Briefing generateBriefing() {
@@ -50,11 +58,12 @@ public class BriefingGeneratorService {
                 + "\n\nAnalyse how today's news affects my portfolio positions, summarise the broader European market themes, "
                 + "and suggest one ticker I don't currently hold that looks interesting based on today's news.";
 
-        AiCallResult result = aiService.call("fna", SYSTEM_PROMPT, userPrompt);
+        AiCallResult result = aiService.call(MODULE_NAME, systemPrompt, userPrompt);
 
         if (!result.success()) {
             log.error("Briefing generation failed: {}", result.failureReason());
-            return null;
+
+            throw new BriefingGenerationException(result.failureReason());
         }
 
         return briefingRepository.save(
