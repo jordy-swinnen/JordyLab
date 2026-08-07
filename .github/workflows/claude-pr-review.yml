@@ -2,7 +2,7 @@ name: Claude PR Review
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
