@@ -28,14 +28,16 @@
       }
     },
     "build": {
-      "executor": "@angular/build:application",
+      "executor": "./tools/executors/federation-application:default",
       "outputs": [
         "{options.outputPath}"
       ],
       "dependsOn": [
-        "^build"
+        "^build",
+        "federation-build"
       ],
       "options": {
+        "federationConfig": "apps/fna/federation.config.ts",
         "outputPath": "dist/apps/fna",
         "baseHref": "/fna",
         "browser": "apps/fna/src/main.ts",

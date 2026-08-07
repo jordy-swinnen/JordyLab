@@ -27,11 +27,16 @@
       }
     },
     "build": {
-      "executor": "@angular/build:application",
+      "executor": "./tools/executors/federation-application:default",
       "outputs": [
         "{options.outputPath}"
       ],
+      "dependsOn": [
+        "^build",
+        "federation-build"
+      ],
       "options": {
+        "federationConfig": "apps/jordylab/federation.config.ts",
         "outputPath": "dist/apps/jordylab",
         "baseHref": "/",
         "browser": "apps/jordylab/src/main.ts",
@@ -108,7 +113,7 @@
         "federation-build"
       ],
       "options": {
-        "buildTarget": "jordylab:build",
+        "buildTarget": "jordylab:build:development",
         "staticFilePath": "dist/apps/jordylab/browser",
         "spa": true,
         "host": "0.0.0.0"

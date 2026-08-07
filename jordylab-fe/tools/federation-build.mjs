@@ -124,7 +124,65 @@ async function main() {
     process.on('SIGTERM', shutdown);
   } else {
     await builder.close();
+    injectImportMapIntoIndexHtml({ workspaceRoot, outputAbs });
   }
+}
+
+/**
+ * Inlines the generated importmap.json contents into dist/<app>/browser/index.html
+ * as a <script type="importmap"> tag, positioned inside <head> before any
+ * <script type="module">. Required so the browser can resolve bare imports of
+ * shared packages (e.g. @angular/core) at module load time, BEFORE main.js's
+ * static imports are requested (since import maps added dynamically after
+ * document load do not apply to static imports).
+ *
+ * Per the import-maps spec, the importmap script MUST be inline (no `src` attr)
+ * and MUST appear before any module script in document order. Spec section
+ * 2.4.2 also requires relative URLs in the importmap to start with `/`, `./`,
+ * or `../` — bare paths like `_angular_core.abc.js` are invalid and the
+ * browser resolves them to `null`. We prefix every value with `./` if it
+ * doesn't already start with one.
+ */
+function injectImportMapIntoIndexHtml({ workspaceRoot, outputAbs }) {
+  const importMapPath = path.join(outputAbs, 'importmap.json');
+  const indexHtmlPath = path.join(outputAbs, 'index.html');
+
+  if (!fs.existsSync(importMapPath)) {
+    console.warn(`[federation-build] no importmap.json at ${importMapPath}; skipping index.html injection`);
+    return;
+  }
+  if (!fs.existsSync(indexHtmlPath)) {
+    console.warn(`[federation-build] no index.html at ${indexHtmlPath}; skipping importmap injection`);
+    return;
+  }
+
+  const rawMap = JSON.parse(fs.readFileSync(importMapPath, 'utf-8'));
+  const normalized = {
+    ...rawMap,
+    imports: Object.fromEntries(
+      Object.entries(rawMap.imports ?? {}).map(([k, v]) => [
+        k,
+        typeof v === 'string' && !/^(https?:|\/|\.\/|\.\.\/)/.test(v) ? `./${v}` : v,
+      ]),
+    ),
+  };
+  const importMapTag = `<script type="importmap" id="jordylab-federation-importmap">${JSON.stringify(normalized)}</script>`;
+
+  let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+
+  const existingTagRegex = /<script type="importmap" id="jordylab-federation-importmap"[^>]*>[\s\S]*?<\/script>/;
+  if (existingTagRegex.test(html)) {
+    html = html.replace(existingTagRegex, importMapTag);
+  } else {
+    const headCloseIndex = html.indexOf('</head>');
+    if (headCloseIndex === -1) {
+      throw new Error(`[federation-build] cannot find </head> in ${indexHtmlPath}`);
+    }
+    html = html.slice(0, headCloseIndex) + importMapTag + '\n' + html.slice(headCloseIndex);
+  }
+
+  fs.writeFileSync(indexHtmlPath, html);
+  console.log(`[federation-build] inlined importmap into ${path.relative(workspaceRoot, indexHtmlPath)}`);
 }
 
 function pathToFileUrl(p) {

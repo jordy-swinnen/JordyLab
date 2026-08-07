@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/executors-schema.json",
+  "executors": {
+    "default": {
+      "implementation": "./implementation.mjs",
+      "schema": "./schema.json",
+      "description": "Angular application build with native-federation shared-package externals injection. Loads the app's federation.config.ts, derives the list of true npm shared packages, and marks them as external in the Angular esbuild pipeline via codePlugins. Workspace-internal aliases (@jordylab-fe/*, helm overrides) are intentionally NOT externalized — they are bundled inline so standalone remote runs resolve them at compile time."
+    }
+  }
+}

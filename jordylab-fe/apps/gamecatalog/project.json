@@ -28,14 +28,16 @@
       }
     },
     "build": {
-      "executor": "@angular/build:application",
+      "executor": "./tools/executors/federation-application:default",
       "outputs": [
         "{options.outputPath}"
       ],
       "dependsOn": [
-        "^build"
+        "^build",
+        "federation-build"
       ],
       "options": {
+        "federationConfig": "apps/gamecatalog/federation.config.ts",
         "outputPath": "dist/apps/gamecatalog",
         "baseHref": "/games",
         "browser": "apps/gamecatalog/src/main.ts",

@@ -1,0 +1,8 @@
+{
+  "name": "@jordylab-fe/federation-application",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./implementation.mjs",
+  "executors": "./executors.json"
+}
