@@ -30,18 +30,11 @@ jobs:
 
             Review this pull request against JordyLab's actual conventions,
             not generic advice. Before reviewing any file, read:
-            - AGENTS.md (root) — architecture principles, module boundaries,
-              AI routing, secrets
-            - .claude/rules/java-spring.md — Java / Spring Boot / Modulith
-              conventions (path-scoped to **/*.java, fires on read)
-            - .claude/rules/typescript-angular.md — Angular / Nx / spartan/ui
-              conventions (path-scoped to **/*.ts + **/*.html, fires on read)
-            - .claude/rules/python.md — Python conventions for all sidecars
-              (path-scoped to **/*.py, fires on read)
-            - jordylab-be/AGENTS.md — Java/Spring Modulith/Flyway project layout
-            - jordylab-fe/AGENTS.md — Angular/Nx project layout
-            - garmin-sync-service/AGENTS.md — Python data-pump conventions
-            - gamecatalog-sync-service/AGENTS.md — Python HTTPS-push conventions
+            - AGENTS.md (root) — architecture principles, module boundaries
+            - jordylab-be/AGENTS.md — Java/Spring Modulith/Flyway conventions
+            - jordylab-fe/AGENTS.md — Angular/Nx conventions
+            - garmin-sync-service/AGENTS.md — Python conventions
+            - coding-master-prompt.md — cross-cutting code style baseline
             - .specify/memory/constitution.md — project-wide coding principles
 
             ## Spec-driven development (SDD) conformance
