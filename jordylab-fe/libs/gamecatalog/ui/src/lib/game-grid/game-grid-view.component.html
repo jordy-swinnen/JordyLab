@@ -1,0 +1,136 @@
+<div class="mb-8 flex flex-wrap items-baseline justify-between gap-4">
+  <h2
+    class="text-3xl tracking-tight text-foreground"
+    style="font-family: 'Instrument Serif', serif"
+  >
+    Game Catalog
+  </h2>
+  <span class="text-xs uppercase tracking-widest text-muted-foreground">
+    {{ totalElements() }} games
+  </span>
+</div>
+
+<div class="mb-6 flex flex-col gap-4">
+  <input
+    hlmInput
+    type="search"
+    placeholder="Search by title…"
+    aria-label="Search games by title"
+    class="max-w-sm"
+    (input)="onSearchInput($event)"
+  />
+  @if (platforms().length > 0) {
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        hlmBadge
+        [variant]="selectedPlatform() === null ? 'default' : 'outline'"
+        (click)="onPlatformClick(null)"
+      >
+        All
+      </button>
+      @for (platform of platforms(); track platform) {
+        <button
+          type="button"
+          hlmBadge
+          [variant]="selectedPlatform() === platform ? 'default' : 'outline'"
+          (click)="onPlatformClick(platform)"
+        >
+          {{ platform }}
+        </button>
+      }
+    </div>
+  }
+</div>
+
+@if (loading()) {
+  <div
+    class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+    aria-label="Loading games"
+  >
+    @for (card of skeletonCards; track card) {
+      <div hlmCard class="overflow-hidden">
+        <hlm-skeleton class="aspect-[2/3] w-full" />
+        <div class="space-y-2 p-3">
+          <hlm-skeleton class="h-4 w-3/4" />
+          <hlm-skeleton class="h-3 w-1/3" />
+        </div>
+      </div>
+    }
+  </div>
+} @else if (error()) {
+  <div class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+    {{ error() }}
+  </div>
+} @else if (games().length === 0) {
+  <div class="py-16 text-center text-muted-foreground">
+    <p class="text-sm">No games discovered yet.</p>
+    <p class="mt-1 text-xs">
+      Once JordyBox syncs your libraries, installed games will appear here.
+    </p>
+  </div>
+} @else {
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    @for (game of games(); track game.id) {
+      <a
+        hlmCard
+        [routerLink]="['/games', game.id]"
+        class="group block cursor-pointer overflow-hidden transition-colors duration-200 hover:border-primary/50"
+      >
+        @if (artworkUrl(game); as artworkSrc) {
+          <img
+            [src]="artworkSrc"
+            [alt]="game.title + ' artwork'"
+            class="aspect-[2/3] w-full object-cover"
+            loading="lazy"
+          />
+        } @else {
+          <div
+            class="flex aspect-[2/3] w-full items-center justify-center bg-muted text-muted-foreground"
+            [attr.aria-label]="'No artwork for ' + game.title"
+          >
+            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M11 4.5 6.5 9H3v6h3.5L11 19.5v-15ZM15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"
+              />
+            </svg>
+          </div>
+        }
+        <div class="space-y-2 p-3">
+          <h3 class="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+            {{ game.title }}
+          </h3>
+          <span hlmBadge variant="secondary" class="text-[10px]">{{ game.platform }}</span>
+        </div>
+      </a>
+    }
+  </div>
+
+  @if (totalPages() > 1) {
+    <div class="mt-8 flex items-center justify-center gap-4">
+      <button
+        type="button"
+        hlmBadge
+        variant="outline"
+        [disabled]="page() === 0"
+        [class.opacity-40]="page() === 0"
+        (click)="onPreviousPage()"
+      >
+        Previous
+      </button>
+      <span class="text-xs text-muted-foreground">Page {{ page() + 1 }} of {{ totalPages() }}</span>
+      <button
+        type="button"
+        hlmBadge
+        variant="outline"
+        [disabled]="page() >= totalPages() - 1"
+        [class.opacity-40]="page() >= totalPages() - 1"
+        (click)="onNextPage()"
+      >
+        Next
+      </button>
+    </div>
+  }
+}

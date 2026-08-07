@@ -1,0 +1,53 @@
+<div class="noise-bg min-h-screen">
+  <header
+    class="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl"
+  >
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-8">
+      <div class="flex items-center gap-8">
+        <a routerLink="/grid" class="flex items-baseline gap-1.5">
+          <span
+            class="font-serif text-2xl italic tracking-tight text-primary"
+            style="font-family: 'Instrument Serif', serif"
+          >
+            Game Catalog
+          </span>
+        </a>
+        <nav class="flex gap-0.5">
+          <a
+            routerLink="/grid"
+            routerLinkActive="bg-accent text-foreground"
+            hlmBtn
+            variant="ghost"
+            size="sm"
+            class="text-muted-foreground transition-all duration-200"
+          >
+            Library
+          </a>
+          <a
+            routerLink="/chat"
+            routerLinkActive="bg-accent text-foreground"
+            hlmBtn
+            variant="ghost"
+            size="sm"
+            class="text-muted-foreground transition-all duration-200"
+          >
+            Chat
+          </a>
+          <a
+            routerLink="/sources"
+            routerLinkActive="bg-accent text-foreground"
+            hlmBtn
+            variant="ghost"
+            size="sm"
+            class="text-muted-foreground transition-all duration-200"
+          >
+            Sources
+          </a>
+        </nav>
+      </div>
+    </div>
+  </header>
+  <main class="mx-auto max-w-6xl px-8 py-10">
+    <router-outlet />
+  </main>
+</div>

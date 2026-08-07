@@ -1,0 +1,124 @@
+<div class="mb-8 grid gap-4 md:grid-cols-2">
+  <div hlmCard class="p-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-medium text-foreground">Steam</h3>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Scans the Steam library on this PC. Walks <code>steamapps/</code> and
+          reads each <code>appmanifest_&lt;appid&gt;.acf</code>.
+        </p>
+      </div>
+      <button
+        hlmBtn
+        variant="default"
+        size="sm"
+        [disabled]="downloading() !== null"
+        (click)="downloadScript.emit('steam')"
+        data-testid="download-steam-script"
+      >
+        @if (downloading() === 'steam') { Generating... } @else { Download script }
+      </button>
+    </div>
+  </div>
+
+  <div hlmCard class="p-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h3 class="text-lg font-medium text-foreground">EmuDeck</h3>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Scans EmuDeck emulator subfolders (you pick which ones when the
+          script runs). One source per hostname.
+        </p>
+      </div>
+      <button
+        hlmBtn
+        variant="default"
+        size="sm"
+        [disabled]="downloading() !== null"
+        (click)="downloadScript.emit('emudeck')"
+        data-testid="download-emudeck-script"
+      >
+        @if (downloading() === 'emudeck') { Generating... } @else { Download script }
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="mb-4 flex items-baseline justify-between">
+  <h2
+    class="text-2xl tracking-tight text-foreground"
+    style="font-family: 'Instrument Serif', serif"
+  >
+    Scan Sources
+  </h2>
+  <span class="text-xs uppercase tracking-widest text-muted-foreground">
+    {{ sources().length }} sources
+  </span>
+</div>
+
+@if (error()) {
+  <div class="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+    {{ error() }}
+  </div>
+}
+
+@if (loading()) {
+  <div class="space-y-3" aria-label="Loading sources">
+    @for (row of [1, 2, 3]; track row) {
+      <hlm-skeleton class="h-20 w-full rounded-lg" />
+    }
+  </div>
+} @else if (sources().length === 0) {
+  <div class="py-12 text-center text-muted-foreground">
+    <p class="text-sm">No scan sources announced yet.</p>
+    <p class="mt-1 text-xs">Download a script above, run it on a host, and the source appears after its first scan.</p>
+  </div>
+} @else {
+  <div class="space-y-3">
+    @for (source of sources(); track source.id) {
+      <div hlmCard class="flex flex-wrap items-center justify-between gap-4 p-4">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-foreground">{{ source.sourceKey }}</span>
+            <span hlmBadge variant="secondary" class="text-[10px]">{{ source.platform }}</span>
+            <span hlmBadge variant="outline" class="text-[10px]">
+              {{ sourceTypeLabel(source.sourceType) }}
+            </span>
+          </div>
+          <p class="mt-1 truncate text-xs text-muted-foreground" [title]="source.hostname">hostname: {{ source.hostname }}</p>
+          <p class="mt-1 text-xs text-muted-foreground">
+            {{ source.installedGameCount }} installed
+            @if (source.lastAttemptAt) {
+              · last sync {{ source.lastAttemptAt | date: 'MMM d, h:mm a' }}
+            } @else {
+              · never synced
+            }
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          @if (source.lastOutcome) {
+            <span hlmBadge [variant]="outcomeVariant(source.lastOutcome)" class="text-[10px]">
+              {{ source.lastOutcome }}
+            </span>
+          }
+          <button
+            type="button"
+            role="switch"
+            [attr.aria-checked]="source.enabled"
+            [attr.aria-label]="'Toggle ' + source.sourceKey"
+            [disabled]="togglingId() === source.id"
+            (click)="toggleSource.emit(source)"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200"
+            [class]="source.enabled ? 'bg-primary' : 'bg-muted'"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200"
+              [class]="source.enabled ? 'translate-x-6' : 'translate-x-1'"
+            ></span>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}
