@@ -2169,6 +2169,7 @@ def run_scan(args, constants):
                 }
             )
             _record(state)
+            LOGGER.info("%s library unchanged since the last scan; nothing uploaded", library_type)
 
             return EXIT_OK
 
@@ -2199,6 +2200,7 @@ def run_scan(args, constants):
         if outcome in ("APPLIED", "NO_CHANGE"):
             state["exitCode"] = EXIT_OK
             _record(state)
+            LOGGER.info("%s scan %s: %s", library_type, outcome, json.dumps(response.get("counts") or {}))
 
             return EXIT_OK
 
