@@ -84,6 +84,7 @@ class EmuDeckLibraryParserTest {
     }
 
     private static ScanRequest request(ScanEntry... entries) {
-        return new ScanRequest("jordybox", SourceType.EMUDECK, CAPTURED_AT, List.of(entries), null);
+        return new ScanRequest(null, "jordybox", SourceType.EMUDECK, CAPTURED_AT, null, false, List.of(entries),
+                null, null);
     }
 }

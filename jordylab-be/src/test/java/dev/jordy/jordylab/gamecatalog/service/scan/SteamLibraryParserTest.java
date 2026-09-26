@@ -101,7 +101,7 @@ class SteamLibraryParserTest {
     }
 
     private static ScanRequest request(Map<String, String> manifests) {
-        return new ScanRequest("jordybox", SourceType.STEAM, CAPTURED_AT,
-                List.of(new ScanEntry(MANIFEST_PATH, 1024L, CAPTURED_AT)), manifests);
+        return new ScanRequest(null, "jordybox", SourceType.STEAM, CAPTURED_AT, null, false,
+                List.of(new ScanEntry(MANIFEST_PATH, 1024L, CAPTURED_AT)), manifests, null);
     }
 }

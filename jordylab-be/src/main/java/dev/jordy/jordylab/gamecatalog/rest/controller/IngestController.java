@@ -1,5 +1,7 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckRequest;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
 import dev.jordy.jordylab.gamecatalog.service.ScanService;
@@ -30,6 +32,11 @@ public class IngestController {
     @PostMapping(path = "/scan", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ScanResponse> submitScan(@Valid @RequestBody ScanRequest request) {
         return ResponseEntity.ok(scanService.submitScan(request));
+    }
+
+    @PostMapping(path = "/check", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ScanCheckResponse> check(@Valid @RequestBody ScanCheckRequest request) {
+        return ResponseEntity.ok(scanService.submitCheck(request));
     }
 
     @GetMapping(path = "/script", produces = "text/x-shellscript")

@@ -234,6 +234,6 @@ class EnrichmentServiceTest {
                 30,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
     }
 }

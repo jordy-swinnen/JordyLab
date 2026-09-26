@@ -12,4 +12,6 @@ public interface ScanSourceRepository extends JpaRepository<ScanSource, UUID> {
     Optional<ScanSource> findBySourceKey(String sourceKey);
 
     Optional<ScanSource> findByHostnameAndSourceType(String hostname, SourceType sourceType);
+
+    Optional<ScanSource> findByMachineIdAndSourceType(String machineId, SourceType sourceType);
 }

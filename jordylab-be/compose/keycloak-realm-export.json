@@ -17,10 +17,18 @@
       },
       {
         "name": "gamecatalog-scanner",
-        "description": "Required for the downloaded scan script to POST /api/gamecatalog/ingest/scan"
+        "description": "Required for the scan client to POST /api/gamecatalog/ingest/scan and /check"
       }
     ]
   },
+  "scopeMappings": [
+    {
+      "client": "gamecatalog-script",
+      "roles": [
+        "gamecatalog-scanner"
+      ]
+    }
+  ],
   "clients": [
     {
       "clientId": "jordylab-host",
@@ -48,6 +56,10 @@
       "publicClient": true,
       "directAccessGrantsEnabled": false,
       "standardFlowEnabled": false,
+      "fullScopeAllowed": false,
+      "optionalClientScopes": [
+        "offline_access"
+      ],
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "true"
       }

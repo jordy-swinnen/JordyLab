@@ -4,6 +4,8 @@ import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.EntryRejection;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.EntryRejectionReason;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckRequest;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanEntry;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
@@ -51,11 +53,24 @@ class IngestControllerTest {
             """;
 
     private static final ScanRequest EXPECTED_SCAN_REQUEST = new ScanRequest(
+            null,
             "jordybox",
             SourceType.EMUDECK,
             Instant.parse("2026-08-02T10:20:00Z"),
+            null,
+            null,
             List.of(new ScanEntry("snes/Super Mario World.sfc", 524288L, Instant.parse("2026-08-02T10:15:00Z"))),
-            Map.of());
+            Map.of(),
+            null);
+
+    @Language("JSON")
+    private static final String VALID_CHECK_REQUEST = """
+            {
+              "hostname": "jordybox",
+              "libraryType": "EMUDECK",
+              "clientDigest": "sha256:abc"
+            }
+            """;
 
     @Autowired
     private MockMvc mockMvc;
@@ -168,5 +183,35 @@ class IngestControllerTest {
                 .andExpect(jsonPath("$.detail").value("libraryType must be 'steam' or 'emudeck'"));
 
         assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/script");
+    }
+
+    @Test
+    void checkReportsWhetherAScanIsNeeded() throws Exception {
+        ScanCheckRequest expected = new ScanCheckRequest(null, "jordybox", SourceType.EMUDECK, "sha256:abc");
+        when(scanService.submitCheck(expected)).thenReturn(new ScanCheckResponse(true, true));
+
+        mockMvc.perform(post("/api/gamecatalog/ingest/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_CHECK_REQUEST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scanNeeded").value(true))
+                .andExpect(jsonPath("$.sourceEnabled").value(true));
+    }
+
+    @Test
+    void checkWithBlankHostnameIsRejected() throws Exception {
+        @Language("JSON")
+        String requestWithBlankHostname = """
+                {
+                  "hostname": "",
+                  "libraryType": "EMUDECK",
+                  "clientDigest": "sha256:abc"
+                }
+                """;
+
+        mockMvc.perform(post("/api/gamecatalog/ingest/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestWithBlankHostname))
+                .andExpect(status().isBadRequest());
     }
 }
