@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
+import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
@@ -173,7 +174,7 @@ class GameCatalogModuleTest {
             softly.assertThat(gameQueryService.getPlatforms().platforms()).containsExactly("Steam");
         });
 
-        var source = scanSourceRepository.findByHostnameAndSourceType("jordybox", SourceType.STEAM).orElseThrow();
+        ScanSource source = scanSourceRepository.findByHostnameAndSourceType("jordybox", SourceType.STEAM).orElseThrow();
         source.setEnabled(false);
         scanSourceRepository.save(source);
 

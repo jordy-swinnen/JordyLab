@@ -9,6 +9,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
@@ -118,7 +119,7 @@ public class ScriptService {
     }
 
     private static String loadTemplate() {
-        try (var input = new ClassPathResource(TEMPLATE_PATH).getInputStream()) {
+        try (InputStream input = new ClassPathResource(TEMPLATE_PATH).getInputStream()) {
             return StreamUtils.copyToString(input, StandardCharsets.UTF_8);
         } catch (IOException exception) {
             throw new IllegalStateException("Script template not found: " + TEMPLATE_PATH, exception);

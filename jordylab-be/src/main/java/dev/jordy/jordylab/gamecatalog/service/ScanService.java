@@ -67,12 +67,11 @@ public class ScanService {
         ScanSource source = announceSource(request);
         String payloadHash = sha256(request);
         if (payloadHash.equals(source.getLastPayloadHash())) {
-            source.recordAttempt(SyncOutcome.NO_CHANGE, receivedAt);
             persistReport(source, request, SyncOutcome.NO_CHANGE, receivedAt, payloadHash,
                     new ReconciliationCounts(0, 0, 0), 0, 0);
 
             return new ScanResponse(SyncOutcome.NO_CHANGE, source.isEnabled(),
-                    new SyncCounts(0, 0, 0, 0, 0), List.of());
+                    new SyncCounts(0, 0, 0, 0, 0), List.of(), null);
         }
 
         List<GamePayload> parsed = parseOrEmpty(request);
@@ -87,13 +86,12 @@ public class ScanService {
         ReconciliationCounts counts = reconciliationService.applySnapshot(source, valid, receivedAt);
         artworkService.processArtworkAfterSync(source, valid);
         source.recordApplied(payloadHash);
-        source.recordAttempt(SyncOutcome.APPLIED, receivedAt);
         persistReport(source, request, SyncOutcome.APPLIED, receivedAt, payloadHash, counts, valid.size(),
                 rejections.size());
 
         return new ScanResponse(SyncOutcome.APPLIED, source.isEnabled(),
                 new SyncCounts(valid.size(), counts.added(), counts.updated(), counts.removed(),
-                        rejections.size()), rejections);
+                        rejections.size()), rejections, null);
     }
 
     private ScanSource announceSource(ScanRequest request) {
@@ -176,7 +174,7 @@ public class ScanService {
     }
 
     private ScanResponse rejected(SyncOutcome outcome, String reason) {
-        return new ScanResponse(outcome, false, new SyncCounts(0, 0, 0, 0, 0), List.of());
+        return new ScanResponse(outcome, false, new SyncCounts(0, 0, 0, 0, 0), List.of(), reason);
     }
 
     private long estimatedPayloadBytes(ScanRequest request) {

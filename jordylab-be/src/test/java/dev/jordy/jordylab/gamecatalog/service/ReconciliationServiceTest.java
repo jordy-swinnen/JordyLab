@@ -18,10 +18,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.when;
 class ReconciliationServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-08-02T12:00:00Z");
+    private static final int GRACE_PERIOD_DAYS = 30;
     private static final String PLATFORM = "SNES";
 
     @Mock
@@ -149,27 +152,32 @@ class ReconciliationServiceTest {
         Path artworkFile = artworkDir.resolve("snes/abc.png");
         Files.createDirectories(artworkFile.getParent());
         Files.writeString(artworkFile, "fake-image");
-        when(gameRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                org.mockito.ArgumentMatchers.any(Instant.class)))
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(gameRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED), cutoffCaptor.capture()))
                 .thenReturn(List.of(expired));
+        Instant before = Instant.now();
 
         reconciliationService.purgeUninstalledGames();
 
+        Instant after = Instant.now();
         org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(Files.exists(artworkFile)).isFalse();
+            softly.assertThat(cutoffCaptor.getValue())
+                    .isBetween(before.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS), after.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS));
         });
         verify(gameRepository).deleteAll(List.of(expired));
     }
 
     @Test
     void purgeDoesNothingWhenNothingExpired() {
-        when(gameRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                org.mockito.ArgumentMatchers.any(Instant.class)))
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(gameRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED), cutoffCaptor.capture()))
                 .thenReturn(List.of());
 
         reconciliationService.purgeUninstalledGames();
 
-        verify(gameRepository, org.mockito.Mockito.never()).deleteAll(org.mockito.ArgumentMatchers.anyList());
+        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
+        verify(gameRepository, never()).deleteAll(List.of());
     }
 
     private ScanSource aSource() {
@@ -202,7 +210,7 @@ class ReconciliationServiceTest {
     private GameCatalogProperties properties() {
         return new GameCatalogProperties(
                                 new GameCatalogProperties.Artwork(artworkDir.toString(), 2097152L, true, 2000L),
-                30,
+                GRACE_PERIOD_DAYS,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Scan(10000, 1_048_576, 262_144));

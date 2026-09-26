@@ -29,7 +29,7 @@ public class EnrichmentService {
     private static final int MAX_DESCRIPTION_LENGTH = 4000;
     private static final int MAX_LOCAL_PLAYERS_UPPER_BOUND = 64;
 
-    private static final String SYSTEM_PROMPT = """
+    static final String SYSTEM_PROMPT = """
             You are a video game metadata expert. The user gives you a game title and platform.
             Respond with ONLY a JSON object in exactly this shape — no markdown, no prose:
             {

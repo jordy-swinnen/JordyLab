@@ -24,8 +24,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,8 +54,8 @@ class EnrichmentServiceTest {
     void enrichesPendingGameFromValidStrictJson() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString()))
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
 
         enrichmentService.enrichPendingGames();
@@ -74,14 +74,14 @@ class EnrichmentServiceTest {
     void promptContainsGameTitleAndPlatform() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString()))
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
 
         enrichmentService.enrichPendingGames();
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
-        verify(aiService).call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
+        verify(aiService).call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
                 userPromptCaptor.capture());
         assertSoftly(softly -> {
             softly.assertThat(userPromptCaptor.getValue()).contains("Super Mario World");
@@ -93,8 +93,8 @@ class EnrichmentServiceTest {
     void malformedAiOutputRecordsAttemptWithoutFabricating() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString()))
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
                         "I think this is a great game!"));
 
@@ -112,8 +112,8 @@ class EnrichmentServiceTest {
     void outOfBoundsValuesRecordAttemptWithoutFabricating() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString()))
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
                         """
                         {"genre": "Platformer", "maxLocalPlayers": 99, "onlineMultiplayer": false,
@@ -132,8 +132,8 @@ class EnrichmentServiceTest {
     void aiFailureNeverFabricatesAndCountsAsAttempt() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString()))
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
                         ProviderFailureReason.TIMEOUT));
 
@@ -153,8 +153,8 @@ class EnrichmentServiceTest {
         game.recordEnrichmentFailure(3);
         game.recordEnrichmentFailure(3);
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString()))
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
                         ProviderFailureReason.UNREACHABLE));
 
@@ -198,14 +198,17 @@ class EnrichmentServiceTest {
 
         enrichmentService.enrichPendingGames();
 
-        verify(aiService, never()).call(org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+        verifyNoInteractions(aiService);
     }
 
     private void stubPendingBatch(List<Game> games) {
         when(gameRepository.findByEnrichmentStatusOrderByFirstSeenAtAsc(EnrichmentStatus.PENDING,
                 PageRequest.of(0, 50)))
                 .thenReturn(games);
+    }
+
+    private String userPromptFor(Game game) {
+        return "Game: " + game.getTitle() + "\nPlatform: " + game.getPlatform();
     }
 
     private Game aGame(String title) {

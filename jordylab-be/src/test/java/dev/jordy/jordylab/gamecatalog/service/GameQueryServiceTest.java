@@ -36,6 +36,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class GameQueryServiceTest {
 
+    private static final Pageable FIRST_PAGE = PageRequest.of(0, 60);
+
     private static final Instant SEEN_AT = Instant.parse("2026-08-02T10:15:00Z");
     private static final String PLATFORM = "SNES";
 
@@ -53,7 +55,7 @@ class GameQueryServiceTest {
     void mapsVisibleGamesToSummariesWithExternalArtworkUrl() {
         Game game = aGame("Super Mario World");
         game.applyArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/smw.png");
-        when(gameRepository.findVisibleGames(isNull(), isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(game), 1));
 
         GamesPageResponse response = gameQueryService.getGames(null, null, 0, 60);
@@ -78,7 +80,7 @@ class GameQueryServiceTest {
     void mapsLocalUploadToArtworkEndpointInsteadOfUrl() {
         Game game = aGame("Chrono Trigger");
         game.applyArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/abc123.png");
-        when(gameRepository.findVisibleGames(isNull(), isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(game), 1));
 
         GamesPageResponse response = gameQueryService.getGames(null, null, 0, 60);
@@ -95,7 +97,7 @@ class GameQueryServiceTest {
         Game pending = aGame("Pending Game");
         Game placeholder = aGame("Placeholder Game");
         placeholder.applyArtwork(ArtworkStatus.PLACEHOLDER, null);
-        when(gameRepository.findVisibleGames(isNull(), isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(pending, placeholder), 2));
 
         GamesPageResponse response = gameQueryService.getGames(null, null, 0, 60);
@@ -121,12 +123,12 @@ class GameQueryServiceTest {
 
     @Test
     void blankSearchAndPlatformBecomeNullForRepository() {
-        when(gameRepository.findVisibleGames(isNull(), isNull(), org.mockito.ArgumentMatchers.any(Pageable.class)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(), 0));
 
         gameQueryService.getGames(" ", "", 0, 60);
 
-        verify(gameRepository).findVisibleGames(isNull(), isNull(), org.mockito.ArgumentMatchers.any(Pageable.class));
+        verify(gameRepository).findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE));
     }
 
     @Test

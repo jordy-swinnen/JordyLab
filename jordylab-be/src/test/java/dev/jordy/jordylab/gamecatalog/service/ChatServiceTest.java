@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +36,8 @@ class ChatServiceTest {
     private static final Instant SEEN_AT = Instant.parse("2026-08-02T10:15:00Z");
     private static final List<String> VISIBLE_PLATFORMS = List.of("SNES", "Steam");
     private static final String QUESTION = "which games support 4+ player local co-op?";
+    private static final String TRANSLATION_USER_PROMPT = "Question: " + QUESTION
+            + "\n\nVisible platforms in the catalog: SNES, Steam";
 
     @Mock
     private GameRepository gameRepository;
@@ -55,7 +58,7 @@ class ChatServiceTest {
         Game kart = aGame("Super Mario Kart", "SNES");
         stubVisiblePlatforms();
         when(aiService.call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString()))
+                eq(TRANSLATION_USER_PROMPT)))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
                         """
                         {"titleSearch": null, "genre": null, "minLocalPlayers": 4, "onlineMultiplayer": null,
@@ -65,7 +68,7 @@ class ChatServiceTest {
                 eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario, kart));
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString()))
+                eq(compositionPromptFor(mario, kart))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
                         "Two games support 4+ player local co-op."));
 
@@ -94,7 +97,7 @@ class ChatServiceTest {
                 eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario));
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString()))
+                eq(compositionPromptFor(mario))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", "One game."));
 
         chatService.ask(QUESTION);
@@ -117,10 +120,8 @@ class ChatServiceTest {
 
         assertThatThrownBy(() -> chatService.ask(QUESTION))
                 .isInstanceOf(ChatUnavailableException.class);
-        verify(gameRepository, never()).findForChatFilter(org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(gameRepository).findVisiblePlatforms();
+        verifyNoMoreInteractions(gameRepository);
     }
 
     @Test
@@ -160,7 +161,7 @@ class ChatServiceTest {
     void translationAiFailureIsChatUnavailable() {
         stubVisiblePlatforms();
         when(aiService.call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString()))
+                eq(TRANSLATION_USER_PROMPT)))
                 .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
                         ProviderFailureReason.TIMEOUT));
 
@@ -180,7 +181,7 @@ class ChatServiceTest {
                 eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario));
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString()))
+                eq(compositionPromptFor(mario))))
                 .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
                         ProviderFailureReason.RATE_LIMITED));
 
@@ -206,8 +207,9 @@ class ChatServiceTest {
             softly.assertThat(response.games()).isEmpty();
             softly.assertThat(response.answer()).isNotBlank();
         });
-        verify(aiService, never()).call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString());
+        verify(aiService).call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
+                eq(TRANSLATION_USER_PROMPT));
+        verifyNoMoreInteractions(aiService);
     }
 
     @Test
@@ -233,13 +235,28 @@ class ChatServiceTest {
         });
     }
 
+    private String compositionPromptFor(Game... games) {
+        StringBuilder prompt = new StringBuilder("Question: " + QUESTION + "\n\nCatalog rows:\n");
+        for (Game game : games) {
+            prompt.append("- ").append(game.getTitle())
+                    .append(" (").append(game.getPlatform()).append(")")
+                    .append(" | genre: ").append(game.getGenre())
+                    .append(" | maxLocalPlayers: ").append(game.getMaxLocalPlayers())
+                    .append(" | onlineMultiplayer: ").append(game.getOnlineMultiplayer())
+                    .append(" | singlePlayer: ").append(game.getSinglePlayer())
+                    .append('\n');
+        }
+
+        return prompt.toString();
+    }
+
     private void stubVisiblePlatforms() {
         when(gameRepository.findVisiblePlatforms()).thenReturn(VISIBLE_PLATFORMS);
     }
 
     private void stubTranslation(String json) {
         when(aiService.call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
-                org.mockito.ArgumentMatchers.anyString()))
+                eq(TRANSLATION_USER_PROMPT)))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", json));
     }
 

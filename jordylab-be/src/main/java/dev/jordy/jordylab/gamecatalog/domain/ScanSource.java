@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
@@ -37,6 +38,7 @@ public class ScanSource extends BaseEntity<ScanSource> {
 
     private String platform;
 
+    @Setter
     private boolean enabled;
 
     private Instant lastAttemptAt;
@@ -51,10 +53,6 @@ public class ScanSource extends BaseEntity<ScanSource> {
     public void announce(String hostname, SourceType sourceType) {
         this.hostname = hostname;
         this.sourceType = sourceType;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
     }
 
     public void recordAttempt(SyncOutcome outcome, Instant attemptedAt) {
