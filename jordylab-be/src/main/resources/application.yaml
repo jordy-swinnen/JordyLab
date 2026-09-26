@@ -52,7 +52,7 @@ jordylab:
         model: claude-sonnet-5
       gamecatalog:
         provider: anthropic
-        model: claude-sonnet-4-20250514
+        model: claude-sonnet-5
   gamecatalog:
     artwork:
       dir: ${GAMECATALOG_ARTWORK_DIR:/var/jordylab/artwork}

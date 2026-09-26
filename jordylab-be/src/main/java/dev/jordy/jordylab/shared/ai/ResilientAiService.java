@@ -4,6 +4,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.anthropic.AnthropicChatModel;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -50,7 +51,9 @@ public class ResilientAiService {
             Prompt prompt = new Prompt(List.of(
                     new SystemMessage(systemPrompt),
                     new UserMessage(userPrompt)
-            ));
+            ), AnthropicChatOptions.builder()
+                    .model(config.model())
+                    .build());
             ChatResponse response = callWithTimeout(prompt);
             String content = extractText(response);
 

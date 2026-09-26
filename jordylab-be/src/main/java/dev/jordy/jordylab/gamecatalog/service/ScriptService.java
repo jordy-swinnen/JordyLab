@@ -110,8 +110,12 @@ public class ScriptService {
                 break;
             }
             String key = template.substring(match + 2, close);
-            String value = vars.getOrDefault(key, "");
-            out.append(value);
+            String value = vars.get(key);
+            if (value == null) {
+                out.append(template, match, close + 1);
+            } else {
+                out.append(value);
+            }
             cursor = close + 1;
         }
 

@@ -2,38 +2,37 @@
 
 **Spec**: [spec.md](./spec.md)
 **Plan**: [plan.md](./plan.md)
-**Contracts**: [ingest-api.md](./contracts/ingest-api.md) · [catalog-api.md](./contracts/catalog-api.md) · [agent-config.md](./contracts/agent-config.md)
+**Contracts**: [ingest-api.md](./contracts/ingest-api.md) · [catalog-api.md](./contracts/catalog-api.md)
 
 ---
 
 ## Prerequisites
 
-- Java 25, Bun, Python 3.12, Docker
-- `ANTHROPIC_API_KEY` and `GAMECATALOG_INGEST_TOKEN` in `jordylab-be/.env`
-- PostgreSQL 16 + pgvector: `docker compose up -d` from `jordylab-be/`
-- Agent deps: `cd gamecatalog-sync-service && python -m venv .venv && pip install -r requirements.txt`
+- Java 25, Bun, Podman + Podman Compose, `jq` (the downloaded scan script needs it)
+- `ANTHROPIC_API_KEY` in `jordylab-be/.env`
+- PostgreSQL 16 + pgvector and Keycloak: `podman compose up -d` from `jordylab-be/`
 
 ## 1. Backend — unit + module tests
 
 ```bash
 cd jordylab-be
-./gradlew test
+export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')
+export TESTCONTAINERS_RYUK_DISABLED=true
+./gradlew build
 ./gradlew :test --tests "*ModularityTests*"
 ```
 
-**Expected**: all green, JaCoCo ≥ 80%. Coverage: entity builder/EqualsVerifier tests; `IngestionService` validation matrix (per-entry rejections, sanitize-vs-reject); `ReconciliationService` (add/update/hide/grace-restore/purge, `OUT_OF_ORDER`, `NO_CHANGE`, `SCAN_FAILED` = zero reconciliation); `IngestAuthFilter` (401/503/pass, constant-time path); `EnrichmentService` (strict-JSON parse, attempts → `FAILED`); `ChatService` (filter validation, grounded citations, `CHAT_UNAVAILABLE`); `ArtworkService` (magic bytes, caps, external probe via WireMock); `@ApplicationModuleTest` slice for the module; `@WebMvcTest` for all three controllers.
+**Expected**: all green, JaCoCo per-package instruction coverage ≥ 80%. Coverage: entity
+builder/EqualsVerifier tests; `ScanService` (byte/game caps + rejection reasons, payload-hash
+`NO_CHANGE`, exactly one attempt recorded); `ReconciliationService` (add/update/hide/grace-restore/
+purge, `SCAN_FAILED` = zero reconciliation); the scan parsers (`VdfParser`, `SteamLibraryParser`,
+`EmuDeckLibraryParser`); `ScriptService` rendering (placeholder substitution, bash expansions left
+intact); `ResilientAiService` per-module model attribution; `EnrichmentService` (strict-JSON parse,
+attempts → `FAILED`); `ChatService` (filter validation, grounded citations, `CHAT_UNAVAILABLE`);
+`ArtworkService` (magic bytes, caps, external probe via WireMock); `@ApplicationModuleTest` slice
+for the module; `@WebMvcTest` for the controllers.
 
-## 2. Agent — unit tests
-
-```bash
-cd gamecatalog-sync-service
-python -m pytest --cov=src
-ruff check .
-```
-
-**Expected**: green. Coverage: VDF parsing from fixture libraries; ROM scan (extension filter, `.m3u` + disc-pattern grouping, tag normalization); scan-failure classification (`UNMOUNTED` vs empty dir); sequence/hash state transitions incl. corrupt state recovery; server client via `respx` (401 propagation, config check-in merge, artwork upload flow).
-
-## 3. Frontend — unit tests
+## 2. Frontend — unit tests + lint
 
 ```bash
 cd jordylab-fe
@@ -41,33 +40,52 @@ bunx nx run-many -t test
 bunx nx run-many -t lint
 ```
 
-**Expected**: green, ≥ 80% lines per lib; lint passes with the new `scope:gamecatalog` depConstraint. Coverage: api service HTTP contract via Spectator (`expectOne` per endpoint); grid container (loading/error/populated, search + platform filter wiring); detail (enriched vs "description unavailable"); chat (answer + citation links, unavailable state); source manager (list, toggle optimistic update).
+**Expected**: green, ≥ 80% lines per lib. Coverage: api service HTTP contract via Spectator
+(`expectOne` per endpoint); signal stores; grid container (loading/error/populated, search +
+platform filter wiring); detail (enriched vs "description unavailable"); chat (answer + citation
+links, unavailable state); source manager (list, toggle).
 
-## 4. End-to-end (local, scripted)
+## 2. Scan-script end-to-end (local)
+
+The scan flow is a downloaded shell script (not a sidecar): it performs the Keycloak Device
+Authorization Grant, walks the library, and POSTs to `/api/gamecatalog/ingest/scan`.
 
 Seed a fake library on the dev machine (stand-in for JordyBox):
 
 ```bash
 /tmp/fake-lib/
 ├── steam/steamapps/libraryfolders.vdf + appmanifest_620.acf   # 1 Steam game
-└── roms/snes/Super Mario World (USA).smc                      # 1 ROM
-    └── downloaded_media/boxart/Super Mario World (USA).png
+└── roms/snes/Super Mario World (USA) (Rev 1).sfc              # 1 ROM
 ```
 
-1. Start backend: `./gradlew bootRun` (Flyway creates the `gamecatalog` schema).
-2. Point agent `config.yaml` at `http://localhost:8080` with sources `steam` and `snes` rooted at `/tmp/fake-lib`; export `GAMECATALOG_INGEST_TOKEN`.
-3. `python -m gamecatalog_sync sync` → expect two `APPLIED` outcomes.
-4. `curl localhost:8080/api/gamecatalog/games` → 2 games; SNES card has badge + title `Super Mario World`.
-5. Trigger enrichment (or wait for the scheduled batch) → detail shows genre + multiplayer facts; `maxLocalPlayers = 2` for SMW.
-6. `curl -X POST …/chat -d '{"question":"which games support local co-op?"}'` → answer names only the seeded games; `games[]` citations resolve.
-7. **Reality check**: delete the ROM file → re-run sync → game hidden from `/games` (DB: `UNINSTALLED`). Restore the file within grace → sync → game back **with** its description (no re-enrichment).
-8. **Trust checks**: `curl` the sync endpoint without a token → `401`, nothing written. POST a payload with a markup-laden title → stored sanitized; with an over-long title → entry in `rejections[]`, others applied.
-9. **Scan-failure check**: `umount`/rename the ROM dir → sync → outcome `SCAN_FAILED`, catalog unchanged.
-10. **Sources UI**: disable `snes` in the web app → its game vanishes everywhere (DB row intact); re-enable → sync → restored instantly.
-11. Frontend: `bunx nx serve fna` → `/games` grid, `/games/:id` detail, `/games/chat`, `/games/sources` all functional through the nav.
+1. Start Postgres + Keycloak: `podman compose up -d`; start the backend: `./gradlew bootRun`.
+2. Download the rendered script (authenticated as `jordy`) from the Sources page in the web UI,
+   or `curl -H "Authorization: Bearer $TOKEN" "localhost:8080/api/gamecatalog/ingest/script?libraryType=steam"`.
+3. Run it: `./jordy-scan-steam.sh --path /tmp/fake-lib/steam` → authorize the printed device-code
+   URL in a browser → expect `APPLIED` with `added: 1`.
+4. Run it again unchanged → expect `NO_CHANGE` (payload-hash idempotency).
+5. `curl localhost:8080/api/gamecatalog/games` → Portal 2 as a Steam card; the source is
+   auto-registered as `(hostname, STEAM)`.
+6. Repeat with the EmuDeck script (`?libraryType=emudeck`, `--path /tmp/fake-lib/roms`) → the
+   SNES game appears with platform `SNES`.
+7. Wait for the scheduled enrichment batch (or trigger it) → detail shows genre + multiplayer
+   facts + description; chat answers cite only seeded games.
+8. **Reality check**: rename `appmanifest_620.acf` → re-run the Steam script → game hidden from
+   `/games` (DB row `UNINSTALLED`). Restore → re-run → game back with the same `id`.
 
-## 5. Production smoke (VPS + JordyBox)
+## 3. Frontend browser smoke (agent-browser)
 
-- Deploy backend via the existing Compose stack; set `GAMECATALOG_INGEST_TOKEN` and the artwork volume.
-- On JordyBox: install the agent, write real `config.yaml` (Steam root + EmuDeck ROM dirs), provision the token env, schedule hourly (Task Scheduler/systemd timer).
-- Verify with JordyBox's firewall denying inbound: games appear ≤ 1 h; `lastOutcome = APPLIED` per source; grid, chat, and sources views work over the public URL.
+```bash
+bunx nx serve jordylab   # http://localhost:4200
+```
+
+Log in through Keycloak, then exercise Library (`/games`), search + platform filter, a game
+detail, grounded Chat, and Sources (list, toggle enable/disable, per-library script download).
+
+## 4. Production smoke (VPS + JordyBox) — deferred until deploy
+
+- Deploy the backend via the existing Compose stack.
+- On JordyBox: download the scan script from the Sources page, run it against the real Steam and
+  EmuDeck roots, and schedule it (cron/systemd timer).
+- Verify with JordyBox's firewall denying inbound: games appear after a scan; `lastOutcome` is
+  `APPLIED`/`NO_CHANGE` per source; grid, chat, and sources views work over the public URL.

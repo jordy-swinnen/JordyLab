@@ -5,10 +5,17 @@
 ./gradlew test                                     # All tests
 ./gradlew :test --tests "*ModularityTests*"        # Verify module boundaries
 ./gradlew bootRun                                  # Run with DevTools
-docker compose up -d                               # Start PostgreSQL (pgvector)
+podman compose up -d                               # Start PostgreSQL (pgvector) + Keycloak
 ```
 
 Run `ModularityTests` after any structural change — this is the build-time boundary check.
+
+Tests boot Postgres via Testcontainers, which needs a container socket. On a Podman host:
+
+```bash
+export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')
+export TESTCONTAINERS_RYUK_DISABLED=true
+```
 
 **Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.0-M2 — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
 

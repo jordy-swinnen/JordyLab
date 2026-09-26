@@ -54,8 +54,9 @@ detect_hostname() {
 default_path() {
   case "$LIBRARY_TYPE" in
     STEAM)
-      # Steam library roots — newer and older Linux defaults
-      for candidate in "$HOME/.local/share/Steam" "$HOME/.steam/steam" "$HOME/.steam" "$HOME/Steam"; do
+      # Steam library roots — Linux (newer and older) and macOS defaults
+      for candidate in "$HOME/.local/share/Steam" "$HOME/.steam/steam" "$HOME/.steam" "$HOME/Steam" \
+          "$HOME/Library/Application Support/Steam"; do
         if [ -d "$candidate/steamapps" ]; then
           echo "$candidate"
           return 0
@@ -216,6 +217,19 @@ fi
 
 CAPTURED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+# Prints a JSON array [{relpath, size, mtime}] for the regular files `find "$@"` matches.
+# GNU find's print-format option does not exist on macOS, so use stat, whose flags differ between GNU and BSD.
+# mtime is an ISO-8601 instant, as the ingest contract requires.
+list_files_json() {
+  {
+    if stat -c '%s' /dev/null >/dev/null 2>&1; then
+      find "$@" -type f -exec stat -c $'%n\t%s\t%Y' {} + 2>/dev/null || true
+    else
+      find "$@" -type f -exec stat -f $'%N\t%z\t%m' {} + 2>/dev/null || true
+    fi
+  } | jq -Rn '[inputs | split("\t") | {relpath: .[0], size: (.[1] | tonumber), mtime: (.[2] | tonumber | todate)}]'
+}
+
 list_steam() {
   log "Walking $SCAN_ROOT for Steam library"
   if [ ! -d "$SCAN_ROOT/steamapps" ]; then
@@ -223,8 +237,7 @@ list_steam() {
     exit 1
   fi
   local entries
-  entries=$(cd "$SCAN_ROOT" && find steamapps -type f -printf '%p\t%s\t%TY-%Tm-%Td %TH:%TM:%TS\n' 2>/dev/null \
-    | jq -R 'split("\t") | {relpath: .[0], size: (.[1] | tonumber), mtime: .[2]}')
+  entries=$(cd "$SCAN_ROOT" && list_files_json steamapps -name 'appmanifest_*.acf')
   local manifests
   manifests=$(cd "$SCAN_ROOT" && find steamapps -name 'appmanifest_*.acf' -type f 2>/dev/null)
   local manifest_json
@@ -233,7 +246,7 @@ list_steam() {
     while IFS= read -r manifest; do
       [ -z "$manifest" ] && continue
       local body
-      body=$(cat "$manifest" | jq -Rs '.')
+      body=$(jq -Rs '.' < "$SCAN_ROOT/$manifest")
       manifest_json=$(echo "$manifest_json" | jq --arg key "$manifest" --argjson val "$body" '. + {($key): $val}')
     done <<< "$manifests"
   fi
@@ -249,7 +262,7 @@ list_steam() {
 list_emudeck() {
   log "Walking $SCAN_ROOT for EmuDeck library"
   local available
-  available=$(find "$SCAN_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort)
+  available=$(cd "$SCAN_ROOT" && for candidate in */; do [ -d "$candidate" ] && echo "${candidate%/}"; done | sort)
   if [ -z "$available" ]; then
     err "No emulator subfolders found under $SCAN_ROOT"
     exit 1
@@ -274,8 +287,7 @@ list_emudeck() {
     [ -z "$sub" ] && continue
     [ ! -d "$SCAN_ROOT/$sub" ] && continue
     local walked
-    walked=$(cd "$SCAN_ROOT" && find "$sub" -type f -printf '%p\t%s\t%TY-%Tm-%Td %TH:%TM:%TS\n' 2>/dev/null \
-      | jq -R 'split("\t") | {relpath: .[0], size: (.[1] | tonumber), mtime: .[2]}')
+    walked=$(cd "$SCAN_ROOT" && list_files_json "$sub")
     entries=$(jq -n --argjson a "$entries" --argjson b "$walked" '$a + $b')
   done <<< "$subfolders"
 

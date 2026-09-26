@@ -30,6 +30,7 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -122,6 +123,34 @@ class ScanServiceTest {
         verify(syncReportRepository, times(1)).save(reportCaptor.capture());
         assertThat(reportCaptor.getValue().getOutcome()).isEqualTo(SyncOutcome.APPLIED);
         assertThat(source.getLastOutcome()).isEqualTo(SyncOutcome.APPLIED);
+    }
+
+    @Test
+    void identicalScanContentReturnsNoChangeEvenWhenCapturedAtDiffers() {
+        ScanService service = serviceWithLimits(100, 1_000_000);
+        ScanSource source = anEnabledSource();
+        ScanRequest first = new ScanRequest(HOSTNAME, SourceType.EMUDECK, CAPTURED_AT,
+                List.of(new ScanEntry("snes/Super Mario World.sfc", 524288L, CAPTURED_AT)), Map.of());
+        ScanRequest second = new ScanRequest(HOSTNAME, SourceType.EMUDECK, CAPTURED_AT.plusSeconds(3600),
+                List.of(new ScanEntry("snes/Super Mario World.sfc", 524288L, CAPTURED_AT)), Map.of());
+        ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
+                .thenReturn(Optional.of(source));
+        when(emuDeckParser.parse(first)).thenReturn(List.of(MARIO));
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), receivedAtCaptor.capture()))
+                .thenReturn(new ReconciliationCounts(1, 0, 0));
+
+        ScanResponse firstResponse = service.submitScan(first);
+        ScanResponse secondResponse = service.submitScan(second);
+
+        assertSoftly(softly -> {
+            softly.assertThat(firstResponse.outcome()).isEqualTo(SyncOutcome.APPLIED);
+            softly.assertThat(secondResponse.outcome()).isEqualTo(SyncOutcome.NO_CHANGE);
+            softly.assertThat(secondResponse.counts().submitted()).isZero();
+        });
+        verify(reconciliationService, times(1))
+                .applySnapshot(eq(source), eq(List.of(MARIO)), receivedAtCaptor.capture());
+        verify(emuDeckParser, never()).parse(second);
     }
 
     private ScanService serviceWithLimits(int maxGamesPerSource, int maxPayloadBytes) {
