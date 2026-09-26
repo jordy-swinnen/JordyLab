@@ -31,6 +31,7 @@ export class AuthService {
     try {
       const authenticated = await keycloak.init({
         onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
         silentCheckSsoFallback: false,
         pkceMethod: 'S256',
         checkLoginIframe: false,
@@ -38,7 +39,9 @@ export class AuthService {
       this.#authenticated.set(authenticated);
       if (authenticated) {
         this.#token.set(keycloak.token ?? null);
-        this.#username.set(keycloak.tokenParsed?.['preferred_username'] ?? null);
+        this.#username.set(
+          keycloak.tokenParsed?.['preferred_username'] ?? null,
+        );
       }
 
       return authenticated;
