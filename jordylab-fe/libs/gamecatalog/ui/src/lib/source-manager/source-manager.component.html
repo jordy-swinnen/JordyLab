@@ -1,0 +1,9 @@
+<lib-source-manager-view
+  [sources]="sources()"
+  [loading]="loading()"
+  [error]="error()"
+  [togglingId]="togglingId()"
+  [downloading]="downloading()"
+  (toggleSource)="onToggle($event)"
+  (downloadScript)="onDownloadScript($event)"
+/>

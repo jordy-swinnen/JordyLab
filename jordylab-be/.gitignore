@@ -1,7 +1,6 @@
 ### Gradle ###
 .gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
@@ -51,6 +50,10 @@ Desktop.ini
 *.class
 *.log
 *.jar
+# The negation above (*.jar) previously sat before this line, so this rule re-ignored it and the
+# wrapper jar was never actually committed — a fresh clone's ./gradlew had no jar to run. Negations
+# must come after the pattern they override, not before.
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
@@ -69,6 +72,9 @@ HELP.md
 .env
 .env.local
 .env.*.local
+
+# Machine-local JDK toolchain path overrides (see gradle.properties comment) — never portable
+gradle.properties
 
 ### Logs ###
 logs/

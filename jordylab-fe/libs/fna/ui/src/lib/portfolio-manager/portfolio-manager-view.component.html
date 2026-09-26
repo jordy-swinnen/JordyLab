@@ -48,6 +48,11 @@
         <th
           class="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
         >
+          Value
+        </th>
+        <th
+          class="px-5 py-3 text-right text-[11px] font-medium uppercase tracking-widest text-muted-foreground"
+        >
           Updated
         </th>
         <th class="px-5 py-3"></th>
@@ -75,10 +80,22 @@
           <td class="px-5 py-3.5 text-right">
             @if (position.lastPrice !== null) {
               <span
-                class="tabular-nums text-primary"
+                class="tabular-nums text-sky-400"
                 style="font-family: 'IBM Plex Mono', monospace"
               >
                 €{{ position.lastPrice | number: '1.2-2' }}
+              </span>
+            } @else {
+              <span class="text-muted-foreground/50">—</span>
+            }
+          </td>
+          <td class="px-5 py-3.5 text-right">
+            @if (position.value !== null) {
+              <span
+                class="text-base font-medium tabular-nums text-primary"
+                style="font-family: 'IBM Plex Mono', monospace"
+              >
+                €{{ position.value | number: '1.2-2' }}
               </span>
             } @else {
               <span class="text-muted-foreground/50">—</span>

@@ -12,6 +12,26 @@ Run `ModularityTests` after any structural change — this is the build-time bou
 
 **Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.0-M2 — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
 
+## Accepted risk: Spring AI 2.0.0-M2 is a milestone release
+
+`spring-ai-bom` is pinned to `2.0.0-M2` (a milestone, not a GA release) in `build.gradle.kts`.
+Accepted deliberately for MVP1 because `ResilientAiService`, `AnthropicApi`, and the pgvector
+vector-store starter all need APIs only available from the 2.0 line, and no GA release of that
+line existed when this was wired. Milestone releases can introduce breaking API changes between
+versions with no deprecation window, unlike GA releases under semantic versioning.
+
+Risk is bounded by two things already true of the module boundary: all Spring AI usage is routed
+through `ResilientAiService` (never `ChatClient` directly, per the rule below), so an upstream
+breaking change surfaces in one place, not scattered across modules; and the milestone version is
+pinned exactly (`2.0.0-M2`, not a range), so nothing changes underneath this build without an
+explicit version bump and a deliberate re-test.
+
+**Plan to move to GA**: once `spring-ai-bom` publishes a GA `2.x` release, bump the
+`springAiVersion` property in `build.gradle.kts`, re-run the full backend test suite (especially
+`ResilientAiServiceTest`, `AiModuleConfigTest`, and the module-level `GameCatalogModuleTest`,
+which exercises the AI-backed chat/enrichment paths), and check the Spring AI migration notes for
+that release before merging.
+
 # Java Code Style
 
 - Never use `var` — always declare explicit types
@@ -267,3 +287,23 @@ class SomeObjectTestBuilder {
 # Spring Boot 4
 
 - Require `spring-boot-starter-flyway` dependency, not just `flyway-core`
+
+# Security / Keycloak
+
+- Backend auth is OAuth2 resource server + JWT. Issuer-uri is `${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab` in `application.yaml`.
+- Spring Security config lives in `shared/config/SecurityConfig.java`. Realm roles map to `ROLE_*` authorities via the `realm_access.roles` claim.
+- Endpoint gates:
+  - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (script, device-code client)
+  - `GET  /api/gamecatalog/ingest/script` → `hasRole("jordylab-user")` (web UI downloads it)
+  - other `/api/**` → `authenticated()` (any logged-in user)
+  - `/actuator/health`, `/actuator/info`, `/h2-console/**` → `permitAll()` (dev only)
+- CORS allowed origins configured via `jordylab.cors.allowed-origins` property (defaults to `http://localhost:4200,4300,4400` for the per-port dev servers).
+- The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan script handles its own token via Keycloak Device Authorization Grant and caches it at `~/.config/jordylab/scan/token.json`.
+
+# Game library scan flow
+
+- Users download a per-library shell script via the web UI's source-manager page → backend returns the rendered `jordylab-scan-template.sh` from `src/main/resources/scripts/`.
+- The script authenticates via Keycloak Device Authorization Grant (`POST /realms/{realm}/protocol/openid-connect/auth/device`), then POSTs a directory listing + per-source VDF contents to `/api/gamecatalog/ingest/scan`.
+- Backend `ScanService` resolves-or-creates a `ScanSource` keyed on `(hostname, libraryType)`, dispatches the listing to the matching `LibraryParser` (Steam: parses VDF; EmuDeck: walks folder structure, infers platform from parent directory name), then reconciles into the `game` table.
+- Idempotency: `ScanService` hashes the payload; same hash + source → `NO_CHANGE` (no DB churn).
+- All hot-swap of the scan pipeline goes through `LibraryParser` implementations — register a new `@Component("<SOURCE_TYPE_NAME>")` bean to support a new library.

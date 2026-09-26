@@ -1,0 +1,79 @@
+<div class="mb-8 flex items-baseline justify-between">
+  <h2
+    class="text-3xl tracking-tight text-foreground"
+    style="font-family: 'Instrument Serif', serif"
+  >
+    Ask the Catalog
+  </h2>
+</div>
+
+<div class="flex min-h-[50vh] flex-col gap-4">
+  @if (messages().length === 0) {
+    <div class="py-16 text-center text-muted-foreground">
+      <p class="text-sm">Ask a question about your installed games.</p>
+      <p class="mt-1 text-xs">
+        For example: "which games support 4-player local co-op?" — answers come only from your catalog.
+      </p>
+    </div>
+  }
+
+  @for (message of messages(); track $index) {
+    <div class="flex" [class.justify-end]="message.role === 'user'">
+      <div
+        class="max-w-prose rounded-lg border px-4 py-3 text-sm"
+        [class]="
+          message.role === 'user'
+            ? 'border-primary/40 bg-primary/10 text-foreground'
+            : message.unavailable
+              ? 'border-dashed border-border text-muted-foreground'
+              : 'border-border bg-card text-foreground/90'
+        "
+      >
+        <p class="leading-relaxed">{{ message.text }}</p>
+        @if (message.games && message.games!.length > 0) {
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            @for (game of message.games!; track game.id) {
+              <a hlmBadge variant="secondary" [routerLink]="['/games', game.id]" class="cursor-pointer">
+                {{ game.title }}
+              </a>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (asking()) {
+    <div class="flex">
+      <div class="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+        <span
+          class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"
+        ></span>
+        Thinking…
+      </div>
+    </div>
+  }
+</div>
+
+<div class="sticky bottom-6 mt-6 flex gap-2">
+  <input
+    #questionInput
+    hlmInput
+    type="text"
+    placeholder="Ask about your games…"
+    aria-label="Ask a question about your games"
+    class="flex-1"
+    [disabled]="asking()"
+    (keydown.enter)="onSubmit(questionInput)"
+  />
+  <button
+    type="button"
+    hlmBadge
+    class="px-4 py-2"
+    [class.opacity-40]="asking()"
+    [disabled]="asking()"
+    (click)="onSubmit(questionInput)"
+  >
+    Ask
+  </button>
+</div>

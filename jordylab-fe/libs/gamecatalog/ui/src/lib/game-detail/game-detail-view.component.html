@@ -1,0 +1,117 @@
+<a
+  routerLink="/games"
+  class="mb-6 inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+>
+  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+  </svg>
+  Back to catalog
+</a>
+
+@if (loading()) {
+  <div class="flex flex-col gap-6 md:flex-row">
+    <hlm-skeleton class="aspect-[2/3] w-full max-w-xs rounded-lg" />
+    <div class="flex-1 space-y-3">
+      <hlm-skeleton class="h-8 w-1/2" />
+      <hlm-skeleton class="h-4 w-24" />
+      <hlm-skeleton class="h-24 w-full" />
+    </div>
+  </div>
+} @else if (notFound()) {
+  <div class="py-16 text-center text-muted-foreground">
+    <p class="text-sm">This game is not in your catalog.</p>
+  </div>
+} @else if (error()) {
+  <div class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+    {{ error() }}
+  </div>
+} @else if (game(); as game) {
+  <div class="flex flex-col gap-8 md:flex-row">
+    <div class="w-full max-w-xs flex-shrink-0">
+      @if (artworkUrl(game); as artworkSrc) {
+        <img
+          [src]="artworkSrc"
+          [alt]="game.title + ' artwork'"
+          class="w-full rounded-lg border border-border object-cover"
+        />
+      } @else {
+        <div
+          class="flex aspect-[2/3] w-full items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground"
+          [attr.aria-label]="'No artwork for ' + game.title"
+        >
+          <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M11 4.5 6.5 9H3v6h3.5L11 19.5v-15ZM15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"
+            />
+          </svg>
+        </div>
+      }
+    </div>
+
+    <div class="min-w-0 flex-1">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2
+          class="text-3xl tracking-tight text-foreground"
+          style="font-family: 'Instrument Serif', serif"
+        >
+          {{ game.title }}
+        </h2>
+        <span hlmBadge variant="secondary">{{ game.platform }}</span>
+      </div>
+      <p class="mt-1 text-xs uppercase tracking-widest text-muted-foreground">
+        Source: {{ game.sourceKey }}
+      </p>
+
+      @if (game.enrichmentStatus === 'ENRICHED') {
+        <div hlmCard class="mt-6 p-5">
+          <h3 class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Multiplayer
+          </h3>
+          <dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            @if (game.genre) {
+              <div class="flex justify-between gap-4">
+                <dt class="text-muted-foreground">Genre</dt>
+                <dd class="font-medium text-foreground">{{ game.genre }}</dd>
+              </div>
+            }
+            @if (game.maxLocalPlayers !== null) {
+              <div class="flex justify-between gap-4">
+                <dt class="text-muted-foreground">Local co-op</dt>
+                <dd class="font-medium text-foreground">up to {{ game.maxLocalPlayers }} players</dd>
+              </div>
+            }
+            @if (game.onlineMultiplayer !== null) {
+              <div class="flex justify-between gap-4">
+                <dt class="text-muted-foreground">Online multiplayer</dt>
+                <dd class="font-medium text-foreground">{{ game.onlineMultiplayer ? 'Yes' : 'No' }}</dd>
+              </div>
+            }
+            @if (game.singlePlayer !== null) {
+              <div class="flex justify-between gap-4">
+                <dt class="text-muted-foreground">Single-player</dt>
+                <dd class="font-medium text-foreground">{{ game.singlePlayer ? 'Yes' : 'No' }}</dd>
+              </div>
+            }
+          </dl>
+        </div>
+
+        <p class="mt-6 max-w-prose text-sm leading-relaxed text-foreground/90">
+          {{ game.description }}
+        </p>
+      } @else {
+        <div class="mt-6 rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
+          <p class="font-medium">Description unavailable.</p>
+          <p class="mt-1 text-xs">
+            @if (game.enrichmentStatus === 'PENDING') {
+              The AI description for this game has not been generated yet — check back later.
+            } @else {
+              The AI description for this game could not be generated.
+            }
+          </p>
+        </div>
+      }
+    </div>
+  </div>
+}

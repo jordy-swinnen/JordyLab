@@ -4,7 +4,16 @@
   "provider": {
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
-      "options": { "baseURL": "http://localhost:11434/v1" }
+      "options": { "baseURL": "http://localhost:11434/v1" },
+      "models": {
+        "qwen3.6:27b-64k": {
+          "name": "Qwen3.6 27B (64k ctx, local)",
+          "limit": {
+            "context": 58000,
+            "output": 65536
+          }
+        }
+      }
     }
   },
   "mcp": {
@@ -25,7 +34,7 @@
   "agent": {
     "sdd-plan": {
       "mode": "primary",
-      "model": "z-ai/glm-5.2",
+      "model": "glm-5.2",
       "permission": {
         "edit": {
           "*": "deny",

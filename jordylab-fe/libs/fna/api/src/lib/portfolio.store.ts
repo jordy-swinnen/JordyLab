@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { catchError, of, tap } from 'rxjs';
-import { PortfolioPosition } from './fna.models';
+import { PortfolioPosition, PortfolioPositionRow } from './fna.models';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioStore {
@@ -13,6 +13,13 @@ export class PortfolioStore {
 
   readonly positions = this.#positions.asReadonly();
   readonly error = this.#error.asReadonly();
+
+  readonly positionRows = computed<PortfolioPositionRow[]>(() =>
+    this.#positions().map((position) => ({
+      ...position,
+      value: position.lastPrice === null ? null : position.shareCount * position.lastPrice,
+    }))
+  );
 
   readonly totalWorth = computed(() =>
     this.#positions().reduce((sum, position) => {

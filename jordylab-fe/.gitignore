@@ -46,3 +46,4 @@ lerna-debug.log*
 .angular
 
 vitest.config.*.timestamp*
+__screenshots__/

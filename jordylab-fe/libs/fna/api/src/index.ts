@@ -5,6 +5,7 @@ export type {
   ArticleSummary,
   Briefing,
   PortfolioPosition,
+  PortfolioPositionRow,
 } from './lib/fna.models';
 export { anArticleSummaryMock } from './lib/mocks/article-summary.model.mock';
 export { aBriefingMock } from './lib/mocks/briefing.model.mock';

@@ -2,7 +2,9 @@
 
 ```bash
 bun install                        # Install dependencies
-bunx nx serve <app>                # Dev server (e.g. bunx nx serve fna)
+bunx nx serve jordylab             # Main app (port 4200) — lazy-loads fna + gamecatalog routes
+bunx nx serve fna                  # fna dev harness, no host shell (port 4300)
+bunx nx serve gamecatalog          # gamecatalog dev harness, no host shell (port 4400)
 bunx nx test <lib>                 # Test specific lib (e.g. bunx nx test fna-ui)
 bunx nx run-many -t test           # Run all tests
 bunx nx run-many -t lint           # Lint everything
@@ -29,18 +31,65 @@ Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 
 # Nx Structure
 
-- Apps in `apps/`, domain libs in `libs/<domain>/{ui,api}`
-- Two-layer lib structure per domain: `ui` (components) + `api` (services, HTTP, signal stores)
-- Enforce module boundaries via Nx ESLint tags (`scope:*`, `type:*`)
-- Tag new libs: `--tags="scope:<domain>,type:<ui|api>"`
-- `type:ui` → can depend on `type:api` and `type:ui`
-- `type:api` → can only depend on `type:api`
-- `scope:<domain>` → can only depend on `scope:<domain>` and `scope:shared` — cross-domain state belongs in a `scope:shared` lib, not a relaxed boundary rule
+All real code lives in per-domain libs; the apps are thin shells over them:
+
+```
+apps/jordylab          — the deployable app. Lazy-loads each domain's routes
+apps/<domain>/         — dev harness per domain: boots that domain's routes alone,
+                         without the host shell. Still authenticates via Keycloak
+                         independently (see Auth via Keycloak below). Not deployed
+libs/<domain>/{ui,api} — domain libs: ui = components + routes, api = services & HTTP
+libs/ui/helm           — shared spartan helm overrides reused by multiple apps
+```
+
+Tag new libs with the right scope + type: `--tags="scope:<domain>,type:<ui|api>"`. App-level tags: `--tags="scope:<domain|shared>,type:app"`. Boundary rules:
+
+- `type:api` → may depend on `type:api`, `type:shared`
+- `type:ui` → may depend on `type:api`, `type:ui`, `type:shared`
+- `type:app` → may depend on `scope:fna | scope:gamecatalog | scope:shared`
+- `scope:fna` → may depend on `scope:fna`, `scope:shared`
+- `scope:gamecatalog` → may depend on `scope:gamecatalog`, `scope:shared`
+- `scope:shared` → may depend on `scope:shared` only
+
+# Domain Routing
+
+`apps/jordylab` is the single deployable app. Each domain's routes live in its `ui` lib and
+are lazy-loaded by the host with a plain dynamic `import()` — Angular's own code splitting
+puts each domain (and each component within it) in its own chunk, fetched on first visit.
+
+- **Route ownership.** `libs/<domain>/ui/src/lib/<domain>.routes.ts` exports `<domain>Routes`,
+  re-exported from the lib's barrel. The host mounts it under a path segment it owns
+  (`/fna`, `/games`); domain routes are relative within that segment and must NOT repeat it.
+- **Dev harnesses.** `apps/fna` and `apps/gamecatalog` exist only so `bunx nx serve <domain>`
+  can exercise one domain without the host shell. Their `app.routes.ts` re-exports the lib's
+  routes wrapped in the shared `authGuard`, so there is one source of truth for the routes and
+  each harness still authenticates against the real Keycloak realm independently — see
+  "Auth via Keycloak" below. They are not deployed.
+- **No cross-domain imports.** No shared stores, no cross-domain service imports, no shared
+  mutable state — enforced by the Nx tag boundaries above.
+- **Base hrefs:** `apps/jordylab` → `/`, `apps/fna` → `/fna`, `apps/gamecatalog` → `/games`.
+  If Angular's `baseHref` builder option normalises a trailing slash in, treat it as framework
+  behaviour, not design intent.
+- **Dev ports:** host `:4200`, harnesses start at `:4300` and increment.
+- **Adding a new domain** (e.g. recipe, garmin, trading):
+  1. `bunx nx g @nx/angular:library <name>-ui --directory=libs/<name>/ui --tags="scope:<name>,type:ui"`
+  2. Add `libs/<name>/ui/src/lib/<name>.routes.ts` exporting `<name>Routes`; export it from the barrel
+  3. Add the host route in `apps/jordylab/src/app/app.routes.ts`:
+     `loadChildren: () => import('@jordylab-fe/<name>/ui').then((m) => m.<name>Routes)`
+  4. Add a nav link to the host's `app.html`
+  5. Optionally scaffold a dev harness app the same way `apps/fna` is set up (next free port)
+
+This replaced a native-federation micro-frontend setup. Micro-frontends solve independent
+team/deploy-cadence problems this project doesn't have, and the custom build pipeline they
+required broke repeatedly against Angular's AOT output. Don't reintroduce them without a
+concrete, demonstrated need for independently deployed bundles — the same monolith-first rule
+the backend follows.
 
 # Component Library
 
 - spartan/ui with brain (headless logic) + helm (styled components)
-- Add components: `bunx @spartan-ng/cli@latest add <component-name>`
+- Helm overrides live in `libs/ui/helm/<component>-helm/` and are tagged `scope:shared, type:ui`. They're ignored by ESLint (vendored styling) and tsconfig-pathed as `@spartan-ng/ui-<component>-helm`.
+- Add a new component: `bunx @spartan-ng/cli@latest add <component-name>`
 
 # Testing
 
@@ -53,3 +102,29 @@ Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 - Create the component once in `beforeEach`, not separately inside every `it()`
 - Fixture data lives in `libs/<domain>/api/src/lib/mocks/<interface>.model.mock.ts` — one file per interface, named after it, exporting a factory function (`aFooMock(overrides = {}) => Foo`)
 - Specs import via the barrel (`@jordylab-fe/<domain>/<layer>`), never deep-relative into another lib (`../../other-lib/src/...`)
+
+# Auth via Keycloak
+
+- Keycloak integration (the `keycloak-js` SDK, token plumbing, route guard, login page) lives in
+  the shared `libs/shared/auth` lib (`@jordylab-fe/shared/auth`), not in any single app. All three
+  deployable/dev-harness apps (`jordylab`, `fna`, `gamecatalog`) depend on it and authenticate
+  independently — there is no host-only session that other apps borrow from.
+- Token plumbing: `AuthService` (`libs/shared/auth/src/lib/auth.service.ts`) wraps the SDK.
+  `authInterceptor` (`auth.interceptor.ts`) adds the bearer header to every outgoing request.
+- Route protection: `authGuard` (`auth.guard.ts`) redirects unauthenticated users to `/login`.
+- Login page: `LoginComponent` (`login.component.ts`). Button calls `authService.login()` which
+  kicks off the standard OIDC Authorization Code flow with PKCE.
+- Logout: `authService.logout()` from the header button (host app only — the standalone harnesses
+  don't render the host chrome).
+- Configuration: each app supplies its own `AUTH_CONFIG` (an `InjectionToken` defined in
+  `auth-config.ts`) from its own `src/environments/environment.ts` (dev) /
+  `environment.prod.ts` (prod), provided in that app's `app.config.ts`. All three apps currently
+  provide the same realm/client — only the runtime redirect origin differs, and that's read from
+  `window.location.origin`, not from the environment file. Each app's `project.json` swaps via
+  `fileReplacements` on production builds.
+- Realm: single `jordylab` realm. Client: `jordylab-host` (public, OIDC web) — its `redirectUris`/
+  `webOrigins` in `compose/keycloak-realm-export.json` already list the standalone harness ports
+  (`:4300`, `:4400`) alongside the host's `:4200`. Roles: `jordylab-user` (default for any
+  logged-in user), `gamecatalog-scanner` (required for the script's `/scan` access — the script
+  uses a separate `gamecatalog-script` device-code client).
+- `apps/gamecatalog` calls `/api/gamecatalog/ingest/script?libraryType=steam` (or `emudeck`) to download the scan script for the user. Both endpoints sit behind the host's auth interceptor.

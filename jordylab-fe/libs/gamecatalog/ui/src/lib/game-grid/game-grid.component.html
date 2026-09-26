@@ -1,0 +1,13 @@
+<lib-game-grid-view
+  [games]="games()"
+  [platforms]="platforms()"
+  [loading]="loading()"
+  [error]="error()"
+  [selectedPlatform]="selectedPlatform()"
+  [page]="page()"
+  [totalPages]="totalPages()"
+  [totalElements]="totalElements()"
+  (searchChange)="onSearch($event)"
+  (platformChange)="onPlatformSelected($event)"
+  (pageChange)="onPageChanged($event)"
+/>

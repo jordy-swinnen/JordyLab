@@ -9,7 +9,6 @@ This directory serves as the central configuration hub for Claude AI assistant i
 ## Contents
 
 - **CLAUDE.md** - Root project instructions and architecture overview for the entire JordyLab ecosystem
-- **coding-master-prompt.md** - Coding conventions and best practices for Java and Angular development
 - **jordylab-infrastructure-guide.md** - Infrastructure setup, deployment, and operational documentation
 - **jordylab-project-setup.md** - Project scaffolding, dependency management, and build configuration
 - **jordylab-project-overview.md** - High-level project goals, monetization strategy, and technical decisions

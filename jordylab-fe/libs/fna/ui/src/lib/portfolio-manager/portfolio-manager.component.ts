@@ -11,7 +11,7 @@ import { PortfolioManagerViewComponent } from './portfolio-manager-view.componen
 export class PortfolioManagerComponent {
   #store = inject(PortfolioStore);
 
-  positions = this.#store.positions;
+  positions = this.#store.positionRows;
   error = this.#store.error;
   totalWorth = this.#store.totalWorth;
   hasAnyPrices = this.#store.hasAnyPrices;
