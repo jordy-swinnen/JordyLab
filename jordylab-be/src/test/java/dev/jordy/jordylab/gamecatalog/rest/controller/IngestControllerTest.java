@@ -10,8 +10,8 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanEntry;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SyncCounts;
+import dev.jordy.jordylab.gamecatalog.service.ClientService;
 import dev.jordy.jordylab.gamecatalog.service.ScanService;
-import dev.jordy.jordylab.gamecatalog.service.ScriptService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
@@ -79,7 +79,7 @@ class IngestControllerTest {
     private ScanService scanService;
 
     @MockitoBean
-    private ScriptService scriptService;
+    private ClientService clientService;
 
     @Test
     void scanReturnsTheOutcomeCountsAndRejections() throws Exception {
@@ -160,29 +160,30 @@ class IngestControllerTest {
     }
 
     @Test
-    void scriptDownloadReturnsTheRenderedShellScriptAsAnAttachment() throws Exception {
+    void clientDownloadReturnsTheRenderedPythonClientAsAnAttachment() throws Exception {
         ArgumentCaptor<HttpServletRequest> requestCaptor = ArgumentCaptor.forClass(HttpServletRequest.class);
-        when(scriptService.generateScript(eq("steam"), requestCaptor.capture())).thenReturn("#!/bin/bash\necho steam-scan\n");
+        when(clientService.generateClient(eq("steam"), requestCaptor.capture())).thenReturn("print('steam-scan')\n");
 
-        mockMvc.perform(get("/api/gamecatalog/ingest/script").param("libraryType", "steam"))
+        mockMvc.perform(get("/api/gamecatalog/ingest/client").param("libraryType", "steam"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=\"jordylab-scan-steam.sh\""))
-                .andExpect(content().string("#!/bin/bash\necho steam-scan\n"));
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"jordylab-scan-steam.py\""))
+                .andExpect(content().contentTypeCompatibleWith("text/x-python"))
+                .andExpect(content().string("print('steam-scan')\n"));
 
-        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/script");
+        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/client");
     }
 
     @Test
-    void scriptDownloadForAnUnknownLibraryTypeIsABadRequest() throws Exception {
+    void clientDownloadForAnUnknownLibraryTypeIsABadRequest() throws Exception {
         ArgumentCaptor<HttpServletRequest> requestCaptor = ArgumentCaptor.forClass(HttpServletRequest.class);
-        when(scriptService.generateScript(eq("bogus"), requestCaptor.capture()))
+        when(clientService.generateClient(eq("bogus"), requestCaptor.capture()))
                 .thenThrow(new IllegalArgumentException("libraryType must be 'steam' or 'emudeck'"));
 
-        mockMvc.perform(get("/api/gamecatalog/ingest/script").param("libraryType", "bogus"))
+        mockMvc.perform(get("/api/gamecatalog/ingest/client").param("libraryType", "bogus"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("libraryType must be 'steam' or 'emudeck'"));
 
-        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/script");
+        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/client");
     }
 
     @Test

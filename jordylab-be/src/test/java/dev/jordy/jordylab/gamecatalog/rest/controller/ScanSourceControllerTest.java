@@ -40,7 +40,7 @@ class ScanSourceControllerTest {
         when(scanSourceService.listSources()).thenReturn(new SourcesResponse(List.of(
                 new ScanSourceResponse(SOURCE_ID, "snes", "jordybox", SourceType.EMUDECK, "SNES",
                         true, Instant.parse("2026-08-02T10:20:00Z"), Instant.parse("2026-08-02T10:20:00Z"),
-                        SyncOutcome.APPLIED, 412L))));
+                        Instant.parse("2026-08-02T10:30:00Z"), SyncOutcome.APPLIED, 412L))));
 
         mockMvc.perform(get("/api/gamecatalog/sources"))
                 .andExpect(status().isOk())

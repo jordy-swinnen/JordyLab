@@ -15,6 +15,7 @@ public record ScanSourceResponse(
         boolean enabled,
         Instant lastAttemptAt,
         Instant lastSuccessAt,
+        Instant lastCheckedAt,
         SyncOutcome lastOutcome,
         long installedGameCount) {
 }
