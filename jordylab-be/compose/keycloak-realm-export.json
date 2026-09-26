@@ -9,6 +9,23 @@
   "bruteForceProtected": true,
   "accessTokenLifespan": 1800,
   "ssoSessionIdleTimeout": 1800,
+  "defaultDefaultClientScopes": [
+    "role_list",
+    "saml_organization",
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    "acr",
+    "basic"
+  ],
+  "defaultOptionalClientScopes": [
+    "offline_access",
+    "address",
+    "phone",
+    "microprofile-jwt",
+    "organization"
+  ],
   "roles": {
     "realm": [
       {
@@ -27,8 +44,24 @@
       "roles": [
         "gamecatalog-scanner"
       ]
+    },
+    {
+      "clientScope": "offline_access",
+      "roles": [
+        "offline_access"
+      ]
     }
   ],
+  "clientScopeMappings": {
+    "gamecatalog-script": [
+      {
+        "client": "gamecatalog-script",
+        "roles": [
+          "gamecatalog-scanner"
+        ]
+      }
+    ]
+  },
   "clients": [
     {
       "clientId": "jordylab-host",
@@ -57,6 +90,9 @@
       "directAccessGrantsEnabled": false,
       "standardFlowEnabled": false,
       "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "roles"
+      ],
       "optionalClientScopes": [
         "offline_access"
       ],
@@ -82,7 +118,8 @@
       ],
       "realmRoles": [
         "jordylab-user",
-        "gamecatalog-scanner"
+        "gamecatalog-scanner",
+        "offline_access"
       ]
     }
   ]
