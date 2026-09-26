@@ -6,14 +6,15 @@ recipe management — a modular monolith with a separate frontend and Python sid
 
 ## Running locally
 
-Three pieces run together: Postgres + Keycloak (via Docker Compose), the Spring Boot backend,
+Three pieces run together: Postgres + Keycloak (via Podman Compose), the Spring Boot backend,
 and the Angular frontend.
 
 ### Prerequisites
 
 - Java 25, Gradle Wrapper (bundled — `./gradlew`)
 - [Bun](https://bun.sh) (`bunx nx ...` runs everything frontend-side — never `npm`/`npx`/`yarn`)
-- Docker + Docker Compose
+- [Podman](https://podman.io) + Podman Compose (the compose files are runtime-agnostic, so
+  Docker + Docker Compose work the same way if you prefer them)
 
 ### 1. Configure environment variables
 
@@ -35,7 +36,7 @@ These are local bootstrap credentials for the containers below — not productio
 
 ```bash
 cd jordylab-be
-docker compose up -d
+podman compose up -d
 ```
 
 This starts `pgvector/pgvector:pg16` on `localhost:5432` and Keycloak
@@ -51,6 +52,16 @@ cd jordylab-be
 ```
 
 Runs on `http://localhost:8080`, validating requests against the Keycloak realm from step 2.
+
+### 3b. Run the backend tests
+
+Tests boot Postgres via Testcontainers, which needs to find the Podman machine socket:
+
+```bash
+export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')
+export TESTCONTAINERS_RYUK_DISABLED=true   # ryuk needs privileges the Podman socket may not grant
+cd jordylab-be && ./gradlew build
+```
 
 ### 4. Start the frontend
 

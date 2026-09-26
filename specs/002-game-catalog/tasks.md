@@ -40,7 +40,7 @@ description: "Task list for Game Catalog implementation (as shipped: downloaded 
 - [x] T011 Security: `SecurityConfig` gates `POST /ingest/scan` -> role `gamecatalog-scanner`, `GET /ingest/script` -> `jordylab-user`, other `/api/**` authenticated (`jordylab-be/.../shared/config/SecurityConfig.java`)
 - [x] T012 Keycloak realm: `gamecatalog-script` public client with the device grant (`oauth2.device.authorization.grant.enabled`), roles `jordylab-user` / `gamecatalog-scanner` (`jordylab-be/compose/keycloak-realm-export.json`)
 - [x] T013 AI routing entry `jordylab.ai.modules.gamecatalog` in `application.yaml`
-- [ ] T014 Fix AI model attribution: `ResilientAiService` sends every call with the global `spring.ai.anthropic.chat.options.model` (`claude-sonnet-5`); the per-module `model` under `jordylab.ai.modules.*` is only a label. gamecatalog's label is `claude-sonnet-4-20250514` (rejected by the Anthropic API), so logs and `modelUsed` misreport it. Either set the label to `claude-sonnet-5` or make the service honor the per-module model
+- [x] T014 Fix AI model attribution: `ResilientAiService` sends every call with the global `spring.ai.anthropic.chat.options.model` (`claude-sonnet-5`); the per-module `model` under `jordylab.ai.modules.*` is only a label. gamecatalog's label is `claude-sonnet-4-20250514` (rejected by the Anthropic API), so logs and `modelUsed` misreport it. Either set the label to `claude-sonnet-5` or make the service honor the per-module model
 
 ## Phase 3: US1 - Catalog synchronization via the scan script (P1) MVP
 
@@ -49,8 +49,8 @@ description: "Task list for Game Catalog implementation (as shipped: downloaded 
 - [x] T016 [P] [US1] `ReconciliationServiceTest`: added/updated/removed/uninstalled transitions, purge with grace period
 - [x] T017 [P] [US1] `IngestControllerTest` (`@WebMvcTest`): scan outcome/counts/rejections/reason, blank hostname -> 400, script download, unknown `libraryType` -> 400
 - [x] T018 [US1] `GameCatalogModuleTest` (`@ApplicationModuleTest`, Testcontainers Postgres): slice boots, migrations apply
-- [ ] T019 [P] [US1] Parser tests: `VdfParserTest`, `SteamLibraryParserTest`, `EmuDeckLibraryParserTest` (none exist yet)
-- [ ] T020 [P] [US1] `ScriptServiceTest`: template substitution, `steam`/`emudeck` accepted, anything else rejected
+- [x] T019 [P] [US1] Parser tests: `VdfParserTest`, `SteamLibraryParserTest`, `EmuDeckLibraryParserTest`
+- [x] T020 [P] [US1] `ScriptServiceTest`: template substitution, `steam`/`emudeck` accepted, anything else rejected
 
 ### Implementation
 - [x] T021 [US1] `ScanService`: resolve-or-create `ScanSource` by `(hostname, libraryType)`, payload hash idempotency (`NO_CHANGE`), byte/game caps, per-entry validation, reconcile
@@ -59,8 +59,8 @@ description: "Task list for Game Catalog implementation (as shipped: downloaded 
 - [x] T024 [US1] `IngestController` (`POST /ingest/scan`, `GET /ingest/script`) + `IngestExceptionHandler` (400 `ProblemDetail`)
 - [x] T025 [US1] `LibraryParser` implementations in `service/scan/`: `SteamLibraryParser` (+`VdfParser`), `EmuDeckLibraryParser`
 - [x] T026 [US1] `ScriptService` + `src/main/resources/scripts/jordylab-scan-template.sh`
-- [ ] T027 [US1] Fix `detect_hostname` in the template (it blanks the hostname, so the script always exits)
-- [ ] T028 [US1] Run the generated script end-to-end against the local stack (device-code login -> `/ingest/scan`) and record the result in `validation-results.md`. Use a fake Steam library via `--path` (a `steamapps/libraryfolders.vdf` plus an `appmanifest_<appid>.acf`): the dev Mac may have no installed games, and the script's default path detection only knows Linux locations (`~/.local/share/Steam`, `~/.steam/...`), not macOS `~/Library/Application Support/Steam`
+- [x] T027 [US1] Fix `detect_hostname` in the template (it blanks the hostname, so the script always exits)
+- [x] T028 [US1] Run the generated script end-to-end against the local stack (device-code login -> `/ingest/scan`) and record the result in `validation-results.md`. Use a fake Steam library via `--path` (a `steamapps/libraryfolders.vdf` plus an `appmanifest_<appid>.acf`): the dev Mac may have no installed games, and the script's default path detection only knows Linux locations (`~/.local/share/Steam`, `~/.steam/...`), not macOS `~/Library/Application Support/Steam`
 
 ## Phase 4: US2 - Browse the catalog as a card grid (P2)
 
@@ -92,7 +92,7 @@ description: "Task list for Game Catalog implementation (as shipped: downloaded 
 - [x] T042 `ModularityTests` pass (gamecatalog exposes no internals)
 - [x] T043 Coverage gates: `./gradlew build` passes JaCoCo verification; per-lib line coverage is >= 80% (gamecatalog-api 99%, gamecatalog-ui 95%, fna-api 100%, fna-ui 85%)
 - [x] T044 [P] Root `AGENTS.md` describes the script + device-grant scan flow and the built `gamecatalog` module
-- [ ] T045 Update `README.md` / `AGENTS.md` run instructions from Docker to Podman
+- [x] T045 Update `README.md` / `AGENTS.md` run instructions from Docker to Podman
 - [ ] T046 Production smoke (VPS + JordyBox): deferred until deploy
 
 ---

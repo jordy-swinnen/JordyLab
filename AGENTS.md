@@ -51,7 +51,7 @@ Per-module provider selection via `ResilientAiService` with health-check-and-cac
 
 ## Infrastructure
 
-- **Hetzner VPS**: Docker Compose stack (Spring Boot, PostgreSQL 16 + pgvector, Traefik, Watchtower, Keycloak)
+- **Hetzner VPS**: Compose stack (Spring Boot, PostgreSQL 16 + pgvector, Traefik, Watchtower, Keycloak). Local dev runs the same `jordylab-be/compose.yaml` with **Podman Compose**; the files are runtime-agnostic (Docker Compose is drop-in). Testcontainers-based tests need `DOCKER_HOST` pointed at the Podman machine socket
 - **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — Ollama inference host, `0.0.0.0:11434` (LAN only)
 - **JordyBox**: i7-9700K, RTX 2070 Super — HTPC/gaming, NFS server for ROMs (where downloaded scan scripts walk the libraries)
 - WireGuard connects VPS to home LAN for Ollama access
@@ -63,7 +63,7 @@ Read these on-demand when working on related tasks — do not load all at once.
 
 | Doc | Read when... |
 |-----|-------------|
-| `jordylab-infrastructure-guide.md` | Working on NFS mounts, Ollama config, Docker networking, or AI fallback |
+| `jordylab-infrastructure-guide.md` | Working on NFS mounts, Ollama config, container networking, or AI fallback |
 | `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
 | `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
 
@@ -76,7 +76,7 @@ present in the repo.
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
 - Ollama on main desktop uses ROCm (AMD GPU), not CUDA — applies when local inference is wired
 - `ResilientAiService` health check only verifies Ollama is running, not that a model is loaded in VRAM — applies when local inference is wired
-- Docker containers need the desktop's LAN IP for Ollama — verify with `docker exec jordylab curl http://<desktop-ip>:11434/api/tags` (applies when local inference is wired)
+- Containers need the desktop's LAN IP for Ollama — verify with `podman exec jordylab curl http://<desktop-ip>:11434/api/tags` (`docker exec` on a Docker host; applies when local inference is wired)
 - NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off
 
 ## Secrets
