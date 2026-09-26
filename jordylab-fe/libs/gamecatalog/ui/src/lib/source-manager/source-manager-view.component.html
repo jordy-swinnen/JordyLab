@@ -13,10 +13,10 @@
         variant="default"
         size="sm"
         [disabled]="downloading() !== null"
-        (click)="downloadScript.emit('steam')"
-        data-testid="download-steam-script"
+        (click)="downloadClient.emit('steam')"
+        data-testid="download-steam-client"
       >
-        @if (downloading() === 'steam') { Generating... } @else { Download script }
+        @if (downloading() === 'steam') { Generating... } @else { Download client }
       </button>
     </div>
   </div>
@@ -27,7 +27,7 @@
         <h3 class="text-lg font-medium text-foreground">EmuDeck</h3>
         <p class="mt-1 text-xs text-muted-foreground">
           Scans EmuDeck emulator subfolders (you pick which ones when the
-          script runs). One source per hostname.
+          client runs). One source per hostname.
         </p>
       </div>
       <button
@@ -35,10 +35,10 @@
         variant="default"
         size="sm"
         [disabled]="downloading() !== null"
-        (click)="downloadScript.emit('emudeck')"
-        data-testid="download-emudeck-script"
+        (click)="downloadClient.emit('emudeck')"
+        data-testid="download-emudeck-client"
       >
-        @if (downloading() === 'emudeck') { Generating... } @else { Download script }
+        @if (downloading() === 'emudeck') { Generating... } @else { Download client }
       </button>
     </div>
   </div>
@@ -71,7 +71,7 @@
 } @else if (sources().length === 0) {
   <div class="py-12 text-center text-muted-foreground">
     <p class="text-sm">No scan sources announced yet.</p>
-    <p class="mt-1 text-xs">Download a script above, run it on a host, and the source appears after its first scan.</p>
+    <p class="mt-1 text-xs">Download the client above, run it once on a host, and the source appears after its first scan.</p>
   </div>
 } @else {
   <div class="space-y-3">
@@ -92,6 +92,9 @@
               · last sync {{ source.lastAttemptAt | date: 'MMM d, h:mm a' }}
             } @else {
               · never synced
+            }
+            @if (source.lastCheckedAt) {
+              · checked {{ source.lastCheckedAt | date: 'MMM d, h:mm a' }}
             }
           </p>
         </div>

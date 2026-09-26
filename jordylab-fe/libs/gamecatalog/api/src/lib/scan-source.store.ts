@@ -69,8 +69,8 @@ export class ScanSourceStore {
       });
   }
 
-  /** Generating the script is state; saving it is a browser side effect, so the blob is handed to `onReady`. */
-  downloadScript(libraryType: ScanLibraryType, onReady: (blob: Blob) => void): void {
+  /** Generating the client is state; saving it is a browser side effect, so the blob is handed to `onReady`. */
+  downloadClient(libraryType: ScanLibraryType, onReady: (blob: Blob) => void): void {
     if (this.#downloading()) {
       return;
     }
@@ -79,10 +79,10 @@ export class ScanSourceStore {
     this.#error.set(null);
 
     this.#api
-      .getScanScript(libraryType)
+      .getScanClient(libraryType)
       .pipe(
         catchError(() => {
-          this.#error.set(`Failed to generate ${libraryType} scan script.`);
+          this.#error.set(`Failed to generate the ${libraryType} scan client.`);
 
           return of(null);
         })

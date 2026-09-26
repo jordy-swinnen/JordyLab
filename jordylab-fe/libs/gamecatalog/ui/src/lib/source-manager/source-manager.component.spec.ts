@@ -11,7 +11,7 @@ describe('SourceManagerComponent', () => {
   const downloading = signal<ScanLibraryType | null>(null);
 
   const toggle = vi.fn<ScanSourceStore['toggle']>();
-  const downloadScript = vi.fn<ScanSourceStore['downloadScript']>();
+  const downloadClient = vi.fn<ScanSourceStore['downloadClient']>();
 
   const storeMock = {
     sources: sources.asReadonly(),
@@ -20,7 +20,7 @@ describe('SourceManagerComponent', () => {
     togglingId: togglingId.asReadonly(),
     downloading: downloading.asReadonly(),
     toggle,
-    downloadScript,
+    downloadClient,
   };
 
   let spectator: Spectator<SourceManagerComponent>;
@@ -37,7 +37,7 @@ describe('SourceManagerComponent', () => {
     togglingId.set(null);
     downloading.set(null);
     toggle.mockReset();
-    downloadScript.mockReset();
+    downloadClient.mockReset();
     spectator = createComponent();
   });
 
@@ -64,8 +64,8 @@ describe('SourceManagerComponent', () => {
   it('exposes Steam and EmuDeck download buttons', () => {
     populate([]);
 
-    expect(spectator.query('[data-testid="download-steam-script"]')).not.toBeNull();
-    expect(spectator.query('[data-testid="download-emudeck-script"]')).not.toBeNull();
+    expect(spectator.query('[data-testid="download-steam-client"]')).not.toBeNull();
+    expect(spectator.query('[data-testid="download-emudeck-client"]')).not.toBeNull();
   });
 
   it('shows an empty state when no sources exist', () => {
@@ -110,20 +110,20 @@ describe('SourceManagerComponent', () => {
       Reflect.deleteProperty(URL, 'revokeObjectURL');
     });
 
-    it('requests the Steam script from the store', () => {
-      spectator.click('[data-testid="download-steam-script"]');
+    it('requests the Steam client from the store', () => {
+      spectator.click('[data-testid="download-steam-client"]');
 
-      expect(downloadScript).toHaveBeenCalledWith('steam', expect.any(Function));
+      expect(downloadClient).toHaveBeenCalledWith('steam', expect.any(Function));
     });
 
-    it('saves the generated script as a file named after the library', () => {
-      spectator.click('[data-testid="download-emudeck-script"]');
-      const onReady = downloadScript.mock.calls[0][1];
+    it('saves the generated client as a file named after the library', () => {
+      spectator.click('[data-testid="download-emudeck-client"]');
+      const onReady = downloadClient.mock.calls[0][1];
 
-      onReady(new Blob(['#!/bin/sh']));
+      onReady(new Blob(['print("hi")']));
 
       const link = anchorClick.mock.contexts[0] as HTMLAnchorElement;
-      expect(link.download).toBe('jordylab-scan-emudeck.sh');
+      expect(link.download).toBe('jordylab-scan-emudeck.py');
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:script');
     });
   });

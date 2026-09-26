@@ -52,8 +52,8 @@ export class GameCatalogApiService {
     return this.#http.put<{ id: string; enabled: boolean }>(`/api/gamecatalog/sources/${id}/enabled`, { enabled });
   }
 
-  getScanScript(libraryType: ScanLibraryType): Observable<Blob> {
-    return this.#http.get(`/api/gamecatalog/ingest/script?libraryType=${libraryType}`, {
+  getScanClient(libraryType: ScanLibraryType): Observable<Blob> {
+    return this.#http.get(`/api/gamecatalog/ingest/client?libraryType=${libraryType}`, {
       responseType: 'blob',
     });
   }

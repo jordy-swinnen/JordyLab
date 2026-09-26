@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
-import { ScanScriptType, SourceManagerViewComponent } from './source-manager-view.component';
+import { ScanClientType, SourceManagerViewComponent } from './source-manager-view.component';
 
 @Component({
   selector: 'lib-source-manager',
@@ -21,9 +21,9 @@ export class SourceManagerComponent {
     this.#store.toggle(source);
   }
 
-  onDownloadScript(libraryType: ScanScriptType): void {
-    this.#store.downloadScript(libraryType, (blob) =>
-      triggerBrowserDownload(blob, `jordylab-scan-${libraryType}.sh`)
+  onDownloadClient(libraryType: ScanClientType): void {
+    this.#store.downloadClient(libraryType, (blob) =>
+      triggerBrowserDownload(blob, `jordylab-scan-${libraryType}.py`)
     );
   }
 }

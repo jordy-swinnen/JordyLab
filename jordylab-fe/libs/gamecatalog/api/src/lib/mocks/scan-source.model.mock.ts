@@ -10,6 +10,7 @@ export function aScanSourceMock(overrides: Partial<ScanSource> = {}): ScanSource
     enabled: true,
     lastAttemptAt: '2026-08-02T10:20:00Z',
     lastSuccessAt: '2026-08-02T10:20:00Z',
+    lastCheckedAt: '2026-08-02T10:30:00Z',
     lastOutcome: 'APPLIED',
     installedGameCount: 412,
     ...overrides,
