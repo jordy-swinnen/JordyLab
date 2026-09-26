@@ -1,20 +1,8 @@
 import { Route } from '@angular/router';
+import { fnaRoutes } from '@jordylab-fe/fna/ui';
 
-export const appRoutes: Route[] = [
-  {
-    path: 'articles',
-    loadComponent: () =>
-      import('@jordylab-fe/fna/ui').then((m) => m.ArticleListComponent),
-  },
-  {
-    path: 'portfolio',
-    loadComponent: () =>
-      import('@jordylab-fe/fna/ui').then((m) => m.PortfolioManagerComponent),
-  },
-  {
-    path: 'briefing',
-    loadComponent: () =>
-      import('@jordylab-fe/fna/ui').then((m) => m.BriefingDisplayComponent),
-  },
-  { path: '', redirectTo: 'articles', pathMatch: 'full' },
-];
+/**
+ * Standalone dev harness: serves the same routes the host mounts at /fna, so
+ * `nx serve fna` can exercise this domain without booting the host + Keycloak.
+ */
+export const appRoutes: Route[] = fnaRoutes;

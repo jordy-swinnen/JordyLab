@@ -1,25 +1,8 @@
 import { Route } from '@angular/router';
+import { gamecatalogRoutes } from '@jordylab-fe/gamecatalog/ui';
 
-export const appRoutes: Route[] = [
-  {
-    path: 'grid',
-    loadComponent: () =>
-      import('@jordylab-fe/gamecatalog/ui').then((m) => m.GameGridComponent),
-  },
-  {
-    path: 'chat',
-    loadComponent: () =>
-      import('@jordylab-fe/gamecatalog/ui').then((m) => m.GameChatComponent),
-  },
-  {
-    path: 'sources',
-    loadComponent: () =>
-      import('@jordylab-fe/gamecatalog/ui').then((m) => m.SourceManagerComponent),
-  },
-  {
-    path: ':id',
-    loadComponent: () =>
-      import('@jordylab-fe/gamecatalog/ui').then((m) => m.GameDetailComponent),
-  },
-  { path: '', redirectTo: 'grid', pathMatch: 'full' },
-];
+/**
+ * Standalone dev harness: serves the same routes the host mounts at /games, so
+ * `nx serve gamecatalog` can exercise this domain without booting the host + Keycloak.
+ */
+export const appRoutes: Route[] = gamecatalogRoutes;

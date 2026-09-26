@@ -4,39 +4,12 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/jordylab/src",
-  "tags": [
-    "scope:shared",
-    "type:app"
-  ],
+  "tags": ["scope:shared", "type:app"],
   "targets": {
-    "federation-build": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "inputs": [
-        "{workspaceRoot}/apps/jordylab/federation.config.ts",
-        "{workspaceRoot}/apps/jordylab/src/**/*",
-        "{workspaceRoot}/libs/shared/**/*",
-        "{workspaceRoot}/tools/federation-build.mjs"
-      ],
-      "outputs": [
-        "{projectRoot}/../../dist/apps/jordylab/browser/remoteEntry.json",
-        "{projectRoot}/../../dist/apps/jordylab/browser/importmap.json"
-      ],
-      "options": {
-        "command": "node tools/federation-build.mjs --config apps/jordylab/federation.config.ts --output dist/apps/jordylab/browser --tsConfig apps/jordylab/tsconfig.app.json --projectName jordylab_host --entryPoint apps/jordylab/src/main.ts"
-      }
-    },
     "build": {
-      "executor": "./tools/executors/federation-application:default",
-      "outputs": [
-        "{options.outputPath}"
-      ],
-      "dependsOn": [
-        "^build",
-        "federation-build"
-      ],
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
       "options": {
-        "federationConfig": "apps/jordylab/federation.config.ts",
         "outputPath": "dist/apps/jordylab",
         "baseHref": "/",
         "browser": "apps/jordylab/src/main.ts",
@@ -47,9 +20,7 @@
             "input": "apps/jordylab/public"
           }
         ],
-        "styles": [
-          "apps/jordylab/src/styles.css"
-        ]
+        "styles": ["apps/jordylab/src/styles.css"]
       },
       "configurations": {
         "production": {
@@ -108,10 +79,7 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
-      "dependsOn": [
-        "build",
-        "federation-build"
-      ],
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "jordylab:build:development",
         "staticFilePath": "dist/apps/jordylab/browser",

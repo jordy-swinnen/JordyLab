@@ -1,5 +1,4 @@
 import { Route } from '@angular/router';
-import { loadRemoteModule } from '@softarc/native-federation-runtime';
 import { authGuard } from './auth/auth.guard';
 import { LoginComponent } from './auth/login.component';
 
@@ -9,13 +8,13 @@ export const appRoutes: Route[] = [
     path: 'fna',
     canActivate: [authGuard],
     loadChildren: () =>
-      loadRemoteModule('fna', './Routes').then((m) => m.appRoutes),
+      import('@jordylab-fe/fna/ui').then((m) => m.fnaRoutes),
   },
   {
     path: 'games',
     canActivate: [authGuard],
     loadChildren: () =>
-      loadRemoteModule('gamecatalog', './Routes').then((m) => m.appRoutes),
+      import('@jordylab-fe/gamecatalog/ui').then((m) => m.gamecatalogRoutes),
   },
   { path: '', redirectTo: 'fna', pathMatch: 'full' },
 ];

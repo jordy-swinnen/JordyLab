@@ -7,7 +7,7 @@ Personal platform for financial intelligence, health/fitness tracking, game cata
 ```
 AGENTS.md                       ← you are here (root)
 jordylab-be/                    ← Spring Boot 4 monolith (Java 25, Gradle Kotlin DSL) — Keycloak JWT auth, gamecatalog ingest endpoint
-jordylab-fe/                    ← Nx Angular 21 monorepo (Bun, spartan/ui) — host shell + per-domain deployable remote apps (fna, gamecatalog) wired via @softarc/native-federation; future remotes (recipe, garmin, trading) follow the same pattern
+jordylab-fe/                    ← Nx Angular 21 monorepo (Bun, spartan/ui) — one deployable app (jordylab) lazy-loading per-domain route libs (fna, gamecatalog); future domains (recipe, garmin, trading) follow the same pattern
 garmin-sync-service/            ← Python 3.12 sidecar (Garmin Connect sync, direct DB writes)
 ```
 

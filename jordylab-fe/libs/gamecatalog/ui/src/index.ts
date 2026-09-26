@@ -1,3 +1,4 @@
+export { gamecatalogRoutes } from './lib/gamecatalog.routes';
 export { GameGridComponent } from './lib/game-grid/game-grid.component';
 export { GameDetailComponent } from './lib/game-detail/game-detail.component';
 export { GameChatComponent } from './lib/game-chat/game-chat.component';
