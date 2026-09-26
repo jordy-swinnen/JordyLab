@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
-import { AuthService } from './auth/auth.service';
+import { AuthService } from '@jordylab-fe/shared/auth';
 
 @Component({
   selector: 'app-root',

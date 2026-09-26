@@ -3,9 +3,9 @@ import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
 /**
- * Redirects unauthenticated users to {@code /login}. The host shell gates
- * the whole micro-frontend topology behind this guard; remotes inherit the
- * token via the {@link authInterceptor} and don't run their own check.
+ * Redirects unauthenticated users to {@code /login}. Every app that mounts this guard —
+ * `jordylab` and the `fna`/`gamecatalog` standalone dev harnesses — runs its own Keycloak
+ * check independently; there is no shared host session to inherit a token from.
  */
 export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);

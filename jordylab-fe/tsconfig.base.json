@@ -30,6 +30,9 @@
       "@jordylab-fe/gamecatalog/ui": [
         "libs/gamecatalog/ui/src/index.ts"
       ],
+      "@jordylab-fe/shared/auth": [
+        "libs/shared/auth/src/index.ts"
+      ],
       "@spartan-ng/ui-card-helm": [
         "libs/ui/helm/ui-card-helm/src/index.ts"
       ],

@@ -1,14 +1,16 @@
-import { Injectable, signal, Signal } from '@angular/core';
+import { inject, Injectable, signal, Signal } from '@angular/core';
 import Keycloak, { KeycloakInstance } from 'keycloak-js';
-import { environment } from '../../environments/environment';
+import { AUTH_CONFIG } from './auth-config';
 
 /**
- * Wraps the official `keycloak-js` SDK behind Angular signals. The host shell
- * is the only place in the frontend that knows about Keycloak; remotes see
- * just the bearer token via the {@link authInterceptor}.
+ * Wraps the official `keycloak-js` SDK behind Angular signals. Every deployable app
+ * (`jordylab`, and the `fna`/`gamecatalog` standalone dev harnesses) provides its own
+ * {@link AUTH_CONFIG} and uses this same service, so each authenticates against the real
+ * Keycloak realm independently rather than relying on a host shell to hold the only session.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  #config = inject(AUTH_CONFIG);
   #keycloak: KeycloakInstance | null = null;
   #authenticated = signal(false);
   #username = signal<string | null>(null);
@@ -23,9 +25,9 @@ export class AuthService {
       return this.#authenticated();
     }
     const keycloak = new Keycloak({
-      url: environment.keycloakUrl,
-      realm: environment.keycloakRealm,
-      clientId: environment.keycloakClientId,
+      url: this.#config.keycloakUrl,
+      realm: this.#config.keycloakRealm,
+      clientId: this.#config.keycloakClientId,
     });
     this.#keycloak = keycloak;
     try {

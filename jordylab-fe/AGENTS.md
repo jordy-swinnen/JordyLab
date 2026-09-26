@@ -3,8 +3,8 @@
 ```bash
 bun install                        # Install dependencies
 bunx nx serve jordylab             # Main app (port 4200) — lazy-loads fna + gamecatalog routes
-bunx nx serve fna                  # fna dev harness, no host/auth (port 4300)
-bunx nx serve gamecatalog          # gamecatalog dev harness, no host/auth (port 4400)
+bunx nx serve fna                  # fna dev harness, no host shell (port 4300)
+bunx nx serve gamecatalog          # gamecatalog dev harness, no host shell (port 4400)
 bunx nx test <lib>                 # Test specific lib (e.g. bunx nx test fna-ui)
 bunx nx run-many -t test           # Run all tests
 bunx nx run-many -t lint           # Lint everything
@@ -36,7 +36,8 @@ All real code lives in per-domain libs; the apps are thin shells over them:
 ```
 apps/jordylab          — the deployable app. Lazy-loads each domain's routes
 apps/<domain>/         — dev harness per domain: boots that domain's routes alone,
-                         without the host shell or Keycloak. Not deployed
+                         without the host shell. Still authenticates via Keycloak
+                         independently (see Auth via Keycloak below). Not deployed
 libs/<domain>/{ui,api} — domain libs: ui = components + routes, api = services & HTTP
 libs/ui/helm           — shared spartan helm overrides reused by multiple apps
 ```
@@ -60,8 +61,10 @@ puts each domain (and each component within it) in its own chunk, fetched on fir
   re-exported from the lib's barrel. The host mounts it under a path segment it owns
   (`/fna`, `/games`); domain routes are relative within that segment and must NOT repeat it.
 - **Dev harnesses.** `apps/fna` and `apps/gamecatalog` exist only so `bunx nx serve <domain>`
-  can exercise one domain without the host or Keycloak. Their `app.routes.ts` just re-exports
-  the lib's routes, so there is one source of truth. They are not deployed.
+  can exercise one domain without the host shell. Their `app.routes.ts` re-exports the lib's
+  routes wrapped in the shared `authGuard`, so there is one source of truth for the routes and
+  each harness still authenticates against the real Keycloak realm independently — see
+  "Auth via Keycloak" below. They are not deployed.
 - **No cross-domain imports.** No shared stores, no cross-domain service imports, no shared
   mutable state — enforced by the Nx tag boundaries above.
 - **Base hrefs:** `apps/jordylab` → `/`, `apps/fna` → `/fna`, `apps/gamecatalog` → `/games`.
@@ -102,11 +105,26 @@ the backend follows.
 
 # Auth via Keycloak
 
-- The host shell (`apps/jordylab`) integrates with Keycloak via the official `keycloak-js` SDK. Other apps don't know about OAuth.
-- Token plumbing: `apps/jordylab/src/app/auth/auth.service.ts` wraps the SDK. `apps/jordylab/src/app/auth/auth.interceptor.ts` adds the bearer header to every outgoing request.
-- Route protection: `authGuard` in `apps/jordylab/src/app/auth/auth.guard.ts` redirects unauthenticated users to `/login`.
-- Login page: `apps/jordylab/src/app/auth/login.component.ts`. Button calls `authService.login()` which kicks off the standard OIDC Authorization Code flow with PKCE.
-- Logout: `authService.logout()` from the header button.
-- Configuration: `apps/jordylab/src/environments/environment.ts` (dev) and `environment.prod.ts` (prod). The `project.json` swaps via `fileReplacements` on production builds.
-- Realm: single `jordylab` realm. Client: `jordylab-host` (public, OIDC web). Roles: `jordylab-user` (default for any logged-in user), `gamecatalog-scanner` (required for the script's `/scan` access — the script uses a separate `gamecatalog-script` device-code client).
+- Keycloak integration (the `keycloak-js` SDK, token plumbing, route guard, login page) lives in
+  the shared `libs/shared/auth` lib (`@jordylab-fe/shared/auth`), not in any single app. All three
+  deployable/dev-harness apps (`jordylab`, `fna`, `gamecatalog`) depend on it and authenticate
+  independently — there is no host-only session that other apps borrow from.
+- Token plumbing: `AuthService` (`libs/shared/auth/src/lib/auth.service.ts`) wraps the SDK.
+  `authInterceptor` (`auth.interceptor.ts`) adds the bearer header to every outgoing request.
+- Route protection: `authGuard` (`auth.guard.ts`) redirects unauthenticated users to `/login`.
+- Login page: `LoginComponent` (`login.component.ts`). Button calls `authService.login()` which
+  kicks off the standard OIDC Authorization Code flow with PKCE.
+- Logout: `authService.logout()` from the header button (host app only — the standalone harnesses
+  don't render the host chrome).
+- Configuration: each app supplies its own `AUTH_CONFIG` (an `InjectionToken` defined in
+  `auth-config.ts`) from its own `src/environments/environment.ts` (dev) /
+  `environment.prod.ts` (prod), provided in that app's `app.config.ts`. All three apps currently
+  provide the same realm/client — only the runtime redirect origin differs, and that's read from
+  `window.location.origin`, not from the environment file. Each app's `project.json` swaps via
+  `fileReplacements` on production builds.
+- Realm: single `jordylab` realm. Client: `jordylab-host` (public, OIDC web) — its `redirectUris`/
+  `webOrigins` in `compose/keycloak-realm-export.json` already list the standalone harness ports
+  (`:4300`, `:4400`) alongside the host's `:4200`. Roles: `jordylab-user` (default for any
+  logged-in user), `gamecatalog-scanner` (required for the script's `/scan` access — the script
+  uses a separate `gamecatalog-script` device-code client).
 - `apps/gamecatalog` calls `/api/gamecatalog/ingest/script?libraryType=steam` (or `emudeck`) to download the scan script for the user. Both endpoints sit behind the host's auth interceptor.

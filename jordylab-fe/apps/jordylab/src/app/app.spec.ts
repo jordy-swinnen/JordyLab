@@ -1,8 +1,8 @@
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
+import { AuthService } from '@jordylab-fe/shared/auth';
 import { App } from './app';
-import { AuthService } from './auth/auth.service';
 
 describe('App', () => {
   const createComponent = createComponentFactory({

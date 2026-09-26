@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 @Component({
-  selector: 'app-login',
+  selector: 'lib-login',
   standalone: true,
   imports: [HlmButtonDirective],
   template: `

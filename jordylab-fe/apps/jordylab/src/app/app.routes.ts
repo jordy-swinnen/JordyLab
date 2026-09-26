@@ -1,6 +1,5 @@
 import { Route } from '@angular/router';
-import { authGuard } from './auth/auth.guard';
-import { LoginComponent } from './auth/login.component';
+import { authGuard, LoginComponent } from '@jordylab-fe/shared/auth';
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },

@@ -1,21 +1,8 @@
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { of, Subject, throwError } from 'rxjs';
+import { Subject } from 'rxjs';
 import { GameCatalogApiService, GameDetail } from '@jordylab-fe/gamecatalog/api';
 import { GameDetailComponent } from './game-detail.component';
-
-class GameCatalogApiServiceMock {
-  private gameSubject = new Subject<GameDetail>();
-  getGame = vi.fn(() => this.gameSubject.asObservable());
-
-  setGame(game: GameDetail) {
-    this.gameSubject.next(game);
-  }
-
-  failGame(status: number) {
-    this.gameSubject.error({ status });
-  }
-}
 
 const aGameDetail = (overrides: Partial<GameDetail> = {}): GameDetail => ({
   id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
@@ -36,10 +23,16 @@ const aGameDetail = (overrides: Partial<GameDetail> = {}): GameDetail => ({
 });
 
 describe('GameDetailComponent', () => {
+  let gameSubject: Subject<GameDetail>;
+  let getGame: ReturnType<typeof vi.fn>;
+
   const createComponent = createComponentFactory({
     component: GameDetailComponent,
     providers: [
-      { provide: GameCatalogApiService, useClass: GameCatalogApiServiceMock },
+      {
+        provide: GameCatalogApiService,
+        useValue: { getGame: (...args: unknown[]) => getGame(...args) },
+      },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -49,18 +42,20 @@ describe('GameDetailComponent', () => {
     ],
   });
 
-  const apiMock = (spectator: Spectator<GameDetailComponent>) =>
-    spectator.inject(GameCatalogApiService) as unknown as GameCatalogApiServiceMock;
+  beforeEach(() => {
+    gameSubject = new Subject<GameDetail>();
+    getGame = vi.fn(() => gameSubject.asObservable());
+  });
 
   it('requests the game for the route id', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
+    createComponent();
 
-    expect(apiMock(spectator).getGame).toHaveBeenCalledWith('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
+    expect(getGame).toHaveBeenCalledWith('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
   });
 
   it('renders artwork, facts and prose for an enriched game', () => {
     const spectator: Spectator<GameDetailComponent> = createComponent();
-    apiMock(spectator).setGame(aGameDetail());
+    gameSubject.next(aGameDetail());
     spectator.detectChanges();
 
     const image = spectator.query('img');
@@ -74,7 +69,7 @@ describe('GameDetailComponent', () => {
 
   it('shows the explicit unavailable state while enrichment is pending', () => {
     const spectator: Spectator<GameDetailComponent> = createComponent();
-    apiMock(spectator).setGame(
+    gameSubject.next(
       aGameDetail({
         enrichmentStatus: 'PENDING',
         genre: null,
@@ -93,7 +88,7 @@ describe('GameDetailComponent', () => {
 
   it('shows the explicit unavailable state when enrichment failed', () => {
     const spectator: Spectator<GameDetailComponent> = createComponent();
-    apiMock(spectator).setGame(
+    gameSubject.next(
       aGameDetail({
         enrichmentStatus: 'FAILED',
         genre: null,
@@ -111,7 +106,7 @@ describe('GameDetailComponent', () => {
 
   it('shows a not-found state for an invisible game', () => {
     const spectator: Spectator<GameDetailComponent> = createComponent();
-    apiMock(spectator).failGame(404);
+    gameSubject.error({ status: 404 });
     spectator.detectChanges();
 
     expect(spectator.element).toHaveText('This game is not in your catalog.');
@@ -119,7 +114,7 @@ describe('GameDetailComponent', () => {
 
   it('shows an error state for other failures', () => {
     const spectator: Spectator<GameDetailComponent> = createComponent();
-    apiMock(spectator).failGame(500);
+    gameSubject.error({ status: 500 });
     spectator.detectChanges();
 
     expect(spectator.query('.text-destructive')).toHaveText('Failed to load the game.');
