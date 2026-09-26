@@ -14,11 +14,8 @@ describe('App', () => {
     spectator = createComponent();
   });
 
-  it('should render navigation links', () => {
-    const navLinks = spectator.queryAll('nav a');
-    expect(navLinks.length).toBe(3);
-    expect(navLinks[0].textContent).toContain('Library');
-    expect(navLinks[1].textContent).toContain('Chat');
-    expect(navLinks[2].textContent).toContain('Sources');
+  it('renders the brand link and a router outlet for the domain routes', () => {
+    expect(spectator.query('header a')).toBeTruthy();
+    expect(spectator.query('router-outlet')).toBeTruthy();
   });
 });

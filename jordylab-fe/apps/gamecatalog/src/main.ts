@@ -6,7 +6,7 @@ import { App } from './app/app';
 import { environment } from './environments/environment';
 
 const injector = Injector.create({
-  providers: [{ provide: AUTH_CONFIG, useValue: environment }],
+  providers: [{ provide: AUTH_CONFIG, useValue: environment }, AuthService],
 });
 const auth = injector.get(AuthService);
 

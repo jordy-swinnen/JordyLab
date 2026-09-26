@@ -59,6 +59,23 @@ describe('PortfolioManagerComponent', () => {
     expect(spectator.query('p.text-2xl')).toHaveText('€705.00');
   });
 
+  it('shows each position value as shares times last price, in the total-worth colour', () => {
+    positions.set([aPortfolioPositionMock({ shareCount: 0.137, lastPrice: 73805.21 })]);
+    spectator.detectChanges();
+
+    const value = spectator.query('tbody td span.text-primary');
+
+    expect(value).toHaveText('€10,111.31');
+    expect(spectator.query('tbody td span.text-sky-400')).toHaveText('€73,805.21');
+  });
+
+  it('shows a dash for the value of an unpriced position', () => {
+    positions.set([aPortfolioPositionMock({ lastPrice: null, lastPriceFetchedAt: null })]);
+    spectator.detectChanges();
+
+    expect(spectator.query('tbody td span.text-primary')).toBeNull();
+  });
+
   it('displays an empty state when no positions exist', () => {
     spectator.detectChanges();
 

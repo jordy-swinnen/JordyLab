@@ -9,7 +9,7 @@ import { environment } from './environments/environment';
 // pre-bootstrap Keycloak check — this instance is separate from the one components later
 // inject via `providedIn: 'root'`, matching the pre-existing pre-bootstrap warm-up pattern.
 const injector = Injector.create({
-  providers: [{ provide: AUTH_CONFIG, useValue: environment }],
+  providers: [{ provide: AUTH_CONFIG, useValue: environment }, AuthService],
 });
 const auth = injector.get(AuthService);
 
