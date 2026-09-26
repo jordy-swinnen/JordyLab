@@ -20,6 +20,7 @@ class ScanSourceTest {
             softly.assertThat(source.getSourceType()).isEqualTo(ScanSourceTestBuilder.DEFAULT_SOURCE_TYPE);
             softly.assertThat(source.getPlatform()).isEqualTo("Steam");
             softly.assertThat(source.isEnabled()).isTrue();
+            softly.assertThat(source.getMachineId()).isEqualTo(ScanSourceTestBuilder.DEFAULT_MACHINE_ID);
         });
     }
 
@@ -89,6 +90,46 @@ class ScanSourceTest {
         source.recordApplied("abc123");
 
         assertThat(source.getLastPayloadHash()).isEqualTo("abc123");
+    }
+
+    @Test
+    void adoptMachineStoresMachineId() {
+        ScanSource source = ScanSourceTestBuilder.aScanSource().machineId(null).build();
+
+        source.adoptMachine(ScanSourceTestBuilder.DEFAULT_MACHINE_ID);
+
+        assertThat(source.getMachineId()).isEqualTo(ScanSourceTestBuilder.DEFAULT_MACHINE_ID);
+    }
+
+    @Test
+    void recordClientDigestStoresDigestAndIngestVersion() {
+        ScanSource source = ScanSourceTestBuilder.aDefaultScanSource();
+
+        source.recordClientDigest(ScanSourceTestBuilder.DEFAULT_CLIENT_DIGEST, 3);
+
+        org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(source.getLastClientDigest()).isEqualTo(ScanSourceTestBuilder.DEFAULT_CLIENT_DIGEST);
+            softly.assertThat(source.getIngestVersion()).isEqualTo(3);
+        });
+    }
+
+    @Test
+    void clearClientDigestRemovesTheStoredDigest() {
+        ScanSource source = ScanSourceTestBuilder.aDefaultScanSource();
+        source.recordClientDigest(ScanSourceTestBuilder.DEFAULT_CLIENT_DIGEST, 1);
+
+        source.clearClientDigest();
+
+        assertThat(source.getLastClientDigest()).isNull();
+    }
+
+    @Test
+    void recordCheckStoresLastCheckedAt() {
+        ScanSource source = ScanSourceTestBuilder.aDefaultScanSource();
+
+        source.recordCheck(ScanSourceTestBuilder.DEFAULT_SYNC_TIME);
+
+        assertThat(source.getLastCheckedAt()).isEqualTo(ScanSourceTestBuilder.DEFAULT_SYNC_TIME);
     }
 
     @Test

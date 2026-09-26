@@ -41,8 +41,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/api/gamecatalog/ingest/script").hasRole("jordylab-user")
+                .requestMatchers("/api/gamecatalog/ingest/client").hasRole("jordylab-user")
                 .requestMatchers("/api/gamecatalog/ingest/scan").hasRole("gamecatalog-scanner")
+                .requestMatchers("/api/gamecatalog/ingest/check").hasRole("gamecatalog-scanner")
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().denyAll())
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))

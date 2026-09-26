@@ -127,4 +127,4 @@ the backend follows.
   (`:4300`, `:4400`) alongside the host's `:4200`. Roles: `jordylab-user` (default for any
   logged-in user), `gamecatalog-scanner` (required for the script's `/scan` access — the script
   uses a separate `gamecatalog-script` device-code client).
-- `apps/gamecatalog` calls `/api/gamecatalog/ingest/script?libraryType=steam` (or `emudeck`) to download the scan script for the user. Both endpoints sit behind the host's auth interceptor.
+- `apps/gamecatalog` calls `/api/gamecatalog/ingest/client?libraryType=steam` (or `emudeck`) to download the scan client for the user. Both endpoints sit behind the host's auth interceptor.

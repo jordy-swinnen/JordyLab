@@ -7,11 +7,15 @@ import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.SyncReport;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ClientGame;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.EntryRejection;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.EntryRejectionReason;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckRequest;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanEntry;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
@@ -22,23 +26,35 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ScanService {
 
+    /**
+     * Server-side ingest-logic version. Bump whenever parsing, validation, or
+     * normalization changes in a way that makes previously accepted payloads
+     * stale. The check endpoint forces a scan when a source's stored version is
+     * older than this — the client never controls invalidation.
+     */
+    static final int CURRENT_INGEST_VERSION = 1;
+
     private final ScanSourceRepository scanSourceRepository;
     private final SyncReportRepository syncReportRepository;
+    private final GameRepository gameRepository;
     private final ReconciliationService reconciliationService;
     private final ArtworkService artworkService;
     private final GameCatalogProperties properties;
@@ -47,27 +63,25 @@ public class ScanService {
 
     /**
      * Entry point for {@code POST /api/gamecatalog/ingest/scan}. Resolves or
-     * auto-creates the {@link ScanSource} for the script's
-     * {@code (hostname, libraryType)} pair, hashes the payload, dispatches
-     * to the matching {@link LibraryParser}, and reconciles the resulting
-     * games into the catalog.
-     *
-     * <p>Idempotency: when the payload hash matches the source's
-     * {@code lastPayloadHash}, the call returns {@link SyncOutcome#NO_CHANGE}
-     * without touching the games table. Repeated runs of the same script
-     * against an unchanged library therefore produce no DB churn.
+     * auto-creates the {@link ScanSource}, applies the shrink guard, parses the
+     * payload (client-provided games take precedence over path inference), and
+     * reconciles.
      */
     @Transactional
     public ScanResponse submitScan(ScanRequest request) {
         if (estimatedPayloadBytes(request) > properties.scan().maxPayloadBytes()) {
             log.warn("Rejecting scan from '{}': payload exceeds byte cap", request.hostname());
+
             return rejected(SyncOutcome.REJECTED, "PAYLOAD_TOO_LARGE");
         }
 
         Instant receivedAt = Instant.now();
-        ScanSource source = announceSource(request);
+        ScanSource source = resolveSource(request.hostname(), request.libraryType(), request.machineId());
+        clearStaleDigestOnPreCutoverScan(source, request);
+
         String payloadHash = sha256(request);
         if (payloadHash.equals(source.getLastPayloadHash())) {
+            recordDigest(source, request.clientDigest());
             persistReport(source, request, SyncOutcome.NO_CHANGE, receivedAt, payloadHash,
                     new ReconciliationCounts(0, 0, 0), 0, 0);
 
@@ -79,14 +93,24 @@ public class ScanService {
         if (parsed.size() > properties.scan().maxGamesPerSource()) {
             log.warn("Rejecting scan from '{}': {} parsed games exceeds cap {}", request.hostname(), parsed.size(),
                     properties.scan().maxGamesPerSource());
+
             return rejected(SyncOutcome.REJECTED, "TOO_MANY_GAMES");
         }
 
         List<EntryRejection> rejections = new ArrayList<>();
         List<GamePayload> valid = validate(parsed, rejections);
+
+        if (isSuspiciousShrink(source, valid.size(), Boolean.TRUE.equals(request.force()))) {
+            log.warn("Rejecting scan from '{}': resulting installed set of {} game(s) looks like a shrink",
+                    request.hostname(), valid.size());
+
+            return rejected(SyncOutcome.REJECTED, "SNAPSHOT_SHRINK_SUSPECT");
+        }
+
         ReconciliationCounts counts = reconciliationService.applySnapshot(source, valid, receivedAt);
         artworkService.processArtworkAfterSync(source, valid);
         source.recordApplied(payloadHash);
+        recordDigest(source, request.clientDigest());
         persistReport(source, request, SyncOutcome.APPLIED, receivedAt, payloadHash, counts, valid.size(),
                 rejections.size());
 
@@ -95,16 +119,104 @@ public class ScanService {
                         rejections.size()), rejections, null);
     }
 
-    private ScanSource announceSource(ScanRequest request) {
-        return scanSourceRepository.findByHostnameAndSourceType(request.hostname(), request.libraryType())
-                .orElseGet(() -> scanSourceRepository.save(ScanSource.builder()
-                        .hostname(request.hostname())
-                        .sourceType(request.libraryType())
-                        .enabled(true)
-                        .build()));
+    /**
+     * Entry point for {@code POST /api/gamecatalog/ingest/check}. Records
+     * liveness and reports whether a scan is needed. A disabled source always
+     * reports {@code scanNeeded=false} so the client uploads nothing.
+     */
+    @Transactional
+    public ScanCheckResponse submitCheck(ScanCheckRequest request) {
+        ScanSource source = resolveSource(request.hostname(), request.libraryType(), request.machineId());
+        source.recordCheck(Instant.now());
+
+        boolean scanNeeded = source.isEnabled() && isScanNeeded(source, request.clientDigest());
+
+        return new ScanCheckResponse(scanNeeded, source.isEnabled());
+    }
+
+    private boolean isScanNeeded(ScanSource source, String clientDigest) {
+        if (source.getLastClientDigest() == null) {
+            return true;
+        }
+        if (clientDigest == null || !source.getLastClientDigest().equals(clientDigest)) {
+            return true;
+        }
+        if (source.getIngestVersion() < CURRENT_INGEST_VERSION) {
+            return true;
+        }
+
+        return source.getLastOutcome() != SyncOutcome.APPLIED && source.getLastOutcome() != SyncOutcome.NO_CHANGE;
+    }
+
+    private ScanSource resolveSource(String hostname, SourceType sourceType, String machineId) {
+        if (StringUtils.hasText(machineId)) {
+            Optional<ScanSource> byMachine = scanSourceRepository.findByMachineIdAndSourceType(machineId, sourceType);
+            if (byMachine.isPresent()) {
+                return byMachine.get();
+            }
+            Optional<ScanSource> byHostname = scanSourceRepository.findByHostnameAndSourceType(hostname, sourceType);
+            if (byHostname.isPresent()) {
+                ScanSource source = byHostname.get();
+                source.adoptMachine(machineId);
+
+                return source;
+            }
+
+            return scanSourceRepository.save(newSource(hostname, sourceType, machineId));
+        }
+
+        return scanSourceRepository.findByHostnameAndSourceType(hostname, sourceType)
+                .orElseGet(() -> scanSourceRepository.save(newSource(hostname, sourceType, null)));
+    }
+
+    private ScanSource newSource(String hostname, SourceType sourceType, String machineId) {
+        return ScanSource.builder()
+                .hostname(hostname)
+                .sourceType(sourceType)
+                .machineId(machineId)
+                .enabled(true)
+                .build();
+    }
+
+    private void clearStaleDigestOnPreCutoverScan(ScanSource source, ScanRequest request) {
+        if (request.clientDigest() == null && source.getLastClientDigest() != null) {
+            log.warn("Pre-cutover scan from '{}' ({}) carries no client digest; clearing the stored digest",
+                    request.hostname(), request.libraryType());
+            source.clearClientDigest();
+        }
+    }
+
+    private void recordDigest(ScanSource source, String clientDigest) {
+        if (clientDigest != null) {
+            source.recordClientDigest(clientDigest, CURRENT_INGEST_VERSION);
+        }
+    }
+
+    private boolean isSuspiciousShrink(ScanSource source, int resultingCount, boolean force) {
+        if (force) {
+            return false;
+        }
+        if (resultingCount == 0) {
+            return true;
+        }
+
+        long installed = gameRepository.countInstalledBySourceId(source.getId());
+        long removed = installed - resultingCount;
+        if (removed <= 0) {
+            return false;
+        }
+        long allowed = Math.max(10L, (long) Math.floor(installed * properties.scan().maxShrinkFraction()));
+
+        return removed > allowed;
     }
 
     private List<GamePayload> parseOrEmpty(ScanRequest request) {
+        if (request.games() != null && !request.games().isEmpty()) {
+            return request.games().stream()
+                    .map(game -> new GamePayload(game.externalRef(), game.title(), game.platform(), null))
+                    .toList();
+        }
+
         LibraryParser parser = parsers.get(request.libraryType().name());
         if (parser == null) {
             log.warn("No parser registered for library type {}", request.libraryType());
@@ -128,8 +240,9 @@ public class ScanService {
                 rejections.add(new EntryRejection(entry.externalRef(), reason));
                 continue;
             }
-            valid.add(new GamePayload(entry.externalRef(), TextSanitizer.sanitizeTitle(entry.title()), entry.platform(),
-                    entry.localArtworkAvailable()));
+            valid.add(new GamePayload(normalizeNfc(entry.externalRef()),
+                    normalizeNfc(TextSanitizer.sanitizeTitle(entry.title())),
+                    normalizeNfc(entry.platform()), entry.localArtworkAvailable()));
         }
 
         return valid;
@@ -156,6 +269,14 @@ public class ScanService {
         }
 
         return null;
+    }
+
+    private static String normalizeNfc(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        return Normalizer.normalize(value, Normalizer.Form.NFC);
     }
 
     private void persistReport(ScanSource source, ScanRequest request, SyncOutcome outcome, Instant receivedAt,
@@ -188,18 +309,28 @@ public class ScanService {
                 bytes += text == null ? 0L : text.length();
             }
         }
+        if (request.games() != null) {
+            for (ClientGame game : request.games()) {
+                bytes += textLength(game.externalRef()) + textLength(game.title()) + textLength(game.platform()) + 16L;
+            }
+        }
 
         return bytes;
     }
 
+    private static long textLength(String value) {
+        return value == null ? 0L : value.length();
+    }
+
     private String sha256(ScanRequest request) {
         try {
-            // Hash only the scan content (the listing and any manifest text).
-            // capturedAt changes on every run, so including it would defeat the
+            // Hash only the scan content (the listing, manifest text, and client-grouped
+            // games). capturedAt changes on every run, so including it would defeat the
             // NO_CHANGE short-circuit for an unchanged library.
             Map<String, Object> content = new LinkedHashMap<>();
             content.put("paths", request.paths());
             content.put("manifestContents", request.manifestContents());
+            content.put("games", request.games());
             byte[] bytes = objectMapper.writeValueAsBytes(content);
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
 

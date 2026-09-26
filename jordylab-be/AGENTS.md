@@ -300,17 +300,20 @@ class SomeObjectTestBuilder {
 - Backend auth is OAuth2 resource server + JWT. Issuer-uri is `${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab` in `application.yaml`.
 - Spring Security config lives in `shared/config/SecurityConfig.java`. Realm roles map to `ROLE_*` authorities via the `realm_access.roles` claim.
 - Endpoint gates:
-  - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (script, device-code client)
-  - `GET  /api/gamecatalog/ingest/script` → `hasRole("jordylab-user")` (web UI downloads it)
+  - `POST /api/gamecatalog/ingest/check` → `hasRole("gamecatalog-scanner")` (client asks if a scan is needed)
+  - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (client, device-code)
+  - `GET  /api/gamecatalog/ingest/client` → `hasRole("jordylab-user")` (web UI downloads it)
   - other `/api/**` → `authenticated()` (any logged-in user)
   - `/actuator/health`, `/actuator/info`, `/h2-console/**` → `permitAll()` (dev only)
 - CORS allowed origins configured via `jordylab.cors.allowed-origins` property (defaults to `http://localhost:4200,4300,4400` for the per-port dev servers).
-- The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan script handles its own token via Keycloak Device Authorization Grant and caches it at `~/.config/jordylab/scan/token.json`.
+- The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client handles its own token via Keycloak Device Authorization Grant (offline token, scoped to `gamecatalog-scanner` only) and caches it at `~/.config/jordylab/scan/token.json`.
 
-# Game library scan flow
+# Game library scan flow (feature 003 — Python client)
 
-- Users download a per-library shell script via the web UI's source-manager page → backend returns the rendered `jordylab-scan-template.sh` from `src/main/resources/scripts/`.
-- The script authenticates via Keycloak Device Authorization Grant (`POST /realms/{realm}/protocol/openid-connect/auth/device`), then POSTs a directory listing + per-source VDF contents to `/api/gamecatalog/ingest/scan`.
-- Backend `ScanService` resolves-or-creates a `ScanSource` keyed on `(hostname, libraryType)`, dispatches the listing to the matching `LibraryParser` (Steam: parses VDF; EmuDeck: walks folder structure, infers platform from parent directory name), then reconciles into the `game` table.
-- Idempotency: `ScanService` hashes the payload; same hash + source → `NO_CHANGE` (no DB churn).
-- All hot-swap of the scan pipeline goes through `LibraryParser` implementations — register a new `@Component("<SOURCE_TYPE_NAME>")` bean to support a new library.
+- Users download a per-library Python client via the web UI's source-manager page → `GET /api/gamecatalog/ingest/client` renders `jordylab-scan-template.py` (frozen from `gamecatalog-scanner/` by `tools/build_client.py`) into `text/x-python`.
+- The client (`gamecatalog-scanner/`) authenticates via Keycloak Device Authorization Grant with `scope=openid offline_access`, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so.
+- `ScanService` resolves-or-adopts a `ScanSource` keyed on `(machine_id, sourceType)` falling back to `(hostname, sourceType)`; client-grouped EmuDeck `games[]` take precedence over the path-inference `LibraryParser` backstop; Steam VDF parsing stays server-side.
+- Change detection is **server-authoritative**: `scanNeeded = fingerprint differs OR stored ingest_version < CURRENT_INGEST_VERSION OR lastOutcome ∉ {APPLIED, NO_CHANGE}`. The digest is equality-only — the client never controls invalidation.
+- Safety: a scan whose resulting installed set is empty, or that would remove more than `jordylab.gamecatalog.scan.max-shrink-fraction` (default 0.5) of a source's installed games, is `REJECTED` with `SNAPSHOT_SHRINK_SUSPECT` unless `force` is set. The client skips (exit 5) explicitly configured roots that are missing/unreadable/empty.
+- Idempotency: `ScanService` hashes the scan content (`paths` + `manifestContents` + `games`); same hash + source → `NO_CHANGE` (no DB churn). The fingerprint is recorded on `APPLIED`/`NO_CHANGE` only.
+- New library pipelines still go through `LibraryParser` implementations — register a new `@Component("<SOURCE_TYPE_NAME>")` bean.

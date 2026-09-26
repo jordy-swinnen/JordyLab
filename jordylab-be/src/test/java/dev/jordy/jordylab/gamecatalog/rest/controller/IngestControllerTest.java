@@ -4,12 +4,14 @@ import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.EntryRejection;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.EntryRejectionReason;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckRequest;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanEntry;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SyncCounts;
+import dev.jordy.jordylab.gamecatalog.service.ClientService;
 import dev.jordy.jordylab.gamecatalog.service.ScanService;
-import dev.jordy.jordylab.gamecatalog.service.ScriptService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
@@ -51,11 +53,24 @@ class IngestControllerTest {
             """;
 
     private static final ScanRequest EXPECTED_SCAN_REQUEST = new ScanRequest(
+            null,
             "jordybox",
             SourceType.EMUDECK,
             Instant.parse("2026-08-02T10:20:00Z"),
+            null,
+            null,
             List.of(new ScanEntry("snes/Super Mario World.sfc", 524288L, Instant.parse("2026-08-02T10:15:00Z"))),
-            Map.of());
+            Map.of(),
+            null);
+
+    @Language("JSON")
+    private static final String VALID_CHECK_REQUEST = """
+            {
+              "hostname": "jordybox",
+              "libraryType": "EMUDECK",
+              "clientDigest": "sha256:abc"
+            }
+            """;
 
     @Autowired
     private MockMvc mockMvc;
@@ -64,7 +79,7 @@ class IngestControllerTest {
     private ScanService scanService;
 
     @MockitoBean
-    private ScriptService scriptService;
+    private ClientService clientService;
 
     @Test
     void scanReturnsTheOutcomeCountsAndRejections() throws Exception {
@@ -145,28 +160,59 @@ class IngestControllerTest {
     }
 
     @Test
-    void scriptDownloadReturnsTheRenderedShellScriptAsAnAttachment() throws Exception {
+    void clientDownloadReturnsTheRenderedPythonClientAsAnAttachment() throws Exception {
         ArgumentCaptor<HttpServletRequest> requestCaptor = ArgumentCaptor.forClass(HttpServletRequest.class);
-        when(scriptService.generateScript(eq("steam"), requestCaptor.capture())).thenReturn("#!/bin/bash\necho steam-scan\n");
+        when(clientService.generateClient(eq("steam"), requestCaptor.capture())).thenReturn("print('steam-scan')\n");
 
-        mockMvc.perform(get("/api/gamecatalog/ingest/script").param("libraryType", "steam"))
+        mockMvc.perform(get("/api/gamecatalog/ingest/client").param("libraryType", "steam"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=\"jordylab-scan-steam.sh\""))
-                .andExpect(content().string("#!/bin/bash\necho steam-scan\n"));
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"jordylab-scan-steam.py\""))
+                .andExpect(content().contentTypeCompatibleWith("text/x-python"))
+                .andExpect(content().string("print('steam-scan')\n"));
 
-        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/script");
+        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/client");
     }
 
     @Test
-    void scriptDownloadForAnUnknownLibraryTypeIsABadRequest() throws Exception {
+    void clientDownloadForAnUnknownLibraryTypeIsABadRequest() throws Exception {
         ArgumentCaptor<HttpServletRequest> requestCaptor = ArgumentCaptor.forClass(HttpServletRequest.class);
-        when(scriptService.generateScript(eq("bogus"), requestCaptor.capture()))
+        when(clientService.generateClient(eq("bogus"), requestCaptor.capture()))
                 .thenThrow(new IllegalArgumentException("libraryType must be 'steam' or 'emudeck'"));
 
-        mockMvc.perform(get("/api/gamecatalog/ingest/script").param("libraryType", "bogus"))
+        mockMvc.perform(get("/api/gamecatalog/ingest/client").param("libraryType", "bogus"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("libraryType must be 'steam' or 'emudeck'"));
 
-        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/script");
+        assertThat(requestCaptor.getValue().getRequestURI()).isEqualTo("/api/gamecatalog/ingest/client");
+    }
+
+    @Test
+    void checkReportsWhetherAScanIsNeeded() throws Exception {
+        ScanCheckRequest expected = new ScanCheckRequest(null, "jordybox", SourceType.EMUDECK, "sha256:abc");
+        when(scanService.submitCheck(expected)).thenReturn(new ScanCheckResponse(true, true));
+
+        mockMvc.perform(post("/api/gamecatalog/ingest/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_CHECK_REQUEST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scanNeeded").value(true))
+                .andExpect(jsonPath("$.sourceEnabled").value(true));
+    }
+
+    @Test
+    void checkWithBlankHostnameIsRejected() throws Exception {
+        @Language("JSON")
+        String requestWithBlankHostname = """
+                {
+                  "hostname": "",
+                  "libraryType": "EMUDECK",
+                  "clientDigest": "sha256:abc"
+                }
+                """;
+
+        mockMvc.perform(post("/api/gamecatalog/ingest/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestWithBlankHostname))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -27,7 +27,7 @@ public class ScanSourceService {
         return new SourcesResponse(scanSourceRepository.findAll().stream()
                 .map(source -> new ScanSourceResponse(source.getId(), source.getSourceKey(), source.getHostname(),
                         source.getSourceType(), source.getPlatform(), source.isEnabled(), source.getLastAttemptAt(),
-                        source.getLastSuccessAt(), source.getLastOutcome(),
+                        source.getLastSuccessAt(), source.getLastCheckedAt(), source.getLastOutcome(),
                         gameRepository.countInstalledBySourceId(source.getId())))
                 .toList());
     }

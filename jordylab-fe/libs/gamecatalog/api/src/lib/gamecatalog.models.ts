@@ -60,6 +60,7 @@ export interface ScanSource {
   enabled: boolean;
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
+  lastCheckedAt: string | null;
   lastOutcome: SyncOutcome | null;
   installedGameCount: number;
 }

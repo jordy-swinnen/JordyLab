@@ -69,5 +69,6 @@ jordylab:
       max-games-per-source: 10000
       max-payload-bytes: 1048576
       max-manifest-bytes-per-source: 262144
+      max-shrink-fraction: 0.5
   cors:
     allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400

@@ -50,9 +50,34 @@ public class ScanSource extends BaseEntity<ScanSource> {
 
     private String lastPayloadHash;
 
+    private String machineId;
+
+    private String lastClientDigest;
+
+    private int ingestVersion;
+
+    private Instant lastCheckedAt;
+
     public void announce(String hostname, SourceType sourceType) {
         this.hostname = hostname;
         this.sourceType = sourceType;
+    }
+
+    public void adoptMachine(String machineId) {
+        this.machineId = machineId;
+    }
+
+    public void recordClientDigest(String clientDigest, int ingestVersion) {
+        this.lastClientDigest = clientDigest;
+        this.ingestVersion = ingestVersion;
+    }
+
+    public void clearClientDigest() {
+        this.lastClientDigest = null;
+    }
+
+    public void recordCheck(Instant checkedAt) {
+        this.lastCheckedAt = checkedAt;
     }
 
     public void recordAttempt(SyncOutcome outcome, Instant attemptedAt) {
@@ -82,7 +107,7 @@ public class ScanSource extends BaseEntity<ScanSource> {
             }
 
             return new ScanSource(id, sourceKey, hostname, sourceType, platform, enabled, lastAttemptAt, lastSuccessAt,
-                    lastOutcome, lastPayloadHash);
+                    lastOutcome, lastPayloadHash, machineId, lastClientDigest, ingestVersion, lastCheckedAt);
         }
     }
 }

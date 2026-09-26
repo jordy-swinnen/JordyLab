@@ -137,8 +137,9 @@ class GameCatalogModuleTest {
     void visibleGamesQueryAppliesVisibilitySearchAndSort() {
         // Use a script-style scan (hostname + libraryType + manifest contents) so
         // the Steam parser produces real titles from VDF, not filename stubs.
-        ScanRequest steamRequest = new ScanRequest("jordybox", SourceType.STEAM,
+        ScanRequest steamRequest = new ScanRequest(null, "jordybox", SourceType.STEAM,
                 Instant.parse("2026-08-06T09:00:00Z"),
+                null, false,
                 List.of(new ScanEntry("steamapps/appmanifest_440.acf", 0L, Instant.parse("2026-08-06T09:00:00Z")),
                         new ScanEntry("steamapps/appmanifest_620.acf", 0L, Instant.parse("2026-08-06T09:00:00Z"))),
                 Map.of("steamapps/appmanifest_440.acf", """
@@ -156,7 +157,8 @@ class GameCatalogModuleTest {
                             name          "Portal 2"
                             installdir    "Portal 2"
                         }
-                        """));
+                        """),
+                null);
         scanService.submitScan(steamRequest);
 
         GamesPageResponse all = gameQueryService.getGames(null, null, 0, 60);
@@ -191,10 +193,12 @@ class GameCatalogModuleTest {
         // so a game whose external-lookup misses is resolved to PLACEHOLDER, not
         // LOCAL_FALLBACK_REQUESTED. The fallback path is exercised by the
         // ArtworkServiceTest unit tests.
-        ScanRequest emuDeckRequest = new ScanRequest("jordybox", SourceType.EMUDECK,
+        ScanRequest emuDeckRequest = new ScanRequest(null, "jordybox", SourceType.EMUDECK,
                 Instant.parse("2026-08-06T09:00:00Z"),
+                null, false,
                 List.of(new ScanEntry("snes/mario.smc", 0L, Instant.parse("2026-08-06T09:00:00Z"))),
-                Map.of());
+                Map.of(),
+                null);
         ScanResponse response = scanService.submitScan(emuDeckRequest);
 
         assertSoftly(softly -> {
@@ -222,15 +226,16 @@ class GameCatalogModuleTest {
 
     @Test
     void steamParserSkipsManifestsWithoutTitle() {
-        ScanRequest request = new ScanRequest("jordybox", SourceType.STEAM,
-                Instant.parse("2026-08-06T10:00:00Z"), List.of(), Map.of(
+        ScanRequest request = new ScanRequest(null, "jordybox", SourceType.STEAM,
+                Instant.parse("2026-08-06T10:00:00Z"), null, false, List.of(), Map.of(
                 "steamapps/appmanifest_440.acf", """
                         "AppState"
                         {
                             appid         "440"
                             installdir    "Team Fortress 2"
                         }
-                        """));
+                        """),
+                null);
 
         ScanResponse response = scanService.submitScan(request);
 
@@ -246,6 +251,7 @@ class GameCatalogModuleTest {
                 .map(game -> new ScanEntry(game.externalRef(), 0L, Instant.parse("2026-08-06T09:00:00Z")))
                 .toList();
 
-        return new ScanRequest(hostname, type, Instant.parse("2026-08-06T09:00:00Z"), paths, Map.of());
+        return new ScanRequest(null, hostname, type, Instant.parse("2026-08-06T09:00:00Z"), null, false, paths,
+                Map.of(), null);
     }
 }

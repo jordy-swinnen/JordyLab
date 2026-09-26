@@ -1,5 +1,7 @@
 # Contract: Ingest API (host script ↔ jordylab-be)
 
+> **Superseded by feature 003** — see `specs/003-gamecatalog-python-scanner/contracts/ingest-api.md`. The `/script` endpoint and shell template are replaced by `/client` (Python client) plus a new `/check` endpoint; `/scan` gains optional `machineId`/`clientDigest`/`force`/`games[]` fields. This file is the 002 historical record.
+
 Base path: `/api/gamecatalog/ingest`. All endpoints require a Keycloak-issued bearer token, validated by Spring Security's OAuth2 resource server against the `jordylab` realm's JWKS endpoint.
 
 | Endpoint | Method | Required role | Description |

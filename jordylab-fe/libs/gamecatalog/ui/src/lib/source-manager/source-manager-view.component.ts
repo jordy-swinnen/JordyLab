@@ -6,7 +6,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
 import { ScanSource, SourceType } from '@jordylab-fe/gamecatalog/api';
 
-export type ScanScriptType = 'steam' | 'emudeck';
+export type ScanClientType = 'steam' | 'emudeck';
 
 @Component({
   selector: 'lib-source-manager-view',
@@ -19,10 +19,10 @@ export class SourceManagerViewComponent {
   loading = input.required<boolean>();
   error = input.required<string | null>();
   togglingId = input.required<string | null>();
-  downloading = input.required<ScanScriptType | null>();
+  downloading = input.required<ScanClientType | null>();
 
   toggleSource = output<ScanSource>();
-  downloadScript = output<ScanScriptType>();
+  downloadClient = output<ScanClientType>();
 
   outcomeVariant(outcome: ScanSource['lastOutcome']): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (outcome === 'APPLIED' || outcome === 'NO_CHANGE') {

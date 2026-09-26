@@ -9,11 +9,11 @@ describe('ScanSourceStore', () => {
   let spectator: SpectatorService<ScanSourceStore>;
   const getSources = vi.fn<GameCatalogApiService['getSources']>();
   const setSourceEnabled = vi.fn<GameCatalogApiService['setSourceEnabled']>();
-  const getScanScript = vi.fn<GameCatalogApiService['getScanScript']>();
+  const getScanClient = vi.fn<GameCatalogApiService['getScanClient']>();
 
   const createService = createServiceFactory({
     service: ScanSourceStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getSources, setSourceEnabled, getScanScript } }],
+    providers: [{ provide: GameCatalogApiService, useValue: { getSources, setSourceEnabled, getScanClient } }],
   });
 
   beforeEach(() => {
@@ -21,8 +21,8 @@ describe('ScanSourceStore', () => {
     getSources.mockReturnValue(of([aScanSourceMock()]));
     setSourceEnabled.mockReset();
     setSourceEnabled.mockImplementation((id, enabled) => of({ id, enabled }));
-    getScanScript.mockReset();
-    getScanScript.mockReturnValue(of(new Blob(['#!/bin/sh'])));
+    getScanClient.mockReset();
+    getScanClient.mockReturnValue(of(new Blob(['#!/bin/sh'])));
   });
 
   describe('load', () => {
@@ -128,7 +128,7 @@ describe('ScanSourceStore', () => {
     });
   });
 
-  describe('downloadScript', () => {
+  describe('downloadClient', () => {
     const onReady = vi.fn<(blob: Blob) => void>();
 
     beforeEach(() => {
@@ -138,20 +138,20 @@ describe('ScanSourceStore', () => {
 
     it('hands the generated script to the callback', () => {
       const blob = new Blob(['#!/bin/sh']);
-      getScanScript.mockReturnValue(of(blob));
+      getScanClient.mockReturnValue(of(blob));
 
-      spectator.service.downloadScript('steam', onReady);
+      spectator.service.downloadClient('steam', onReady);
 
-      expect(getScanScript).toHaveBeenCalledWith('steam');
+      expect(getScanClient).toHaveBeenCalledWith('steam');
       expect(onReady).toHaveBeenCalledWith(blob);
       expect(spectator.service.downloading()).toBeNull();
     });
 
     it('marks the library as downloading until the script arrives', () => {
       const script = new Subject<Blob>();
-      getScanScript.mockReturnValue(script.asObservable());
+      getScanClient.mockReturnValue(script.asObservable());
 
-      spectator.service.downloadScript('emudeck', onReady);
+      spectator.service.downloadClient('emudeck', onReady);
 
       expect(spectator.service.downloading()).toBe('emudeck');
 
@@ -161,20 +161,20 @@ describe('ScanSourceStore', () => {
     });
 
     it('ignores a download while another is in flight', () => {
-      getScanScript.mockReturnValue(new Subject<Blob>().asObservable());
+      getScanClient.mockReturnValue(new Subject<Blob>().asObservable());
 
-      spectator.service.downloadScript('steam', onReady);
-      spectator.service.downloadScript('emudeck', onReady);
+      spectator.service.downloadClient('steam', onReady);
+      spectator.service.downloadClient('emudeck', onReady);
 
-      expect(getScanScript).toHaveBeenCalledTimes(1);
+      expect(getScanClient).toHaveBeenCalledTimes(1);
     });
 
     it('reports a failure without calling the callback', () => {
-      getScanScript.mockReturnValue(throwError(() => new Error('network error')));
+      getScanClient.mockReturnValue(throwError(() => new Error('network error')));
 
-      spectator.service.downloadScript('steam', onReady);
+      spectator.service.downloadClient('steam', onReady);
 
-      expect(spectator.service.error()).toBe('Failed to generate steam scan script.');
+      expect(spectator.service.error()).toBe('Failed to generate the steam scan client.');
       expect(spectator.service.downloading()).toBeNull();
       expect(onReady).not.toHaveBeenCalled();
     });

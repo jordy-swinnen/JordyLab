@@ -17,7 +17,7 @@ public record GameCatalogProperties(
         }
         enrichment = enrichment == null ? new Enrichment(0, 0) : enrichment;
         chat = chat == null ? new Chat(0) : chat;
-        scan = scan == null ? new Scan(0, 0, 0) : scan;
+        scan = scan == null ? new Scan(0, 0, 0, 0) : scan;
     }
 
     public record Artwork(String dir, long maxBytes, Boolean externalLookupEnabled, long lookupTimeoutMs) {
@@ -52,7 +52,8 @@ public record GameCatalogProperties(
         }
     }
 
-    public record Scan(int maxGamesPerSource, int maxPayloadBytes, int maxManifestBytesPerSource) {
+    public record Scan(int maxGamesPerSource, int maxPayloadBytes, int maxManifestBytesPerSource,
+            double maxShrinkFraction) {
         public Scan {
             if (maxGamesPerSource <= 0) {
                 maxGamesPerSource = 10000;
@@ -62,6 +63,9 @@ public record GameCatalogProperties(
             }
             if (maxManifestBytesPerSource <= 0) {
                 maxManifestBytesPerSource = 262_144;
+            }
+            if (maxShrinkFraction <= 0d || maxShrinkFraction >= 1d) {
+                maxShrinkFraction = 0.5d;
             }
         }
     }

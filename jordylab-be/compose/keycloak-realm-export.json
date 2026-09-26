@@ -9,6 +9,23 @@
   "bruteForceProtected": true,
   "accessTokenLifespan": 1800,
   "ssoSessionIdleTimeout": 1800,
+  "defaultDefaultClientScopes": [
+    "role_list",
+    "saml_organization",
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    "acr",
+    "basic"
+  ],
+  "defaultOptionalClientScopes": [
+    "offline_access",
+    "address",
+    "phone",
+    "microprofile-jwt",
+    "organization"
+  ],
   "roles": {
     "realm": [
       {
@@ -17,7 +34,31 @@
       },
       {
         "name": "gamecatalog-scanner",
-        "description": "Required for the downloaded scan script to POST /api/gamecatalog/ingest/scan"
+        "description": "Required for the scan client to POST /api/gamecatalog/ingest/scan and /check"
+      }
+    ]
+  },
+  "scopeMappings": [
+    {
+      "client": "gamecatalog-script",
+      "roles": [
+        "gamecatalog-scanner"
+      ]
+    },
+    {
+      "clientScope": "offline_access",
+      "roles": [
+        "offline_access"
+      ]
+    }
+  ],
+  "clientScopeMappings": {
+    "gamecatalog-script": [
+      {
+        "client": "gamecatalog-script",
+        "roles": [
+          "gamecatalog-scanner"
+        ]
       }
     ]
   },
@@ -48,6 +89,13 @@
       "publicClient": true,
       "directAccessGrantsEnabled": false,
       "standardFlowEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "true"
       }
@@ -70,7 +118,8 @@
       ],
       "realmRoles": [
         "jordylab-user",
-        "gamecatalog-scanner"
+        "gamecatalog-scanner",
+        "offline_access"
       ]
     }
   ]
