@@ -10,10 +10,10 @@
 # pgvector container (initialised by compose/keycloak-init.sql on first boot).
 # The dev realm is auto-imported from compose/keycloak-realm-export.json.
 services:
-  ollama:
-    image: 'ollama/ollama:latest'
-    ports:
-      - '11434'
+#  ollama:
+#    image: 'ollama/ollama:latest'
+#    ports:
+#      - '11434'
   pgvector:
     image: 'pgvector/pgvector:pg16'
     environment:
