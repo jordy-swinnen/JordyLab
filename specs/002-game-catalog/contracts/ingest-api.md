@@ -64,14 +64,28 @@ For `libraryType: "EMUDECK"` the `paths` array is the full recursive listing und
 |---------|---------|
 | `APPLIED` | New snapshot reconciled into the `game` table. |
 | `NO_CHANGE` | Payload hash matches the last applied snapshot. No DB churn. |
-| `REJECTED` | Body failed validation, or exceeded the per-source games cap, or the payload exceeded the byte cap. |
+| `REJECTED` | The payload exceeded the byte cap, or the parsed game count exceeded the per-source cap. The response carries a top-level `reason` (below); nothing is written. |
+
+A `REJECTED` response looks like:
+
+```json
+{
+  "outcome": "REJECTED",
+  "sourceEnabled": false,
+  "counts": { "submitted": 0, "added": 0, "updated": 0, "removed": 0, "rejected": 0 },
+  "rejections": [],
+  "reason": "TOO_MANY_GAMES"
+}
+```
+
+`reason` is omitted on `APPLIED` and `NO_CHANGE`.
 
 | `reason` value | When |
 |---------------|------|
-| `MALFORMED_BODY` | Body is not parseable JSON. |
-| `VALIDATION_FAILED` | Body parsed but failed `@Valid` (e.g. missing `hostname`). |
 | `PAYLOAD_TOO_LARGE` | Combined `paths` + `manifestContents` exceeded the byte cap. |
 | `TOO_MANY_GAMES` | Parsed game count exceeded `jordylab.gamecatalog.scan.max-games-per-source`. |
+
+A body that is not parseable JSON, or that fails `@Valid` (e.g. blank `hostname`), never reaches `ScanService`: Spring rejects it with `400 Bad Request` before any `REJECTED` outcome is produced.
 
 | `EntryRejection.reason` | When |
 |--------------------------|------|
@@ -94,6 +108,6 @@ Returns the per-library shell script the user downloads from the web UI. The scr
 |---------------|--------|
 | `steam` | Steam library scan script (walks `steamapps/`, reads each `appmanifest_<appid>.acf`) |
 | `emudeck` | EmuDeck scan script (asks the user which emulator subfolders to scan, walks the chosen set) |
-| anything else | `400` (validation error) |
+| anything else | `400` with an RFC 9457 `ProblemDetail` body (`detail`: `libraryType must be 'steam' or 'emudeck'`), produced by `IngestExceptionHandler` |
 
 The script handles its own Keycloak Device Authorization Grant. Tokens are cached at `~/.config/jordylab/scan/token.json` (mode 0600).
