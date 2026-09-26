@@ -19,7 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          # Full history so `git diff origin/<base>...HEAD` works when the PR is too
+          # large for `gh pr diff` (GitHub refuses diffs over 300 files).
+          fetch-depth: 0
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -91,8 +93,25 @@ jobs:
             Note: the PR branch is already checked out in the current
             working directory.
 
+            ## Getting the diff
+
+            Start with `gh pr diff ${{ github.event.pull_request.number }}`. GitHub
+            rejects that call (HTTP 406, "exceeded the maximum number of files")
+            once a PR touches more than 300 files. If it fails, do not give up:
+            - list the changed files with
+              `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files --paginate`
+              or `git diff --name-only origin/${{ github.base_ref }}...HEAD`
+            - read per-file diffs with
+              `git diff origin/${{ github.base_ref }}...HEAD -- <path>`
+            - on a very large PR, prioritise: application code and tests first,
+              then config/CI, and skip generated files, lockfiles and vendored
+              or build output. Say in the summary what you did not cover.
+
             Use `gh pr comment` for a top-level summary only — one comment,
-            not a running log.
+            not a running log. You MUST post this summary comment on every run,
+            even when you found nothing to flag or could not review part of the
+            PR (e.g. the diff was unavailable or truncated) — say so plainly in
+            the comment. A run that ends without any GitHub comment is a failure.
             Use `mcp__github_inline_comment__create_inline_comment` (with
             `confirmed: true`) to flag specific issues at the exact line,
             citing which convention/file is being violated.
@@ -100,4 +119,5 @@ jobs:
             chat messages.
 
           claude_args: |
-            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --max-turns 80
+            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
