@@ -26,10 +26,17 @@ class SecurityConfigTest {
                 .build();
     }
 
-    private Collection<GrantedAuthority> convert(Jwt jwt) {
+    // JwtAuthenticationConverter.convert() adds its own FACTOR_BEARER authority alongside
+    // whatever the realm-roles converter under test returns, so assertions here only look at
+    // the ROLE_* authorities extractRealmRoles is actually responsible for.
+    private List<String> realmRoleAuthorities(Jwt jwt) {
         Converter<Jwt, AbstractAuthenticationToken> converter = securityConfig.jwtAuthenticationConverter();
+        Collection<GrantedAuthority> authorities = converter.convert(jwt).getAuthorities();
 
-        return converter.convert(jwt).getAuthorities();
+        return authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .toList();
     }
 
     @Test
@@ -38,32 +45,28 @@ class SecurityConfigTest {
                 "sub", "jordy",
                 "realm_access", Map.of("roles", List.of("jordylab-user", "gamecatalog-scanner"))));
 
-        Collection<GrantedAuthority> authorities = convert(jwt);
-
-        assertThat(authorities)
-                .extracting(GrantedAuthority::getAuthority)
-                .containsExactlyInAnyOrder("ROLE_jordylab-user", "ROLE_gamecatalog-scanner");
+        assertThat(realmRoleAuthorities(jwt)).containsExactlyInAnyOrder("ROLE_jordylab-user", "ROLE_gamecatalog-scanner");
     }
 
     @Test
     void returnsNoAuthoritiesWhenRealmAccessClaimIsMissing() {
         Jwt jwt = aJwtWithClaims(Map.of("sub", "jordy"));
 
-        assertThat(convert(jwt)).isEmpty();
+        assertThat(realmRoleAuthorities(jwt)).isEmpty();
     }
 
     @Test
     void returnsNoAuthoritiesWhenRealmAccessIsNotAMap() {
         Jwt jwt = aJwtWithClaims(Map.of("sub", "jordy", "realm_access", "not-a-map"));
 
-        assertThat(convert(jwt)).isEmpty();
+        assertThat(realmRoleAuthorities(jwt)).isEmpty();
     }
 
     @Test
     void returnsNoAuthoritiesWhenRolesClaimIsNotACollection() {
         Jwt jwt = aJwtWithClaims(Map.of("sub", "jordy", "realm_access", Map.of("roles", "not-a-list")));
 
-        assertThat(convert(jwt)).isEmpty();
+        assertThat(realmRoleAuthorities(jwt)).isEmpty();
     }
 
     @Test
@@ -73,10 +76,6 @@ class SecurityConfigTest {
         rolesWithANonStringEntry.add(42);
         Jwt jwt = aJwtWithClaims(Map.of("sub", "jordy", "realm_access", Map.of("roles", rolesWithANonStringEntry)));
 
-        Collection<GrantedAuthority> authorities = convert(jwt);
-
-        assertThat(authorities)
-                .extracting(GrantedAuthority::getAuthority)
-                .containsExactly("ROLE_jordylab-user");
+        assertThat(realmRoleAuthorities(jwt)).containsExactly("ROLE_jordylab-user");
     }
 }
