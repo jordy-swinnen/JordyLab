@@ -28,6 +28,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -193,9 +194,13 @@ public class ScanService {
 
     private String sha256(ScanRequest request) {
         try {
-            // Use the JSON serialisation of the whole request so the script's
-            // choice of paths/manifest contents is captured in the hash.
-            byte[] bytes = objectMapper.writeValueAsBytes(request);
+            // Hash only the scan content (the listing and any manifest text).
+            // capturedAt changes on every run, so including it would defeat the
+            // NO_CHANGE short-circuit for an unchanged library.
+            Map<String, Object> content = new LinkedHashMap<>();
+            content.put("paths", request.paths());
+            content.put("manifestContents", request.manifestContents());
+            byte[] bytes = objectMapper.writeValueAsBytes(content);
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
 
             return HexFormat.of().formatHex(digest);
