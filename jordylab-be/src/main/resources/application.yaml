@@ -2,7 +2,7 @@ spring:
   application:
     name: jordylab-be
   datasource:
-    url: jdbc:postgresql://localhost:42817/jordylab
+    url: jdbc:postgresql://localhost:5432/jordylab
     username: ${POSTGRES_USER:jordylab}
     password: ${POSTGRES_PASSWORD:}
   jpa:

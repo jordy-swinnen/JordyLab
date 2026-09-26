@@ -12,6 +12,26 @@ Run `ModularityTests` after any structural change — this is the build-time bou
 
 **Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.0-M2 — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
 
+## Accepted risk: Spring AI 2.0.0-M2 is a milestone release
+
+`spring-ai-bom` is pinned to `2.0.0-M2` (a milestone, not a GA release) in `build.gradle.kts`.
+Accepted deliberately for MVP1 because `ResilientAiService`, `AnthropicApi`, and the pgvector
+vector-store starter all need APIs only available from the 2.0 line, and no GA release of that
+line existed when this was wired. Milestone releases can introduce breaking API changes between
+versions with no deprecation window, unlike GA releases under semantic versioning.
+
+Risk is bounded by two things already true of the module boundary: all Spring AI usage is routed
+through `ResilientAiService` (never `ChatClient` directly, per the rule below), so an upstream
+breaking change surfaces in one place, not scattered across modules; and the milestone version is
+pinned exactly (`2.0.0-M2`, not a range), so nothing changes underneath this build without an
+explicit version bump and a deliberate re-test.
+
+**Plan to move to GA**: once `spring-ai-bom` publishes a GA `2.x` release, bump the
+`springAiVersion` property in `build.gradle.kts`, re-run the full backend test suite (especially
+`ResilientAiServiceTest`, `AiModuleConfigTest`, and the module-level `GameCatalogModuleTest`,
+which exercises the AI-backed chat/enrichment paths), and check the Spring AI migration notes for
+that release before merging.
+
 # Java Code Style
 
 - Never use `var` — always declare explicit types
