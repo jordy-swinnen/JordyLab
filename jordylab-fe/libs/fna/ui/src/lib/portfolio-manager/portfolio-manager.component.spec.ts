@@ -11,6 +11,12 @@ describe('PortfolioManagerComponent', () => {
 
   const storeMock = {
     positions: positions.asReadonly(),
+    positionRows: computed(() =>
+      positions().map((position) => ({
+        ...position,
+        value: position.lastPrice === null ? null : position.shareCount * position.lastPrice,
+      }))
+    ),
     error: error.asReadonly(),
     totalWorth: computed(() =>
       positions().reduce((sum, position) => {

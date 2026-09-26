@@ -1,62 +1,74 @@
+import { signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { of, Subject } from 'rxjs';
-import { GameCatalogApiService, GamesPage, GameSummary } from '@jordylab-fe/gamecatalog/api';
+import { aGameSummaryMock, GameLibraryStore, GameSummary } from '@jordylab-fe/gamecatalog/api';
 import { GameGridComponent } from './game-grid.component';
 
-class GameCatalogApiServiceMock {
-  private gamesSubject = new Subject<GamesPage>();
-  getGames = vi.fn(() => this.gamesSubject.asObservable());
-  getPlatforms = vi.fn(() => of(['SNES', 'Steam']));
-
-  setGames(page: GamesPage) {
-    this.gamesSubject.next(page);
-  }
-
-  failGames() {
-    this.gamesSubject.error(new Error('network error'));
-  }
-}
-
-const aGame = (overrides: Partial<GameSummary> = {}): GameSummary => ({
-  id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-  title: 'Super Mario World',
-  platform: 'SNES',
-  artworkStatus: 'EXTERNAL_URL',
-  artworkUrl: 'https://example.com/smw.png',
-  artworkEndpoint: null,
-  ...overrides,
-});
-
-const aPage = (content: GameSummary[], overrides: Partial<GamesPage> = {}): GamesPage => ({
-  content,
-  page: 0,
-  size: 60,
-  totalElements: content.length,
-  totalPages: 1,
-  ...overrides,
-});
-
 describe('GameGridComponent', () => {
+  const games = signal<GameSummary[]>([]);
+  const platforms = signal<string[]>([]);
+  const loading = signal(true);
+  const error = signal<string | null>(null);
+  const selectedPlatform = signal<string | null>(null);
+  const page = signal(0);
+  const totalPages = signal(0);
+  const totalElements = signal(0);
+
+  const search = vi.fn<GameLibraryStore['search']>();
+  const selectPlatform = vi.fn<GameLibraryStore['selectPlatform']>();
+  const goToPage = vi.fn<GameLibraryStore['goToPage']>();
+
+  const storeMock = {
+    games: games.asReadonly(),
+    platforms: platforms.asReadonly(),
+    loading: loading.asReadonly(),
+    error: error.asReadonly(),
+    selectedPlatform: selectedPlatform.asReadonly(),
+    page: page.asReadonly(),
+    totalPages: totalPages.asReadonly(),
+    totalElements: totalElements.asReadonly(),
+    search,
+    selectPlatform,
+    goToPage,
+  };
+
+  let spectator: Spectator<GameGridComponent>;
+
   const createComponent = createComponentFactory({
     component: GameGridComponent,
     imports: [RouterModule.forRoot([])],
-    providers: [{ provide: GameCatalogApiService, useClass: GameCatalogApiServiceMock }],
+    providers: [{ provide: GameLibraryStore, useValue: storeMock }],
   });
 
-  const apiMock = (spectator: Spectator<GameGridComponent>) =>
-    spectator.inject(GameCatalogApiService) as unknown as GameCatalogApiServiceMock;
+  beforeEach(() => {
+    games.set([]);
+    platforms.set(['SNES', 'Steam']);
+    loading.set(true);
+    error.set(null);
+    selectedPlatform.set(null);
+    page.set(0);
+    totalPages.set(0);
+    totalElements.set(0);
+    search.mockReset();
+    selectPlatform.mockReset();
+    goToPage.mockReset();
+    spectator = createComponent();
+  });
+
+  const populate = (content: GameSummary[], overrides: { totalPages?: number; totalElements?: number } = {}) => {
+    loading.set(false);
+    games.set(content);
+    totalPages.set(overrides.totalPages ?? 1);
+    totalElements.set(overrides.totalElements ?? content.length);
+    spectator.detectChanges();
+  };
 
   it('shows skeleton cards while loading', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders game cards with title, badge and artwork when populated', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).setGames(aPage([aGame()]));
-    spectator.detectChanges();
+    populate([aGameSummaryMock()]);
 
     expect(spectator.query('h3')).toHaveText('Super Mario World');
     const image = spectator.query('img');
@@ -66,83 +78,55 @@ describe('GameGridComponent', () => {
   });
 
   it('renders a placeholder instead of an image when a game has no artwork', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).setGames(
-      aPage([aGame({ artworkStatus: 'PLACEHOLDER', artworkUrl: null, artworkEndpoint: null })])
-    );
-    spectator.detectChanges();
+    populate([aGameSummaryMock({ artworkStatus: 'PLACEHOLDER', artworkUrl: null, artworkEndpoint: null })]);
 
     expect(spectator.query('img')).toBeNull();
     expect(spectator.query('[aria-label="No artwork for Super Mario World"]')).toBeTruthy();
   });
 
   it('shows an explicit empty state when the catalog is empty', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).setGames(aPage([]));
-    spectator.detectChanges();
+    populate([]);
 
     expect(spectator.query('p')).toHaveText('No games discovered yet.');
   });
 
   it('shows an error state when loading fails', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).failGames();
+    loading.set(false);
+    error.set('Failed to load games.');
     spectator.detectChanges();
 
     expect(spectator.query('.text-destructive')).toHaveText('Failed to load games.');
   });
 
-  it('debounces search input before reloading', () => {
-    vi.useFakeTimers();
-    try {
-      const spectator: Spectator<GameGridComponent> = createComponent();
-      apiMock(spectator).setGames(aPage([aGame()]));
-      spectator.detectChanges();
-      const mock = apiMock(spectator);
-      mock.getGames.mockClear();
+  it('forwards search input to the store', () => {
+    populate([aGameSummaryMock()]);
 
-      spectator.typeInElement('mario', 'input[type="search"]');
-      vi.advanceTimersByTime(299);
-      expect(mock.getGames).not.toHaveBeenCalled();
+    spectator.typeInElement('mario', 'input[type="search"]');
 
-      vi.advanceTimersByTime(1);
-      expect(mock.getGames).toHaveBeenCalledWith({ search: 'mario', platform: undefined, page: 0, size: 60 });
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(search).toHaveBeenCalledWith('mario');
   });
 
-  it('reloads with the platform filter when a chip is clicked', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).setGames(aPage([aGame()]));
-    spectator.detectChanges();
-    const mock = apiMock(spectator);
-    mock.getGames.mockClear();
+  it('selects the platform in the store when a chip is clicked', () => {
+    populate([aGameSummaryMock()]);
 
     const chips = spectator.queryAll('button[hlmbadge]');
     const snesChip = chips.find((chip) => chip.textContent?.trim() === 'SNES');
     spectator.click(snesChip as Element);
 
-    expect(mock.getGames).toHaveBeenCalledWith({ search: undefined, platform: 'SNES', page: 0, size: 60 });
+    expect(selectPlatform).toHaveBeenCalledWith('SNES');
   });
 
-  it('navigates to the next page', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).setGames(aPage([aGame()], { totalPages: 3, totalElements: 150 }));
-    spectator.detectChanges();
-    const mock = apiMock(spectator);
-    mock.getGames.mockClear();
+  it('asks the store for the next page', () => {
+    populate([aGameSummaryMock()], { totalPages: 3, totalElements: 150 });
 
     const nextButton = spectator.queryAll('button[hlmbadge]').find((b) => b.textContent?.trim() === 'Next');
     spectator.click(nextButton as Element);
 
-    expect(mock.getGames).toHaveBeenCalledWith({ search: undefined, platform: undefined, page: 1, size: 60 });
+    expect(goToPage).toHaveBeenCalledWith(1);
   });
 
-  it('loads platforms for the filter chips', () => {
-    const spectator: Spectator<GameGridComponent> = createComponent();
-    apiMock(spectator).setGames(aPage([aGame()]));
-    spectator.detectChanges();
+  it('renders the store platforms as filter chips', () => {
+    populate([aGameSummaryMock()]);
 
     const chips = spectator.queryAll('button[hlmbadge]').map((chip) => chip.textContent?.trim());
     expect(chips).toContain('All');

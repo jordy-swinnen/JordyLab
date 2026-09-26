@@ -14,6 +14,10 @@ export interface PortfolioPosition {
   lastPriceFetchedAt: string | null;
 }
 
+export interface PortfolioPositionRow extends PortfolioPosition {
+  value: number | null;
+}
+
 export interface Briefing {
   id: string;
   generatedAt: string;

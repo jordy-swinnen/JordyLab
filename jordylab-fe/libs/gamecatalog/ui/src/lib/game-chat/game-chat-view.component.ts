@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
-import { ChatMessage } from './game-chat.component';
+import { ChatMessage } from '@jordylab-fe/gamecatalog/api';
 
 @Component({
   selector: 'lib-game-chat-view',

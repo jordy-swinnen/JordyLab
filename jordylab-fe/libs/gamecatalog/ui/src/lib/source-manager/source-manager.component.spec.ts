@@ -1,56 +1,58 @@
+import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { of, Subject } from 'rxjs';
-import { GameCatalogApiService, ScanSource } from '@jordylab-fe/gamecatalog/api';
+import { aScanSourceMock, ScanLibraryType, ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
 import { SourceManagerComponent } from './source-manager.component';
 
-class GameCatalogApiServiceMock {
-  private sourcesSubject = new Subject<ScanSource[]>();
-  getSources = vi.fn(() => this.sourcesSubject.asObservable());
-  setSourceEnabled = vi.fn((id: string, enabled: boolean) => of({ id, enabled }));
-  getScanScript = vi.fn(() => of(new Blob(['#!/bin/sh'], { type: 'text/x-shellscript' })));
-
-  setSources(sources: ScanSource[]) {
-    this.sourcesSubject.next(sources);
-  }
-
-  failSources() {
-    this.sourcesSubject.error(new Error('network error'));
-  }
-}
-
-const aSource = (overrides: Partial<ScanSource> = {}): ScanSource => ({
-  id: '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-  sourceKey: 'jordybox:STEAM',
-  hostname: 'jordybox',
-  sourceType: 'STEAM',
-  platform: 'Steam',
-  enabled: true,
-  lastAttemptAt: '2026-08-02T10:20:00Z',
-  lastSuccessAt: '2026-08-02T10:20:00Z',
-  lastOutcome: 'APPLIED',
-  installedGameCount: 412,
-  ...overrides,
-});
-
 describe('SourceManagerComponent', () => {
+  const sources = signal<ScanSource[]>([]);
+  const loading = signal(true);
+  const error = signal<string | null>(null);
+  const togglingId = signal<string | null>(null);
+  const downloading = signal<ScanLibraryType | null>(null);
+
+  const toggle = vi.fn<ScanSourceStore['toggle']>();
+  const downloadScript = vi.fn<ScanSourceStore['downloadScript']>();
+
+  const storeMock = {
+    sources: sources.asReadonly(),
+    loading: loading.asReadonly(),
+    error: error.asReadonly(),
+    togglingId: togglingId.asReadonly(),
+    downloading: downloading.asReadonly(),
+    toggle,
+    downloadScript,
+  };
+
+  let spectator: Spectator<SourceManagerComponent>;
+
   const createComponent = createComponentFactory({
     component: SourceManagerComponent,
-    providers: [{ provide: GameCatalogApiService, useClass: GameCatalogApiServiceMock }],
+    providers: [{ provide: ScanSourceStore, useValue: storeMock }],
   });
 
-  const apiMock = (spectator: Spectator<SourceManagerComponent>) =>
-    spectator.inject(GameCatalogApiService) as unknown as GameCatalogApiServiceMock;
+  beforeEach(() => {
+    sources.set([]);
+    loading.set(true);
+    error.set(null);
+    togglingId.set(null);
+    downloading.set(null);
+    toggle.mockReset();
+    downloadScript.mockReset();
+    spectator = createComponent();
+  });
+
+  const populate = (list: ScanSource[]) => {
+    loading.set(false);
+    sources.set(list);
+    spectator.detectChanges();
+  };
 
   it('shows skeletons while loading', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
   });
 
   it('renders source hostname, type, counts and last outcome', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-    apiMock(spectator).setSources([aSource()]);
-    spectator.detectChanges();
+    populate([aScanSourceMock()]);
 
     expect(spectator.element).toHaveText('jordybox:STEAM');
     expect(spectator.element).toHaveText('hostname: jordybox');
@@ -60,59 +62,69 @@ describe('SourceManagerComponent', () => {
   });
 
   it('exposes Steam and EmuDeck download buttons', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-    apiMock(spectator).setSources([]);
-    spectator.detectChanges();
+    populate([]);
 
     expect(spectator.query('[data-testid="download-steam-script"]')).not.toBeNull();
     expect(spectator.query('[data-testid="download-emudeck-script"]')).not.toBeNull();
   });
 
   it('shows an empty state when no sources exist', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-    apiMock(spectator).setSources([]);
-    spectator.detectChanges();
+    populate([]);
 
     expect(spectator.element).toHaveText('No scan sources announced yet.');
   });
 
   it('shows an error state when loading fails', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-    apiMock(spectator).failSources();
+    loading.set(false);
+    error.set('Failed to load scan sources.');
     spectator.detectChanges();
 
     expect(spectator.query('.text-destructive')).toHaveText('Failed to load scan sources.');
   });
 
-  it('disables an enabled source via the toggle', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-    apiMock(spectator).setSources([aSource()]);
-    spectator.detectChanges();
+  it('forwards the source to the store when its toggle is clicked', () => {
+    populate([aScanSourceMock()]);
 
-    const toggleButton = spectator.query('button[role="switch"]') as HTMLElement;
-    spectator.click(toggleButton);
-    spectator.detectChanges();
+    spectator.click(spectator.query('button[role="switch"]') as HTMLElement);
 
-    expect(apiMock(spectator).setSourceEnabled).toHaveBeenCalledWith(
-      '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-      false
-    );
-    expect(spectator.component.sources()[0].enabled).toBe(false);
+    expect(toggle).toHaveBeenCalledWith(aScanSourceMock());
   });
 
-  it('enables a disabled source via the toggle', () => {
-    const spectator: Spectator<SourceManagerComponent> = createComponent();
-    apiMock(spectator).setSources([aSource({ enabled: false })]);
-    spectator.detectChanges();
+  describe('download', () => {
+    const createObjectURL = vi.fn(() => 'blob:script');
+    const revokeObjectURL = vi.fn();
+    let anchorClick: ReturnType<typeof vi.spyOn>;
 
-    const toggleButton = spectator.query('button[role="switch"]') as HTMLElement;
-    spectator.click(toggleButton);
-    spectator.detectChanges();
+    beforeEach(() => {
+      // jsdom does not implement the object-URL API
+      Object.assign(URL, { createObjectURL, revokeObjectURL });
+      createObjectURL.mockClear();
+      revokeObjectURL.mockClear();
+      anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      populate([]);
+    });
 
-    expect(apiMock(spectator).setSourceEnabled).toHaveBeenCalledWith(
-      '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-      true
-    );
-    expect(spectator.component.sources()[0].enabled).toBe(true);
+    afterEach(() => {
+      anchorClick.mockRestore();
+      Reflect.deleteProperty(URL, 'createObjectURL');
+      Reflect.deleteProperty(URL, 'revokeObjectURL');
+    });
+
+    it('requests the Steam script from the store', () => {
+      spectator.click('[data-testid="download-steam-script"]');
+
+      expect(downloadScript).toHaveBeenCalledWith('steam', expect.any(Function));
+    });
+
+    it('saves the generated script as a file named after the library', () => {
+      spectator.click('[data-testid="download-emudeck-script"]');
+      const onReady = downloadScript.mock.calls[0][1];
+
+      onReady(new Blob(['#!/bin/sh']));
+
+      const link = anchorClick.mock.contexts[0] as HTMLAnchorElement;
+      expect(link.download).toBe('jordylab-scan-emudeck.sh');
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:script');
+    });
   });
 });

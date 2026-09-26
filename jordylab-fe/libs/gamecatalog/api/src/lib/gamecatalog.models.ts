@@ -79,3 +79,10 @@ export interface ChatAnswer {
 export type ChatAskResponse =
   | { kind: 'answered'; answer: ChatAnswer }
   | { kind: 'unavailable' };
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  games?: ChatGameRef[];
+  unavailable?: boolean;
+}

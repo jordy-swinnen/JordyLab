@@ -1,7 +1,7 @@
 import { Component, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { PortfolioPosition } from '@jordylab-fe/fna/api';
+import { PortfolioPositionRow } from '@jordylab-fe/fna/api';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 @Component({
@@ -11,7 +11,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
   templateUrl: './portfolio-manager-view.component.html',
 })
 export class PortfolioManagerViewComponent {
-  positions = input.required<PortfolioPosition[]>();
+  positions = input.required<PortfolioPositionRow[]>();
   totalWorth = input.required<number>();
   hasAnyPrices = input.required<boolean>();
 

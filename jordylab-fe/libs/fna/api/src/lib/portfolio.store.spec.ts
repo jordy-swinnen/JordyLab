@@ -32,6 +32,19 @@ describe('PortfolioStore', () => {
     expect(spectator.service.error()).toBe('Failed to load portfolio.');
   });
 
+  it('derives each position value as shares times last price, null when unpriced', () => {
+    const req = httpMock.expectOne('/api/fna/portfolio');
+    req.flush([
+      aPortfolioPositionMock({ shareCount: 0.137, lastPrice: 73805.21 }),
+      aPortfolioPositionMock({ id: 'p2', ticker: 'KBC', shareCount: 5, lastPrice: null, lastPriceFetchedAt: null }),
+    ]);
+
+    const rows = spectator.service.positionRows();
+
+    expect(rows.map((row) => row.value)).toEqual([0.137 * 73805.21, null]);
+    expect(rows[0].ticker).toBe('ABI');
+  });
+
   it('computes total worth from priced positions only', () => {
     const req = httpMock.expectOne('/api/fna/portfolio');
     req.flush([

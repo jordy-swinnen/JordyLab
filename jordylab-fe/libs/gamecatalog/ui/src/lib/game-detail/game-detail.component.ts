@@ -1,8 +1,6 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { catchError, of } from 'rxjs';
-import { GameCatalogApiService, GameDetail } from '@jordylab-fe/gamecatalog/api';
+import { GameDetailStore } from '@jordylab-fe/gamecatalog/api';
 import { GameDetailViewComponent } from './game-detail-view.component';
 
 @Component({
@@ -12,34 +10,15 @@ import { GameDetailViewComponent } from './game-detail-view.component';
   templateUrl: './game-detail.component.html',
 })
 export class GameDetailComponent {
-  #route = inject(ActivatedRoute);
-  #api = inject(GameCatalogApiService);
+  readonly #route = inject(ActivatedRoute);
+  readonly #store = inject(GameDetailStore);
 
-  game = signal<GameDetail | null>(null);
-  loading = signal(true);
-  notFound = signal(false);
-  error = signal<string | null>(null);
+  readonly game = this.#store.game;
+  readonly loading = this.#store.loading;
+  readonly notFound = this.#store.notFound;
+  readonly error = this.#store.error;
 
   constructor() {
-    const id = this.#route.snapshot.paramMap.get('id') ?? '';
-    this.#api
-      .getGame(id)
-      .pipe(
-        catchError((httpError: HttpErrorResponse) => {
-          if (httpError.status === 404) {
-            this.notFound.set(true);
-          } else {
-            this.error.set('Failed to load the game.');
-          }
-          this.loading.set(false);
-          return of(null);
-        })
-      )
-      .subscribe((game) => {
-        if (game) {
-          this.game.set(game);
-        }
-        this.loading.set(false);
-      });
+    this.#store.load(this.#route.snapshot.paramMap.get('id') ?? '');
   }
 }

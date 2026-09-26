@@ -1,6 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
-import { catchError, of } from 'rxjs';
-import { GameCatalogApiService, ScanSource } from '@jordylab-fe/gamecatalog/api';
+import { Component, inject } from '@angular/core';
+import { ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
 import { ScanScriptType, SourceManagerViewComponent } from './source-manager-view.component';
 
 @Component({
@@ -10,76 +9,22 @@ import { ScanScriptType, SourceManagerViewComponent } from './source-manager-vie
   templateUrl: './source-manager.component.html',
 })
 export class SourceManagerComponent {
-  #api = inject(GameCatalogApiService);
+  readonly #store = inject(ScanSourceStore);
 
-  sources = signal<ScanSource[]>([]);
-  loading = signal(true);
-  error = signal<string | null>(null);
-  togglingId = signal<string | null>(null);
-  downloading = signal<ScanScriptType | null>(null);
+  readonly sources = this.#store.sources;
+  readonly loading = this.#store.loading;
+  readonly error = this.#store.error;
+  readonly togglingId = this.#store.togglingId;
+  readonly downloading = this.#store.downloading;
 
-  constructor() {
-    this.#api
-      .getSources()
-      .pipe(
-        catchError(() => {
-          this.error.set('Failed to load scan sources.');
-          this.loading.set(false);
-          return of([]);
-        })
-      )
-      .subscribe((sources) => {
-        this.sources.set(sources);
-        this.loading.set(false);
-      });
+  onToggle(source: ScanSource): void {
+    this.#store.toggle(source);
   }
 
-  onToggle(source: ScanSource) {
-    if (this.togglingId()) {
-      return;
-    }
-
-    this.togglingId.set(source.id);
-    this.error.set(null);
-    this.#api
-      .setSourceEnabled(source.id, !source.enabled)
-      .pipe(
-        catchError(() => {
-          this.error.set(`Failed to update '${source.sourceKey}'.`);
-          return of(null);
-        })
-      )
-      .subscribe((response) => {
-        this.togglingId.set(null);
-        if (response) {
-          this.sources.update((list) =>
-            list.map((item) => (item.id === response.id ? { ...item, enabled: response.enabled } : item))
-          );
-        }
-      });
-  }
-
-  onDownloadScript(libraryType: ScanScriptType) {
-    if (this.downloading()) {
-      return;
-    }
-    this.downloading.set(libraryType);
-    this.error.set(null);
-    this.#api
-      .getScanScript(libraryType)
-      .pipe(
-        catchError(() => {
-          this.error.set(`Failed to generate ${libraryType} scan script.`);
-          this.downloading.set(null);
-          return of(null);
-        })
-      )
-      .subscribe((blob) => {
-        this.downloading.set(null);
-        if (blob) {
-          triggerBrowserDownload(blob, `jordylab-scan-${libraryType}.sh`);
-        }
-      });
+  onDownloadScript(libraryType: ScanScriptType): void {
+    this.#store.downloadScript(libraryType, (blob) =>
+      triggerBrowserDownload(blob, `jordylab-scan-${libraryType}.sh`)
+    );
   }
 }
 

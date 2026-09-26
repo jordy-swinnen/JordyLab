@@ -90,12 +90,12 @@
             }
           </td>
           <td class="px-5 py-3.5 text-right">
-            @if (position.lastPrice !== null) {
+            @if (position.value !== null) {
               <span
                 class="text-base font-medium tabular-nums text-primary"
                 style="font-family: 'IBM Plex Mono', monospace"
               >
-                €{{ position.shareCount * position.lastPrice | number: '1.2-2' }}
+                €{{ position.value | number: '1.2-2' }}
               </span>
             } @else {
               <span class="text-muted-foreground/50">—</span>

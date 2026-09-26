@@ -1,38 +1,30 @@
+import { signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { Subject } from 'rxjs';
-import { GameCatalogApiService, GameDetail } from '@jordylab-fe/gamecatalog/api';
+import { aGameDetailMock, GameDetail, GameDetailStore } from '@jordylab-fe/gamecatalog/api';
 import { GameDetailComponent } from './game-detail.component';
 
-const aGameDetail = (overrides: Partial<GameDetail> = {}): GameDetail => ({
-  id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-  title: 'Super Mario World',
-  platform: 'SNES',
-  sourceKey: 'snes',
-  artworkStatus: 'EXTERNAL_URL',
-  artworkUrl: 'https://example.com/smw.png',
-  artworkEndpoint: null,
-  enrichmentStatus: 'ENRICHED',
-  genre: 'Platformer',
-  maxLocalPlayers: 2,
-  onlineMultiplayer: false,
-  singlePlayer: true,
-  description: 'A classic SNES platformer.',
-  firstSeenAt: '2026-08-02T10:15:00Z',
-  ...overrides,
-});
-
 describe('GameDetailComponent', () => {
-  let gameSubject: Subject<GameDetail>;
-  let getGame: ReturnType<typeof vi.fn>;
+  const game = signal<GameDetail | null>(null);
+  const loading = signal(true);
+  const notFound = signal(false);
+  const error = signal<string | null>(null);
+  const load = vi.fn<GameDetailStore['load']>();
+
+  const storeMock = {
+    game: game.asReadonly(),
+    loading: loading.asReadonly(),
+    notFound: notFound.asReadonly(),
+    error: error.asReadonly(),
+    load,
+  };
+
+  let spectator: Spectator<GameDetailComponent>;
 
   const createComponent = createComponentFactory({
     component: GameDetailComponent,
     providers: [
-      {
-        provide: GameCatalogApiService,
-        useValue: { getGame: (...args: unknown[]) => getGame(...args) },
-      },
+      { provide: GameDetailStore, useValue: storeMock },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -43,20 +35,26 @@ describe('GameDetailComponent', () => {
   });
 
   beforeEach(() => {
-    gameSubject = new Subject<GameDetail>();
-    getGame = vi.fn(() => gameSubject.asObservable());
+    game.set(null);
+    loading.set(true);
+    notFound.set(false);
+    error.set(null);
+    load.mockReset();
+    spectator = createComponent();
   });
 
-  it('requests the game for the route id', () => {
-    createComponent();
+  const show = (detail: GameDetail) => {
+    loading.set(false);
+    game.set(detail);
+    spectator.detectChanges();
+  };
 
-    expect(getGame).toHaveBeenCalledWith('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
+  it('requests the game for the route id', () => {
+    expect(load).toHaveBeenCalledWith('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
   });
 
   it('renders artwork, facts and prose for an enriched game', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
-    gameSubject.next(aGameDetail());
-    spectator.detectChanges();
+    show(aGameDetailMock());
 
     const image = spectator.query('img');
     expect(image?.getAttribute('src')).toBe('https://example.com/smw.png');
@@ -68,9 +66,8 @@ describe('GameDetailComponent', () => {
   });
 
   it('shows the explicit unavailable state while enrichment is pending', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
-    gameSubject.next(
-      aGameDetail({
+    show(
+      aGameDetailMock({
         enrichmentStatus: 'PENDING',
         genre: null,
         maxLocalPlayers: null,
@@ -79,7 +76,6 @@ describe('GameDetailComponent', () => {
         description: null,
       })
     );
-    spectator.detectChanges();
 
     expect(spectator.element).toHaveText('Description unavailable.');
     expect(spectator.element).toHaveText('has not been generated yet');
@@ -87,9 +83,8 @@ describe('GameDetailComponent', () => {
   });
 
   it('shows the explicit unavailable state when enrichment failed', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
-    gameSubject.next(
-      aGameDetail({
+    show(
+      aGameDetailMock({
         enrichmentStatus: 'FAILED',
         genre: null,
         maxLocalPlayers: null,
@@ -98,31 +93,28 @@ describe('GameDetailComponent', () => {
         description: null,
       })
     );
-    spectator.detectChanges();
 
     expect(spectator.element).toHaveText('Description unavailable.');
     expect(spectator.element).toHaveText('could not be generated');
   });
 
   it('shows a not-found state for an invisible game', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
-    gameSubject.error({ status: 404 });
+    loading.set(false);
+    notFound.set(true);
     spectator.detectChanges();
 
     expect(spectator.element).toHaveText('This game is not in your catalog.');
   });
 
   it('shows an error state for other failures', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
-    gameSubject.error({ status: 500 });
+    loading.set(false);
+    error.set('Failed to load the game.');
     spectator.detectChanges();
 
     expect(spectator.query('.text-destructive')).toHaveText('Failed to load the game.');
   });
 
   it('shows skeletons while loading', () => {
-    const spectator: Spectator<GameDetailComponent> = createComponent();
-
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
   });
 });
