@@ -49,7 +49,7 @@
       "directAccessGrantsEnabled": false,
       "standardFlowEnabled": false,
       "attributes": {
-        "oauth2.device.code.grant.enabled": "true"
+        "oauth2.device.authorization.grant.enabled": "true"
       }
     }
   ],
