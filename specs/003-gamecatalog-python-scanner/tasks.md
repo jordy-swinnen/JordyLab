@@ -93,7 +93,7 @@ description: "Task list for Game Catalog Python Scanner (replaces the shell scan
 
 - [x] T050 Backend build + client pytest/ruff + frozen selftest green
 - [x] T051 Docs: root/be/frontend AGENTS + 002 contract supersession
-- [ ] T052 Open PR to `main` (note stacking on PR #11); watch CI
+- [x] T052 PR to `main`: https://github.com/jordy-swinnen/JordyLab/pull/12 (stacked on PR #11). The `review` check is the Claude PR Review action, which has been failing on an invalid/expired `CLAUDE_CODE_OAUTH_TOKEN` repo secret (it failed the same way on PR #8/#11) — not a code failure.
 - [x] T053 **agent-browser verification** of the new flows (sources page download, login, grid reflects client scans); bugs found logged in validation-results.md and fixed
 
 ---
