@@ -135,8 +135,8 @@ public class EmuDeckLibraryParser implements LibraryParser {
 
         return basename
                 .replace('_', ' ')
-                .replace("\\[", "(")
-                .replace("\\]", ")")
+                .replace("[", "(")
+                .replace("]", ")")
                 .replaceAll("\\(.*?\\)", "")
                 .replaceAll("\\s+", " ")
                 .trim();
