@@ -35,6 +35,12 @@ spring:
          jwt:
            issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 jordylab:
   ai:
     health-check-ttl-seconds: 30
