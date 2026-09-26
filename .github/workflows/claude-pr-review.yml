@@ -112,6 +112,11 @@ jobs:
             even when you found nothing to flag or could not review part of the
             PR (e.g. the diff was unavailable or truncated) — say so plainly in
             the comment. A run that ends without any GitHub comment is a failure.
+            Pass the comment body to `gh pr comment` as one plain double-quoted
+            string. Do not use command substitution (`$(...)`), heredocs, or
+            pipes into commands other than head/tail/wc/cat/grep/ls — those are
+            the only shell helpers available and anything else is denied.
+            Keep the summary under ~60 lines.
             Use `mcp__github_inline_comment__create_inline_comment` (with
             `confirmed: true`) to flag specific issues at the exact line,
             citing which convention/file is being violated.
@@ -120,4 +125,4 @@ jobs:
 
           claude_args: |
             --max-turns 80
-            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+            --allowedTools "Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(cat:*),Bash(grep:*),Bash(ls:*)"
