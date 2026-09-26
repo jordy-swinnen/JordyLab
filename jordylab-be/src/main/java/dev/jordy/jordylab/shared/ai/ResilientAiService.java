@@ -9,17 +9,18 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 
 import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -51,7 +52,14 @@ public class ResilientAiService {
                     new UserMessage(userPrompt)
             ));
             ChatResponse response = callWithTimeout(prompt);
-            String content = Objects.requireNonNull(response.getResult()).getOutput().getText();
+            String content = extractText(response);
+
+            if (!StringUtils.hasText(content)) {
+                log.error("AI call returned no text: module={}, provider={}, model={}, generations={}",
+                        moduleName, config.provider(), config.model(), response.getResults().size());
+
+                return AiCallResult.failure(moduleName, config.provider(), config.model(), ProviderFailureReason.UNKNOWN);
+            }
 
             providerHealthCache.recordSuccess(config.provider());
             log.info("AI call succeeded: module={}, provider={}, model={}", moduleName, config.provider(), config.model());
@@ -86,6 +94,15 @@ public class ResilientAiService {
 
             throw exception;
         }
+    }
+
+    // With thinking enabled the model returns a text-less thinking generation before the answer,
+    // so getResult() (the first generation) is blank — join every generation that carries text.
+    private String extractText(ChatResponse response) {
+        return response.getResults().stream()
+                .map(generation -> generation.getOutput().getText())
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("\n\n"));
     }
 
     private ProviderFailureReason mapExceptionToReason(Exception exception) {

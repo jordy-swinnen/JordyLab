@@ -78,6 +78,41 @@ class ResilientAiServiceTest {
     }
 
     @Test
+    void returnsAnswerTextWhenThinkingGenerationPrecedesIt() {
+        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
+        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
+        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
+        when(anthropicChatModel.call(EXPECTED_PROMPT))
+                .thenReturn(new ChatResponse(List.of(
+                        new Generation(new AssistantMessage("")),
+                        new Generation(new AssistantMessage(AI_OUTPUT))
+                )));
+
+        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertSoftly(softly -> {
+            softly.assertThat(result.success()).isTrue();
+            softly.assertThat(result.content()).isEqualTo(AI_OUTPUT);
+        });
+    }
+
+    @Test
+    void returnsFailureWhenResponseCarriesNoText() {
+        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
+        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
+        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
+        when(anthropicChatModel.call(EXPECTED_PROMPT))
+                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage("")))));
+
+        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertSoftly(softly -> {
+            softly.assertThat(result.success()).isFalse();
+            softly.assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.UNKNOWN);
+        });
+    }
+
+    @Test
     void returnsFailureWhenHealthCacheUnhealthy() {
         when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
         when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(false);

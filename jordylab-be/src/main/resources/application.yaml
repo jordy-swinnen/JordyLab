@@ -29,6 +29,7 @@ spring:
       chat:
         options:
           model: claude-sonnet-5
+          max-tokens: 8192
   security:
      oauth2:
        resourceserver:
