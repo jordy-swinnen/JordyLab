@@ -7,6 +7,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.anthropic.AnthropicChatModel;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -39,7 +40,7 @@ class ResilientAiServiceTest {
     private static final Prompt EXPECTED_PROMPT = new Prompt(List.of(
             new SystemMessage(SYSTEM_PROMPT),
             new UserMessage(USER_PROMPT)
-    ));
+    ), AnthropicChatOptions.builder().model(MODEL).build());
 
     @Mock
     private AnthropicChatModel anthropicChatModel;
@@ -296,5 +297,45 @@ class ResilientAiServiceTest {
 
         verify(anthropicChatModel).call(promptCaptor.capture());
         assertThat(promptCaptor.getValue()).isEqualTo(EXPECTED_PROMPT);
+    }
+
+    @Test
+    void sendsTheConfiguredModuleModelAsAPerCallOption() {
+        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
+        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
+        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
+        when(anthropicChatModel.call(EXPECTED_PROMPT))
+                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
+        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+
+        service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
+
+        verify(anthropicChatModel).call(promptCaptor.capture());
+        AnthropicChatOptions options = (AnthropicChatOptions) promptCaptor.getValue().getOptions();
+        assertThat(options.getModel()).isEqualTo(MODEL);
+    }
+
+    @Test
+    void honoursADifferentModelPerModule() {
+        String otherModel = "claude-sonnet-4-20250514";
+        Prompt otherPrompt = new Prompt(List.of(
+                new SystemMessage(SYSTEM_PROMPT),
+                new UserMessage(USER_PROMPT)
+        ), AnthropicChatOptions.builder().model(otherModel).build());
+        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, otherModel));
+        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
+        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
+        when(anthropicChatModel.call(otherPrompt))
+                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
+        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+
+        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
+
+        verify(anthropicChatModel).call(promptCaptor.capture());
+        AnthropicChatOptions options = (AnthropicChatOptions) promptCaptor.getValue().getOptions();
+        assertSoftly(softly -> {
+            softly.assertThat(options.getModel()).isEqualTo(otherModel);
+            softly.assertThat(result.model()).isEqualTo(otherModel);
+        });
     }
 }
