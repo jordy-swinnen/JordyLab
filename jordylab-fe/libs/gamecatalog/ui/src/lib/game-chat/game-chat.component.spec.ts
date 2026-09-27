@@ -1,7 +1,8 @@
 import { signal } from '@angular/core';
-import { ActivatedRoute, convertToParamMap, RouterModule } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, RouterModule } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { AttachedGame, ChatMessage, GameChatStore } from '@jordylab-fe/gamecatalog/api';
+import { Subject } from 'rxjs';
 import { GameChatComponent } from './game-chat.component';
 
 describe('GameChatComponent', () => {
@@ -21,6 +22,8 @@ describe('GameChatComponent', () => {
     clearAttachment,
   };
 
+  const queryParamMap = new Subject<ParamMap>();
+
   let spectator: Spectator<GameChatComponent>;
 
   const createComponent = createComponentFactory({
@@ -28,10 +31,7 @@ describe('GameChatComponent', () => {
     imports: [RouterModule.forRoot([])],
     providers: [
       { provide: GameChatStore, useValue: storeMock },
-      {
-        provide: ActivatedRoute,
-        useValue: { snapshot: { queryParamMap: convertToParamMap({ attach: 'game-1' }) } },
-      },
+      { provide: ActivatedRoute, useValue: { queryParamMap: queryParamMap.asObservable() } },
     ],
   });
 
@@ -51,8 +51,21 @@ describe('GameChatComponent', () => {
     spectator = createComponent();
   });
 
-  it('attaches the game from the query param on load', () => {
+  it('attaches the game from the query param', () => {
+    queryParamMap.next(convertToParamMap({ attach: 'game-1' }));
+    spectator.detectChanges();
+
     expect(attachGame).toHaveBeenCalledWith('game-1');
+  });
+
+  it('re-attaches when the attach query param changes on a reused component', () => {
+    queryParamMap.next(convertToParamMap({ attach: 'game-1' }));
+    spectator.detectChanges();
+    queryParamMap.next(convertToParamMap({ attach: 'game-2' }));
+    spectator.detectChanges();
+
+    expect(attachGame).toHaveBeenCalledTimes(2);
+    expect(attachGame).toHaveBeenLastCalledWith('game-2');
   });
 
   it('shows an empty-state hint before the first question', () => {
@@ -75,6 +88,16 @@ describe('GameChatComponent', () => {
     spectator.click(remove);
 
     expect(clearAttachment).toHaveBeenCalled();
+  });
+
+  it('disables the remove button while a question is in flight', () => {
+    attachedGame.set({ id: 'game-1', title: 'Portal 2' });
+    asking.set(true);
+    spectator.detectChanges();
+
+    const remove = spectator.query('button[aria-label="Remove attachment"]') as HTMLButtonElement;
+
+    expect(remove.disabled).toBe(true);
   });
 
   it('renders user and assistant messages', () => {

@@ -1,6 +1,8 @@
 import { createHttpFactory, HttpMethod, SpectatorHttp } from '@ngneat/spectator/vitest';
 import { bannerUrl, coverUrl, GameCatalogApiService } from './gamecatalog-api.service';
-import { GameDetail, GameSummary, GamesPage } from './gamecatalog.models';
+import { GamesPage } from './gamecatalog.models';
+import { aGameDetailMock } from './mocks/game-detail.model.mock';
+import { aGameSummaryMock } from './mocks/game-summary.model.mock';
 
 describe('GameCatalogApiService', () => {
   let spectator: SpectatorHttp<GameCatalogApiService>;
@@ -10,45 +12,9 @@ describe('GameCatalogApiService', () => {
     spectator = createService();
   });
 
-  const aGameSummary = (overrides: Partial<GameSummary> = {}): GameSummary => ({
-    id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-    title: 'Super Mario World',
-    platform: 'SNES',
-    coverStatus: 'EXTERNAL_URL',
-    coverUrl: 'https://example.com/smw.png',
-    coverEndpoint: null,
-    ...overrides,
-  });
-
-  const aGameDetail = (overrides: Partial<GameDetail> = {}): GameDetail => ({
-    id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-    title: 'Super Mario World',
-    platform: 'SNES',
-    hosts: [{ hostname: 'jordybox', sourceType: 'EMUDECK' }],
-    coverStatus: 'EXTERNAL_URL',
-    coverUrl: 'https://example.com/smw.png',
-    coverEndpoint: null,
-    bannerStatus: 'EXTERNAL_URL',
-    bannerUrl: 'https://example.com/smw-banner.png',
-    bannerEndpoint: null,
-    enrichmentStatus: 'ENRICHED',
-    genre: 'Platformer',
-    genres: 'Platformer, Action',
-    developer: 'Nintendo',
-    publisher: 'Nintendo',
-    releaseYear: 1990,
-    metadataSource: 'AI',
-    maxLocalPlayers: 2,
-    onlineMultiplayer: false,
-    singlePlayer: true,
-    description: 'A classic.',
-    firstSeenAt: '2026-08-02T10:15:00Z',
-    ...overrides,
-  });
-
   it('requests the games page without optional params', () => {
     const expectedPage: GamesPage = {
-      content: [aGameSummary()],
+      content: [aGameSummaryMock()],
       page: 0,
       size: 60,
       totalElements: 1,
@@ -112,7 +78,7 @@ describe('GameCatalogApiService', () => {
   });
 
   it('requests a game detail by id', () => {
-    const expectedDetail = aGameDetail();
+    const expectedDetail = aGameDetailMock();
 
     spectator.service.getGame('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
       expect(detail).toEqual(expectedDetail);
@@ -227,11 +193,11 @@ describe('GameCatalogApiService', () => {
   });
 
   it('resolves the external cover URL when present', () => {
-    expect(coverUrl(aGameSummary())).toBe('https://example.com/smw.png');
+    expect(coverUrl(aGameSummaryMock())).toBe('https://example.com/smw.png');
   });
 
   it('resolves the local cover endpoint for uploaded art', () => {
-    const game = aGameSummary({
+    const game = aGameSummaryMock({
       coverStatus: 'LOCAL_UPLOAD',
       coverUrl: null,
       coverEndpoint: '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork',
@@ -241,23 +207,23 @@ describe('GameCatalogApiService', () => {
   });
 
   it('resolves null when a game has no cover', () => {
-    const game = aGameSummary({ coverStatus: 'PLACEHOLDER', coverUrl: null, coverEndpoint: null });
+    const game = aGameSummaryMock({ coverStatus: 'PLACEHOLDER', coverUrl: null, coverEndpoint: null });
 
     expect(coverUrl(game)).toBeNull();
   });
 
   it('resolves the banner URL when present', () => {
-    expect(bannerUrl(aGameDetail())).toBe('https://example.com/smw-banner.png');
+    expect(bannerUrl(aGameDetailMock())).toBe('https://example.com/smw-banner.png');
   });
 
   it('resolves null when a game has no banner', () => {
-    const game = aGameDetail({ bannerStatus: 'PLACEHOLDER', bannerUrl: null, bannerEndpoint: null });
+    const game = aGameDetailMock({ bannerStatus: 'PLACEHOLDER', bannerUrl: null, bannerEndpoint: null });
 
     expect(bannerUrl(game)).toBeNull();
   });
 
   it('posts a deterministic metadata refresh for a game', () => {
-    const refreshed = aGameDetail({ developer: 'Valve' });
+    const refreshed = aGameDetailMock({ developer: 'Valve' });
 
     spectator.service.refreshGameMetadata('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
       expect(detail).toEqual(refreshed);
@@ -269,7 +235,7 @@ describe('GameCatalogApiService', () => {
   });
 
   it('posts an AI enrichment refresh for a game', () => {
-    const regenerated = aGameDetail({ description: 'Regenerated.' });
+    const regenerated = aGameDetailMock({ description: 'Regenerated.' });
 
     spectator.service.refreshGameEnrichment('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
       expect(detail).toEqual(regenerated);

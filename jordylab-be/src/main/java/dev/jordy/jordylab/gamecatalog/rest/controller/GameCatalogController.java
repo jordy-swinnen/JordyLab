@@ -16,6 +16,7 @@ import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
 import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 import java.util.List;
 import java.util.UUID;
@@ -116,6 +118,30 @@ public class GameCatalogController {
     @ExceptionHandler(MetadataNotSupportedException.class)
     public ResponseEntity<ChatErrorBody> handleMetadataNotSupported(MetadataNotSupportedException exception) {
         return ResponseEntity.badRequest().body(new ChatErrorBody("METADATA_NOT_SUPPORTED"));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ChatErrorBody> handleUnreadableChatRequest(HttpMessageNotReadableException exception) {
+        return ResponseEntity.badRequest().body(new ChatErrorBody(reasonForUnreadable(exception)));
+    }
+
+    /**
+     * A non-UUID entry in {@code gameIds} fails deserialization before {@link ChatAttachmentException}
+     * can run, so it is reported as {@code GAME_IDS_INVALID}; any other unreadable field (e.g. a
+     * non-text {@code question}) is a question problem.
+     */
+    private String reasonForUnreadable(HttpMessageNotReadableException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof MismatchedInputException mismatched
+                    && mismatched.getPath().stream()
+                            .anyMatch(reference -> "gameIds".equals(reference.getPropertyName()))) {
+                return "GAME_IDS_INVALID";
+            }
+            cause = cause.getCause();
+        }
+
+        return "QUESTION_INVALID";
     }
 
     private record ChatErrorBody(String reason) {

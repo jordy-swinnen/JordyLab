@@ -52,13 +52,6 @@ public class GameQueryService {
         return gameRepository.findVisibleById(id).map(this::toDetail);
     }
 
-    public List<Game> findVisibleByIds(List<UUID> ids) {
-        return ids.stream()
-                .map(gameRepository::findVisibleById)
-                .flatMap(Optional::stream)
-                .toList();
-    }
-
     private GameSummaryResponse toSummary(Game game) {
         return new GameSummaryResponse(game.getId(), game.getTitle(), game.getPlatform(), game.getCoverStatus(),
                 externalCoverUrl(game), localCoverEndpoint(game));

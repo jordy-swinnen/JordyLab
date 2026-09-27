@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -120,7 +122,7 @@ class ReconciliationServiceTest {
         ScanSource secondHost = aSource();
         when(gameInstallationRepository.findAllBySourceId(secondHost.getId())).thenReturn(List.of());
         when(gameRepository.findByPlatformAndLowercaseTitle(eq(PLATFORM), eq("Super Mario World"),
-                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+                eq(PageRequest.of(0, 1))))
                 .thenReturn(List.of(existing));
 
         reconciliationService.applySnapshot(secondHost, List.of(payload("other-host/smw.smc", "Super Mario World")),
@@ -145,7 +147,7 @@ class ReconciliationServiceTest {
             softly.assertThat(counts.added()).isZero();
             softly.assertThat(existing.getLastSeenAt()).isEqualTo(NOW);
         });
-        verify(gameRepository, never()).save(org.mockito.ArgumentMatchers.any(Game.class));
+        verifyNoInteractions(gameRepository);
     }
 
     @Test
@@ -244,12 +246,14 @@ class ReconciliationServiceTest {
         Game game = Game.builder().platform(PLATFORM).title("Shared Game").build();
         GameInstallation expired = anInstallation(aSource(), game, "old.smc");
         expired.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
         when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                org.mockito.ArgumentMatchers.any(Instant.class))).thenReturn(List.of(expired));
+                cutoffCaptor.capture())).thenReturn(List.of(expired));
         when(gameInstallationRepository.countByGameId(game.getId())).thenReturn(1L);
 
         reconciliationService.purgeUninstalledGames();
 
+        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
         verify(gameRepository, never()).delete(game);
         verify(gameRepository, never()).findById(game.getId());
     }

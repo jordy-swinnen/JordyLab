@@ -286,6 +286,24 @@ class GameCatalogControllerTest {
     }
 
     @Test
+    void chatWithMalformedGameIdIsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/gamecatalog/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\": \"which games?\", \"gameIds\": [\"not-a-uuid\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("GAME_IDS_INVALID"));
+    }
+
+    @Test
+    void chatWithNonTextQuestionIsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/gamecatalog/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\": {\"nested\": true}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("QUESTION_INVALID"));
+    }
+
+    @Test
     void chatUnavailableIsServiceUnavailable() throws Exception {
         when(chatService.ask("which games support 4-player co-op?", List.of()))
                 .thenThrow(new ChatUnavailableException("chat translation failed: TIMEOUT"));

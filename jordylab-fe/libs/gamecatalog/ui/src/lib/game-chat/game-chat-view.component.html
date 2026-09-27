@@ -104,7 +104,8 @@
         Asking about {{ attached.title }}
         <button
           type="button"
-          class="ml-1 rounded-full px-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          class="ml-1 rounded-full px-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+          [disabled]="asking()"
           aria-label="Remove attachment"
           (click)="removeAttachment.emit()"
         >

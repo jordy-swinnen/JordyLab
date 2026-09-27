@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { GameChatStore } from '@jordylab-fe/gamecatalog/api';
 import { GameChatViewComponent } from './game-chat-view.component';
@@ -12,16 +13,21 @@ import { GameChatViewComponent } from './game-chat-view.component';
 export class GameChatComponent {
   readonly #route = inject(ActivatedRoute);
   readonly #store = inject(GameChatStore);
+  // Read reactively: Angular reuses this component on query-param-only navigation
+  // (`/games/chat?attach=A` → `?attach=B`), so a one-shot snapshot read would miss the change.
+  readonly #attachParam = toSignal(this.#route.queryParamMap);
 
   readonly messages = this.#store.messages;
   readonly asking = this.#store.asking;
   readonly attachedGame = this.#store.attachedGame;
 
   constructor() {
-    const attach = this.#route.snapshot.queryParamMap.get('attach');
-    if (attach) {
-      this.#store.attachGame(attach);
-    }
+    effect(() => {
+      const attach = this.#attachParam()?.get('attach');
+      if (attach) {
+        this.#store.attachGame(attach);
+      }
+    });
   }
 
   onAsk(question: string): void {

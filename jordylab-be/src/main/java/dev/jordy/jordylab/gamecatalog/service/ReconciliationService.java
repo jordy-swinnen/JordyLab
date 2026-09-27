@@ -88,11 +88,12 @@ public class ReconciliationService {
             if (gameInstallationRepository.countByGameId(gameId) > 0) {
                 continue;
             }
-            gameRepository.findById(gameId).ifPresent(game -> {
-                deleteLocalArtworkFile(game);
-                gameRepository.delete(game);
-            });
-            purgedGames++;
+            Optional<Game> orphanedGame = gameRepository.findById(gameId);
+            if (orphanedGame.isPresent()) {
+                deleteLocalArtworkFile(orphanedGame.get());
+                gameRepository.delete(orphanedGame.get());
+                purgedGames++;
+            }
         }
 
         log.info("Purged {} installation(s) and {} orphaned game(s) past the {}-day grace period",

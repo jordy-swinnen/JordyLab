@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -129,10 +130,13 @@ class SteamAppDetailsClientTest {
     }
 
     private void stubAppDetails(String appId, @Language("JSON") String body) {
-        stubFor(get(urlPathEqualTo("/api/appdetails")).willReturn(aResponse()
-                .withStatus(200)
-                .withHeader("Content-Type", "application/json")
-                .withBody(body)));
+        stubFor(get(urlPathEqualTo("/api/appdetails"))
+                .withQueryParam("appids", equalTo(appId))
+                .withQueryParam("filters", equalTo("basic"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(body)));
     }
 
     private GameCatalogProperties properties() {

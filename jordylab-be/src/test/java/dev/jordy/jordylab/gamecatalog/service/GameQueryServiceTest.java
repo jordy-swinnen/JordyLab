@@ -270,19 +270,6 @@ class GameQueryServiceTest {
         assertThat(gameQueryService.getGameDetail(unknownId)).isEmpty();
     }
 
-    @Test
-    void findVisibleByIdsKeepsOnlyVisibleGames() {
-        UUID visibleId = UUID.fromString("11111111-2222-4333-8444-555555555555");
-        UUID invisibleId = UUID.fromString("99999999-8888-4777-8666-555555555555");
-        Game visible = aGame("Visible");
-        when(gameRepository.findVisibleById(visibleId)).thenReturn(Optional.of(visible));
-        when(gameRepository.findVisibleById(invisibleId)).thenReturn(Optional.empty());
-
-        List<Game> games = gameQueryService.findVisibleByIds(List.of(visibleId, invisibleId));
-
-        assertThat(games).containsExactly(visible);
-    }
-
     private Page<Game> pageOf(List<Game> games, long total) {
         return new PageImpl<>(games, PageRequest.of(0, 60), total);
     }

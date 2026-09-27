@@ -16,6 +16,8 @@ class GameInstallationTest {
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(installation.getId()).isNotNull();
+            softly.assertThat(installation.getGame()).isEqualTo(GameTestBuilder.aDefaultGame());
+            softly.assertThat(installation.getSource()).isEqualTo(ScanSourceTestBuilder.aDefaultScanSource());
             softly.assertThat(installation.getExternalRef())
                     .isEqualTo(GameInstallationTestBuilder.DEFAULT_EXTERNAL_REF);
             softly.assertThat(installation.getPresence()).isEqualTo(Presence.INSTALLED);
