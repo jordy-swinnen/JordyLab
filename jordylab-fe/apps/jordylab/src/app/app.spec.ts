@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
@@ -6,18 +7,28 @@ import { App } from './app';
 
 describe('App', () => {
   const logout = vi.fn(() => Promise.resolve());
+  // A real signal backs the mock's reactive state so tests can drive shell visibility.
+  const hasAppRole = signal(true);
   const createComponent = createComponentFactory({
     component: App,
     imports: [RouterModule.forRoot([])],
     providers: [
       provideHttpClient(),
-      { provide: AuthService, useValue: { username: () => 'jordy', logout } },
+      {
+        provide: AuthService,
+        useValue: {
+          username: () => 'jordy',
+          logout,
+          hasAppRole: hasAppRole.asReadonly(),
+        },
+      },
     ],
   });
 
   let spectator: Spectator<App>;
 
   beforeEach(() => {
+    hasAppRole.set(true);
     spectator = createComponent();
   });
 
@@ -63,5 +74,15 @@ describe('App', () => {
     expect(button).toHaveText('jordy');
     spectator.click(button);
     expect(logout).toHaveBeenCalled();
+  });
+
+  it('hides the shell for an authenticated account with no application role', () => {
+    hasAppRole.set(false);
+
+    spectator.detectChanges();
+
+    expect(spectator.query('aside')).toBeNull();
+    expect(spectator.query('nav')).toBeNull();
+    expect(spectator.query('router-outlet')).toBeTruthy();
   });
 });

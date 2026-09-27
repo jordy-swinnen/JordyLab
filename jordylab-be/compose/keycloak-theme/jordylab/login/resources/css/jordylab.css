@@ -213,3 +213,28 @@ a {
 .pf-v5-c-form-control {
   border: 1px solid var(--jl-line-strong);
 }
+
+/* Registration reuses the card, fields and buttons above; tighten the higher-field rhythm and
+   keep the "already have an account / back to login" options legible in Night Lab colours. */
+#kc-register-form .pf-v5-c-form__group {
+    margin-bottom: 16px;
+}
+
+#kc-register-form .pf-v5-c-form__group-label {
+    padding-bottom: 4px;
+}
+
+#kc-register-form .pf-v5-c-form__actions {
+    margin-top: 8px;
+}
+
+#kc-registration,
+#kc-form-options {
+    color: var(--jl-mute);
+    font-size: 0.875rem;
+}
+
+#kc-registration a,
+#kc-form-options a {
+    font-weight: 600;
+}

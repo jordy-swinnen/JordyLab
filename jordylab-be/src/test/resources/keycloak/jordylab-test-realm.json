@@ -1,0 +1,123 @@
+{
+  "realm": "jordylab-test",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin"
+      },
+      {
+        "name": "guest"
+      },
+      {
+        "name": "gamecatalog-scanner"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "test-public",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ]
+    },
+    {
+      "clientId": "gamecatalog-script",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "fullScopeAllowed": false,
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      }
+    },
+    {
+      "clientId": "jordylab-backend",
+      "publicClient": false,
+      "secret": "test-backend-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false
+    }
+  ],
+  "users": [
+    {
+      "username": "admin-user",
+      "enabled": true,
+      "email": "admin-user@jordylab.test",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    },
+    {
+      "username": "guest-user",
+      "enabled": true,
+      "email": "guest-user@jordylab.test",
+      "emailVerified": true,
+      "firstName": "Guest",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "guest-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "guest"
+      ]
+    },
+    {
+      "username": "pending-user",
+      "enabled": true,
+      "email": "pending-user@jordylab.test",
+      "emailVerified": true,
+      "firstName": "Pending",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "pending-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "scanner-user",
+      "enabled": true,
+      "email": "scanner-user@jordylab.test",
+      "emailVerified": true,
+      "firstName": "Scanner",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "scanner-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "gamecatalog-scanner"
+      ]
+    }
+  ]
+}

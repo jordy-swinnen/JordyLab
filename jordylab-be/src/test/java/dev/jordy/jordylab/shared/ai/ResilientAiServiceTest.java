@@ -317,7 +317,7 @@ class ResilientAiServiceTest {
 
     @Test
     void honoursADifferentModelPerModule() {
-        String otherModel = "claude-sonnet-4-20250514";
+        String otherModel = "claude-haiku-4-5-20251001";
         Prompt otherPrompt = new Prompt(List.of(
                 new SystemMessage(SYSTEM_PROMPT),
                 new UserMessage(USER_PROMPT)

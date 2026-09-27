@@ -18,39 +18,23 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@jordylab-fe/fna/api": [
-        "libs/fna/api/src/index.ts"
-      ],
-      "@jordylab-fe/fna/ui": [
-        "libs/fna/ui/src/index.ts"
-      ],
-      "@jordylab-fe/gamecatalog/api": [
-        "libs/gamecatalog/api/src/index.ts"
-      ],
-      "@jordylab-fe/gamecatalog/ui": [
-        "libs/gamecatalog/ui/src/index.ts"
-      ],
-      "@jordylab-fe/shared/brand": [
-        "libs/shared/brand/src/index.ts"
-      ],
-      "@jordylab-fe/shared/auth": [
-        "libs/shared/auth/src/index.ts"
-      ],
-      "@spartan-ng/ui-card-helm": [
-        "libs/ui/helm/ui-card-helm/src/index.ts"
-      ],
-      "@spartan-ng/ui-badge-helm": [
-        "libs/ui/helm/ui-badge-helm/src/index.ts"
-      ],
+      "@jordylab-fe/fna/api": ["libs/fna/api/src/index.ts"],
+      "@jordylab-fe/fna/ui": ["libs/fna/ui/src/index.ts"],
+      "@jordylab-fe/gamecatalog/api": ["libs/gamecatalog/api/src/index.ts"],
+      "@jordylab-fe/gamecatalog/ui": ["libs/gamecatalog/ui/src/index.ts"],
+      "@jordylab-fe/settings/api": ["libs/settings/api/src/index.ts"],
+      "@jordylab-fe/settings/ui": ["libs/settings/ui/src/index.ts"],
+      "@jordylab-fe/shared/brand": ["libs/shared/brand/src/index.ts"],
+      "@jordylab-fe/shared/auth": ["libs/shared/auth/src/index.ts"],
+      "@spartan-ng/ui-card-helm": ["libs/ui/helm/ui-card-helm/src/index.ts"],
+      "@spartan-ng/ui-badge-helm": ["libs/ui/helm/ui-badge-helm/src/index.ts"],
       "@spartan-ng/ui-skeleton-helm": [
         "libs/ui/helm/ui-skeleton-helm/src/index.ts"
       ],
       "@spartan-ng/ui-formfield-helm": [
         "libs/ui/helm/ui-formfield-helm/src/index.ts"
       ],
-      "@spartan-ng/ui-input-helm": [
-        "libs/ui/helm/ui-input-helm/src/index.ts"
-      ]
+      "@spartan-ng/ui-input-helm": ["libs/ui/helm/ui-input-helm/src/index.ts"]
     }
   },
   "exclude": [

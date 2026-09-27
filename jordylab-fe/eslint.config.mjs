@@ -32,7 +32,12 @@ export default [
             },
             {
               sourceTag: 'type:app',
-              onlyDependOnLibsWithTags: ['scope:fna', 'scope:gamecatalog', 'scope:shared'],
+              onlyDependOnLibsWithTags: [
+                'scope:fna',
+                'scope:gamecatalog',
+                'scope:settings',
+                'scope:shared',
+              ],
             },
             {
               sourceTag: 'scope:fna',
@@ -41,6 +46,10 @@ export default [
             {
               sourceTag: 'scope:gamecatalog',
               onlyDependOnLibsWithTags: ['scope:gamecatalog', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:settings',
+              onlyDependOnLibsWithTags: ['scope:settings', 'scope:shared'],
             },
           ],
         },

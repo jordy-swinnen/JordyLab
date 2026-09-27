@@ -2,7 +2,9 @@
   "realm": "jordylab",
   "enabled": true,
   "loginTheme": "jordylab",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "passwordPolicy": "length(12) and notUsername and notEmail",
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": false,
@@ -30,8 +32,12 @@
   "roles": {
     "realm": [
       {
-        "name": "jordylab-user",
-        "description": "Default role for any user logged into JordyLab (web apps, source listings, etc.)"
+        "name": "admin",
+        "description": "Full access to JordyLab: FNA, Settings and Game Catalog administration"
+      },
+      {
+        "name": "guest",
+        "description": "Game Catalog read and chat access only"
       },
       {
         "name": "gamecatalog-scanner",
@@ -100,6 +106,14 @@
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "true"
       }
+    },
+    {
+      "clientId": "jordylab-backend",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false
     }
   ],
   "users": [
@@ -113,15 +127,27 @@
       "credentials": [
         {
           "type": "password",
-          "value": "jordy",
+          "value": "nightlab-dev-2026",
           "temporary": false
         }
       ],
       "realmRoles": [
-        "jordylab-user",
+        "admin",
         "gamecatalog-scanner",
         "offline_access"
       ]
+    },
+    {
+      "username": "service-account-jordylab-backend",
+      "enabled": true,
+      "serviceAccountClientId": "jordylab-backend",
+      "clientRoles": {
+        "realm-management": [
+          "view-users",
+          "manage-users",
+          "view-roles"
+        ]
+      }
     }
   ]
 }

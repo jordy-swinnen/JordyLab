@@ -48,6 +48,7 @@ export class App {
   #router = inject(Router);
 
   username = this.#auth.username;
+  hasAppRole = this.#auth.hasAppRole;
 
   #url = toSignal(
     this.#router.events.pipe(
