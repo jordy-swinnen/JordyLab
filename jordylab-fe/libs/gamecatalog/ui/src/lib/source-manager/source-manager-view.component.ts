@@ -25,9 +25,12 @@ export class SourceManagerViewComponent {
   error = input.required<string | null>();
   togglingId = input.required<string | null>();
   downloading = input.required<ScanClientType | null>();
+  refreshingPending = input.required<boolean>();
+  refreshProgress = input.required<string | null>();
 
   toggleSource = output<ScanSource>();
   downloadClient = output<ScanClientType>();
+  refreshPending = output<void>();
 
   protected readonly tagClass = platformTagClass;
   protected readonly neutralTag =

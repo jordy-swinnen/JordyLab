@@ -17,13 +17,20 @@ export type SyncOutcome =
 
 export type ScanLibraryType = 'steam' | 'emudeck';
 
+export type MetadataSource = 'STEAM' | 'AI';
+
+export interface HostRef {
+  hostname: string;
+  sourceType: SourceType;
+}
+
 export interface GameSummary {
   id: string;
   title: string;
   platform: string;
-  artworkStatus: ArtworkStatus;
-  artworkUrl: string | null;
-  artworkEndpoint: string | null;
+  coverStatus: ArtworkStatus;
+  coverUrl: string | null;
+  coverEndpoint: string | null;
 }
 
 export interface GamesPage {
@@ -38,12 +45,20 @@ export interface GameDetail {
   id: string;
   title: string;
   platform: string;
-  sourceKey: string;
-  artworkStatus: ArtworkStatus;
-  artworkUrl: string | null;
-  artworkEndpoint: string | null;
+  hosts: HostRef[];
+  coverStatus: ArtworkStatus;
+  coverUrl: string | null;
+  coverEndpoint: string | null;
+  bannerStatus: ArtworkStatus;
+  bannerUrl: string | null;
+  bannerEndpoint: string | null;
   enrichmentStatus: EnrichmentStatus;
   genre: string | null;
+  genres: string | null;
+  developer: string | null;
+  publisher: string | null;
+  releaseYear: number | null;
+  metadataSource: MetadataSource | null;
   maxLocalPlayers: number | null;
   onlineMultiplayer: boolean | null;
   singlePlayer: boolean | null;
@@ -71,6 +86,11 @@ export interface ChatGameRef {
   platform: string;
 }
 
+export interface AttachedGame {
+  id: string;
+  title: string;
+}
+
 export interface ChatAnswer {
   answer: string;
   games: ChatGameRef[];
@@ -86,4 +106,14 @@ export interface ChatMessage {
   text: string;
   games?: ChatGameRef[];
   unavailable?: boolean;
+}
+
+export interface RefreshCount {
+  processed: number;
+  remaining: number;
+}
+
+export interface RefreshAll {
+  metadata: RefreshCount;
+  enrichment: RefreshCount;
 }

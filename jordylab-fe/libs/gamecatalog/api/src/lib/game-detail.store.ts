@@ -12,11 +12,15 @@ export class GameDetailStore {
   readonly #loading = signal(true);
   readonly #notFound = signal(false);
   readonly #error = signal<string | null>(null);
+  readonly #refreshingMetadata = signal(false);
+  readonly #refreshingEnrichment = signal(false);
 
   readonly game = this.#game.asReadonly();
   readonly loading = this.#loading.asReadonly();
   readonly notFound = this.#notFound.asReadonly();
   readonly error = this.#error.asReadonly();
+  readonly refreshingMetadata = this.#refreshingMetadata.asReadonly();
+  readonly refreshingEnrichment = this.#refreshingEnrichment.asReadonly();
 
   load(id: string): void {
     this.#game.set(null);
@@ -40,6 +44,56 @@ export class GameDetailStore {
       .subscribe((game) => {
         this.#game.set(game);
         this.#loading.set(false);
+      });
+  }
+
+  refreshMetadata(): void {
+    const id = this.#game()?.id;
+    if (!id || this.#refreshingMetadata()) {
+      return;
+    }
+
+    this.#refreshingMetadata.set(true);
+    this.#error.set(null);
+    this.#api
+      .refreshGameMetadata(id)
+      .pipe(
+        catchError(() => {
+          this.#error.set('Failed to refresh the deterministic facts.');
+
+          return of(null);
+        })
+      )
+      .subscribe((game) => {
+        this.#refreshingMetadata.set(false);
+        if (game) {
+          this.#game.set(game);
+        }
+      });
+  }
+
+  refreshEnrichment(): void {
+    const id = this.#game()?.id;
+    if (!id || this.#refreshingEnrichment()) {
+      return;
+    }
+
+    this.#refreshingEnrichment.set(true);
+    this.#error.set(null);
+    this.#api
+      .refreshGameEnrichment(id)
+      .pipe(
+        catchError(() => {
+          this.#error.set('Failed to regenerate the description.');
+
+          return of(null);
+        })
+      )
+      .subscribe((game) => {
+        this.#refreshingEnrichment.set(false);
+        if (game) {
+          this.#game.set(game);
+        }
       });
   }
 }

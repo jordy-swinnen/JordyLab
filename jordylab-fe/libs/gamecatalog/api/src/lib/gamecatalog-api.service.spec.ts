@@ -1,6 +1,9 @@
 import { createHttpFactory, HttpMethod, SpectatorHttp } from '@ngneat/spectator/vitest';
-import { artworkUrl, GameCatalogApiService } from './gamecatalog-api.service';
-import { GameSummary, GamesPage } from './gamecatalog.models';
+import { bannerUrl, coverUrl, GameCatalogApiService } from './gamecatalog-api.service';
+import { GamesPage } from './gamecatalog.models';
+import { aGameDetailMock } from './mocks/game-detail.model.mock';
+import { aGameSummaryMock } from './mocks/game-summary.model.mock';
+import { aRefreshAllMock } from './mocks/refresh-all.model.mock';
 
 describe('GameCatalogApiService', () => {
   let spectator: SpectatorHttp<GameCatalogApiService>;
@@ -10,19 +13,9 @@ describe('GameCatalogApiService', () => {
     spectator = createService();
   });
 
-  const aGameSummary = (overrides: Partial<GameSummary> = {}): GameSummary => ({
-    id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-    title: 'Super Mario World',
-    platform: 'SNES',
-    artworkStatus: 'EXTERNAL_URL',
-    artworkUrl: 'https://example.com/smw.png',
-    artworkEndpoint: null,
-    ...overrides,
-  });
-
   it('requests the games page without optional params', () => {
     const expectedPage: GamesPage = {
-      content: [aGameSummary()],
+      content: [aGameSummaryMock()],
       page: 0,
       size: 60,
       totalElements: 1,
@@ -36,17 +29,17 @@ describe('GameCatalogApiService', () => {
     spectator.expectOne('/api/gamecatalog/games', HttpMethod.GET).flush(expectedPage);
   });
 
-  it('passes search, platform, page and size as query params', () => {
+  it('passes search, platform, host, page and size as query params', () => {
     spectator.service
-      .getGames({ search: 'mario', platform: 'SNES', page: 2, size: 30 })
+      .getGames({ search: 'mario', platform: 'SNES', host: 'jordybox', page: 2, size: 30 })
       .subscribe();
 
     spectator
-      .expectOne('/api/gamecatalog/games?search=mario&platform=SNES&page=2&size=30', HttpMethod.GET)
+      .expectOne('/api/gamecatalog/games?search=mario&platform=SNES&host=jordybox&page=2&size=30', HttpMethod.GET)
       .flush({ content: [], page: 2, size: 30, totalElements: 0, totalPages: 0 });
   });
 
-  it('omits empty search and platform params', () => {
+  it('omits empty search, platform and host params', () => {
     spectator.service.getGames({ search: '', page: 0 }).subscribe();
 
     spectator
@@ -75,23 +68,18 @@ describe('GameCatalogApiService', () => {
       .flush({ platforms: ['SNES', 'PlayStation 2', 'Steam'] });
   });
 
+  it('maps the hosts response to a plain string list', () => {
+    spectator.service.getHosts().subscribe((hosts) => {
+      expect(hosts).toEqual(['jordybox', 'ryzen-desktop']);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/hosts', HttpMethod.GET)
+      .flush({ hosts: ['jordybox', 'ryzen-desktop'] });
+  });
+
   it('requests a game detail by id', () => {
-    const expectedDetail = {
-      id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-      title: 'Super Mario World',
-      platform: 'SNES',
-      sourceKey: 'snes',
-      artworkStatus: 'EXTERNAL_URL',
-      artworkUrl: 'https://example.com/smw.png',
-      artworkEndpoint: null,
-      enrichmentStatus: 'ENRICHED',
-      genre: 'Platformer',
-      maxLocalPlayers: 2,
-      onlineMultiplayer: false,
-      singlePlayer: true,
-      description: 'A classic.',
-      firstSeenAt: '2026-08-02T10:15:00Z',
-    };
+    const expectedDetail = aGameDetailMock();
 
     spectator.service.getGame('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
       expect(detail).toEqual(expectedDetail);
@@ -129,6 +117,14 @@ describe('GameCatalogApiService', () => {
     request.flush(expectedAnswer);
   });
 
+  it('includes attached game ids when present', () => {
+    spectator.service.chat('is this good for 4 players?', ['game-1']).subscribe();
+
+    const request = spectator.expectOne('/api/gamecatalog/chat', HttpMethod.POST);
+    expect(request.request.body).toEqual({ question: 'is this good for 4 players?', gameIds: ['game-1'] });
+    request.flush({ answer: 'Yes.', games: [], noMatch: false });
+  });
+
   it('maps a 503 chat response to the unavailable state', () => {
     spectator.service.chat('anything').subscribe((response) => {
       expect(response).toEqual({ kind: 'unavailable' });
@@ -137,6 +133,16 @@ describe('GameCatalogApiService', () => {
     spectator
       .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
       .flush({ reason: 'CHAT_UNAVAILABLE' }, { status: 503, statusText: 'Service Unavailable' });
+  });
+
+  it('maps a 400 invalid-attachment response to the unavailable state', () => {
+    spectator.service.chat('anything', ['hidden']).subscribe((response) => {
+      expect(response).toEqual({ kind: 'unavailable' });
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
+      .flush({ reason: 'GAME_IDS_INVALID' }, { status: 400, statusText: 'Bad Request' });
   });
 
   it('propagates non-503 chat errors', () => {
@@ -154,13 +160,14 @@ describe('GameCatalogApiService', () => {
     const expectedSources = [
       {
         id: '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-        sourceKey: 'snes',
-        path: 'D:\\EmuDeck\\roms\\snes',
-        sourceType: 'ROM_FOLDER',
+        sourceKey: 'jordybox:EMUDECK',
+        hostname: 'jordybox',
+        sourceType: 'EMUDECK',
         platform: 'SNES',
         enabled: true,
         lastAttemptAt: '2026-08-02T10:20:00Z',
         lastSuccessAt: '2026-08-02T10:20:00Z',
+        lastCheckedAt: null,
         lastOutcome: 'APPLIED',
         installedGameCount: 412,
       },
@@ -186,27 +193,67 @@ describe('GameCatalogApiService', () => {
     request.flush({ id: '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', enabled: false });
   });
 
-  it('resolves the external artwork URL when present', () => {
-    const game = aGameSummary();
-
-    expect(artworkUrl(game)).toBe('https://example.com/smw.png');
+  it('resolves the external cover URL when present', () => {
+    expect(coverUrl(aGameSummaryMock())).toBe('https://example.com/smw.png');
   });
 
-  it('resolves the local artwork endpoint for uploaded art', () => {
-    const game = aGameSummary({
-      artworkStatus: 'LOCAL_UPLOAD',
-      artworkUrl: null,
-      artworkEndpoint: '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork',
+  it('resolves the local cover endpoint for uploaded art', () => {
+    const game = aGameSummaryMock({
+      coverStatus: 'LOCAL_UPLOAD',
+      coverUrl: null,
+      coverEndpoint: '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork',
     });
 
-    expect(artworkUrl(game)).toBe(
-      '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork'
-    );
+    expect(coverUrl(game)).toBe('/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork');
   });
 
-  it('resolves null when a game has no artwork', () => {
-    const game = aGameSummary({ artworkStatus: 'PLACEHOLDER', artworkUrl: null, artworkEndpoint: null });
+  it('resolves null when a game has no cover', () => {
+    const game = aGameSummaryMock({ coverStatus: 'PLACEHOLDER', coverUrl: null, coverEndpoint: null });
 
-    expect(artworkUrl(game)).toBeNull();
+    expect(coverUrl(game)).toBeNull();
+  });
+
+  it('resolves the banner URL when present', () => {
+    expect(bannerUrl(aGameDetailMock())).toBe('https://example.com/smw-banner.png');
+  });
+
+  it('resolves null when a game has no banner', () => {
+    const game = aGameDetailMock({ bannerStatus: 'PLACEHOLDER', bannerUrl: null, bannerEndpoint: null });
+
+    expect(bannerUrl(game)).toBeNull();
+  });
+
+  it('posts a deterministic metadata refresh for a game', () => {
+    const refreshed = aGameDetailMock({ developer: 'Valve' });
+
+    spectator.service.refreshGameMetadata('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
+      expect(detail).toEqual(refreshed);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/metadata/refresh', HttpMethod.POST)
+      .flush(refreshed);
+  });
+
+  it('posts an AI enrichment refresh for a game', () => {
+    const regenerated = aGameDetailMock({ description: 'Regenerated.' });
+
+    spectator.service.refreshGameEnrichment('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
+      expect(detail).toEqual(regenerated);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/enrichment/refresh', HttpMethod.POST)
+      .flush(regenerated);
+  });
+
+  it('posts a bulk refresh and returns the processed and remaining counts', () => {
+    const counts = aRefreshAllMock();
+
+    spectator.service.refreshPending().subscribe((result) => {
+      expect(result).toEqual(counts);
+    });
+
+    spectator.expectOne('/api/gamecatalog/games/refresh', HttpMethod.POST).flush(counts);
   });
 });

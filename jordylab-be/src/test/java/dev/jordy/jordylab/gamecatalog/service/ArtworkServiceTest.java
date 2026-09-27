@@ -3,8 +3,10 @@ package dev.jordy.jordylab.gamecatalog.service;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.ArtworkLookupClient;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
@@ -40,6 +42,9 @@ class ArtworkServiceTest {
     private GameRepository gameRepository;
 
     @Mock
+    private GameInstallationRepository gameInstallationRepository;
+
+    @Mock
     private ArtworkLookupClient artworkLookupClient;
 
     @TempDir
@@ -49,135 +54,169 @@ class ArtworkServiceTest {
 
     @BeforeEach
     void setUp() {
-        artworkService = new ArtworkService(gameRepository, artworkLookupClient, properties(true));
+        artworkService = new ArtworkService(gameRepository, gameInstallationRepository, artworkLookupClient,
+                properties(true));
     }
 
     @Test
-    void resolvesSteamGameToDeterministicCdnUrl() {
+    void resolvesSteamGameToPortraitCoverAndHeroBanner() {
         ScanSource source = aSource(SourceType.STEAM);
-        Game game = aGame(source, "620", "Portal 2");
+        Game game = aGame(source, "620", "Portal 2", "620");
         stubGames(source, game);
-        when(artworkLookupClient.findExternalArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
-                .thenReturn(Optional.of("https://cdn.example/steam/apps/620/header.jpg"));
+        when(artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
+                .thenReturn(Optional.of("https://cdn.example/steam/apps/620/library_600x900.jpg"));
+        when(artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
+                .thenReturn(Optional.of("https://cdn.example/steam/apps/620/library_hero.jpg"));
 
         List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("620", true)));
 
         assertSoftly(softly -> {
             softly.assertThat(requested).isEmpty();
-            softly.assertThat(game.getArtworkStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-            softly.assertThat(game.getArtworkRef()).isEqualTo("https://cdn.example/steam/apps/620/header.jpg");
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(game.getCoverRef())
+                    .isEqualTo("https://cdn.example/steam/apps/620/library_600x900.jpg");
+            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(game.getBannerRef()).isEqualTo("https://cdn.example/steam/apps/620/library_hero.jpg");
         });
     }
 
     @Test
     void resolvesEmudeckGameOnLibretroProbeHit() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
         stubGames(source, game);
-        when(artworkLookupClient.findExternalArtworkUrl(SourceType.EMUDECK, source.getSourceType().platform(),
-                "smw.smc", "Super Mario World"))
-                .thenReturn(Optional.of("https://libretro.example/smw.png"));
+        when(artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, PLATFORM, null,
+                "Super Mario World")).thenReturn(Optional.of("https://libretro.example/smw.png"));
+        when(artworkLookupClient.findBannerArtworkUrl(SourceType.EMUDECK, PLATFORM, null,
+                "Super Mario World")).thenReturn(Optional.of("https://libretro.example/smw-snap.png"));
 
-        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("smw.smc", true)));
+        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("Super Mario World.smc", true)));
 
         assertSoftly(softly -> {
             softly.assertThat(requested).isEmpty();
-            softly.assertThat(game.getArtworkStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-            softly.assertThat(game.getArtworkRef()).isEqualTo("https://libretro.example/smw.png");
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(game.getCoverRef()).isEqualTo("https://libretro.example/smw.png");
+            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(game.getBannerRef()).isEqualTo("https://libretro.example/smw-snap.png");
         });
+    }
+
+    @Test
+    void bannerFallsBackToPlaceholderWhenMissing() {
+        ScanSource source = aSource(SourceType.EMUDECK);
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
+        stubGames(source, game);
+        when(artworkLookupClient.findCoverArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.of("https://libretro.example/smw.png"));
+        when(artworkLookupClient.findBannerArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.empty());
+
+        artworkService.processArtworkAfterSync(source, List.of(payload("Super Mario World.smc", true)));
+
+        assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
+        assertThat(game.getBannerRef()).isNull();
     }
 
     @Test
     void requestsLocalFallbackWhenProbeMissesAndScriptHasArtwork() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
         stubGames(source, game);
-        when(artworkLookupClient.findExternalArtworkUrl(eq(SourceType.EMUDECK), eq(source.getSourceType().platform()),
-                eq("smw.smc"), eq("Super Mario World"))).thenReturn(Optional.empty());
+        when(artworkLookupClient.findCoverArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.empty());
+        when(artworkLookupClient.findBannerArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.empty());
 
-        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("smw.smc", true)));
+        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("Super Mario World.smc", true)));
 
         assertSoftly(softly -> {
-            softly.assertThat(requested).containsExactly("smw.smc");
-            softly.assertThat(game.getArtworkStatus()).isEqualTo(ArtworkStatus.LOCAL_FALLBACK_REQUESTED);
+            softly.assertThat(requested).containsExactly("Super Mario World");
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.LOCAL_FALLBACK_REQUESTED);
             softly.assertThat(game.getArtworkFallbackRequests()).isEqualTo(1);
         });
     }
 
     @Test
-    void marksPlaceholderWhenProbeMissesAndScriptHasNoArtwork() {
+    void marksCoverPlaceholderWhenProbeMissesAndScriptHasNoArtwork() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
         stubGames(source, game);
-        when(artworkLookupClient.findExternalArtworkUrl(eq(SourceType.EMUDECK), eq(source.getSourceType().platform()),
-                eq("smw.smc"), eq("Super Mario World"))).thenReturn(Optional.empty());
+        when(artworkLookupClient.findCoverArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.empty());
+        when(artworkLookupClient.findBannerArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.empty());
 
-        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("smw.smc", false)));
+        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("Super Mario World.smc", false)));
 
         assertSoftly(softly -> {
             softly.assertThat(requested).isEmpty();
-            softly.assertThat(game.getArtworkStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
         });
     }
 
     @Test
     void skipsExternalLookupWhenDisabled() {
-        artworkService = new ArtworkService(gameRepository, artworkLookupClient, properties(false));
+        artworkService = new ArtworkService(gameRepository, gameInstallationRepository, artworkLookupClient,
+                properties(false));
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
         stubGames(source, game);
 
-        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("smw.smc", true)));
+        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("Super Mario World.smc", true)));
 
-        assertThat(requested).containsExactly("smw.smc");
+        assertThat(requested).containsExactly("Super Mario World");
         verifyNoInteractions(artworkLookupClient);
     }
 
     @Test
     void agesStaleFallbackRequestToPlaceholderAfterMaxSyncs() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
-        game.requestLocalArtworkFallback();
-        game.requestLocalArtworkFallback();
-        game.requestLocalArtworkFallback();
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
+        game.requestLocalCoverFallback();
+        game.requestLocalCoverFallback();
+        game.requestLocalCoverFallback();
         stubGames(source, game);
+        when(artworkLookupClient.findBannerArtworkUrl(eq(SourceType.EMUDECK), eq(PLATFORM), eq(null),
+                eq("Super Mario World"))).thenReturn(Optional.empty());
 
-        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("smw.smc", true)));
+        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("Super Mario World.smc", true)));
 
         assertSoftly(softly -> {
             softly.assertThat(requested).isEmpty();
-            softly.assertThat(game.getArtworkStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
         });
     }
 
     @Test
-    void leavesTerminalArtworkStatesUntouched() {
+    void leavesTerminalCoverStatesUntouched() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game external = aGame(source, "a.smc", "A");
-        external.applyArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/a.png");
-        Game uploaded = aGame(source, "b.smc", "B");
-        uploaded.applyArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/b.png");
+        Game external = aGame(source, "a.smc", "A", null);
+        external.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/a.png");
+        external.applyBannerArtwork(ArtworkStatus.PLACEHOLDER, null);
+        Game uploaded = aGame(source, "b.smc", "B", null);
+        uploaded.applyCoverArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/b.png");
+        uploaded.applyBannerArtwork(ArtworkStatus.PLACEHOLDER, null);
         stubGames(source, external, uploaded);
 
         List<String> requested = artworkService.processArtworkAfterSync(source,
-                List.of(payload("a.smc", true), payload("b.smc", true)));
+                List.of(payload("A.smc", true), payload("B.smc", true)));
 
         assertThat(requested).isEmpty();
         verifyNoInteractions(artworkLookupClient);
         assertSoftly(softly -> {
-            softly.assertThat(external.getArtworkStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-            softly.assertThat(uploaded.getArtworkStatus()).isEqualTo(ArtworkStatus.LOCAL_UPLOAD);
+            softly.assertThat(external.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(uploaded.getCoverStatus()).isEqualTo(ArtworkStatus.LOCAL_UPLOAD);
         });
     }
 
     @Test
     void loadsVisibleArtworkForLocalUpload() throws Exception {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
         String relativeRef = "smw.png";
         Files.createDirectories(artworkDir);
         Files.write(artworkDir.resolve(relativeRef), PNG_BYTES);
-        game.applyArtwork(ArtworkStatus.LOCAL_UPLOAD, relativeRef);
+        game.applyCoverArtwork(ArtworkStatus.LOCAL_UPLOAD, relativeRef);
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
 
         Optional<ArtworkContent> content = artworkService.loadVisibleArtwork(game.getId());
@@ -192,8 +231,8 @@ class ArtworkServiceTest {
     @Test
     void loadVisibleArtworkIsEmptyForNonUploadStatuses() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
-        game.applyArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/smw.png");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
+        game.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/smw.png");
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
 
         Optional<ArtworkContent> content = artworkService.loadVisibleArtwork(game.getId());
@@ -204,8 +243,8 @@ class ArtworkServiceTest {
     @Test
     void loadVisibleArtworkIsEmptyWhenFileIsMissing() {
         ScanSource source = aSource(SourceType.EMUDECK);
-        Game game = aGame(source, "smw.smc", "Super Mario World");
-        game.applyArtwork(ArtworkStatus.LOCAL_UPLOAD, "gone.png");
+        Game game = aGame(source, "smw.smc", "Super Mario World", null);
+        game.applyCoverArtwork(ArtworkStatus.LOCAL_UPLOAD, "gone.png");
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
 
         Optional<ArtworkContent> content = artworkService.loadVisibleArtwork(game.getId());
@@ -224,7 +263,16 @@ class ArtworkServiceTest {
     }
 
     private void stubGames(ScanSource source, Game... games) {
-        when(gameRepository.findAllBySourceId(source.getId())).thenReturn(List.of(games));
+        List<GameInstallation> installations = List.of(games).stream()
+                .map(game -> GameInstallation.builder()
+                        .game(game)
+                        .source(source)
+                        .externalRef(game.getSteamAppId() == null ? game.getTitle() + ".smc" : game.getSteamAppId())
+                        .firstSeenAt(SEEN_AT)
+                        .lastSeenAt(SEEN_AT)
+                        .build())
+                .toList();
+        when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(installations);
     }
 
     private ScanSource aSource(SourceType sourceType) {
@@ -235,14 +283,11 @@ class ArtworkServiceTest {
                 .build();
     }
 
-    private Game aGame(ScanSource source, String externalRef, String title) {
+    private Game aGame(ScanSource source, String externalRef, String title, String steamAppId) {
         return Game.builder()
-                .source(source)
-                .platform(source.getSourceType().platform())
-                .externalRef(externalRef)
+                .platform(steamAppId == null ? PLATFORM : "Steam")
+                .steamAppId(steamAppId)
                 .title(title)
-                .firstSeenAt(SEEN_AT)
-                .lastSeenAt(SEEN_AT)
                 .build();
     }
 
@@ -256,6 +301,7 @@ class ArtworkServiceTest {
                 30,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
+                new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
     }
 }

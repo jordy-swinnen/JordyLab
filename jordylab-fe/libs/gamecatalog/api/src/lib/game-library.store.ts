@@ -15,20 +15,24 @@ export class GameLibraryStore {
 
   readonly #games = signal<GameSummary[]>([]);
   readonly #platforms = signal<string[]>([]);
+  readonly #hosts = signal<string[]>([]);
   readonly #loading = signal(true);
   readonly #error = signal<string | null>(null);
   readonly #searchTerm = signal('');
   readonly #selectedPlatform = signal<string | null>(null);
+  readonly #selectedHost = signal<string | null>(null);
   readonly #page = signal(0);
   readonly #totalPages = signal(0);
   readonly #totalElements = signal(0);
 
   readonly games = this.#games.asReadonly();
   readonly platforms = this.#platforms.asReadonly();
+  readonly hosts = this.#hosts.asReadonly();
   readonly loading = this.#loading.asReadonly();
   readonly error = this.#error.asReadonly();
   readonly searchTerm = this.#searchTerm.asReadonly();
   readonly selectedPlatform = this.#selectedPlatform.asReadonly();
+  readonly selectedHost = this.#selectedHost.asReadonly();
   readonly page = this.#page.asReadonly();
   readonly totalPages = this.#totalPages.asReadonly();
   readonly totalElements = this.#totalElements.asReadonly();
@@ -53,6 +57,7 @@ export class GameLibraryStore {
             .getGames({
               search: this.#searchTerm() || undefined,
               platform: this.#selectedPlatform() ?? undefined,
+              host: this.#selectedHost() ?? undefined,
               page: this.#page(),
               size: GAME_LIBRARY_PAGE_SIZE,
             })
@@ -79,6 +84,11 @@ export class GameLibraryStore {
       .getPlatforms()
       .pipe(catchError(() => of([])))
       .subscribe((platforms) => this.#platforms.set(platforms));
+
+    this.#api
+      .getHosts()
+      .pipe(catchError(() => of([])))
+      .subscribe((hosts) => this.#hosts.set(hosts));
   }
 
   search(term: string): void {
@@ -87,6 +97,12 @@ export class GameLibraryStore {
 
   selectPlatform(platform: string | null): void {
     this.#selectedPlatform.set(platform);
+    this.#page.set(0);
+    this.#queryTrigger.next();
+  }
+
+  selectHost(host: string | null): void {
+    this.#selectedHost.set(host);
     this.#page.set(0);
     this.#queryTrigger.next();
   }

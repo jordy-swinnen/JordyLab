@@ -4,6 +4,9 @@
   [error]="error()"
   [togglingId]="togglingId()"
   [downloading]="downloading()"
+  [refreshingPending]="refreshingPending()"
+  [refreshProgress]="refreshProgress()"
   (toggleSource)="onToggle($event)"
   (downloadClient)="onDownloadClient($event)"
+  (refreshPending)="onRefreshPending()"
 />

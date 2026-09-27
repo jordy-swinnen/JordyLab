@@ -1,22 +1,38 @@
 import { signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, RouterModule } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { ChatMessage, GameChatStore } from '@jordylab-fe/gamecatalog/api';
+import { aAttachedGameMock, AttachedGame, ChatMessage, GameChatStore } from '@jordylab-fe/gamecatalog/api';
+import { Subject } from 'rxjs';
 import { GameChatComponent } from './game-chat.component';
 
 describe('GameChatComponent', () => {
   const messages = signal<ChatMessage[]>([]);
   const asking = signal(false);
+  const attachedGame = signal<AttachedGame | null>(null);
   const ask = vi.fn<GameChatStore['ask']>();
+  const attachGame = vi.fn<GameChatStore['attachGame']>();
+  const clearAttachment = vi.fn<GameChatStore['clearAttachment']>();
 
-  const storeMock = { messages: messages.asReadonly(), asking: asking.asReadonly(), ask };
+  const storeMock = {
+    messages: messages.asReadonly(),
+    asking: asking.asReadonly(),
+    attachedGame: attachedGame.asReadonly(),
+    ask,
+    attachGame,
+    clearAttachment,
+  };
+
+  const queryParamMap = new Subject<ParamMap>();
 
   let spectator: Spectator<GameChatComponent>;
 
   const createComponent = createComponentFactory({
     component: GameChatComponent,
     imports: [RouterModule.forRoot([])],
-    providers: [{ provide: GameChatStore, useValue: storeMock }],
+    providers: [
+      { provide: GameChatStore, useValue: storeMock },
+      { provide: ActivatedRoute, useValue: { queryParamMap: queryParamMap.asObservable() } },
+    ],
   });
 
   const askQuestion = (question: string) => {
@@ -28,8 +44,28 @@ describe('GameChatComponent', () => {
   beforeEach(() => {
     messages.set([]);
     asking.set(false);
+    attachedGame.set(null);
     ask.mockReset();
+    attachGame.mockReset();
+    clearAttachment.mockReset();
     spectator = createComponent();
+  });
+
+  it('attaches the game from the query param', () => {
+    queryParamMap.next(convertToParamMap({ attach: 'game-1' }));
+    spectator.detectChanges();
+
+    expect(attachGame).toHaveBeenCalledWith('game-1');
+  });
+
+  it('re-attaches when the attach query param changes on a reused component', () => {
+    queryParamMap.next(convertToParamMap({ attach: 'game-1' }));
+    spectator.detectChanges();
+    queryParamMap.next(convertToParamMap({ attach: 'game-2' }));
+    spectator.detectChanges();
+
+    expect(attachGame).toHaveBeenCalledTimes(2);
+    expect(attachGame).toHaveBeenLastCalledWith('game-2');
   });
 
   it('shows an empty-state hint before the first question', () => {
@@ -40,6 +76,28 @@ describe('GameChatComponent', () => {
     askQuestion('which games support local co-op?');
 
     expect(ask).toHaveBeenCalledWith('which games support local co-op?');
+  });
+
+  it('renders the attached game as a removable chip', () => {
+    attachedGame.set(aAttachedGameMock({ id: 'game-1', title: 'Portal 2' }));
+    spectator.detectChanges();
+
+    expect(spectator.element).toHaveText('Asking about Portal 2');
+
+    const remove = spectator.query('button[aria-label="Remove attachment"]') as Element;
+    spectator.click(remove);
+
+    expect(clearAttachment).toHaveBeenCalled();
+  });
+
+  it('disables the remove button while a question is in flight', () => {
+    attachedGame.set(aAttachedGameMock({ id: 'game-1', title: 'Portal 2' }));
+    asking.set(true);
+    spectator.detectChanges();
+
+    const remove = spectator.query('button[aria-label="Remove attachment"]') as HTMLButtonElement;
+
+    expect(remove.disabled).toBe(true);
   });
 
   it('renders user and assistant messages', () => {

@@ -1,8 +1,8 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
-import { artworkUrl, GameDetail } from '@jordylab-fe/gamecatalog/api';
+import { bannerUrl, coverUrl, GameDetail } from '@jordylab-fe/gamecatalog/api';
 import { coverInitials, coverPalette, platformTagClass } from '../cover';
 
 @Component({
@@ -16,9 +16,19 @@ export class GameDetailViewComponent {
   loading = input.required<boolean>();
   notFound = input.required<boolean>();
   error = input.required<string | null>();
+  refreshingMetadata = input.required<boolean>();
+  refreshingEnrichment = input.required<boolean>();
 
-  protected readonly artworkUrl = artworkUrl;
+  refreshMetadata = output<void>();
+  refreshEnrichment = output<void>();
+
+  protected readonly coverUrl = coverUrl;
+  protected readonly bannerUrl = bannerUrl;
   protected readonly initials = coverInitials;
   protected readonly palette = coverPalette;
   protected readonly tagClass = platformTagClass;
+
+  protected hostnames(game: GameDetail): string {
+    return game.hosts.map((host) => host.hostname).join(', ');
+  }
 }

@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
-import { artworkUrl, GAME_LIBRARY_PAGE_SIZE, GameSummary } from '@jordylab-fe/gamecatalog/api';
+import { coverUrl, GAME_LIBRARY_PAGE_SIZE, GameSummary } from '@jordylab-fe/gamecatalog/api';
 import { coverInitials, coverPalette, platformTagClass } from '../cover';
 
 const SKELETON_CARD_COUNT = 10;
@@ -23,22 +23,25 @@ const CHIP = 'h-10 cursor-pointer px-4 text-sm font-semibold';
 export class GameGridViewComponent {
   games = input.required<GameSummary[]>();
   platforms = input.required<string[]>();
+  hosts = input.required<string[]>();
   loading = input.required<boolean>();
   error = input.required<string | null>();
   selectedPlatform = input.required<string | null>();
+  selectedHost = input.required<string | null>();
   page = input.required<number>();
   totalPages = input.required<number>();
   totalElements = input.required<number>();
 
   searchChange = output<string>();
   platformChange = output<string | null>();
+  hostChange = output<string | null>();
   pageChange = output<number>();
 
   protected readonly skeletonCards = Array.from(
     { length: SKELETON_CARD_COUNT },
     (_, index) => index,
   );
-  protected readonly artworkUrl = artworkUrl;
+  protected readonly coverUrl = coverUrl;
   protected readonly initials = coverInitials;
   protected readonly palette = coverPalette;
   protected readonly tagClass = platformTagClass;
@@ -57,6 +60,10 @@ export class GameGridViewComponent {
 
   onPlatformClick(platform: string | null) {
     this.platformChange.emit(platform);
+  }
+
+  onHostClick(host: string | null) {
+    this.hostChange.emit(host);
   }
 
   onPreviousPage() {

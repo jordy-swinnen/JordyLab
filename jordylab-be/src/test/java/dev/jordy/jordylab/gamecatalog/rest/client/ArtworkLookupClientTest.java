@@ -25,25 +25,54 @@ class ArtworkLookupClientTest {
 
     @BeforeEach
     void setUp() {
-        artworkLookupClient = new ArtworkLookupClient(properties(), "https://cdn.example/steam/apps",
+        artworkLookupClient = new ArtworkLookupClient(properties(), LOOKUP_BASE_URL + "/steam/apps",
                 LOOKUP_BASE_URL);
     }
 
     @Test
-    void steamGamesResolveToDeterministicCdnUrlWithoutProbing() {
-        Optional<String> url = artworkLookupClient.findExternalArtworkUrl(SourceType.STEAM, "Steam", "620",
-                "Portal 2");
+    void steamCoverResolvesToProbedPortraitLibraryArt() {
+        stubFor(head(urlEqualTo("/steam/apps/620/library_600x900.jpg")).willReturn(aResponse().withStatus(200)));
 
-        assertThat(url).contains("https://cdn.example/steam/apps/620/header.jpg");
-        verify(0, headRequestedFor(urlEqualTo("/anything")));
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2");
+
+        assertThat(url).contains(LOOKUP_BASE_URL + "/steam/apps/620/library_600x900.jpg");
     }
 
     @Test
-    void romGameResolvesWhenLibretroProbeHits() {
+    void steamCoverFallsBackToRetinaPortraitWhenStandardIsMissing() {
+        stubFor(head(urlEqualTo("/steam/apps/620/library_600x900.jpg")).willReturn(aResponse().withStatus(404)));
+        stubFor(head(urlEqualTo("/steam/apps/620/library_600x900_2x.jpg")).willReturn(aResponse().withStatus(200)));
+
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2");
+
+        assertThat(url).contains(LOOKUP_BASE_URL + "/steam/apps/620/library_600x900_2x.jpg");
+    }
+
+    @Test
+    void steamCoverIsEmptyWhenNoPortraitExists() {
+        stubFor(head(urlEqualTo("/steam/apps/620/library_600x900.jpg")).willReturn(aResponse().withStatus(404)));
+        stubFor(head(urlEqualTo("/steam/apps/620/library_600x900_2x.jpg")).willReturn(aResponse().withStatus(404)));
+
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2");
+
+        assertThat(url).isEmpty();
+    }
+
+    @Test
+    void steamBannerResolvesToLibraryHero() {
+        stubFor(head(urlEqualTo("/steam/apps/620/library_hero.jpg")).willReturn(aResponse().withStatus(200)));
+
+        Optional<String> url = artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2");
+
+        assertThat(url).contains(LOOKUP_BASE_URL + "/steam/apps/620/library_hero.jpg");
+    }
+
+    @Test
+    void romCoverResolvesWhenLibretroBoxartProbeHits() {
         stubFor(head(urlEqualTo("/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Boxarts/Super%20Mario%20World.png"))
                 .willReturn(aResponse().withStatus(200)));
 
-        Optional<String> url = artworkLookupClient.findExternalArtworkUrl(SourceType.EMUDECK, "SNES", "smw.smc",
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "SNES", null,
                 "Super Mario World");
 
         assertThat(url).contains(LOOKUP_BASE_URL
@@ -51,20 +80,32 @@ class ArtworkLookupClientTest {
     }
 
     @Test
-    void romGameIsEmptyWhenLibretroProbeMisses() {
+    void romBannerResolvesWhenLibretroSnapshotProbeHits() {
+        stubFor(head(urlEqualTo("/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Snaps/Super%20Mario%20World.png"))
+                .willReturn(aResponse().withStatus(200)));
+
+        Optional<String> url = artworkLookupClient.findBannerArtworkUrl(SourceType.EMUDECK, "SNES", null,
+                "Super Mario World");
+
+        assertThat(url).contains(LOOKUP_BASE_URL
+                + "/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Snaps/Super%20Mario%20World.png");
+    }
+
+    @Test
+    void romCoverIsEmptyWhenLibretroProbeMisses() {
         stubFor(head(urlEqualTo("/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Boxarts/Unknown%20Game.png"))
                 .willReturn(aResponse().withStatus(404)));
 
-        Optional<String> url = artworkLookupClient.findExternalArtworkUrl(SourceType.EMUDECK, "SNES", "x.smc",
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "SNES", null,
                 "Unknown Game");
 
         assertThat(url).isEmpty();
     }
 
     @Test
-    void romGameIsEmptyWhenPlatformHasNoRepoMapping() {
-        Optional<String> url = artworkLookupClient.findExternalArtworkUrl(SourceType.EMUDECK, "WonderSwan",
-                "x.ws", "Some Game");
+    void romArtworkIsEmptyWhenPlatformHasNoRepoMapping() {
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "WonderSwan", null,
+                "Some Game");
 
         assertThat(url).isEmpty();
         verify(0, headRequestedFor(urlEqualTo("/anything")));
@@ -75,7 +116,7 @@ class ArtworkLookupClientTest {
         stubFor(head(urlEqualTo("/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Boxarts/A_B_C_D_E_F_G_H_I_'J.png"))
                 .willReturn(aResponse().withStatus(200)));
 
-        Optional<String> url = artworkLookupClient.findExternalArtworkUrl(SourceType.EMUDECK, "SNES", "ab.smc",
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "SNES", null,
                 "A&B:C/D*E?F<G>H|I\"J");
 
         assertThat(url).contains(LOOKUP_BASE_URL
@@ -87,18 +128,19 @@ class ArtworkLookupClientTest {
         stubFor(head(urlEqualTo("/Sony%20-%20PlayStation/Named_Boxarts/Crash%20Bandicoot.png"))
                 .willReturn(aResponse().withStatus(500)));
 
-        Optional<String> url = artworkLookupClient.findExternalArtworkUrl(SourceType.EMUDECK, "PlayStation",
-                "crash.chd", "Crash Bandicoot");
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "PlayStation", null,
+                "Crash Bandicoot");
 
         assertThat(url).isEmpty();
     }
 
     private GameCatalogProperties properties() {
         return new GameCatalogProperties(
-                                new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
+                new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
                 30,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
+                new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
     }
 }

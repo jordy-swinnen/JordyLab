@@ -9,14 +9,18 @@ import { aGameDetailMock } from './mocks/game-detail.model.mock';
 describe('GameDetailStore', () => {
   let spectator: SpectatorService<GameDetailStore>;
   const getGame = vi.fn<GameCatalogApiService['getGame']>();
+  const refreshGameMetadata = vi.fn<GameCatalogApiService['refreshGameMetadata']>();
+  const refreshGameEnrichment = vi.fn<GameCatalogApiService['refreshGameEnrichment']>();
 
   const createService = createServiceFactory({
     service: GameDetailStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getGame } }],
+    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment } }],
   });
 
   beforeEach(() => {
     getGame.mockReset();
+    refreshGameMetadata.mockReset();
+    refreshGameEnrichment.mockReset();
     spectator = createService();
   });
 
@@ -90,5 +94,70 @@ describe('GameDetailStore', () => {
 
     expect(spectator.service.game()).toBeNull();
     expect(spectator.service.loading()).toBe(true);
+  });
+
+  it('refreshes deterministic metadata and replaces the loaded game', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    const refreshed = aGameDetailMock({ developer: 'Valve', releaseYear: 2011 });
+    refreshGameMetadata.mockReturnValue(of(refreshed));
+
+    spectator.service.refreshMetadata();
+
+    expect(refreshGameMetadata).toHaveBeenCalledWith(aGameDetailMock().id);
+    expect(spectator.service.game()).toEqual(refreshed);
+    expect(spectator.service.refreshingMetadata()).toBe(false);
+  });
+
+  it('is refreshing until the metadata refresh arrives', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    refreshGameMetadata.mockReturnValue(new Subject<GameDetail>().asObservable());
+
+    spectator.service.refreshMetadata();
+
+    expect(spectator.service.refreshingMetadata()).toBe(true);
+  });
+
+  it('sets an error when the metadata refresh fails', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    refreshGameMetadata.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    spectator.service.refreshMetadata();
+
+    expect(spectator.service.error()).toBe('Failed to refresh the deterministic facts.');
+    expect(spectator.service.refreshingMetadata()).toBe(false);
+  });
+
+  it('refreshes the AI description and replaces the loaded game', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    const regenerated = aGameDetailMock({ description: 'A regenerated description.' });
+    refreshGameEnrichment.mockReturnValue(of(regenerated));
+
+    spectator.service.refreshEnrichment();
+
+    expect(refreshGameEnrichment).toHaveBeenCalledWith(aGameDetailMock().id);
+    expect(spectator.service.game()).toEqual(regenerated);
+    expect(spectator.service.refreshingEnrichment()).toBe(false);
+  });
+
+  it('sets an error when the enrichment refresh fails', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    refreshGameEnrichment.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    spectator.service.refreshEnrichment();
+
+    expect(spectator.service.error()).toBe('Failed to regenerate the description.');
+  });
+
+  it('does not refresh when no game is loaded', () => {
+    spectator.service.refreshMetadata();
+    spectator.service.refreshEnrichment();
+
+    expect(refreshGameMetadata).not.toHaveBeenCalled();
+    expect(refreshGameEnrichment).not.toHaveBeenCalled();
   });
 });

@@ -68,7 +68,7 @@ class GameCatalogPropertiesTest {
 
     @Test
     void appliesDocumentedDefaultsWhenSectionsAreAbsent() {
-        GameCatalogProperties defaults = new GameCatalogProperties(null, 0, null, null, null);
+        GameCatalogProperties defaults = new GameCatalogProperties(null, 0, null, null, null, null);
 
         org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(defaults.artwork().dir()).isEqualTo("/var/jordylab/artwork");
@@ -76,7 +76,7 @@ class GameCatalogPropertiesTest {
             softly.assertThat(defaults.artwork().externalLookupEnabled()).isTrue();
             softly.assertThat(defaults.artwork().lookupTimeoutMs()).isEqualTo(2000L);
             softly.assertThat(defaults.gracePeriodDays()).isEqualTo(30);
-            softly.assertThat(defaults.enrichment().batchSize()).isEqualTo(50);
+            softly.assertThat(defaults.enrichment().batchSize()).isEqualTo(8);
             softly.assertThat(defaults.enrichment().maxAttempts()).isEqualTo(3);
             softly.assertThat(defaults.chat().maxResultGames()).isEqualTo(50);
             softly.assertThat(defaults.scan().maxGamesPerSource()).isEqualTo(10000);

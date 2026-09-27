@@ -8,7 +8,7 @@ public record GameSummaryResponse(
         UUID id,
         String title,
         String platform,
-        ArtworkStatus artworkStatus,
-        String artworkUrl,
-        String artworkEndpoint) {
+        ArtworkStatus coverStatus,
+        String coverUrl,
+        String coverEndpoint) {
 }

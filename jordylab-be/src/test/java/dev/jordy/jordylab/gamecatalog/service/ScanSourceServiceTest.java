@@ -3,7 +3,7 @@ package dev.jordy.jordylab.gamecatalog.service;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanSourceResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
@@ -33,13 +33,13 @@ class ScanSourceServiceTest {
     private ScanSourceRepository scanSourceRepository;
 
     @Mock
-    private GameRepository gameRepository;
+    private GameInstallationRepository gameInstallationRepository;
 
     private ScanSourceService scanSourceService;
 
     @BeforeEach
     void setUp() {
-        scanSourceService = new ScanSourceService(scanSourceRepository, gameRepository);
+        scanSourceService = new ScanSourceService(scanSourceRepository, gameInstallationRepository);
     }
 
     @Test
@@ -47,7 +47,7 @@ class ScanSourceServiceTest {
         ScanSource source = aSource("snes");
         source.recordAttempt(SyncOutcome.APPLIED, ATTEMPT_AT);
         when(scanSourceRepository.findAll()).thenReturn(List.of(source));
-        when(gameRepository.countInstalledBySourceId(source.getId())).thenReturn(412L);
+        when(gameInstallationRepository.countInstalledBySourceId(source.getId())).thenReturn(412L);
 
         SourcesResponse response = scanSourceService.listSources();
 

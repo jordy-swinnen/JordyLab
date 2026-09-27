@@ -6,7 +6,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.SyncReport;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ClientGame;
@@ -58,13 +58,19 @@ class ScanServiceTest {
     private SyncReportRepository syncReportRepository;
 
     @Mock
-    private GameRepository gameRepository;
+    private GameInstallationRepository gameInstallationRepository;
 
     @Mock
     private ReconciliationService reconciliationService;
 
     @Mock
     private ArtworkService artworkService;
+
+    @Mock
+    private SteamMetadataService steamMetadataService;
+
+    @Mock
+    private EnrichmentService enrichmentService;
 
     @Mock
     private LibraryParser emuDeckParser;
@@ -130,6 +136,52 @@ class ScanServiceTest {
         verify(syncReportRepository, times(1)).save(reportCaptor.capture());
         assertThat(reportCaptor.getValue().getOutcome()).isEqualTo(SyncOutcome.APPLIED);
         assertThat(source.getLastOutcome()).isEqualTo(SyncOutcome.APPLIED);
+    }
+
+    @Test
+    void appliedScanPopulatesCatalogDataInlineAndPurges() {
+        ScanService service = serviceWithLimits(100, 1_000_000);
+        ScanSource source = anEnabledSource();
+        ScanRequest request = aScanRequest(null, false, null);
+        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
+                .thenReturn(Optional.of(source));
+        when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
+        ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
+                .thenReturn(new ReconciliationCounts(1, 0, 0));
+        Instant before = Instant.now();
+
+        service.submitScan(request);
+
+        Instant after = Instant.now();
+        assertThat(snapshotCaptor.getValue()).isBetween(before, after);
+        verify(steamMetadataService).fetchPending(25);
+        verify(enrichmentService).enrichPending(8);
+        verify(reconciliationService).purgeUninstalledGames();
+    }
+
+    @Test
+    void noChangeScanSkipsInlinePopulationAndPurge() {
+        ScanService service = serviceWithLimits(100, 1_000_000);
+        ScanSource source = anEnabledSource();
+        ScanRequest request = aScanRequest(null, false, null);
+        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
+                .thenReturn(Optional.of(source));
+        when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
+        ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
+                .thenReturn(new ReconciliationCounts(1, 0, 0));
+        Instant before = Instant.now();
+        service.submitScan(request);
+
+        ScanResponse duplicate = service.submitScan(request);
+
+        Instant after = Instant.now();
+        assertThat(snapshotCaptor.getValue()).isBetween(before, after);
+        assertThat(duplicate.outcome()).isEqualTo(SyncOutcome.NO_CHANGE);
+        verify(steamMetadataService, times(1)).fetchPending(25);
+        verify(enrichmentService, times(1)).enrichPending(8);
+        verify(reconciliationService, times(1)).purgeUninstalledGames();
     }
 
     @Test
@@ -258,7 +310,7 @@ class ScanServiceTest {
         when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
                 .thenReturn(Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
-        when(gameRepository.countInstalledBySourceId(source.getId())).thenReturn(100L);
+        when(gameInstallationRepository.countInstalledBySourceId(source.getId())).thenReturn(100L);
 
         ScanResponse response = service.submitScan(request);
 
@@ -401,12 +453,14 @@ class ScanServiceTest {
         GameCatalogProperties properties = new GameCatalogProperties(
                 new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
                 30,
-                new GameCatalogProperties.Enrichment(50, 3),
+                new GameCatalogProperties.Enrichment(8, 3),
                 new GameCatalogProperties.Chat(50),
+                new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(maxGamesPerSource, maxPayloadBytes, 262_144, 0.5));
 
-        return new ScanService(scanSourceRepository, syncReportRepository, gameRepository, reconciliationService,
-                artworkService, properties, new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
+        return new ScanService(scanSourceRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
+                artworkService, steamMetadataService, enrichmentService, properties,
+                new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
     }
 
     private static ScanRequest aScanRequest(String machineId, boolean force, List<ClientGame> games) {

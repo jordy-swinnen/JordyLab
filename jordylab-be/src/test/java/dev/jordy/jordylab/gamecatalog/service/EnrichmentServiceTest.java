@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
-import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
-import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
@@ -18,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +28,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class EnrichmentServiceTest {
 
-    private static final Instant SEEN_AT = Instant.parse("2026-08-02T10:15:00Z");
+    private static final int SCAN_CAP = 50;
     private static final String VALID_JSON = """
             {"genre": "Platformer", "maxLocalPlayers": 2, "onlineMultiplayer": false, "singlePlayer": true,
              "description": "A classic SNES platformer."}
@@ -58,8 +55,9 @@ class EnrichmentServiceTest {
                 eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
 
-        enrichmentService.enrichPendingGames();
+        int processed = enrichmentService.enrichPending(SCAN_CAP);
 
+        assertThat(processed).isEqualTo(1);
         assertSoftly(softly -> {
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
             softly.assertThat(game.getGenre()).isEqualTo("Platformer");
@@ -78,7 +76,7 @@ class EnrichmentServiceTest {
                 eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
 
-        enrichmentService.enrichPendingGames();
+        enrichmentService.enrichPending(SCAN_CAP);
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
         verify(aiService).call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
@@ -98,7 +96,7 @@ class EnrichmentServiceTest {
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
                         "I think this is a great game!"));
 
-        enrichmentService.enrichPendingGames();
+        enrichmentService.enrichPending(SCAN_CAP);
 
         assertSoftly(softly -> {
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.PENDING);
@@ -120,7 +118,7 @@ class EnrichmentServiceTest {
                          "singlePlayer": true, "description": "A classic."}
                         """));
 
-        enrichmentService.enrichPendingGames();
+        enrichmentService.enrichPending(SCAN_CAP);
 
         assertSoftly(softly -> {
             softly.assertThat(game.getEnrichmentAttempts()).isEqualTo(1);
@@ -137,7 +135,7 @@ class EnrichmentServiceTest {
                 .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
                         ProviderFailureReason.TIMEOUT));
 
-        enrichmentService.enrichPendingGames();
+        enrichmentService.enrichPending(SCAN_CAP);
 
         assertSoftly(softly -> {
             softly.assertThat(game.getEnrichmentAttempts()).isEqualTo(1);
@@ -158,37 +156,58 @@ class EnrichmentServiceTest {
                 .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
                         ProviderFailureReason.UNREACHABLE));
 
-        enrichmentService.enrichPendingGames();
+        enrichmentService.enrichPending(SCAN_CAP);
 
         assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.FAILED);
     }
 
     @Test
-    void batchIsLimitedToConfiguredBatchSize() {
-        stubPendingBatch(List.of());
+    void enrichPendingRespectsThePerScanCap() {
+        when(gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
+                PageRequest.of(0, 7))).thenReturn(List.of());
 
-        enrichmentService.enrichPendingGames();
+        int processed = enrichmentService.enrichPending(7);
 
-        verify(gameRepository).findByEnrichmentStatusOrderByFirstSeenAtAsc(EnrichmentStatus.PENDING,
-                PageRequest.of(0, 50));
+        assertThat(processed).isZero();
+        verify(gameRepository).findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
+                PageRequest.of(0, 7));
     }
 
     @Test
-    void dailyJobResetsFailedGamesForRetry() {
-        Game failed = aGame("Super Mario World");
-        failed.recordEnrichmentFailure(3);
-        failed.recordEnrichmentFailure(3);
-        failed.recordEnrichmentFailure(3);
-        Game enriched = aGame("Chrono Trigger");
-        enriched.applyEnrichment("RPG", null, false, true, "A masterpiece.");
-        when(gameRepository.findByEnrichmentStatus(EnrichmentStatus.FAILED)).thenReturn(List.of(failed));
+    void refreshClearsTheFailureCounterAndReEnriches() {
+        Game game = aGame("Super Mario World");
+        game.recordEnrichmentFailure(3);
+        game.recordEnrichmentFailure(3);
+        game.recordEnrichmentFailure(3);
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
+                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
 
-        enrichmentService.resetFailedEnrichments();
+        enrichmentService.refresh(game);
 
         assertSoftly(softly -> {
-            softly.assertThat(failed.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.PENDING);
-            softly.assertThat(failed.getEnrichmentAttempts()).isZero();
-            softly.assertThat(enriched.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
+            softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
+            softly.assertThat(game.getEnrichmentAttempts()).isZero();
+            softly.assertThat(game.getGenre()).isEqualTo("Platformer");
+        });
+    }
+
+    @Test
+    void refreshClearsTheFailureCounterEvenWhenTheAiCallFails() {
+        Game game = aGame("Super Mario World");
+        game.recordEnrichmentFailure(3);
+        game.recordEnrichmentFailure(3);
+        game.recordEnrichmentFailure(3);
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq(userPromptFor(game))))
+                .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
+                        ProviderFailureReason.TIMEOUT));
+
+        enrichmentService.refresh(game);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.PENDING);
+            softly.assertThat(game.getEnrichmentAttempts()).isEqualTo(1);
         });
     }
 
@@ -196,14 +215,15 @@ class EnrichmentServiceTest {
     void emptyPendingBatchSkipsAiCalls() {
         stubPendingBatch(List.of());
 
-        enrichmentService.enrichPendingGames();
+        int processed = enrichmentService.enrichPending(SCAN_CAP);
 
+        assertThat(processed).isZero();
         verifyNoInteractions(aiService);
     }
 
     private void stubPendingBatch(List<Game> games) {
-        when(gameRepository.findByEnrichmentStatusOrderByFirstSeenAtAsc(EnrichmentStatus.PENDING,
-                PageRequest.of(0, 50)))
+        when(gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
+                PageRequest.of(0, SCAN_CAP)))
                 .thenReturn(games);
     }
 
@@ -213,27 +233,18 @@ class EnrichmentServiceTest {
 
     private Game aGame(String title) {
         return Game.builder()
-                .source(ScanSource.builder()
-                        .sourceKey("snes")
-                        .hostname("jordybox")
-                        .sourceType(SourceType.EMUDECK)
-                        .platform("SNES")
-                        .enabled(true)
-                        .build())
                 .platform("SNES")
-                .externalRef(title + ".smc")
                 .title(title)
-                .firstSeenAt(SEEN_AT)
-                .lastSeenAt(SEEN_AT)
                 .build();
     }
 
     private GameCatalogProperties properties() {
         return new GameCatalogProperties(
-                                new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
+                new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
                 30,
-                new GameCatalogProperties.Enrichment(50, 3),
+                new GameCatalogProperties.Enrichment(SCAN_CAP, 3),
                 new GameCatalogProperties.Chat(50),
+                new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
     }
 }

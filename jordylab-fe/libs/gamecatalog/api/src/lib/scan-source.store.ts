@@ -12,12 +12,16 @@ export class ScanSourceStore {
   readonly #error = signal<string | null>(null);
   readonly #togglingId = signal<string | null>(null);
   readonly #downloading = signal<ScanLibraryType | null>(null);
+  readonly #refreshingPending = signal(false);
+  readonly #refreshProgress = signal<string | null>(null);
 
   readonly sources = this.#sources.asReadonly();
   readonly loading = this.#loading.asReadonly();
   readonly error = this.#error.asReadonly();
   readonly togglingId = this.#togglingId.asReadonly();
   readonly downloading = this.#downloading.asReadonly();
+  readonly refreshingPending = this.#refreshingPending.asReadonly();
+  readonly refreshProgress = this.#refreshProgress.asReadonly();
 
   constructor() {
     this.load();
@@ -66,6 +70,59 @@ export class ScanSourceStore {
             list.map((item) => (item.id === response.id ? { ...item, enabled: response.enabled } : item))
           );
         }
+      });
+  }
+
+  /**
+   * Drains leftover PENDING/FAILED deterministic + AI data in bounded batches, repeating until
+   * nothing remains. Stops (with an explicit error) if a batch makes no progress, so an unavailable
+   * AI provider cannot spin the loop.
+   */
+  refreshPending(): void {
+    if (this.#refreshingPending()) {
+      return;
+    }
+
+    this.#refreshingPending.set(true);
+    this.#refreshProgress.set('Refreshing catalog data…');
+    this.#error.set(null);
+    this.#drainPending(Number.POSITIVE_INFINITY);
+  }
+
+  #drainPending(previousRemaining: number): void {
+    this.#api
+      .refreshPending()
+      .pipe(
+        catchError(() => {
+          this.#error.set('Failed to refresh catalog data.');
+          this.#refreshingPending.set(false);
+          this.#refreshProgress.set(null);
+
+          return of(null);
+        })
+      )
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+
+        const remaining = result.metadata.remaining + result.enrichment.remaining;
+        if (remaining === 0) {
+          this.#refreshingPending.set(false);
+          this.#refreshProgress.set(null);
+
+          return;
+        }
+        if (remaining >= previousRemaining) {
+          this.#error.set(`Refresh stalled with ${remaining} game(s) still pending.`);
+          this.#refreshingPending.set(false);
+          this.#refreshProgress.set(null);
+
+          return;
+        }
+
+        this.#refreshProgress.set(`Refreshing… ${remaining} left`);
+        this.#drainPending(remaining);
       });
   }
 

@@ -1,4 +1,4 @@
-export { artworkUrl, GameCatalogApiService } from './lib/gamecatalog-api.service';
+export { bannerUrl, coverUrl, GameCatalogApiService } from './lib/gamecatalog-api.service';
 export type { GamesQuery } from './lib/gamecatalog-api.service';
 export { GameChatStore } from './lib/game-chat.store';
 export { GameDetailStore } from './lib/game-detail.store';
@@ -10,6 +10,11 @@ export type {
   SourceType,
   SyncOutcome,
   ScanLibraryType,
+  MetadataSource,
+  HostRef,
+  AttachedGame,
+  RefreshCount,
+  RefreshAll,
   GameSummary,
   GamesPage,
   GameDetail,
@@ -19,7 +24,10 @@ export type {
   ChatAskResponse,
   ChatMessage,
 } from './lib/gamecatalog.models';
+export { aAttachedGameMock } from './lib/mocks/attached-game.model.mock';
 export { aChatAnswerMock } from './lib/mocks/chat-answer.model.mock';
+export { aRefreshAllMock } from './lib/mocks/refresh-all.model.mock';
+export { aRefreshCountMock } from './lib/mocks/refresh-count.model.mock';
 export { aGameDetailMock } from './lib/mocks/game-detail.model.mock';
 export { aGameSummaryMock } from './lib/mocks/game-summary.model.mock';
 export { aGamesPageMock } from './lib/mocks/games-page.model.mock';

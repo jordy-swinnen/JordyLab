@@ -17,8 +17,18 @@ export class GameDetailComponent {
   readonly loading = this.#store.loading;
   readonly notFound = this.#store.notFound;
   readonly error = this.#store.error;
+  readonly refreshingMetadata = this.#store.refreshingMetadata;
+  readonly refreshingEnrichment = this.#store.refreshingEnrichment;
 
   constructor() {
     this.#store.load(this.#route.snapshot.paramMap.get('id') ?? '');
+  }
+
+  onRefreshMetadata(): void {
+    this.#store.refreshMetadata();
+  }
+
+  onRefreshEnrichment(): void {
+    this.#store.refreshEnrichment();
   }
 }

@@ -61,10 +61,14 @@ jordylab:
       lookup-timeout-ms: 2000
     grace-period-days: 30
     enrichment:
-      batch-size: 50
+      batch-size: 8
       max-attempts: 3
     chat:
       max-result-games: 50
+    metadata:
+      store-base-url: https://store.steampowered.com
+      batch-size: 25
+      max-attempts: 3
     scan:
       max-games-per-source: 10000
       max-payload-bytes: 1048576
