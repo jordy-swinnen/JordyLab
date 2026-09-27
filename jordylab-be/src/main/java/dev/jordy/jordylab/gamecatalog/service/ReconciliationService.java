@@ -3,12 +3,16 @@ package dev.jordy.jordylab.gamecatalog.service;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
+import dev.jordy.jordylab.gamecatalog.domain.SourceType;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +24,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -29,30 +36,33 @@ import java.util.stream.Collectors;
 public class ReconciliationService {
 
     private final GameRepository gameRepository;
+    private final GameInstallationRepository gameInstallationRepository;
     private final GameCatalogProperties properties;
 
     public ReconciliationCounts applySnapshot(ScanSource source, List<GamePayload> validEntries, Instant snapshotTime) {
         Map<String, GamePayload> entriesByRef = deduplicateByExternalRef(validEntries);
-        Map<String, Game> existingByRef = gameRepository.findAllBySourceId(source.getId()).stream()
-                .collect(Collectors.toMap(Game::getExternalRef, Function.identity()));
+        Map<String, GameInstallation> existingByRef = gameInstallationRepository
+                .findAllBySourceId(source.getId()).stream()
+                .collect(Collectors.toMap(GameInstallation::getExternalRef, Function.identity()));
 
         int added = 0;
         int updated = 0;
         for (GamePayload entry : entriesByRef.values()) {
-            Game existing = existingByRef.get(entry.externalRef());
+            GameInstallation existing = existingByRef.get(entry.externalRef());
             if (existing == null) {
-                gameRepository.save(newGameFrom(source, entry, snapshotTime));
+                addInstallationFor(source, entry, snapshotTime);
                 added++;
                 continue;
             }
-            if (!existing.getTitle().equals(entry.title()) || !existing.getPlatform().equals(entry.platform())) {
-                existing.updateCatalogInfo(entry.title(), entry.platform());
+            Game game = existing.getGame();
+            if (!game.getTitle().equals(entry.title()) || !game.getPlatform().equals(entry.platform())) {
+                game.updateCatalogInfo(entry.title(), entry.platform());
                 updated++;
             }
             existing.seenAgain(snapshotTime);
         }
 
-        int removed = hideMissingGames(existingByRef, entriesByRef, snapshotTime);
+        int removed = hideMissingInstallations(existingByRef, entriesByRef, snapshotTime);
 
         return new ReconciliationCounts(added, updated, removed);
     }
@@ -60,15 +70,31 @@ public class ReconciliationService {
     @Scheduled(cron = "0 0 4 * * *")
     public void purgeUninstalledGames() {
         Instant cutoff = Instant.now().minus(properties.gracePeriodDays(), ChronoUnit.DAYS);
-        List<Game> expired = gameRepository.findByPresenceAndUninstalledAtBefore(Presence.UNINSTALLED, cutoff);
+        List<GameInstallation> expired = gameInstallationRepository
+                .findByPresenceAndUninstalledAtBefore(Presence.UNINSTALLED, cutoff);
         if (expired.isEmpty()) {
             return;
         }
 
-        expired.forEach(this::deleteLocalArtworkFile);
-        gameRepository.deleteAll(expired);
-        log.info("Purged {} uninstalled game(s) past the {}-day grace period", expired.size(),
-                properties.gracePeriodDays());
+        Set<UUID> affectedGameIds = expired.stream()
+                .map(installation -> installation.getGame().getId())
+                .collect(Collectors.toSet());
+        gameInstallationRepository.deleteAll(expired);
+
+        int purgedGames = 0;
+        for (UUID gameId : affectedGameIds) {
+            if (gameInstallationRepository.countByGameId(gameId) > 0) {
+                continue;
+            }
+            gameRepository.findById(gameId).ifPresent(game -> {
+                deleteLocalArtworkFile(game);
+                gameRepository.delete(game);
+            });
+            purgedGames++;
+        }
+
+        log.info("Purged {} installation(s) and {} orphaned game(s) past the {}-day grace period",
+                expired.size(), purgedGames, properties.gracePeriodDays());
     }
 
     private Map<String, GamePayload> deduplicateByExternalRef(List<GamePayload> validEntries) {
@@ -77,22 +103,50 @@ public class ReconciliationService {
                         LinkedHashMap::new));
     }
 
-    private Game newGameFrom(ScanSource source, GamePayload entry, Instant snapshotTime) {
-        return Game.builder()
+    /**
+     * Links the submitted entry to an existing host-independent game when it is recognized
+     * (Steam: platform + appid; ROM: platform + normalized title), otherwise creates a new one.
+     * Adoption only adds this source's installation — the game's enrichment, metadata, and
+     * artwork are never touched (FR-005).
+     */
+    private void addInstallationFor(ScanSource source, GamePayload entry, Instant snapshotTime) {
+        Game game = findAdoptableGame(entry).orElseGet(() -> createGame(entry));
+        gameInstallationRepository.save(GameInstallation.builder()
+                .game(game)
                 .source(source)
-                .platform(entry.platform())
                 .externalRef(entry.externalRef())
-                .title(entry.title())
                 .firstSeenAt(snapshotTime)
                 .lastSeenAt(snapshotTime)
-                .build();
+                .build());
     }
 
-    private int hideMissingGames(Map<String, Game> existingByRef, Map<String, GamePayload> entriesByRef,
-            Instant snapshotTime) {
+    private Optional<Game> findAdoptableGame(GamePayload entry) {
+        if (SourceType.STEAM.platform().equals(entry.platform())) {
+            return gameRepository.findByPlatformAndSteamAppId(entry.platform(), entry.externalRef());
+        }
+
+        return gameRepository.findByPlatformAndLowercaseTitle(entry.platform(), entry.title(), PageRequest.of(0, 1))
+                .stream()
+                .findFirst();
+    }
+
+    private Game createGame(GamePayload entry) {
+        return gameRepository.save(Game.builder()
+                .platform(entry.platform())
+                .title(entry.title())
+                .steamAppId(steamAppIdFor(entry))
+                .build());
+    }
+
+    private String steamAppIdFor(GamePayload entry) {
+        return SourceType.STEAM.platform().equals(entry.platform()) ? entry.externalRef() : null;
+    }
+
+    private int hideMissingInstallations(Map<String, GameInstallation> existingByRef,
+            Map<String, GamePayload> entriesByRef, Instant snapshotTime) {
         int removed = 0;
-        for (Game existing : existingByRef.values()) {
-            if (existing.getPresence() == Presence.INSTALLED && !entriesByRef.containsKey(existing.getExternalRef())) {
+        for (GameInstallation existing : existingByRef.values()) {
+            if (existing.isInstalled() && !entriesByRef.containsKey(existing.getExternalRef())) {
                 existing.markUninstalled(snapshotTime);
                 removed++;
             }
@@ -102,11 +156,11 @@ public class ReconciliationService {
     }
 
     private void deleteLocalArtworkFile(Game game) {
-        if (game.getArtworkStatus() != ArtworkStatus.LOCAL_UPLOAD || game.getArtworkRef() == null) {
+        if (game.getCoverStatus() != ArtworkStatus.LOCAL_UPLOAD || game.getCoverRef() == null) {
             return;
         }
         try {
-            Files.deleteIfExists(Path.of(properties.artwork().dir()).resolve(game.getArtworkRef()).normalize());
+            Files.deleteIfExists(Path.of(properties.artwork().dir()).resolve(game.getCoverRef()).normalize());
         } catch (IOException exception) {
             log.warn("Could not delete artwork file for purged game {}: {}", game.getId(), exception.getMessage());
         }

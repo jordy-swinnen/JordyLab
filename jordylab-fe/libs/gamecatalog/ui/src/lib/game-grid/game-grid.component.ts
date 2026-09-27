@@ -13,9 +13,11 @@ export class GameGridComponent {
 
   readonly games = this.#store.games;
   readonly platforms = this.#store.platforms;
+  readonly hosts = this.#store.hosts;
   readonly loading = this.#store.loading;
   readonly error = this.#store.error;
   readonly selectedPlatform = this.#store.selectedPlatform;
+  readonly selectedHost = this.#store.selectedHost;
   readonly page = this.#store.page;
   readonly totalPages = this.#store.totalPages;
   readonly totalElements = this.#store.totalElements;
@@ -26,6 +28,10 @@ export class GameGridComponent {
 
   onPlatformSelected(platform: string | null): void {
     this.#store.selectPlatform(platform);
+  }
+
+  onHostSelected(host: string | null): void {
+    this.#store.selectHost(host);
   }
 
   onPageChanged(page: number): void {

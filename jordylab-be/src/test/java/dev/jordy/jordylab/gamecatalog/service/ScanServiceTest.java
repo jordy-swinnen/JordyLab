@@ -6,7 +6,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.SyncReport;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ClientGame;
@@ -58,7 +58,7 @@ class ScanServiceTest {
     private SyncReportRepository syncReportRepository;
 
     @Mock
-    private GameRepository gameRepository;
+    private GameInstallationRepository gameInstallationRepository;
 
     @Mock
     private ReconciliationService reconciliationService;
@@ -258,7 +258,7 @@ class ScanServiceTest {
         when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
                 .thenReturn(Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
-        when(gameRepository.countInstalledBySourceId(source.getId())).thenReturn(100L);
+        when(gameInstallationRepository.countInstalledBySourceId(source.getId())).thenReturn(100L);
 
         ScanResponse response = service.submitScan(request);
 
@@ -403,9 +403,10 @@ class ScanServiceTest {
                 30,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
+                new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(maxGamesPerSource, maxPayloadBytes, 262_144, 0.5));
 
-        return new ScanService(scanSourceRepository, syncReportRepository, gameRepository, reconciliationService,
+        return new ScanService(scanSourceRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
                 artworkService, properties, new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
     }
 

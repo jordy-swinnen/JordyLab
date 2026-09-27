@@ -68,7 +68,7 @@ class GameCatalogPropertiesTest {
 
     @Test
     void appliesDocumentedDefaultsWhenSectionsAreAbsent() {
-        GameCatalogProperties defaults = new GameCatalogProperties(null, 0, null, null, null);
+        GameCatalogProperties defaults = new GameCatalogProperties(null, 0, null, null, null, null);
 
         org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(defaults.artwork().dir()).isEqualTo("/var/jordylab/artwork");

@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
-import { ChatMessage } from '@jordylab-fe/gamecatalog/api';
+import { AttachedGame, ChatMessage } from '@jordylab-fe/gamecatalog/api';
 import { BrandMarkComponent } from '@jordylab-fe/shared/brand';
 import { coverPalette } from '../cover';
 
@@ -25,8 +25,10 @@ interface TextSegment {
 export class GameChatViewComponent {
   messages = input.required<ChatMessage[]>();
   asking = input.required<boolean>();
+  attachedGame = input.required<AttachedGame | null>();
 
   ask = output<string>();
+  removeAttachment = output<void>();
 
   protected readonly palette = coverPalette;
 

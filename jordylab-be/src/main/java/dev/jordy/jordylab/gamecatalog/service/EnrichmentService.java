@@ -34,12 +34,21 @@ public class EnrichmentService {
             Respond with ONLY a JSON object in exactly this shape — no markdown, no prose:
             {
               "genre": "primary genre, max 100 characters",
+              "genres": "comma-separated list of genres, max 200 characters",
+              "developer": "developer name, max 100 characters, or null if unknown",
+              "publisher": "publisher name, max 100 characters, or null if unknown",
+              "releaseYear": "integer release year, or null if unknown",
               "maxLocalPlayers": "integer 1-64 for max simultaneous local players, or null if none/unknown",
               "onlineMultiplayer": "true/false if the game has online multiplayer, or null if unknown",
               "singlePlayer": "true/false if the game has a single-player mode, or null if unknown",
               "description": "one short paragraph about the game, max 4000 characters"
             }
             """;
+
+    private static final int MAX_GENRES_LENGTH = 200;
+    private static final int MAX_NAME_LENGTH = 100;
+    private static final int MIN_RELEASE_YEAR = 1950;
+    private static final int MAX_RELEASE_YEAR = 2028;
 
     private final GameRepository gameRepository;
     private final ResilientAiService aiService;
@@ -49,7 +58,7 @@ public class EnrichmentService {
     @Scheduled(fixedDelayString = "PT15M", initialDelayString = "PT1M")
     @Transactional
     public void enrichPendingGames() {
-        List<Game> pending = gameRepository.findByEnrichmentStatusOrderByFirstSeenAtAsc(
+        List<Game> pending = gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(
                 EnrichmentStatus.PENDING, PageRequest.of(0, properties.enrichment().batchSize()));
         if (pending.isEmpty()) {
             return;
@@ -88,6 +97,8 @@ public class EnrichmentService {
 
         game.applyEnrichment(facts.get().genre(), facts.get().maxLocalPlayers(), facts.get().onlineMultiplayer(),
                 facts.get().singlePlayer(), facts.get().description());
+        game.applyDeterministicMetadata(facts.get().genres(), facts.get().developer(), facts.get().publisher(),
+                facts.get().releaseYear());
     }
 
     private String buildUserPrompt(Game game) {
@@ -99,6 +110,10 @@ public class EnrichmentService {
             JsonNode node = objectMapper.readTree(extractJson(content));
             String genre = requiredText(node, "genre", MAX_GENRE_LENGTH);
             String description = requiredText(node, "description", MAX_DESCRIPTION_LENGTH);
+            String genres = optionalText(node, "genres", MAX_GENRES_LENGTH);
+            String developer = optionalText(node, "developer", MAX_NAME_LENGTH);
+            String publisher = optionalText(node, "publisher", MAX_NAME_LENGTH);
+            Integer releaseYear = optionalBoundedInt(node, "releaseYear", MIN_RELEASE_YEAR, MAX_RELEASE_YEAR);
             Integer maxLocalPlayers = optionalBoundedInt(node, "maxLocalPlayers", 1, MAX_LOCAL_PLAYERS_UPPER_BOUND);
             Boolean onlineMultiplayer = optionalBoolean(node, "onlineMultiplayer");
             Boolean singlePlayer = optionalBoolean(node, "singlePlayer");
@@ -106,8 +121,8 @@ public class EnrichmentService {
                 return Optional.empty();
             }
 
-            return Optional.of(new EnrichmentFacts(genre, maxLocalPlayers, onlineMultiplayer, singlePlayer,
-                    description));
+            return Optional.of(new EnrichmentFacts(genre, genres, developer, publisher, releaseYear,
+                    maxLocalPlayers, onlineMultiplayer, singlePlayer, description));
         } catch (Exception exception) {
             return Optional.empty();
         }
@@ -127,6 +142,18 @@ public class EnrichmentService {
         if (value == null || !value.isTextual() || !StringUtils.hasText(value.asText())
                 || value.asText().length() > maxLength) {
             return null;
+        }
+
+        return value.asText();
+    }
+
+    private String optionalText(JsonNode node, String field, int maxLength) {
+        JsonNode value = node.get(field);
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (!value.isTextual() || !StringUtils.hasText(value.asText()) || value.asText().length() > maxLength) {
+            throw new IllegalArgumentException(field + " must be text within bounds");
         }
 
         return value.asText();
@@ -156,7 +183,8 @@ public class EnrichmentService {
         return value.asBoolean();
     }
 
-    private record EnrichmentFacts(String genre, Integer maxLocalPlayers, Boolean onlineMultiplayer,
-            Boolean singlePlayer, String description) {
+    private record EnrichmentFacts(String genre, String genres, String developer, String publisher,
+            Integer releaseYear, Integer maxLocalPlayers, Boolean onlineMultiplayer, Boolean singlePlayer,
+            String description) {
     }
 }

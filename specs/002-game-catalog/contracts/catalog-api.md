@@ -1,5 +1,10 @@
 # Contract: Catalog API (frontend ↔ jordylab-be)
 
+> **Superseded (partially) by 004**: the `artwork*` fields are renamed to `cover*`, detail gains
+> `banner*`, `hosts[]`, and deterministic metadata, `GET /games` gains `host`, `GET /hosts` is
+> added, and `POST /chat` gains `gameIds`. See
+> `specs/004-gamecatalog-refinements/contracts/catalog-api.md` for the current shapes.
+
 Base path: `/api/gamecatalog` — **all endpoints require a Keycloak-issued bearer token** (the host shell's HTTP interceptor adds it; unauthenticated requests get `401`). CORS allowed origins are configured via `jordylab.cors.allowed-origins` in `application.yaml`.
 
 Visibility rule applied to **every** endpoint below: a game is visible iff `presence = INSTALLED` **and** its source is `enabled` (FR-005, FR-024).

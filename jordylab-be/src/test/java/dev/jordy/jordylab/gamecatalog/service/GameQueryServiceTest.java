@@ -3,12 +3,16 @@ package dev.jordy.jordylab.gamecatalog.service;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
+import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameSummaryResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.HostsResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformsResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,27 +42,31 @@ class GameQueryServiceTest {
 
     private static final Pageable FIRST_PAGE = PageRequest.of(0, 60);
 
-    private static final Instant SEEN_AT = Instant.parse("2026-08-02T10:15:00Z");
+    private static final Instant FIRST_SEEN = Instant.parse("2026-08-01T08:00:00Z");
+    private static final Instant LAST_SEEN = Instant.parse("2026-08-02T10:15:00Z");
     private static final String PLATFORM = "SNES";
 
     @Mock
     private GameRepository gameRepository;
 
+    @Mock
+    private GameInstallationRepository gameInstallationRepository;
+
     private GameQueryService gameQueryService;
 
     @BeforeEach
     void setUp() {
-        gameQueryService = new GameQueryService(gameRepository);
+        gameQueryService = new GameQueryService(gameRepository, gameInstallationRepository);
     }
 
     @Test
-    void mapsVisibleGamesToSummariesWithExternalArtworkUrl() {
+    void mapsVisibleGamesToSummariesWithExternalCoverUrl() {
         Game game = aGame("Super Mario World");
-        game.applyArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/smw.png");
-        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
+        game.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/smw.png");
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(game), 1));
 
-        GamesPageResponse response = gameQueryService.getGames(null, null, 0, 60);
+        GamesPageResponse response = gameQueryService.getGames(null, null, null, 0, 60);
 
         assertSoftly(softly -> {
             softly.assertThat(response.content()).hasSize(1);
@@ -66,9 +74,9 @@ class GameQueryServiceTest {
             softly.assertThat(summary.id()).isEqualTo(game.getId());
             softly.assertThat(summary.title()).isEqualTo("Super Mario World");
             softly.assertThat(summary.platform()).isEqualTo(PLATFORM);
-            softly.assertThat(summary.artworkStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-            softly.assertThat(summary.artworkUrl()).isEqualTo("https://example.com/smw.png");
-            softly.assertThat(summary.artworkEndpoint()).isNull();
+            softly.assertThat(summary.coverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(summary.coverUrl()).isEqualTo("https://example.com/smw.png");
+            softly.assertThat(summary.coverEndpoint()).isNull();
             softly.assertThat(response.page()).isZero();
             softly.assertThat(response.size()).isEqualTo(60);
             softly.assertThat(response.totalElements()).isEqualTo(1);
@@ -77,58 +85,56 @@ class GameQueryServiceTest {
     }
 
     @Test
-    void mapsLocalUploadToArtworkEndpointInsteadOfUrl() {
+    void mapsLocalUploadToCoverEndpointInsteadOfUrl() {
         Game game = aGame("Chrono Trigger");
-        game.applyArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/abc123.png");
-        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
+        game.applyCoverArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/abc123.png");
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(game), 1));
 
-        GamesPageResponse response = gameQueryService.getGames(null, null, 0, 60);
+        GamesPageResponse response = gameQueryService.getGames(null, null, null, 0, 60);
 
         assertSoftly(softly -> {
-            softly.assertThat(response.content().getFirst().artworkUrl()).isNull();
-            softly.assertThat(response.content().getFirst().artworkEndpoint())
+            softly.assertThat(response.content().getFirst().coverUrl()).isNull();
+            softly.assertThat(response.content().getFirst().coverEndpoint())
                     .isEqualTo("/api/gamecatalog/games/" + game.getId() + "/artwork");
         });
     }
 
     @Test
-    void mapsPendingAndPlaceholderArtworkToNullFields() {
+    void mapsPendingAndPlaceholderCoverToNullFields() {
         Game pending = aGame("Pending Game");
         Game placeholder = aGame("Placeholder Game");
-        placeholder.applyArtwork(ArtworkStatus.PLACEHOLDER, null);
-        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
+        placeholder.applyCoverArtwork(ArtworkStatus.PLACEHOLDER, null);
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(pending, placeholder), 2));
 
-        GamesPageResponse response = gameQueryService.getGames(null, null, 0, 60);
+        GamesPageResponse response = gameQueryService.getGames(null, null, null, 0, 60);
 
-        assertSoftly(softly -> {
-            softly.assertThat(response.content()).allSatisfy(summary -> {
-                softly.assertThat(summary.artworkUrl()).isNull();
-                softly.assertThat(summary.artworkEndpoint()).isNull();
-            });
-        });
+        assertThat(response.content()).allSatisfy(summary -> assertSoftly(softly -> {
+            softly.assertThat(summary.coverUrl()).isNull();
+            softly.assertThat(summary.coverEndpoint()).isNull();
+        }));
     }
 
     @Test
-    void passesSearchPlatformAndPaginationToRepository() {
+    void passesSearchPlatformHostAndPaginationToRepository() {
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(gameRepository.findVisibleGames(eq("mario"), eq(PLATFORM), pageableCaptor.capture()))
+        when(gameRepository.findVisibleGames(eq("mario"), eq(PLATFORM), eq("jordybox"), pageableCaptor.capture()))
                 .thenReturn(pageOf(List.of(), 0));
 
-        gameQueryService.getGames("mario", PLATFORM, 2, 60);
+        gameQueryService.getGames("mario", PLATFORM, "jordybox", 2, 60);
 
         assertThat(pageableCaptor.getValue()).isEqualTo(PageRequest.of(2, 60));
     }
 
     @Test
-    void blankSearchAndPlatformBecomeNullForRepository() {
-        when(gameRepository.findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE)))
+    void blankFiltersBecomeNullForRepository() {
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(), 0));
 
-        gameQueryService.getGames(" ", "", 0, 60);
+        gameQueryService.getGames(" ", "", " ", 0, 60);
 
-        verify(gameRepository).findVisibleGames(isNull(), isNull(), eq(FIRST_PAGE));
+        verify(gameRepository).findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE));
     }
 
     @Test
@@ -141,19 +147,99 @@ class GameQueryServiceTest {
     }
 
     @Test
+    void returnsVisibleHosts() {
+        when(gameRepository.findVisibleHosts()).thenReturn(List.of("jordybox", "ryzen-desktop"));
+
+        HostsResponse response = gameQueryService.getHosts();
+
+        assertThat(response.hosts()).containsExactly("jordybox", "ryzen-desktop");
+    }
+
+    @Test
     void detailExposesEnrichmentFieldsForEnrichedGame() {
         Game game = aGame("Super Mario World");
         game.applyEnrichment("Platformer", 2, false, true, "A classic.");
+        GameInstallation installation = anInstallation(game, aSource("jordybox", SourceType.EMUDECK));
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(installation));
 
         Optional<GameDetailResponse> detail = gameQueryService.getGameDetail(game.getId());
 
         assertSoftly(softly -> {
             softly.assertThat(detail).isPresent();
-            softly.assertThat(detail.get().sourceKey()).isEqualTo("snes");
             softly.assertThat(detail.get().genre()).isEqualTo("Platformer");
             softly.assertThat(detail.get().maxLocalPlayers()).isEqualTo(2);
             softly.assertThat(detail.get().description()).isEqualTo("A classic.");
+            softly.assertThat(detail.get().hosts()).hasSize(1);
+            softly.assertThat(detail.get().hosts().getFirst().hostname()).isEqualTo("jordybox");
+            softly.assertThat(detail.get().hosts().getFirst().sourceType()).isEqualTo(SourceType.EMUDECK);
+            softly.assertThat(detail.get().firstSeenAt()).isEqualTo(FIRST_SEEN);
+        });
+    }
+
+    @Test
+    void detailListsOnlyInstalledEnabledHosts() {
+        Game game = aGame("Super Mario World");
+        GameInstallation enabled = anInstallation(game, aSource("jordybox", SourceType.EMUDECK));
+        GameInstallation disabled = anInstallation(game, aSource("disabled-host", SourceType.STEAM, false));
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(enabled, disabled));
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId()).orElseThrow();
+
+        assertThat(detail.hosts()).hasSize(1);
+        assertThat(detail.hosts().getFirst().hostname()).isEqualTo("jordybox");
+    }
+
+    @Test
+    void detailExposesMetadataFieldsAndProvenanceForSteamGame() {
+        Game game = Game.builder()
+                .platform("Steam")
+                .steamAppId("620")
+                .title("Portal 2")
+                .build();
+        game.applyDeterministicMetadata("Puzzle, Adventure", "Valve", "Valve", 2011);
+        GameInstallation installation = anInstallation(game, aSource("jordybox", SourceType.STEAM));
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(installation));
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId()).orElseThrow();
+
+        assertSoftly(softly -> {
+            softly.assertThat(detail.genres()).isEqualTo("Puzzle, Adventure");
+            softly.assertThat(detail.developer()).isEqualTo("Valve");
+            softly.assertThat(detail.publisher()).isEqualTo("Valve");
+            softly.assertThat(detail.releaseYear()).isEqualTo(2011);
+            softly.assertThat(detail.metadataSource()).isEqualTo("STEAM");
+        });
+    }
+
+    @Test
+    void detailHasNoMetadataProvenanceUntilMetadataIsOk() {
+        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2").build();
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of());
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId()).orElseThrow();
+
+        assertThat(detail.metadataSource()).isNull();
+        assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
+    }
+
+    @Test
+    void mapsBannerCoverAndEndpointIndependently() {
+        Game game = aGame("Super Mario World");
+        game.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png");
+        game.applyBannerArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png");
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of());
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId()).orElseThrow();
+
+        assertSoftly(softly -> {
+            softly.assertThat(detail.coverUrl()).isEqualTo("https://example.com/cover.png");
+            softly.assertThat(detail.bannerUrl()).isEqualTo("https://example.com/banner.png");
+            softly.assertThat(detail.bannerEndpoint()).isNull();
         });
     }
 
@@ -161,6 +247,7 @@ class GameQueryServiceTest {
     void detailNullsEnrichmentFieldsWhenNotEnriched() {
         Game game = aGame("Super Mario World");
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of());
 
         Optional<GameDetailResponse> detail = gameQueryService.getGameDetail(game.getId());
 
@@ -183,24 +270,49 @@ class GameQueryServiceTest {
         assertThat(gameQueryService.getGameDetail(unknownId)).isEmpty();
     }
 
+    @Test
+    void findVisibleByIdsKeepsOnlyVisibleGames() {
+        UUID visibleId = UUID.fromString("11111111-2222-4333-8444-555555555555");
+        UUID invisibleId = UUID.fromString("99999999-8888-4777-8666-555555555555");
+        Game visible = aGame("Visible");
+        when(gameRepository.findVisibleById(visibleId)).thenReturn(Optional.of(visible));
+        when(gameRepository.findVisibleById(invisibleId)).thenReturn(Optional.empty());
+
+        List<Game> games = gameQueryService.findVisibleByIds(List.of(visibleId, invisibleId));
+
+        assertThat(games).containsExactly(visible);
+    }
+
     private Page<Game> pageOf(List<Game> games, long total) {
         return new PageImpl<>(games, PageRequest.of(0, 60), total);
     }
 
     private Game aGame(String title) {
         return Game.builder()
-                .source(ScanSource.builder()
-                        .sourceKey("snes")
-                        .hostname("jordybox")
-                        .sourceType(SourceType.EMUDECK)
-                        .platform(PLATFORM)
-                        .enabled(true)
-                        .build())
                 .platform(PLATFORM)
-                .externalRef(UUID.randomUUID().toString())
                 .title(title)
-                .firstSeenAt(SEEN_AT)
-                .lastSeenAt(SEEN_AT)
+                .build();
+    }
+
+    private ScanSource aSource(String hostname, SourceType sourceType) {
+        return aSource(hostname, sourceType, true);
+    }
+
+    private ScanSource aSource(String hostname, SourceType sourceType, boolean enabled) {
+        return ScanSource.builder()
+                .hostname(hostname)
+                .sourceType(sourceType)
+                .enabled(enabled)
+                .build();
+    }
+
+    private GameInstallation anInstallation(Game game, ScanSource source) {
+        return GameInstallation.builder()
+                .game(game)
+                .source(source)
+                .externalRef(UUID.randomUUID().toString())
+                .firstSeenAt(FIRST_SEEN)
+                .lastSeenAt(LAST_SEEN)
                 .build();
     }
 }

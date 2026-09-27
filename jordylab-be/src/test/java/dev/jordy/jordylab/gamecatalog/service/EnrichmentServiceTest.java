@@ -169,7 +169,7 @@ class EnrichmentServiceTest {
 
         enrichmentService.enrichPendingGames();
 
-        verify(gameRepository).findByEnrichmentStatusOrderByFirstSeenAtAsc(EnrichmentStatus.PENDING,
+        verify(gameRepository).findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
                 PageRequest.of(0, 50));
     }
 
@@ -202,7 +202,7 @@ class EnrichmentServiceTest {
     }
 
     private void stubPendingBatch(List<Game> games) {
-        when(gameRepository.findByEnrichmentStatusOrderByFirstSeenAtAsc(EnrichmentStatus.PENDING,
+        when(gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
                 PageRequest.of(0, 50)))
                 .thenReturn(games);
     }
@@ -213,18 +213,8 @@ class EnrichmentServiceTest {
 
     private Game aGame(String title) {
         return Game.builder()
-                .source(ScanSource.builder()
-                        .sourceKey("snes")
-                        .hostname("jordybox")
-                        .sourceType(SourceType.EMUDECK)
-                        .platform("SNES")
-                        .enabled(true)
-                        .build())
                 .platform("SNES")
-                .externalRef(title + ".smc")
                 .title(title)
-                .firstSeenAt(SEEN_AT)
-                .lastSeenAt(SEEN_AT)
                 .build();
     }
 
@@ -234,6 +224,7 @@ class EnrichmentServiceTest {
                 30,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
+                new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
     }
 }

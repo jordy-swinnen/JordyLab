@@ -7,7 +7,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.SyncReport;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ClientGame;
@@ -54,7 +54,7 @@ public class ScanService {
 
     private final ScanSourceRepository scanSourceRepository;
     private final SyncReportRepository syncReportRepository;
-    private final GameRepository gameRepository;
+    private final GameInstallationRepository gameInstallationRepository;
     private final ReconciliationService reconciliationService;
     private final ArtworkService artworkService;
     private final GameCatalogProperties properties;
@@ -200,7 +200,7 @@ public class ScanService {
             return true;
         }
 
-        long installed = gameRepository.countInstalledBySourceId(source.getId());
+        long installed = gameInstallationRepository.countInstalledBySourceId(source.getId());
         long removed = installed - resultingCount;
         if (removed <= 0) {
             return false;

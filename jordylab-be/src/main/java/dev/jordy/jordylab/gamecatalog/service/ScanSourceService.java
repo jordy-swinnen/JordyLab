@@ -1,7 +1,7 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanSourceResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
@@ -20,7 +20,7 @@ import java.util.UUID;
 public class ScanSourceService {
 
     private final ScanSourceRepository scanSourceRepository;
-    private final GameRepository gameRepository;
+    private final GameInstallationRepository gameInstallationRepository;
 
     @Transactional(readOnly = true)
     public SourcesResponse listSources() {
@@ -28,7 +28,7 @@ public class ScanSourceService {
                 .map(source -> new ScanSourceResponse(source.getId(), source.getSourceKey(), source.getHostname(),
                         source.getSourceType(), source.getPlatform(), source.isEnabled(), source.getLastAttemptAt(),
                         source.getLastSuccessAt(), source.getLastCheckedAt(), source.getLastOutcome(),
-                        gameRepository.countInstalledBySourceId(source.getId())))
+                        gameInstallationRepository.countInstalledBySourceId(source.getId())))
                 .toList());
     }
 

@@ -9,24 +9,27 @@ import { aGamesPageMock } from './mocks/games-page.model.mock';
 describe('GameLibraryStore', () => {
   let spectator: SpectatorService<GameLibraryStore>;
   const getGames = vi.fn<GameCatalogApiService['getGames']>();
-  const getPlatforms = vi.fn<GameCatalogApiService['getPlatforms']>();
+  const getPlatforms = vi.fn<GameCatalogApiService["getPlatforms"]>();
+  const getHosts = vi.fn<GameCatalogApiService["getHosts"]>();
 
   const createService = createServiceFactory({
     service: GameLibraryStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getGames, getPlatforms } }],
+    providers: [{ provide: GameCatalogApiService, useValue: { getGames, getPlatforms, getHosts } }],
   });
 
   beforeEach(() => {
     getGames.mockReset();
     getGames.mockReturnValue(of(aGamesPageMock()));
     getPlatforms.mockReset();
-    getPlatforms.mockReturnValue(of(['SNES', 'Steam']));
+    getPlatforms.mockReturnValue(of(["SNES", "Steam"]));
+    getHosts.mockReset();
+    getHosts.mockReturnValue(of(["jordybox", "ryzen-desktop"]));
   });
 
   it('loads the first page and the platforms on construction', () => {
     spectator = createService();
 
-    expect(getGames).toHaveBeenCalledWith({ search: undefined, platform: undefined, page: 0, size: 60 });
+    expect(getGames).toHaveBeenCalledWith({ search: undefined, platform: undefined, host: undefined, page: 0, size: 60 });
     expect(spectator.service.games()).toEqual([aGameSummaryMock()]);
     expect(spectator.service.platforms()).toEqual(['SNES', 'Steam']);
     expect(spectator.service.totalPages()).toBe(1);
@@ -105,7 +108,7 @@ describe('GameLibraryStore', () => {
 
       vi.advanceTimersByTime(1);
 
-      expect(getGames).toHaveBeenCalledWith({ search: 'mario', platform: undefined, page: 0, size: 60 });
+      expect(getGames).toHaveBeenCalledWith({ search: 'mario', platform: undefined, host: undefined, page: 0, size: 60 });
       expect(spectator.service.searchTerm()).toBe('mario');
     });
 
@@ -136,7 +139,7 @@ describe('GameLibraryStore', () => {
       vi.advanceTimersByTime(300);
 
       expect(spectator.service.page()).toBe(0);
-      expect(getGames).toHaveBeenLastCalledWith({ search: 'mario', platform: undefined, page: 0, size: 60 });
+      expect(getGames).toHaveBeenLastCalledWith({ search: 'mario', platform: undefined, host: undefined, page: 0, size: 60 });
     });
   });
 
@@ -148,7 +151,7 @@ describe('GameLibraryStore', () => {
 
     expect(spectator.service.selectedPlatform()).toBe('SNES');
     expect(spectator.service.page()).toBe(0);
-    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: 'SNES', page: 0, size: 60 });
+    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: "SNES", host: undefined, page: 0, size: 60 });
   });
 
   it('clears the platform filter when null is selected', () => {
@@ -158,7 +161,7 @@ describe('GameLibraryStore', () => {
     spectator.service.selectPlatform(null);
 
     expect(spectator.service.selectedPlatform()).toBeNull();
-    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: undefined, page: 0, size: 60 });
+    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: undefined, host: undefined, page: 0, size: 60 });
   });
 
   it('navigates to the requested page', () => {
@@ -170,6 +173,33 @@ describe('GameLibraryStore', () => {
     expect(spectator.service.page()).toBe(1);
     expect(spectator.service.totalPages()).toBe(3);
     expect(spectator.service.totalElements()).toBe(150);
-    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: undefined, page: 1, size: 60 });
+    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: undefined, host: undefined, page: 1, size: 60 });
+  });
+
+  it('exposes the hosts loaded on construction', () => {
+    spectator = createService();
+
+    expect(spectator.service.hosts()).toEqual(['jordybox', 'ryzen-desktop']);
+  });
+
+  it('filters by host and resets the page', () => {
+    spectator = createService();
+    spectator.service.goToPage(2);
+
+    spectator.service.selectHost('jordybox');
+
+    expect(spectator.service.selectedHost()).toBe('jordybox');
+    expect(spectator.service.page()).toBe(0);
+    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: undefined, host: 'jordybox', page: 0, size: 60 });
+  });
+
+  it('clears the host filter when null is selected', () => {
+    spectator = createService();
+    spectator.service.selectHost('jordybox');
+
+    spectator.service.selectHost(null);
+
+    expect(spectator.service.selectedHost()).toBeNull();
+    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: undefined, host: undefined, page: 0, size: 60 });
   });
 });

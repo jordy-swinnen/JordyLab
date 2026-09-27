@@ -1,13 +1,16 @@
 <lib-game-grid-view
   [games]="games()"
   [platforms]="platforms()"
+  [hosts]="hosts()"
   [loading]="loading()"
   [error]="error()"
   [selectedPlatform]="selectedPlatform()"
+  [selectedHost]="selectedHost()"
   [page]="page()"
   [totalPages]="totalPages()"
   [totalElements]="totalElements()"
   (searchChange)="onSearch($event)"
   (platformChange)="onPlatformSelected($event)"
+  (hostChange)="onHostSelected($event)"
   (pageChange)="onPageChanged($event)"
 />

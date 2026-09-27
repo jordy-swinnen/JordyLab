@@ -1,6 +1,6 @@
 import { createHttpFactory, HttpMethod, SpectatorHttp } from '@ngneat/spectator/vitest';
-import { artworkUrl, GameCatalogApiService } from './gamecatalog-api.service';
-import { GameSummary, GamesPage } from './gamecatalog.models';
+import { bannerUrl, coverUrl, GameCatalogApiService } from './gamecatalog-api.service';
+import { GameDetail, GameSummary, GamesPage } from './gamecatalog.models';
 
 describe('GameCatalogApiService', () => {
   let spectator: SpectatorHttp<GameCatalogApiService>;
@@ -14,9 +14,35 @@ describe('GameCatalogApiService', () => {
     id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
     title: 'Super Mario World',
     platform: 'SNES',
-    artworkStatus: 'EXTERNAL_URL',
-    artworkUrl: 'https://example.com/smw.png',
-    artworkEndpoint: null,
+    coverStatus: 'EXTERNAL_URL',
+    coverUrl: 'https://example.com/smw.png',
+    coverEndpoint: null,
+    ...overrides,
+  });
+
+  const aGameDetail = (overrides: Partial<GameDetail> = {}): GameDetail => ({
+    id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
+    title: 'Super Mario World',
+    platform: 'SNES',
+    hosts: [{ hostname: 'jordybox', sourceType: 'EMUDECK' }],
+    coverStatus: 'EXTERNAL_URL',
+    coverUrl: 'https://example.com/smw.png',
+    coverEndpoint: null,
+    bannerStatus: 'EXTERNAL_URL',
+    bannerUrl: 'https://example.com/smw-banner.png',
+    bannerEndpoint: null,
+    enrichmentStatus: 'ENRICHED',
+    genre: 'Platformer',
+    genres: 'Platformer, Action',
+    developer: 'Nintendo',
+    publisher: 'Nintendo',
+    releaseYear: 1990,
+    metadataSource: 'AI',
+    maxLocalPlayers: 2,
+    onlineMultiplayer: false,
+    singlePlayer: true,
+    description: 'A classic.',
+    firstSeenAt: '2026-08-02T10:15:00Z',
     ...overrides,
   });
 
@@ -36,17 +62,17 @@ describe('GameCatalogApiService', () => {
     spectator.expectOne('/api/gamecatalog/games', HttpMethod.GET).flush(expectedPage);
   });
 
-  it('passes search, platform, page and size as query params', () => {
+  it('passes search, platform, host, page and size as query params', () => {
     spectator.service
-      .getGames({ search: 'mario', platform: 'SNES', page: 2, size: 30 })
+      .getGames({ search: 'mario', platform: 'SNES', host: 'jordybox', page: 2, size: 30 })
       .subscribe();
 
     spectator
-      .expectOne('/api/gamecatalog/games?search=mario&platform=SNES&page=2&size=30', HttpMethod.GET)
+      .expectOne('/api/gamecatalog/games?search=mario&platform=SNES&host=jordybox&page=2&size=30', HttpMethod.GET)
       .flush({ content: [], page: 2, size: 30, totalElements: 0, totalPages: 0 });
   });
 
-  it('omits empty search and platform params', () => {
+  it('omits empty search, platform and host params', () => {
     spectator.service.getGames({ search: '', page: 0 }).subscribe();
 
     spectator
@@ -75,23 +101,18 @@ describe('GameCatalogApiService', () => {
       .flush({ platforms: ['SNES', 'PlayStation 2', 'Steam'] });
   });
 
+  it('maps the hosts response to a plain string list', () => {
+    spectator.service.getHosts().subscribe((hosts) => {
+      expect(hosts).toEqual(['jordybox', 'ryzen-desktop']);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/hosts', HttpMethod.GET)
+      .flush({ hosts: ['jordybox', 'ryzen-desktop'] });
+  });
+
   it('requests a game detail by id', () => {
-    const expectedDetail = {
-      id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-      title: 'Super Mario World',
-      platform: 'SNES',
-      sourceKey: 'snes',
-      artworkStatus: 'EXTERNAL_URL',
-      artworkUrl: 'https://example.com/smw.png',
-      artworkEndpoint: null,
-      enrichmentStatus: 'ENRICHED',
-      genre: 'Platformer',
-      maxLocalPlayers: 2,
-      onlineMultiplayer: false,
-      singlePlayer: true,
-      description: 'A classic.',
-      firstSeenAt: '2026-08-02T10:15:00Z',
-    };
+    const expectedDetail = aGameDetail();
 
     spectator.service.getGame('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
       expect(detail).toEqual(expectedDetail);
@@ -129,6 +150,14 @@ describe('GameCatalogApiService', () => {
     request.flush(expectedAnswer);
   });
 
+  it('includes attached game ids when present', () => {
+    spectator.service.chat('is this good for 4 players?', ['game-1']).subscribe();
+
+    const request = spectator.expectOne('/api/gamecatalog/chat', HttpMethod.POST);
+    expect(request.request.body).toEqual({ question: 'is this good for 4 players?', gameIds: ['game-1'] });
+    request.flush({ answer: 'Yes.', games: [], noMatch: false });
+  });
+
   it('maps a 503 chat response to the unavailable state', () => {
     spectator.service.chat('anything').subscribe((response) => {
       expect(response).toEqual({ kind: 'unavailable' });
@@ -137,6 +166,16 @@ describe('GameCatalogApiService', () => {
     spectator
       .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
       .flush({ reason: 'CHAT_UNAVAILABLE' }, { status: 503, statusText: 'Service Unavailable' });
+  });
+
+  it('maps a 400 invalid-attachment response to the unavailable state', () => {
+    spectator.service.chat('anything', ['hidden']).subscribe((response) => {
+      expect(response).toEqual({ kind: 'unavailable' });
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
+      .flush({ reason: 'GAME_IDS_INVALID' }, { status: 400, statusText: 'Bad Request' });
   });
 
   it('propagates non-503 chat errors', () => {
@@ -154,13 +193,14 @@ describe('GameCatalogApiService', () => {
     const expectedSources = [
       {
         id: '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
-        sourceKey: 'snes',
-        path: 'D:\\EmuDeck\\roms\\snes',
-        sourceType: 'ROM_FOLDER',
+        sourceKey: 'jordybox:EMUDECK',
+        hostname: 'jordybox',
+        sourceType: 'EMUDECK',
         platform: 'SNES',
         enabled: true,
         lastAttemptAt: '2026-08-02T10:20:00Z',
         lastSuccessAt: '2026-08-02T10:20:00Z',
+        lastCheckedAt: null,
         lastOutcome: 'APPLIED',
         installedGameCount: 412,
       },
@@ -186,27 +226,33 @@ describe('GameCatalogApiService', () => {
     request.flush({ id: '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', enabled: false });
   });
 
-  it('resolves the external artwork URL when present', () => {
-    const game = aGameSummary();
-
-    expect(artworkUrl(game)).toBe('https://example.com/smw.png');
+  it('resolves the external cover URL when present', () => {
+    expect(coverUrl(aGameSummary())).toBe('https://example.com/smw.png');
   });
 
-  it('resolves the local artwork endpoint for uploaded art', () => {
+  it('resolves the local cover endpoint for uploaded art', () => {
     const game = aGameSummary({
-      artworkStatus: 'LOCAL_UPLOAD',
-      artworkUrl: null,
-      artworkEndpoint: '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork',
+      coverStatus: 'LOCAL_UPLOAD',
+      coverUrl: null,
+      coverEndpoint: '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork',
     });
 
-    expect(artworkUrl(game)).toBe(
-      '/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork'
-    );
+    expect(coverUrl(game)).toBe('/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/artwork');
   });
 
-  it('resolves null when a game has no artwork', () => {
-    const game = aGameSummary({ artworkStatus: 'PLACEHOLDER', artworkUrl: null, artworkEndpoint: null });
+  it('resolves null when a game has no cover', () => {
+    const game = aGameSummary({ coverStatus: 'PLACEHOLDER', coverUrl: null, coverEndpoint: null });
 
-    expect(artworkUrl(game)).toBeNull();
+    expect(coverUrl(game)).toBeNull();
+  });
+
+  it('resolves the banner URL when present', () => {
+    expect(bannerUrl(aGameDetail())).toBe('https://example.com/smw-banner.png');
+  });
+
+  it('resolves null when a game has no banner', () => {
+    const game = aGameDetail({ bannerStatus: 'PLACEHOLDER', bannerUrl: null, bannerEndpoint: null });
+
+    expect(bannerUrl(game)).toBeNull();
   });
 });

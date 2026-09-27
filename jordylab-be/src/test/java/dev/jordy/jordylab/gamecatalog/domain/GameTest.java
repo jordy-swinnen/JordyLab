@@ -17,11 +17,11 @@ class GameTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(game.getId()).isNotNull();
             softly.assertThat(game.getTitle()).isEqualTo(GameTestBuilder.DEFAULT_TITLE);
-            softly.assertThat(game.getExternalRef()).isEqualTo(GameTestBuilder.DEFAULT_EXTERNAL_REF);
             softly.assertThat(game.getPlatform()).isEqualTo(GameTestBuilder.DEFAULT_PLATFORM);
-            softly.assertThat(game.getPresence()).isEqualTo(Presence.INSTALLED);
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.PENDING);
-            softly.assertThat(game.getArtworkStatus()).isEqualTo(ArtworkStatus.PENDING);
+            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.PENDING);
+            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.PENDING);
         });
     }
 
@@ -38,14 +38,28 @@ class GameTest {
     }
 
     @Test
-    void buildWithoutExternalRef() {
-        assertThatThrownBy(() -> GameTestBuilder.aGame().externalRef(null).build())
+    void buildWithoutPlatform() {
+        assertThatThrownBy(() -> GameTestBuilder.aGame().platform(null).build())
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void buildWithoutSource() {
-        assertThatThrownBy(() -> GameTestBuilder.aGame().source(null).build())
+    void buildWithTooLongSteamAppId() {
+        assertThatThrownBy(() -> GameTestBuilder.aGame().steamAppId("x".repeat(33)).build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void buildWithTooLongGenres() {
+        assertThatThrownBy(() -> GameTestBuilder.aGame().genres("x".repeat(201)).build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void buildWithOutOfRangeReleaseYear() {
+        assertThatThrownBy(() -> GameTestBuilder.aGame().releaseYear(1949).build())
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> GameTestBuilder.aGame().releaseYear(2029).build())
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -55,22 +69,6 @@ class GameTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> GameTestBuilder.aGame().maxLocalPlayers(65).build())
                 .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void markUninstalledThenSeenAgainRestoresInstalled() {
-        Game game = GameTestBuilder.aDefaultGame();
-
-        game.markUninstalled(GameTestBuilder.DEFAULT_LAST_SEEN);
-        assertThat(game.getPresence()).isEqualTo(Presence.UNINSTALLED);
-        assertThat(game.getUninstalledAt()).isEqualTo(GameTestBuilder.DEFAULT_LAST_SEEN);
-
-        game.seenAgain(GameTestBuilder.DEFAULT_LAST_SEEN.plusSeconds(3600));
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(game.getPresence()).isEqualTo(Presence.INSTALLED);
-            softly.assertThat(game.getUninstalledAt()).isNull();
-            softly.assertThat(game.getLastSeenAt()).isEqualTo(GameTestBuilder.DEFAULT_LAST_SEEN.plusSeconds(3600));
-        });
     }
 
     @Test
@@ -89,6 +87,21 @@ class GameTest {
     }
 
     @Test
+    void recordMetadataFailureFailsAfterMaxAttempts() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.recordMetadataFailure(3);
+        assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
+        game.recordMetadataFailure(3);
+        game.recordMetadataFailure(3);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.FAILED);
+            softly.assertThat(game.getMetadataAttempts()).isEqualTo(3);
+        });
+    }
+
+    @Test
     void applyEnrichmentStoresFactsAndProse() {
         Game game = GameTestBuilder.aDefaultGame();
 
@@ -101,6 +114,48 @@ class GameTest {
             softly.assertThat(game.getSinglePlayer()).isTrue();
             softly.assertThat(game.getDescription()).isEqualTo("A classic side-scrolling platformer.");
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
+        });
+    }
+
+    @Test
+    void applyDeterministicMetadataStoresFieldsAndMarksOk() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.applyDeterministicMetadata("Platformer, Action", "Nintendo", "Nintendo", 1990);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getGenres()).isEqualTo("Platformer, Action");
+            softly.assertThat(game.getDeveloper()).isEqualTo("Nintendo");
+            softly.assertThat(game.getPublisher()).isEqualTo("Nintendo");
+            softly.assertThat(game.getReleaseYear()).isEqualTo(1990);
+            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.OK);
+        });
+    }
+
+    @Test
+    void applyCoverAndBannerArtworkAreIndependent() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.test/cover.jpg");
+        game.applyBannerArtwork(ArtworkStatus.PLACEHOLDER, null);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(game.getCoverRef()).isEqualTo("https://example.test/cover.jpg");
+            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
+            softly.assertThat(game.getBannerRef()).isNull();
+        });
+    }
+
+    @Test
+    void requestLocalCoverFallbackMarksStatusAndCountsRequests() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.requestLocalCoverFallback();
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.LOCAL_FALLBACK_REQUESTED);
+            softly.assertThat(game.getArtworkFallbackRequests()).isEqualTo(1);
         });
     }
 

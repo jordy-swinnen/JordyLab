@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 
@@ -18,6 +19,9 @@ public class ArtworkLookupClient {
 
     private static final String STEAM_CDN_BASE_URL = "https://cdn.cloudflare.steamstatic.com/steam/apps";
     private static final String LIBRETRO_BASE_URL = "https://raw.githubusercontent.com/libretro/libretro-thumbnails/master";
+
+    private static final String LIBRETRO_COVER_MEDIA = "Named_Boxarts";
+    private static final String LIBRETRO_BANNER_MEDIA = "Named_Snaps";
 
     private static final Map<String, String> LIBRETRO_REPOS_BY_PLATFORM = Map.ofEntries(
             Map.entry("NES", "Nintendo - Nintendo Entertainment System"),
@@ -65,19 +69,54 @@ public class ArtworkLookupClient {
         this.libretroBaseUrl = libretroBaseUrl;
     }
 
-    public Optional<String> findExternalArtworkUrl(SourceType sourceType, String platform, String externalRef,
+    /**
+     * Portrait, card-fitted cover art. Steam uses the official library portrait (600x900);
+     * ROMs use libretro box art.
+     */
+    public Optional<String> findCoverArtworkUrl(SourceType sourceType, String platform, String steamAppId,
             String title) {
         if (sourceType == SourceType.STEAM) {
-            return Optional.of(steamCdnBaseUrl + "/" + externalRef + "/header.jpg");
+            return findSteamAsset(steamAppId, "library_600x900.jpg", "library_600x900_2x.jpg");
         }
 
+        return findLibretroAsset(platform, LIBRETRO_COVER_MEDIA, title);
+    }
+
+    /**
+     * Wide banner art for the detail page. Steam uses the library hero (1920x620 family);
+     * ROMs use libretro in-game snapshots.
+     */
+    public Optional<String> findBannerArtworkUrl(SourceType sourceType, String platform, String steamAppId,
+            String title) {
+        if (sourceType == SourceType.STEAM) {
+            return findSteamAsset(steamAppId, "library_hero.jpg");
+        }
+
+        return findLibretroAsset(platform, LIBRETRO_BANNER_MEDIA, title);
+    }
+
+    private Optional<String> findSteamAsset(String steamAppId, String... candidates) {
+        if (steamAppId == null || steamAppId.isBlank()) {
+            return Optional.empty();
+        }
+        for (String candidate : candidates) {
+            String url = steamCdnBaseUrl + "/" + steamAppId + "/" + candidate;
+            if (probeExists(URI.create(url))) {
+                return Optional.of(url);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<String> findLibretroAsset(String platform, String media, String title) {
         String repo = LIBRETRO_REPOS_BY_PLATFORM.get(platform);
         if (repo == null) {
             return Optional.empty();
         }
 
-        java.net.URI candidateUri = UriComponentsBuilder.fromUriString(libretroBaseUrl)
-                .pathSegment(repo, "Named_Boxarts", escapeLibretroTitle(title) + ".png")
+        URI candidateUri = UriComponentsBuilder.fromUriString(libretroBaseUrl)
+                .pathSegment(repo, media, escapeLibretroTitle(title) + ".png")
                 .build()
                 .encode()
                 .toUri();
@@ -85,7 +124,7 @@ public class ArtworkLookupClient {
         return probeExists(candidateUri) ? Optional.of(candidateUri.toString()) : Optional.empty();
     }
 
-    private boolean probeExists(java.net.URI uri) {
+    private boolean probeExists(URI uri) {
         try {
             restClient.head().uri(uri).retrieve().toBodilessEntity();
 

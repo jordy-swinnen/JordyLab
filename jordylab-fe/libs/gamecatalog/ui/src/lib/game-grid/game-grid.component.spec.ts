@@ -7,28 +7,34 @@ import { GameGridComponent } from './game-grid.component';
 describe('GameGridComponent', () => {
   const games = signal<GameSummary[]>([]);
   const platforms = signal<string[]>([]);
+  const hosts = signal<string[]>([]);
   const loading = signal(true);
   const error = signal<string | null>(null);
   const selectedPlatform = signal<string | null>(null);
+  const selectedHost = signal<string | null>(null);
   const page = signal(0);
   const totalPages = signal(0);
   const totalElements = signal(0);
 
   const search = vi.fn<GameLibraryStore['search']>();
   const selectPlatform = vi.fn<GameLibraryStore['selectPlatform']>();
+  const selectHost = vi.fn<GameLibraryStore['selectHost']>();
   const goToPage = vi.fn<GameLibraryStore['goToPage']>();
 
   const storeMock = {
     games: games.asReadonly(),
     platforms: platforms.asReadonly(),
+    hosts: hosts.asReadonly(),
     loading: loading.asReadonly(),
     error: error.asReadonly(),
     selectedPlatform: selectedPlatform.asReadonly(),
+    selectedHost: selectedHost.asReadonly(),
     page: page.asReadonly(),
     totalPages: totalPages.asReadonly(),
     totalElements: totalElements.asReadonly(),
     search,
     selectPlatform,
+    selectHost,
     goToPage,
   };
 
@@ -43,14 +49,17 @@ describe('GameGridComponent', () => {
   beforeEach(() => {
     games.set([]);
     platforms.set(['SNES', 'Steam']);
+    hosts.set(['jordybox', 'ryzen-desktop']);
     loading.set(true);
     error.set(null);
     selectedPlatform.set(null);
+    selectedHost.set(null);
     page.set(0);
     totalPages.set(0);
     totalElements.set(0);
     search.mockReset();
     selectPlatform.mockReset();
+    selectHost.mockReset();
     goToPage.mockReset();
     spectator = createComponent();
   });
@@ -67,7 +76,7 @@ describe('GameGridComponent', () => {
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
   });
 
-  it('renders game cards with title, badge and artwork when populated', () => {
+  it('renders game cards with title, badge and cover when populated', () => {
     populate([aGameSummaryMock()]);
 
     expect(spectator.query('h3')).toHaveText('Super Mario World');
@@ -77,8 +86,8 @@ describe('GameGridComponent', () => {
     expect(spectator.query('[hlmbadge]')).toBeTruthy();
   });
 
-  it('renders a placeholder instead of an image when a game has no artwork', () => {
-    populate([aGameSummaryMock({ artworkStatus: 'PLACEHOLDER', artworkUrl: null, artworkEndpoint: null })]);
+  it('renders a placeholder instead of an image when a game has no cover', () => {
+    populate([aGameSummaryMock({ coverStatus: 'PLACEHOLDER', coverUrl: null, coverEndpoint: null })]);
 
     expect(spectator.query('img')).toBeNull();
     expect(spectator.query('[aria-label="No artwork for Super Mario World"]')).toBeTruthy();
@@ -116,6 +125,16 @@ describe('GameGridComponent', () => {
     expect(selectPlatform).toHaveBeenCalledWith('SNES');
   });
 
+  it('selects the host in the store when a host chip is clicked', () => {
+    populate([aGameSummaryMock()]);
+
+    const chips = spectator.queryAll('button[hlmbadge]');
+    const hostChip = chips.find((chip) => chip.textContent?.trim() === 'jordybox');
+    spectator.click(hostChip as Element);
+
+    expect(selectHost).toHaveBeenCalledWith('jordybox');
+  });
+
   it('asks the store for the next page', () => {
     populate([aGameSummaryMock()], { totalPages: 3, totalElements: 150 });
 
@@ -125,12 +144,14 @@ describe('GameGridComponent', () => {
     expect(goToPage).toHaveBeenCalledWith(1);
   });
 
-  it('renders the store platforms as filter chips', () => {
+  it('renders the store platforms and hosts as filter chips', () => {
     populate([aGameSummaryMock()]);
 
     const chips = spectator.queryAll('button[hlmbadge]').map((chip) => chip.textContent?.trim());
-    expect(chips).toContain('All');
+    expect(chips).toContain('All platforms');
     expect(chips).toContain('SNES');
     expect(chips).toContain('Steam');
+    expect(chips).toContain('Any');
+    expect(chips).toContain('jordybox');
   });
 });

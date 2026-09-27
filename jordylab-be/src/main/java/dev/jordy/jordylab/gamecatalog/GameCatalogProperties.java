@@ -8,6 +8,7 @@ public record GameCatalogProperties(
         int gracePeriodDays,
         Enrichment enrichment,
         Chat chat,
+        Metadata metadata,
         Scan scan) {
 
     public GameCatalogProperties {
@@ -17,7 +18,19 @@ public record GameCatalogProperties(
         }
         enrichment = enrichment == null ? new Enrichment(0, 0) : enrichment;
         chat = chat == null ? new Chat(0) : chat;
+        metadata = metadata == null ? new Metadata(0, 0) : metadata;
         scan = scan == null ? new Scan(0, 0, 0, 0) : scan;
+    }
+
+    public record Metadata(int batchSize, int maxAttempts) {
+        public Metadata {
+            if (batchSize <= 0) {
+                batchSize = 25;
+            }
+            if (maxAttempts <= 0) {
+                maxAttempts = 3;
+            }
+        }
     }
 
     public record Artwork(String dir, long maxBytes, Boolean externalLookupEnabled, long lookupTimeoutMs) {

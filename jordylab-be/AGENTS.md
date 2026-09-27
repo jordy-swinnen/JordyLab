@@ -317,3 +317,12 @@ class SomeObjectTestBuilder {
 - Safety: a scan whose resulting installed set is empty, or that would remove more than `jordylab.gamecatalog.scan.max-shrink-fraction` (default 0.5) of a source's installed games, is `REJECTED` with `SNAPSHOT_SHRINK_SUSPECT` unless `force` is set. The client skips (exit 5) explicitly configured roots that are missing/unreadable/empty.
 - Idempotency: `ScanService` hashes the scan content (`paths` + `manifestContents` + `games`); same hash + source → `NO_CHANGE` (no DB churn). The fingerprint is recorded on `APPLIED`/`NO_CHANGE` only.
 - New library pipelines still go through `LibraryParser` implementations — register a new `@Component("<SOURCE_TYPE_NAME>")` bean.
+
+# Game catalog model (feature 004 — refinements)
+
+- `Game` is the host-independent catalog entry (title, platform, `steam_app_id`, enrichment, deterministic metadata, cover + banner artwork slots). Per-host state lives on `GameInstallation` (game, source, external ref, presence, seen/grace timestamps; `UNIQUE (source_id, external_ref)`).
+- A game is visible iff it has an installed installation on an enabled source; the 30-day grace purge runs per installation and deletes a game (with its local artwork) once its last installation is purged.
+- Reconciliation adopts across hosts before creating a `Game`: Steam on `(platform, steam_app_id)`, ROMs on `(platform, LOWER(title))`. Adoption only adds the source's installation — it never touches the game's enrichment, metadata, or artwork (no full refresh).
+- Artwork has two slots: `cover` (portrait, card-fitted) and `banner` (wide). `ArtworkLookupClient` resolves Steam covers to `library_600x900` and banners to `library_hero` (probing `_2x` / placeholder fallback), ROM covers to libretro `Named_Boxarts` and banners to `Named_Snaps`.
+- Deterministic metadata (`genres`, `developer`, `publisher`, `release_year`) comes from `SteamAppDetailsClient` (keyless `store.steampowered.com/api/appdetails`) via the scheduled `SteamMetadataService` for Steam games, and from `EnrichmentService` for ROMs. `metadata_status` mirrors the enrichment attempt/retry pattern.
+- Chat: `ChatService.ask(question, gameIds)` — attached (visible) games are injected into the composition context and always cited; the grounded filter additionally supports genres/developer/release-year/hosts. `GET /api/gamecatalog/hosts` lists visible hostnames; `GET /api/gamecatalog/games?host=` filters by host.

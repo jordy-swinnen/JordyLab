@@ -1,1 +1,7 @@
-<lib-game-chat-view [messages]="messages()" [asking]="asking()" (ask)="onAsk($event)" />
+<lib-game-chat-view
+  [messages]="messages()"
+  [asking]="asking()"
+  [attachedGame]="attachedGame()"
+  (ask)="onAsk($event)"
+  (removeAttachment)="onRemoveAttachment()"
+/>

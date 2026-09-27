@@ -53,16 +53,45 @@ describe('GameDetailComponent', () => {
     expect(load).toHaveBeenCalledWith('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
   });
 
-  it('renders artwork, facts and prose for an enriched game', () => {
+  it('renders the wide banner, cover, facts and prose for an enriched game', () => {
     show(aGameDetailMock());
 
-    const image = spectator.query('img');
-    expect(image?.getAttribute('src')).toBe('https://example.com/smw.png');
+    const banner = spectator.query('img[alt="Super Mario World banner"]');
+    expect(banner?.getAttribute('src')).toBe('https://example.com/smw-banner.png');
+    const cover = spectator.query('img[alt="Super Mario World cover"]');
+    expect(cover?.getAttribute('src')).toBe('https://example.com/smw.png');
     expect(spectator.query('h2')).toHaveText('Super Mario World');
     expect(spectator.query('dl')).toHaveText('up to 2 players');
-    expect(spectator.query('dl')).toHaveText('Platformer');
+    expect(spectator.query('dl')).toHaveText('Platformer, Action');
     expect(spectator.query('p.max-w-prose')).toHaveText('A classic SNES platformer.');
     expect(spectator.element).not.toHaveText('Description unavailable.');
+  });
+
+  it('renders deterministic metadata and hosts in the spec sheet', () => {
+    show(aGameDetailMock());
+
+    const sheet = spectator.query('dl');
+    expect(sheet).toHaveText('Nintendo');
+    expect(sheet).toHaveText('1990');
+    expect(sheet).toHaveText('jordybox');
+  });
+
+  it('renders the spark icon and an attachment link on the ask button', () => {
+    show(aGameDetailMock());
+
+    const askLink = spectator
+      .queryAll('a')
+      .find((anchor) => anchor.textContent?.includes('Ask the catalog'));
+    expect(askLink).toBeTruthy();
+    expect(askLink?.getAttribute('href')).toContain('/games/chat');
+    expect(askLink?.getAttribute('href')).toContain('attach=1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
+  });
+
+  it('shows a banner plate instead of an image when there is no banner', () => {
+    show(aGameDetailMock({ bannerStatus: 'PLACEHOLDER', bannerUrl: null, bannerEndpoint: null }));
+
+    expect(spectator.query('img[alt="Super Mario World banner"]')).toBeNull();
+    expect(spectator.query('[aria-label="No banner for Super Mario World"]')).toBeTruthy();
   });
 
   it('shows the explicit unavailable state while enrichment is pending', () => {
@@ -70,6 +99,10 @@ describe('GameDetailComponent', () => {
       aGameDetailMock({
         enrichmentStatus: 'PENDING',
         genre: null,
+        genres: null,
+        developer: null,
+        publisher: null,
+        releaseYear: null,
         maxLocalPlayers: null,
         onlineMultiplayer: null,
         singlePlayer: null,
@@ -87,6 +120,7 @@ describe('GameDetailComponent', () => {
       aGameDetailMock({
         enrichmentStatus: 'FAILED',
         genre: null,
+        genres: null,
         maxLocalPlayers: null,
         onlineMultiplayer: null,
         singlePlayer: null,

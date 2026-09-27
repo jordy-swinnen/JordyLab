@@ -6,6 +6,7 @@ import { ChatAnswer, ChatAskResponse, GameDetail, GameSummary, GamesPage, ScanLi
 export interface GamesQuery {
   search?: string;
   platform?: string;
+  host?: string;
   page?: number;
   size?: number;
 }
@@ -22,6 +23,9 @@ export class GameCatalogApiService {
     if (query.platform) {
       params = params.set('platform', query.platform);
     }
+    if (query.host) {
+      params = params.set('host', query.host);
+    }
     if (query.page !== undefined) {
       params = params.set('page', query.page);
     }
@@ -36,6 +40,12 @@ export class GameCatalogApiService {
     return this.#http
       .get<{ platforms: string[] }>('/api/gamecatalog/platforms')
       .pipe(map((response) => response.platforms));
+  }
+
+  getHosts(): Observable<string[]> {
+    return this.#http
+      .get<{ hosts: string[] }>('/api/gamecatalog/hosts')
+      .pipe(map((response) => response.hosts));
   }
 
   getGame(id: string): Observable<GameDetail> {
@@ -58,11 +68,13 @@ export class GameCatalogApiService {
     });
   }
 
-  chat(question: string): Observable<ChatAskResponse> {
-    return this.#http.post<ChatAnswer>('/api/gamecatalog/chat', { question }).pipe(
+  chat(question: string, gameIds: string[] = []): Observable<ChatAskResponse> {
+    const body = gameIds.length > 0 ? { question, gameIds } : { question };
+
+    return this.#http.post<ChatAnswer>('/api/gamecatalog/chat', body).pipe(
       map((answer): ChatAskResponse => ({ kind: 'answered', answer })),
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 503) {
+        if (error.status === 503 || error.status === 400) {
           return of<ChatAskResponse>({ kind: 'unavailable' });
         }
         throw error;
@@ -71,6 +83,10 @@ export class GameCatalogApiService {
   }
 }
 
-export function artworkUrl(game: GameSummary): string | null {
-  return game.artworkUrl ?? game.artworkEndpoint;
+export function coverUrl(game: GameSummary | GameDetail): string | null {
+  return game.coverUrl ?? game.coverEndpoint;
+}
+
+export function bannerUrl(game: GameDetail): string | null {
+  return game.bannerUrl ?? game.bannerEndpoint;
 }

@@ -42,7 +42,7 @@
         [class]="selectedPlatform() === null ? chipActive : chipIdle"
         (click)="onPlatformClick(null)"
       >
-        All
+        All platforms
       </button>
       @for (platform of platforms(); track platform) {
         <button
@@ -58,6 +58,32 @@
     </div>
   }
 </div>
+
+@if (hosts().length > 0) {
+  <div class="mt-5 flex flex-wrap items-center gap-2.5">
+    <span class="mono-label mr-1">Host</span>
+    <button
+      type="button"
+      hlmBadge
+      variant="outline"
+      [class]="selectedHost() === null ? chipActive : chipIdle"
+      (click)="onHostClick(null)"
+    >
+      Any
+    </button>
+    @for (host of hosts(); track host) {
+      <button
+        type="button"
+        hlmBadge
+        variant="outline"
+        [class]="selectedHost() === host ? chipActive : chipIdle"
+        (click)="onHostClick(host)"
+      >
+        {{ host }}
+      </button>
+    }
+  </div>
+}
 
 <div class="mt-9">
   @if (loading()) {
@@ -100,7 +126,7 @@
           class="card-link group flex flex-col gap-3.5 outline-none"
         >
           <div class="cover-frame">
-            @if (artworkUrl(game); as artworkSrc) {
+            @if (coverUrl(game); as artworkSrc) {
               <img
                 [src]="artworkSrc"
                 [alt]="game.title + ' artwork'"

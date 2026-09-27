@@ -1,4 +1,4 @@
-export { artworkUrl, GameCatalogApiService } from './lib/gamecatalog-api.service';
+export { bannerUrl, coverUrl, GameCatalogApiService } from './lib/gamecatalog-api.service';
 export type { GamesQuery } from './lib/gamecatalog-api.service';
 export { GameChatStore } from './lib/game-chat.store';
 export { GameDetailStore } from './lib/game-detail.store';
@@ -10,6 +10,9 @@ export type {
   SourceType,
   SyncOutcome,
   ScanLibraryType,
+  MetadataSource,
+  HostRef,
+  AttachedGame,
   GameSummary,
   GamesPage,
   GameDetail,
