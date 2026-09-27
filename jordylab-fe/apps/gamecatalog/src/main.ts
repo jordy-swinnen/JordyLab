@@ -5,8 +5,10 @@ import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { environment } from './environments/environment';
 
+// AuthService must be listed explicitly: `Injector.create` without a `parent` isn't scoped as
+// the app root, so it can't resolve a `providedIn: 'root'` service on its own.
 const injector = Injector.create({
-  providers: [{ provide: AUTH_CONFIG, useValue: environment }],
+  providers: [{ provide: AUTH_CONFIG, useValue: environment }, AuthService],
 });
 const auth = injector.get(AuthService);
 
