@@ -341,7 +341,7 @@ class SomeObjectTestBuilder {
 - **Tools/runtimes** (Proton, Steam Linux Runtime, Steamworks redistributables) are excluded via `ToolExclusion` (app-ID deny-list) and the appdetails `type != game` check; the 005 migration cleans up any already catalogued.
 - Endpoints: `GET /games?installStatus=&librarySource=&host=`, `POST /library/steam/sync`, `POST /library/steam-family/sync` (token in body), `GET /library/status`. `gamecatalog` AI enrichment runs on **Claude Haiku** (`jordylab.ai.modules.gamecatalog.model`).
 
-# Game catalog model (feature 006 — local multiplayer metadata)
+# Game catalog model (005 extension — local multiplayer metadata)
 
 - Structured local-multiplayer facts are **deterministic only** (never LLM-inferred): `game.local_multiplayer`, `game.split_screen` (nullable booleans), `game.multiplayer_source` (`STEAM` | `IGDB` | `UNKNOWN`), `game.multiplayer_attempts`. `max_local_players` is deterministic too (the 006 migration nulls the legacy AI-guessed values).
 - **Steam path (free for new games)**: `SteamAppDetailsClient` derives `MultiplayerFacts` from the store `categories` array by matching **description text** (not numeric ids — they shift): local = any `Shared/Split Screen*` or exact `Local Co-op`; split = `Shared/Split Screen*`; online = `Multi-player`/`Cross-Platform Multiplayer`/`Co-op`/`Online Co-op`/`Online PvP`/`PvP`; single = `Single-player`. `SteamMetadataService` applies it (source `STEAM`) from the same fetch — no extra store call. `categoriesPresent=false` means no data → IGDB fallback.

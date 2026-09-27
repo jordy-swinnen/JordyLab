@@ -210,6 +210,18 @@ class SteamAppDetailsClientTest {
     }
 
     @Test
+    void missingTypeFailsClosedAsNotAGame() {
+        stubAppDetails("620", """
+                { "620": { "success": true, "data": { "name": "Portal 2" } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("620");
+
+        assertThat(metadata).isPresent();
+        assertThat(metadata.get().isGame()).isFalse();
+    }
+
+    @Test
     void blankAppIdIsEmpty() {
         assertThat(steamAppDetailsClient.fetch(" ")).isEmpty();
     }

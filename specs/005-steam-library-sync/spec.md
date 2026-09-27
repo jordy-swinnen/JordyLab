@@ -120,6 +120,42 @@ As the catalog owner, I want the first library sync (possibly many hundreds of g
 
 ---
 
+### User Story 7 — Local multiplayer is a fact, never a guess (Priority: P2)
+
+As the catalog owner, I want to know whether a game supports local co-op or split-screen, and I
+want that answer to come from a real source — Steam's own listing, or IGDB for the ROMs Steam
+doesn't cover — never from the AI making something up, so I don't plan a couch co-op night around
+a feature the game doesn't actually have.
+
+**Why this priority**: Extends this feature's core rule (§ Context: "a game's data is produced
+once and reused") to a specific, previously AI-guessed field. Depends on the Steam metadata fetch
+this feature already corrects (User Story 1), so it rides on the same PR/branch rather than a
+separate one.
+
+**Acceptance Scenarios**:
+
+1. **Given** a Steam game whose store page lists a split-screen or local co-op category, **When**
+   its metadata is fetched, **Then** `localMultiplayer`/`splitScreen` are set from that listing,
+   attributed to source "Steam", with no extra Steam call beyond the metadata fetch already made.
+2. **Given** a Steam game whose store page has no category data, or a ROM with no `steam_app_id`,
+   **When** the multiplayer backlog is processed, **Then** IGDB is queried by title and, on a
+   match, `localMultiplayer`/`splitScreen`/`maxLocalPlayers` are set from IGDB, attributed to
+   source "IGDB".
+3. **Given** neither Steam nor IGDB has data for a game (or IGDB is not configured), **When** the
+   backlog is processed repeatedly, **Then** the game is retried a bounded number of times and
+   then left "Unknown" rather than retried forever; a manual refresh resets it for one more try.
+4. **Given** a game with no local-multiplayer data at all, **When** it is AI-enriched, **Then**
+   the AI is never asked to guess `maxLocalPlayers` or imply local multiplayer support — only
+   deterministically-known facts are ever shown.
+5. **Given** the catalog, **When** I filter to "Local multiplayer only" (grid) or ask chat which
+   games support local multiplayer, **Then** only games with a confirmed `localMultiplayer=true`
+   are returned — never an unresolved or AI-guessed one.
+6. **Given** Steam's store rate limit is hit while resolving the backlog, **When** the batch is
+   paused, **Then** it resumes on the next pass without counting as a failed attempt (same
+   behaviour as the metadata pass in User Story 6).
+
+---
+
 ### Edge Cases
 
 - **Empty or failed Steam response** (API error, privacy glitch, token expired): the sync is recorded as failed or suspicious, and no library entries are removed.
@@ -172,9 +208,17 @@ As the catalog owner, I want the first library sync (possibly many hundreds of g
 - **FR-022**: Library games that are not installed on any host MUST NOT be AI-enriched; they receive deterministic metadata and artwork only, and where a description is shown it is the deterministic Steam-provided one. If such a game is later installed, it is enriched like any installed game.
 - **FR-023**: While the status filter is "Not installed", the host filter MUST NOT be offered or combined; "Not installed" is always evaluated across all enabled sources.
 
+**Deterministic local multiplayer metadata**
+
+- **FR-024**: `localMultiplayer`, `splitScreen` and `maxLocalPlayers` MUST be deterministic only — derived from Steam store categories or IGDB — and MUST NEVER be inferred or guessed by the AI. A game with no deterministic data available MUST show as unresolved rather than receive an AI guess.
+- **FR-025**: When a Steam game's metadata fetch (FR-005) has category data, local-multiplayer facts MUST be derived from it in that same fetch, at no additional Steam store call.
+- **FR-026**: When a Steam game has no category data, or the game has no `steamAppId` (a ROM), the system MUST fall back to querying IGDB by title for local-multiplayer facts, when IGDB is configured.
+- **FR-027**: An unresolved local-multiplayer lookup MUST be retried a bounded number of times and then left "Unknown" until a manual refresh resets it; a Steam store rate limit during this pass MUST pause the batch without counting as a failed attempt (mirrors FR-006's metadata pass).
+- **FR-028**: Game list, detail and chat queries MUST support filtering to games with confirmed `localMultiplayer=true`, and MUST derive an "online only" indicator (`onlineMultiplayer && !localMultiplayer`) rather than storing it.
+
 ### Key Entities *(include if feature involves data)*
 
-- **Game** (exists): the host-independent catalog entry holding identity, title, deterministic metadata, AI enrichment and artwork. Unchanged in role. Gains a guaranteed-unique Steam app ID and a recorded title authority.
+- **Game** (exists): the host-independent catalog entry holding identity, title, deterministic metadata, AI enrichment and artwork. Unchanged in role. Gains a guaranteed-unique Steam app ID, a recorded title authority, and deterministic local-multiplayer facts (local co-op, split-screen, max local players, provenance source, retry attempts).
 - **Installation** (exists): a game on disk on a scan source (host + library type). Unchanged.
 - **Library entry** (new): a game available to the user through a library source — Owned or Family — with first seen, last seen, removed-at, and for Family the owner(s). At most one per game per library source. Family titles excluded from sharing are not catalogued at all.
 - **Library sync run** (new): one owned or family sync — source, time, outcome (applied / no change / failed / suspicious), content hash, counts added/removed/unchanged, and the number of metadata and AI calls it caused.
@@ -193,6 +237,7 @@ As the catalog owner, I want the first library sync (possibly many hundreds of g
 - **SC-007**: No Steam credential or token appears in logs, API responses, the frontend bundle or the repository.
 - **SC-008**: A failed, empty or expired-token sync removes or changes 0 catalog rows.
 - **SC-009**: A first library sync of N not-installed games causes 0 AI calls; deterministic metadata and artwork only.
+- **SC-010**: No game's shown local-multiplayer status is AI-derived, verified by test — every `localMultiplayer`/`splitScreen`/`maxLocalPlayers` value in the catalog traces to a Steam category fetch or an IGDB lookup, or is unresolved.
 
 ---
 
@@ -204,6 +249,7 @@ As the catalog owner, I want the first library sync (possibly many hundreds of g
 - Installing or launching games from the catalog is out of scope.
 - Steam playtime/last-played data is out of scope, even though the sync responses contain it.
 - Game Catalog AI enrichment switches from the Anthropic Sonnet model to the cheaper Haiku model as a cost decision; local (Ollama) inference remains out of scope for this feature.
+- IGDB credentials (`IGDB_CLIENT_ID`/`IGDB_CLIENT_SECRET`) are optional configuration: the local-multiplayer fallback for ROMs/no-category Steam games degrades to "Unknown" rather than failing when unset. IGDB's field/endpoint shape is confirmed against live responses (its old `category` field is now `game_type`) rather than only documentation, mirroring the family-library research approach.
 
 ## Constraints discovered during research
 

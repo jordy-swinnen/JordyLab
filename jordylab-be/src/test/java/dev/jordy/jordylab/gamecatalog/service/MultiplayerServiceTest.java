@@ -2,6 +2,7 @@ package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.IgdbClient;
@@ -20,6 +21,8 @@ import java.util.Optional;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -128,6 +131,40 @@ class MultiplayerServiceTest {
         stubBacklog();
 
         assertThat(multiplayerService.derivePending(BATCH)).isZero();
+    }
+
+    @Test
+    void backlogPassSkipsRedundantSteamFetchOnceMetadataAlreadyChecked() {
+        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+                .metadataStatus(MetadataStatus.OK).build();
+        stubBacklog(game);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Portal 2")).thenReturn(Optional.empty());
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.UNKNOWN);
+            softly.assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        });
+        verify(steamAppDetailsClient, never()).fetch("620");
+    }
+
+    @Test
+    void manualRefreshAlwaysRechecksSteamEvenWhenMetadataAlreadyChecked() {
+        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+                .metadataStatus(MetadataStatus.OK).build();
+        when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata(
+                null, null, null, null, null, "game",
+                new SteamAppDetailsClient.MultiplayerFacts(true, true, true, true, true))));
+
+        multiplayerService.refresh(game);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.STEAM);
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+        });
+        verify(steamAppDetailsClient).fetch("620");
     }
 
     private void stubBacklog(Game... games) {

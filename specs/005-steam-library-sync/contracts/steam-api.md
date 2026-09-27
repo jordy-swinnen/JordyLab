@@ -84,9 +84,13 @@ Fields used:
 | `developers[]` / `publishers[]` | first member, cap 100 |
 | `release_date.date` | parsed year (regex), 1950..2028 |
 
-Category IDs (verify against a live response): `2` Single-player, `1` Multi-player, `9` Co-op,
-`24` Shared/Split Screen, `36` Online PvP, `37` Shared/Split Screen PvP, `38` Online Co-op,
-`39` Shared/Split Screen Co-op. `maxLocalPlayers` is **not** provided by Steam and remains AI/null.
+**Verified against live responses**: Steam reuses/shifts numeric category ids over time, so
+`SteamAppDetailsClient` matches on `categories[].description` **text**, not `id`, deriving
+`local_multiplayer`/`split_screen`/`online_multiplayer`/`single_player` (see
+`data-model.md`'s "local multiplayer metadata" section for the exact text matched).
+`categoriesPresent = false` (no `categories` array at all in the response) signals "no data",
+distinct from "checked, has no multiplayer categories present". Steam categories never carry a
+player count, so `maxLocalPlayers` is only ever set from the IGDB path below — never AI-guessed.
 
 **Rate limit**: pace calls ≥1.5 s apart. On HTTP 429, stop the batch immediately and do **not**
 increment `metadata_attempts` (a rate limit is not a game failure); the next pass resumes.
@@ -97,3 +101,50 @@ increment `metadata_attempts` (a rate limit is not a game failure); the next pas
 The migration performs a one-off cleanup of already-catalogued tool rows.
 
 Fixtures: `appdetails-game.json`, `appdetails-tool.json`, `appdetails-404.json`, `appdetails-429.json`.
+
+## 4. IGDB — `api.igdb.com/v4` (ROM/non-Steam multiplayer fallback, added within 005)
+
+Used for ROM titles (no `steam_app_id`) and as the fallback when a Steam game's appdetails
+response has no `categories` at all. Twitch OAuth client-credentials — `IGDB_CLIENT_ID` /
+`IGDB_CLIENT_SECRET`; unconfigured (either blank) degrades to a graceful no-op everywhere.
+
+```
+POST https://id.twitch.tv/oauth2/token
+    ?client_id={IGDB_CLIENT_ID}&client_secret={IGDB_CLIENT_SECRET}&grant_type=client_credentials
+```
+
+Token is cached in memory (`expires_in - 60s` margin) and refreshed on expiry or a live `401`
+(retried exactly once); never logged (the token URL carries the secret as a query parameter).
+
+```
+POST https://api.igdb.com/v4/games
+    Client-ID: {IGDB_CLIENT_ID}
+    Authorization: Bearer {token}
+    body: search "<title>"; fields name; where version_parent = null & game_type = 0; limit 10;
+```
+
+- IGDB migrated its old numeric `category` field to `game_type` — `game_type = 0` is the "main
+  game" filter (was `category = 0`).
+- Response entries are filtered to **exact** normalized-name matches against the requested title
+  (case/punctuation-insensitive), since IGDB is a fuzzy `search`. IGDB holds duplicate same-named
+  entries (regions, re-releases); all exact matches are kept, in search order.
+
+```
+POST https://api.igdb.com/v4/multiplayer_modes
+    body: fields game,platform,offlinecoop,offlinecoopmax,offlinemax,lancoop,campaigncoop,
+          onlinecoop,onlinemax,splitscreen,splitscreenonline; where game = (<id1,id2,...>); limit 500;
+```
+
+- All exact-name-match ids from the search are queried in **one batched** call (not one call per
+  id) — only some duplicate entries carry `multiplayer_modes` rows, so the first id (in search
+  order) with data wins.
+- Per-platform rows for the same game are OR-aggregated: `local = offlinecoop || lancoop ||
+  splitscreen`, `split = splitscreen`, `online = onlinecoop`. `maxLocalPlayers` is only trusted
+  (`max(offlinemax, offlinecoopmax)`) when `local` is true — `offlinemax` alone also counts
+  alternating/turn-based play (e.g. Super Mario World reports "2 players" with no co-op).
+
+**Secret handling**: neither the client secret nor the access token is ever logged. **Failure
+handling**: any non-2xx (other than a `401` mid-flight, which triggers the one retry above), an
+unreadable response, or being unconfigured all resolve to an empty result — never an exception
+that would fail the caller's batch. Test fixtures: inline WireMock JSON stubs in `IgdbClientTest`
+(`/v4/games`, `/v4/multiplayer_modes`, `/oauth2/token`) — no separate fixture files.

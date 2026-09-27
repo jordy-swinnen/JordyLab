@@ -27,13 +27,70 @@ operator resolves them deliberately rather than the migration silently deleting 
 `Game` domain changes:
 - New `titleSource` field (`TitleSource` enum).
 - `applyDeterministicMetadata` becomes **fill-only**: each of `genres`, `developer`, `publisher`,
-  `releaseYear` is assigned only when currently null; `metadataStatus` is set to `OK` only when the
-  call supplied at least one value. This stops `EnrichmentService` from overwriting Steam facts (FR-005).
+  `releaseYear` is assigned only when currently null. This stops `EnrichmentService` from
+  overwriting Steam facts (FR-005). `metadataStatus` is set to `OK` by `markMetadataFetched()`
+  whenever the Steam appdetails fetch **completes** — whether or not any field was actually
+  populated, and including the confirmed-non-game case. A game with genuinely empty Steam data
+  (no genres/developer/publisher/release date) must still transition to `OK` once checked — if it
+  stayed `PENDING` instead, it would be re-queried against Steam on every subsequent scan forever,
+  defeating the cost-economy goal this feature protects (FR-006/FR-007). `FAILED` is reserved for
+  the fetch itself failing after `metadataAttempts` reaches the configured ceiling.
 - New `updateTitle(title, TitleSource)` used by both scan and library sync with authority ranking; the
   old `updateCatalogInfo(title, platform)` keeps platform updates but calls `updateTitle(..., MANIFEST)`.
 
 **Title authority** (FR-012): rank `LIBRARY (2) > MANIFEST (1) = ROM (1)`. A source may only set the
 title if its rank is `>=` the current `title_source` rank; a lower-ranked source never overwrites.
+
+---
+
+## `game` — local multiplayer metadata (changed, `V20260928002__gamecatalog_local_multiplayer.sql`)
+
+An additive migration within this feature: structured local-multiplayer facts are **deterministic
+only** (Steam store categories or IGDB), never LLM-inferred, extending the same "cost economy /
+fill-only / never re-run a lookup that already ran" rule this feature applies to `genres` /
+`developer` / `publisher` / `releaseYear` above.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `local_multiplayer` | `BOOLEAN` (nullable) | Local co-op or split-screen supported. |
+| `split_screen` | `BOOLEAN` (nullable) | Split-screen specifically. |
+| `multiplayer_source` | `TEXT` NOT NULL DEFAULT `'UNKNOWN'` | `STEAM` \| `IGDB` \| `UNKNOWN` — provenance, so an unresolved game can be re-checked without re-querying everything. |
+| `multiplayer_attempts` | `INTEGER` NOT NULL DEFAULT `0` | Mirrors the `metadataAttempts` retry pattern; parks a game after the configured ceiling until a manual refresh resets it. |
+
+`max_local_players` (existing column) is reset to `NULL` for every row by this migration and is
+re-derived deterministically going forward — it is no longer an AI-guessed value.
+
+```sql
+CREATE INDEX idx_game_multiplayer_backlog ON game (multiplayer_source, multiplayer_attempts)
+    WHERE multiplayer_source = 'UNKNOWN' AND multiplayer_attempts < 3;
+```
+
+**Derivation**:
+- **Steam path** (free — no extra call): `SteamAppDetailsClient` derives facts from the
+  `categories` array during the *same* appdetails fetch `SteamMetadataService` already makes,
+  matched on **description text** (Steam reuses/shifts numeric category ids over time) —
+  `Shared/Split Screen*` or exact `Local Co-op` → local; `Shared/Split Screen*` → split;
+  `Multi-player`/`Cross-Platform Multiplayer`/`Co-op`/`Online Co-op`/`Online PvP`/`PvP` → online;
+  `Single-player` → single-player. `categoriesPresent = false` (no categories in the response at
+  all) means "no data", distinct from "checked, has no multiplayer categories".
+- **IGDB path** (`IgdbClient`, Twitch client-credentials): used for ROMs (no `steam_app_id`) and as
+  the fallback when a Steam game's `categoriesPresent` is `false`. Title search, then a batched
+  `multiplayer_modes` query OR-aggregated across matches; `maxLocalPlayers` only comes from IGDB
+  (Steam categories carry no player counts).
+- `MultiplayerService.derivePending(cap)` is the bounded backlog pass (`multiplayer_source =
+  'UNKNOWN' AND multiplayer_attempts < 3`, installed games first), wired inline after every scan,
+  library sync, the bulk refresh, and the per-game `POST /games/{id}/multiplayer/refresh`. A Steam
+  429 pauses the batch without incrementing `multiplayer_attempts` (same pattern as
+  `SteamMetadataService`). To avoid a guaranteed-redundant second Steam call for a game the
+  metadata pass already checked in the same run, the automatic backlog pass only attempts Steam
+  again while `metadataStatus = PENDING` (metadata hasn't been fetched for this game yet); once
+  metadata has been fetched (`OK`/`FAILED`), Steam categories are already known and the backlog
+  pass goes straight to IGDB. An explicit manual refresh always re-checks Steam regardless of
+  `metadataStatus`, since the caller asked for a fresh look.
+- `onlineOnly` is **derived** in the API (`onlineMultiplayer && !localMultiplayer`, null while
+  either fact is unknown) — not stored.
+- AI enrichment no longer guesses `maxLocalPlayers`; known multiplayer facts are passed to the
+  prompt verbatim and it is told never to imply local multiplayer when no facts are known.
 
 ---
 

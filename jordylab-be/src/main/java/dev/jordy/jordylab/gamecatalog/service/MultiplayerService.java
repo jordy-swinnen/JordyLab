@@ -2,6 +2,7 @@ package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.IgdbClient;
@@ -49,7 +50,7 @@ public class MultiplayerService {
         for (Game game : backlog) {
             boolean resolved;
             try {
-                resolved = deriveOne(game, igdbModeByTitle);
+                resolved = deriveOne(game, igdbModeByTitle, false);
             } catch (SteamRateLimitedException rateLimited) {
                 log.warn("Steam store rate limit hit; pausing multiplayer batch after {} game(s)", processed);
                 break;
@@ -67,13 +68,22 @@ public class MultiplayerService {
     @Transactional
     public void refresh(Game game) {
         game.resetMultiplayerForRetry();
-        if (!deriveOne(game, new HashMap<>())) {
+        if (!deriveOne(game, new HashMap<>(), true)) {
             game.recordMultiplayerFailure();
         }
     }
 
-    private boolean deriveOne(Game game, Map<String, Optional<IgdbClient.MultiplayerMode>> igdbModeByTitle) {
-        if (StringUtils.hasText(game.getSteamAppId())) {
+    /**
+     * {@code forceSteamCheck} distinguishes an explicit manual refresh (always re-checks Steam,
+     * since the caller asked for a fresh look) from the automatic backlog pass, where a Steam
+     * game only reaches here after {@code SteamMetadataService} already checked its categories
+     * for the exact same app ID during the metadata pass that always runs just before this one —
+     * re-fetching there would be a guaranteed-redundant Steam store call.
+     */
+    private boolean deriveOne(Game game, Map<String, Optional<IgdbClient.MultiplayerMode>> igdbModeByTitle,
+            boolean forceSteamCheck) {
+        boolean steamAlreadyChecked = !forceSteamCheck && game.getMetadataStatus() != MetadataStatus.PENDING;
+        if (StringUtils.hasText(game.getSteamAppId()) && !steamAlreadyChecked) {
             Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch(game.getSteamAppId());
             if (metadata.isPresent()) {
                 SteamAppDetailsClient.MultiplayerFacts facts = metadata.get().multiplayer();

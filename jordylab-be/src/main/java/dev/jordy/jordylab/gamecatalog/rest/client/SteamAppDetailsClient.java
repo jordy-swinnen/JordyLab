@@ -257,7 +257,7 @@ public class SteamAppDetailsClient {
             String shortDescription, String type, MultiplayerFacts multiplayer) {
 
         public boolean isGame() {
-            return type == null || "game".equals(type);
+            return "game".equals(type);
         }
     }
 

@@ -10,13 +10,14 @@
 
 Add a second way a Steam game belongs to the catalog: **library membership**. Today a game is visible only while it has an installed installation, and an orphaned game is deleted (with its description and artwork) after the 30-day grace period. 005 makes a game visible when it is *installed or in a library*, and makes installation status + library source filterable.
 
-Backend-first, five parts:
+Backend-first, six parts:
 
 1. **Identity hardening** — replace the plain partial `idx_game_steam_app_id` with a **unique** partial index (duplicate-check in the migration first); add `findBySteamAppId`; resolve-or-create with insert-or-fetch so a concurrent scan and library sync cannot create two games (FR-001, SC-004).
 2. **Library model** — new `game_library_entry` (one per game per `OWNED`/`FAMILY` source; first/last seen, removed-at, family owner names) and `library_sync_run` (outcome, content hash, counts, `metadata_calls`, `ai_calls`). Excluded family titles are omitted entirely (Q2).
 3. **Sync services** — `SteamLibrarySyncService` (documented `GetOwnedGames`, key + steamid) and `SteamFamilySyncService` (undocumented `IFamilyGroupsService`, in-memory token). Both mirror `ScanService`'s SHA-256 `NO_CHANGE` short-circuit and suspicious-shrink guard, go through the same resolve-or-create path as scans, and run the same bounded inline passes. Owned sync piggybacks on an applied Steam scan via a Modulith event (first user of `event_publication`), gated by a min-interval — no scheduler.
 4. **Cost economy** — `SteamAppDetailsClient` currently requests `filters=basic`, which **does not include** genres/categories/developers/publishers/release_date, so deterministic metadata is effectively broken and the UI's metadata comes from the LLM. Fix the filter set, use `type` to exclude Steam tools/runtimes and `short_description` as the free description; pace store calls (≥1.5 s) and treat 429 as "stop the batch", not a game failure; not-installed library games get **zero AI** (FR-022); enrichment may only fill still-null fields; gamecatalog's Anthropic model switches Sonnet → Haiku; backlog orders installed games first.
 5. **Visibility, status & filtering** — every visibility query becomes `installed OR active library entry`, gain `installStatus` (default `INSTALLED`) and `librarySource` (`OWNED > FAMILY > LOCAL`) parameters and propagate through the list, detail, platforms, hosts, chat filter and frontend (status/source badges, filters mirroring the host pattern, library section in Sources).
+6. **Deterministic local multiplayer** — extends part 4's "deterministic, never AI-guessed" rule to `local_multiplayer`/`split_screen`/`maxLocalPlayers`: `SteamAppDetailsClient` derives them from the same `categories` fetch (text match, no extra call); `IgdbClient` (new, Twitch client-credentials) resolves them for ROMs and as the fallback when Steam has no category data; `MultiplayerService` runs the same bounded, installed-first, 429-aware backlog pattern as part 4, wired inline after every scan/sync/refresh (FR-024–FR-028, see spec.md).
 
 ## Technical Context
 
@@ -95,9 +96,13 @@ jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/
 │       └── GameRepository.java              # findBySteamAppId, visibility + filter params
 ├── rest/
 │   ├── client/
-│   │   ├── SteamAppDetailsClient.java    # filters fixed; type check; 429-aware; paced
+│   │   ├── SteamAppDetailsClient.java    # filters fixed; type check; 429-aware; paced;
+│   │   │                                 #   + local-multiplayer facts from categories text
 │   │   ├── SteamOwnedGamesClient.java    # NEW RestClient (documented GetOwnedGames)
-│   │   └── SteamFamilyClient.java        # NEW RestClient (undocumented family endpoints)
+│   │   ├── SteamFamilyClient.java        # NEW RestClient (undocumented family endpoints)
+│   │   └── IgdbClient.java               # NEW RestClient (Twitch client-credentials; title
+│   │                                     #   search + batched multiplayer_modes; ROM/fallback
+│   │                                     #   local-multiplayer source)
 │   └── controller/
 │       ├── GameCatalogController.java    # games?installStatus=&librarySource=, detail fields
 │       ├── LibraryController.java        # NEW /library/steam/sync, /library/steam-family/sync, /library/status
@@ -107,15 +112,22 @@ jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/
     ├── SteamLibrarySyncService.java      # NEW owned sync (hash, shrink guard, entry upsert)
     ├── SteamFamilySyncService.java       # NEW family sync (in-memory token)
     ├── LibrarySyncScheduler.java         # NEW Modulith @ApplicationModuleListener (scan applied → due)
-    ├── SteamMetadataService.java         # ordering installed-first; store call counting
-    ├── EnrichmentService.java            # skip not-installed (FR-022); fill-nulls-only; call counting
+    ├── SteamMetadataService.java         # ordering installed-first; store call counting;
+    │                                     #   applies Steam categories' local-multiplayer facts
+    ├── EnrichmentService.java            # skip not-installed (FR-022); fill-nulls-only; call counting;
+    │                                     #   no longer guesses maxLocalPlayers (known facts only)
+    ├── MultiplayerService.java           # NEW bounded backlog pass (UNKNOWN, attempts < ceiling,
+    │                                     #   installed first); Steam→IGDB fallback; 429-aware
     ├── ToolExclusion.java                # NEW @UtilityClass deny-list (Proton/runtimes/redistributables)
-    ├── ChatService.java                  # + installStatus/librarySource filter fields
-    └── GameQueryService.java             # status/source filter passthrough
+    ├── ChatService.java                  # + installStatus/librarySource/localMultiplayer filter fields
+    └── GameQueryService.java             # status/source/localMultiplayer filter passthrough
 
 jordylab-be/src/main/resources/db/migration/
-└── V20260928001__gamecatalog_library.sql  # unique partial index (dup check), title_source,
-                                           # game_library_entry, library_sync_run, tool cleanup
+├── V20260928001__gamecatalog_library.sql  # unique partial index (dup check), title_source,
+│                                          # game_library_entry, library_sync_run, tool cleanup
+└── V20260928002__gamecatalog_local_multiplayer.sql  # local_multiplayer, split_screen,
+                                           # multiplayer_source, multiplayer_attempts + backlog index;
+                                           # resets max_local_players (no longer AI-guessed)
 
 jordylab-be/src/main/resources/application.yaml
 └── jordylab.gamecatalog.library.* + jordylab.ai.modules.gamecatalog.model: claude-haiku-5
@@ -127,8 +139,11 @@ jordylab-fe/libs/gamecatalog/
 │   ├── game-library.store.ts           # selectedInstallStatus/selectedLibrarySource signals
 │   └── mocks/                          # + install-status/library-source/library-status mocks
 └── ui/src/lib/
-    ├── game-grid/game-grid-view.*      # status + source filter chips; badges on cards
-    ├── game-detail/game-detail-view.*  # status/source rows, family owners
+    ├── game-grid/game-grid-view.*      # status + source filter chips; badges on cards;
+    │                                   #   + "Local multiplayer only" toggle
+    ├── game-detail/game-detail-view.*  # status/source rows, family owners;
+    │                                   #   + Local co-op / Split-screen / Online only /
+    │                                   #     Multiplayer data (provenance) rows
     └── source-manager/source-manager-* # library section: owned/family sync buttons, last-run
                                         #   (metadata/AI call counts), family token field
 ```
