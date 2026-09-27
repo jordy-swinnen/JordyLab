@@ -94,6 +94,11 @@ jordylab:
       store-min-interval-ms: 1500
       call-timeout-ms: 10000
   settings:
+    keycloak:
+      server-url: ${KEYCLOAK_URL:http://localhost:8180}
+      realm: jordylab
+      admin-client-id: jordylab-backend
+      admin-client-secret: ${KEYCLOAK_BACKEND_SECRET:}
     guest-chat:
       daily-limit: ${JORDYLAB_GUEST_CHAT_DAILY_LIMIT:20}
       zone: Europe/Brussels

@@ -1,10 +1,17 @@
 import { Route } from '@angular/router';
+import { roleGuard } from '@jordylab-fe/shared/auth';
 import { GamecatalogShellComponent } from './gamecatalog-shell/gamecatalog-shell.component';
 
+/**
+ * Guarded here (not only where the host mounts these routes) so the standalone `apps/gamecatalog`
+ * dev harness — which wraps this same array behind only `authGuard` — enforces the same access
+ * matrix as the host: reads and chat are open to admin and guest; writes (sources) are admin-only.
+ */
 export const gamecatalogRoutes: Route[] = [
   {
     path: '',
     component: GamecatalogShellComponent,
+    canActivate: [roleGuard('admin', 'guest')],
     children: [
       {
         path: 'grid',
@@ -18,6 +25,7 @@ export const gamecatalogRoutes: Route[] = [
       },
       {
         path: 'sources',
+        canActivate: [roleGuard('admin')],
         loadComponent: () =>
           import('./source-manager/source-manager.component').then(
             (m) => m.SourceManagerComponent,

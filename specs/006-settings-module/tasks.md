@@ -97,11 +97,11 @@ US1, FR-001–FR-005)
 **Independent Test**: Register on the live stack, log in → only the awaiting-approval page renders and every backend
 call is denied (quickstart scenario 1)
 
-- [ ] T010 [P] [US1] Write the pending-isolation integration test (red first) in
+- [X] T010 [P] [US1] Write the pending-isolation integration test (red first) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/SettingsModuleTest.java`: register a user via the test realm →
   password-grant login → token carries no app role → every endpoint group (fna, settings, gamecatalog read + write +
   chat) returns 403; run against the T008 Keycloak container
-- [ ] T011 [P] [US1] Create the awaiting-approval page (standalone route outside the nav shell so no tabs render) in
+- [X] T011 [P] [US1] Create the awaiting-approval page (standalone route outside the nav shell so no tabs render) in
   `jordylab-fe/apps/jordylab/src/app/awaiting-approval/` + route `{ path: 'awaiting-approval', … }` in
   `jordylab-fe/apps/jordylab/src/app/app.routes.ts`, with `roleGuard` redirecting authenticated no-role users there;
   spec in `awaiting-approval.component.spec.ts` (guest/admin tokens → NOT redirected; no-role token → redirected)
@@ -119,35 +119,35 @@ REST API (spec US2, FR-006/FR-007)
 **Independent Test**: With one pending user (test fixture): approve → their next login shows the Game Catalog; revoke →
 access gone within one token lifetime; last-admin reject blocked (quickstart scenarios 2–5)
 
-- [ ] T012 [US2] Create `KeycloakAdminClient` in
+- [X] T012 [US2] Create `KeycloakAdminClient` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClient.java` (Spring `RestClient` +
   client-credentials token fetch/refresh for `jordylab-backend`; list/search users, get user, role-mapping add/remove,
   `reset-password` with `temporary: true`, `logout` sessions, enable/disable, get role) per [research.md](research.md)
   D3; WireMock tests in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClientTest.java` (token refresh, each
   Admin REST call, failure → explicit `KEYCLOAK_UNAVAILABLE`)
-- [ ] T013 [US2] Implement `KeycloakUserAdministrationService` in
+- [X] T013 [US2] Implement `KeycloakUserAdministrationService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/KeycloakUserAdministrationService.java` — derived
   status per [data-model.md](data-model.md) (PENDING/APPROVED/REJECTED), approve/reject/revoke/reset-password
   orchestration, `LAST_ADMIN_PROTECTED` guard (FR-007), generated temporary password (returned once, never logged); unit
   tests with the client mocked (explicit values, assigned `ArgumentCaptor`) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/service/KeycloakUserAdministrationServiceTest.java`
-- [ ] T014 [US2] Implement `SettingsUsersController` + request/response records in
+- [X] T014 [US2] Implement `SettingsUsersController` + request/response records in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/controller/`
   per [contracts/settings-users-api.md](contracts/settings-users-api.md) (`GET /api/settings/users?status=`,
   `GET …/pending-count`, `POST …/{id}/approve|reject|revoke|reset-password`, error shapes `USER_NOT_FOUND`/
   `LAST_ADMIN_PROTECTED`/`USER_NOT_APPROVED`/`KEYCLOAK_UNAVAILABLE`); MockMvc tests (`@WebMvcTest` + `@MockitoBean` +
   `@Language("JSON")`) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/controller/SettingsUsersControllerTest.java`
-- [ ] T015 [P] [US2] Create the settings API lib surface in `jordylab-fe/libs/settings/api/src/lib/` —
+- [X] T015 [P] [US2] Create the settings API lib surface in `jordylab-fe/libs/settings/api/src/lib/` —
   `SettingsApiService` (HttpClient wrapper for the users contract), `users.store.ts` signal store (
   pending/approved/rejected lists, actions with loading/error state) per `/angular-signal-store`, user models + mock
   factories in `mocks/`; specs per `/angular-test` (real `signal(...)` instances + `vi.fn` via `useValue`)
-- [ ] T016 [US2] Build the Users page in `jordylab-fe/libs/settings/ui/src/lib/users-page/` — container (
+- [X] T016 [US2] Build the Users page in `jordylab-fe/libs/settings/ui/src/lib/users-page/` — container (
   `users-page.component.ts` injects the store) + presentation (`users-page-view.component.ts`, `input.required`/
   `output`, zero DI) with status sections, per-user Approve/Reject/Revoke/Reset actions, one-time temporary-password
   reveal; specs with store mock per repo conventions
-- [ ] T017 [US2] Wire the app shell: settings route (`{ path: 'settings', canActivate: [authGuard, roleGuard]… }` via
+- [X] T017 [US2] Wire the app shell: settings route (`{ path: 'settings', canActivate: [authGuard, roleGuard]… }` via
   `loadChildren` of `settingsRoutes`) + "Settings" nav group with pending-count badge (from `pending-count`) +
   username-aware visibility in `jordylab-fe/apps/jordylab/src/app/app.ts` + `app.html`; update the pinned nav assertions
   in `jordylab-fe/apps/jordylab/src/app/app.spec.ts`
@@ -165,30 +165,30 @@ persisted daily chat limit (spec US3, FR-002/FR-003/FR-009)
 by the guard; after the limit (set 3 via env) the 4th chat shows the friendly message and no AI call is made (quickstart
 scenarios 2, 10)
 
-- [ ] T018 [US3] Create the `GuestChatUsage` entity + repository per [data-model.md](data-model.md) in
+- [X] T018 [US3] Create the `GuestChatUsage` entity + repository per [data-model.md](data-model.md) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/domain/` — canonical entity structure via `/entity` (UUID id,
   `(user_subject, usage_date)` unique, builder guards) + race-safe native upsert `incrementUsage(subject, date)` in the
   repository; entity test + TestBuilder via `/test-builder` in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/domain/`
-- [ ] T019 [US3] Implement `GuestChatLimitFilter` (OncePerRequestFilter in
+- [X] T019 [US3] Implement `GuestChatLimitFilter` (OncePerRequestFilter in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/controller/GuestChatLimitFilter.java`, registered after
   security, matches `POST /api/gamecatalog/chat`) — exempt admins; pre-call check against the persisted count → `429`
   `{"reason":"CHAT_LIMIT_REACHED","resetsAt":…}` when ≥ `jordylab.settings.guest-chat.daily-limit` (default 20);
   increment only on 2xx after `chain.doFilter`; tests (limit boundary, admin exempt, failed-call-not-counted, concurrent
   upsert) in `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/controller/GuestChatLimitFilterTest.java`
-- [ ] T020 [US3] Add the guest-at-limit integration test to
+- [X] T020 [US3] Add the guest-at-limit integration test to
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/SettingsModuleTest.java`: guest token at the limit → 429 with
   `resetsAt`, `ResilientAiService` never invoked (`@MockitoBean` verify with explicit values); count survives a
   simulated restart (new EntityManager session)
-- [ ] T021 [P] [US3] Make the nav role-aware in `jordylab-fe/apps/jordylab/src/app/app.ts`: per-`NavItem`/group required
+- [X] T021 [P] [US3] Make the nav role-aware in `jordylab-fe/apps/jordylab/src/app/app.ts`: per-`NavItem`/group required
   role computed from `AuthService.roles()` (guest sees only Game Catalog group with Library + Chat; Sources item
   admin-only; Settings group admin-only); update `jordylab-fe/apps/jordylab/src/app/app.spec.ts` for guest/admin nav
   renders
-- [ ] T022 [P] [US3] Apply guards inside the domain route libs (so all three apps inherit):
+- [X] T022 [P] [US3] Apply guards inside the domain route libs (so all three apps inherit):
   `jordylab-fe/libs/gamecatalog/ui/src/lib/gamecatalog.routes.ts` (shell → `admin|guest`; sources + management
   children → `admin`; grid/detail/chat open to both) and `jordylab-fe/libs/fna/ui/src/lib/fna.routes.ts` (→ `admin`);
   verify `apps/fna` + `apps/gamecatalog` harnesses pick them up; specs for both route files
-- [ ] T023 [US3] Handle `429 CHAT_LIMIT_REACHED` in the frontend chat flow (
+- [X] T023 [US3] Handle `429 CHAT_LIMIT_REACHED` in the frontend chat flow (
   `jordylab-fe/libs/gamecatalog/api/src/lib/chat.store.ts` or equivalent): friendly "limit reached, resets at {time}"
   message, no retry; spec with a `useValue` HTTP mock returning the 429 body
 

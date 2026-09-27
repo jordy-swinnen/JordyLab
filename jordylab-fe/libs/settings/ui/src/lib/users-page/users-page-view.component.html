@@ -1,0 +1,161 @@
+<div class="flex flex-col gap-3.5">
+  <div class="eyebrow">Settings · Users</div>
+  <h2 class="page-title">Users</h2>
+</div>
+
+@if (temporaryPassword(); as reveal) {
+  <div
+    class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/40 bg-primary/10 p-4"
+  >
+    <div>
+      <p class="mono-label">Temporary password — shown once</p>
+      <p class="mt-1 font-mono text-base text-foreground" data-testid="temporary-password">
+        {{ reveal.password }}
+      </p>
+      <p class="mt-1 text-xs text-muted-foreground">
+        Share this with the user out-of-band. It will not be shown again.
+      </p>
+    </div>
+    <button
+      hlmBtn
+      variant="outline"
+      (click)="dismissTemporaryPassword.emit()"
+      data-testid="dismiss-temporary-password"
+    >
+      Dismiss
+    </button>
+  </div>
+}
+
+@if (error()) {
+  <div
+    class="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+  >
+    {{ error() }}
+  </div>
+}
+
+@if (loading()) {
+  <div class="mt-10 space-y-3" aria-label="Loading users">
+    @for (row of [1, 2, 3]; track row) {
+      <hlm-skeleton class="h-20 w-full rounded-2xl" />
+    }
+  </div>
+} @else {
+  <div class="mt-10 flex flex-col gap-10">
+    <section>
+      <div class="mb-4 flex items-center gap-3">
+        <h3 class="section-title">Pending</h3>
+        <span hlmBadge variant="secondary">{{ pendingUsers().length }}</span>
+      </div>
+      @if (pendingUsers().length === 0) {
+        <p class="text-sm text-muted-foreground">No pending sign-ups.</p>
+      } @else {
+        <div class="space-y-3">
+          @for (user of pendingUsers(); track user.id) {
+            <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+              <div class="min-w-0">
+                <p class="text-base text-foreground">{{ displayName(user) }}</p>
+                <p class="mt-1 font-mono text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  signed up {{ user.createdAt | date: 'MMM d, h:mm a' }}
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <button
+                  hlmBtn
+                  variant="default"
+                  [disabled]="actioningId() === user.id"
+                  (click)="approve.emit(user.id)"
+                  data-testid="approve-user"
+                >
+                  Approve
+                </button>
+                <button
+                  hlmBtn
+                  variant="outline"
+                  [disabled]="actioningId() === user.id"
+                  (click)="reject.emit(user.id)"
+                  data-testid="reject-user"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <section>
+      <div class="mb-4 flex items-center gap-3">
+        <h3 class="section-title">Approved</h3>
+        <span hlmBadge variant="secondary">{{ approvedUsers().length }}</span>
+      </div>
+      @if (approvedUsers().length === 0) {
+        <p class="text-sm text-muted-foreground">No approved guests yet.</p>
+      } @else {
+        <div class="space-y-3">
+          @for (user of approvedUsers(); track user.id) {
+            <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+              <div class="min-w-0">
+                <p class="text-base text-foreground">{{ displayName(user) }}</p>
+                <p class="mt-1 font-mono text-[13px] text-muted-foreground">{{ user.email }}</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <button
+                  hlmBtn
+                  variant="outline"
+                  [disabled]="actioningId() === user.id"
+                  (click)="resetPassword.emit(user.id)"
+                  data-testid="reset-password"
+                >
+                  Reset password
+                </button>
+                <button
+                  hlmBtn
+                  variant="outline"
+                  [disabled]="actioningId() === user.id"
+                  (click)="revoke.emit(user.id)"
+                  data-testid="revoke-user"
+                >
+                  Revoke
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <section>
+      <div class="mb-4 flex items-center gap-3">
+        <h3 class="section-title">Rejected</h3>
+        <span hlmBadge variant="secondary">{{ rejectedUsers().length }}</span>
+      </div>
+      @if (rejectedUsers().length === 0) {
+        <p class="text-sm text-muted-foreground">No rejected accounts.</p>
+      } @else {
+        <div class="space-y-3">
+          @for (user of rejectedUsers(); track user.id) {
+            <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+              <div class="min-w-0">
+                <p class="text-base text-foreground">{{ displayName(user) }}</p>
+                <p class="mt-1 font-mono text-[13px] text-muted-foreground">{{ user.email }}</p>
+              </div>
+              <button
+                hlmBtn
+                variant="outline"
+                [disabled]="actioningId() === user.id"
+                (click)="approve.emit(user.id)"
+                data-testid="approve-user"
+              >
+                Approve
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  </div>
+}

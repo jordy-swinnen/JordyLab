@@ -12,6 +12,7 @@ import {
   BrandMarkComponent,
   WordmarkComponent,
 } from '@jordylab-fe/shared/brand';
+import { PendingCountBadgeComponent } from '@jordylab-fe/settings/ui';
 
 interface NavItem {
   label: string;
@@ -19,11 +20,14 @@ interface NavItem {
   icon: string;
   /** Extra route prefixes that should keep this item highlighted (e.g. game detail under Library). */
   isActive: (url: string) => boolean;
+  /** Omit for admin-or-guest; 'admin' hides the item from guests (mirrors the backend access matrix). */
+  requiredRole?: 'admin';
 }
 
 interface NavGroup {
   label: string;
   items: NavItem[];
+  requiredRole?: 'admin';
 }
 
 const ICONS = {
@@ -33,14 +37,23 @@ const ICONS = {
   news: 'M5 4h11v16H6a1 1 0 0 1-1-1zM16 8h3v11a1 1 0 0 1-1 1M8 8h5M8 12h5M8 16h3',
   pie: 'M12 3v9h9a9 9 0 1 1-9-9zM15 3.5A9 9 0 0 1 20.5 9H15z',
   spark: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
+  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.65a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.04z',
 } as const;
+
+const SETTINGS_GROUP_LABEL = 'Settings';
 
 const startsWith = (prefix: string) => (url: string) => url.startsWith(prefix);
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, BrandMarkComponent, WordmarkComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    BrandMarkComponent,
+    WordmarkComponent,
+    PendingCountBadgeComponent,
+  ],
   templateUrl: './app.html',
 })
 export class App {
@@ -49,6 +62,10 @@ export class App {
 
   username = this.#auth.username;
   hasAppRole = this.#auth.hasAppRole;
+  isAdmin = this.#auth.isAdmin;
+
+  protected readonly isSettingsGroup = (group: NavGroup): boolean =>
+    group.label === SETTINGS_GROUP_LABEL;
 
   #url = toSignal(
     this.#router.events.pipe(
@@ -83,11 +100,13 @@ export class App {
           path: '/games/sources',
           icon: ICONS.plug,
           isActive: startsWith('/games/sources'),
+          requiredRole: 'admin',
         },
       ],
     },
     {
       label: 'FNA · Finance',
+      requiredRole: 'admin',
       items: [
         {
           label: 'Articles',
@@ -109,7 +128,30 @@ export class App {
         },
       ],
     },
+    {
+      label: SETTINGS_GROUP_LABEL,
+      requiredRole: 'admin',
+      items: [
+        {
+          label: 'Users',
+          path: '/settings/users',
+          icon: ICONS.gear,
+          isActive: startsWith('/settings'),
+        },
+      ],
+    },
   ];
+
+  protected readonly visibleGroups = computed(() => {
+    const admin = this.isAdmin();
+
+    return this.groups
+      .filter((group) => !group.requiredRole || admin)
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.requiredRole || admin),
+      }));
+  });
 
   protected readonly activePath = computed(() => {
     const url = this.#url();

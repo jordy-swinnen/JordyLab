@@ -20,5 +20,11 @@ export const appRoutes: Route[] = [
     loadChildren: () =>
       import('@jordylab-fe/gamecatalog/ui').then((m) => m.gamecatalogRoutes),
   },
+  {
+    path: 'settings',
+    canActivate: [authGuard, roleGuard('admin')],
+    loadChildren: () =>
+      import('@jordylab-fe/settings/ui').then((m) => m.settingsRoutes),
+  },
   { path: '', redirectTo: 'fna', pathMatch: 'full' },
 ];

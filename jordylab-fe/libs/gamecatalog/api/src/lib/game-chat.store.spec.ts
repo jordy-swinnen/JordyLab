@@ -112,6 +112,19 @@ describe('GameChatStore', () => {
     expect(spectator.service.asking()).toBe(false);
   });
 
+  it('appends a friendly limit-reached message with the reset time and does not retry', () => {
+    chat.mockReturnValue(
+      of<ChatAskResponse>({ kind: 'limitReached', resetsAt: '2026-09-28T00:00:00Z' }),
+    );
+
+    spectator.service.ask('co-op games?');
+
+    const message = spectator.service.messages()[1];
+    expect(message.unavailable).toBe(true);
+    expect(message.text).toContain("You've reached today's chat limit.");
+    expect(chat).toHaveBeenCalledTimes(1);
+  });
+
   it('appends the unavailable message when the request errors', () => {
     chat.mockReturnValue(throwError(() => new Error('network error')));
 

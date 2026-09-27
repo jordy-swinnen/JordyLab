@@ -110,6 +110,11 @@ export class GameCatalogApiService {
     return this.#http.post<ChatAnswer>('/api/gamecatalog/chat', body).pipe(
       map((answer): ChatAskResponse => ({ kind: 'answered', answer })),
       catchError((error: HttpErrorResponse) => {
+        if (error.status === 429) {
+          const resetsAt = (error.error as { resetsAt?: string } | null)?.resetsAt ?? '';
+
+          return of<ChatAskResponse>({ kind: 'limitReached', resetsAt });
+        }
         if (error.status === 503 || error.status === 400) {
           return of<ChatAskResponse>({ kind: 'unavailable' });
         }
