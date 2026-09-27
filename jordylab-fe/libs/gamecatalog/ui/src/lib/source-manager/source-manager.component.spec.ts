@@ -9,9 +9,12 @@ describe('SourceManagerComponent', () => {
   const error = signal<string | null>(null);
   const togglingId = signal<string | null>(null);
   const downloading = signal<ScanLibraryType | null>(null);
+  const refreshingPending = signal(false);
+  const refreshProgress = signal<string | null>(null);
 
   const toggle = vi.fn<ScanSourceStore['toggle']>();
   const downloadClient = vi.fn<ScanSourceStore['downloadClient']>();
+  const refreshPending = vi.fn<ScanSourceStore['refreshPending']>();
 
   const storeMock = {
     sources: sources.asReadonly(),
@@ -19,8 +22,11 @@ describe('SourceManagerComponent', () => {
     error: error.asReadonly(),
     togglingId: togglingId.asReadonly(),
     downloading: downloading.asReadonly(),
+    refreshingPending: refreshingPending.asReadonly(),
+    refreshProgress: refreshProgress.asReadonly(),
     toggle,
     downloadClient,
+    refreshPending,
   };
 
   let spectator: Spectator<SourceManagerComponent>;
@@ -36,8 +42,11 @@ describe('SourceManagerComponent', () => {
     error.set(null);
     togglingId.set(null);
     downloading.set(null);
+    refreshingPending.set(false);
+    refreshProgress.set(null);
     toggle.mockReset();
     downloadClient.mockReset();
+    refreshPending.mockReset();
     spectator = createComponent();
   });
 
@@ -88,6 +97,20 @@ describe('SourceManagerComponent', () => {
     spectator.click(spectator.query('button[role="switch"]') as HTMLElement);
 
     expect(toggle).toHaveBeenCalledWith(aScanSourceMock());
+  });
+
+  it('asks the store to refresh pending data and shows progress', () => {
+    populate([aScanSourceMock()]);
+
+    spectator.click('[data-testid="refresh-pending-data"]');
+
+    expect(refreshPending).toHaveBeenCalled();
+
+    refreshingPending.set(true);
+    refreshProgress.set('Refreshing… 4 left');
+    spectator.detectChanges();
+
+    expect(spectator.element).toHaveText('Refreshing… 4 left');
   });
 
   describe('download', () => {

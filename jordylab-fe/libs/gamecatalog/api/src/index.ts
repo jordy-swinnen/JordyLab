@@ -13,6 +13,8 @@ export type {
   MetadataSource,
   HostRef,
   AttachedGame,
+  RefreshCount,
+  RefreshAll,
   GameSummary,
   GamesPage,
   GameDetail,

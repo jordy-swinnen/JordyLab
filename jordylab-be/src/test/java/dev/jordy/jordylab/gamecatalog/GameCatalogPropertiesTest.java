@@ -76,7 +76,7 @@ class GameCatalogPropertiesTest {
             softly.assertThat(defaults.artwork().externalLookupEnabled()).isTrue();
             softly.assertThat(defaults.artwork().lookupTimeoutMs()).isEqualTo(2000L);
             softly.assertThat(defaults.gracePeriodDays()).isEqualTo(30);
-            softly.assertThat(defaults.enrichment().batchSize()).isEqualTo(50);
+            softly.assertThat(defaults.enrichment().batchSize()).isEqualTo(8);
             softly.assertThat(defaults.enrichment().maxAttempts()).isEqualTo(3);
             softly.assertThat(defaults.chat().maxResultGames()).isEqualTo(50);
             softly.assertThat(defaults.scan().maxGamesPerSource()).isEqualTo(10000);

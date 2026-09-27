@@ -218,6 +218,26 @@
               >
                 {{ game.description }}
               </p>
+              <div class="mt-6 flex flex-wrap gap-3">
+                @if (game.platform === 'Steam') {
+                  <button
+                    type="button"
+                    class="inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
+                    [disabled]="refreshingMetadata()"
+                    (click)="refreshMetadata.emit()"
+                  >
+                    {{ refreshingMetadata() ? 'Refreshing facts…' : 'Refresh facts' }}
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
+                  [disabled]="refreshingEnrichment()"
+                  (click)="refreshEnrichment.emit()"
+                >
+                  {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
+                </button>
+              </div>
               <a
                 [routerLink]="['/games/chat']"
                 [queryParams]="{ attach: game.id }"
@@ -253,6 +273,14 @@
                 The AI description for this game could not be generated.
               }
             </p>
+            <button
+              type="button"
+              class="mt-4 inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
+              [disabled]="refreshingEnrichment()"
+              (click)="refreshEnrichment.emit()"
+            >
+              {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
+            </button>
             <a
               [routerLink]="['/games/chat']"
               [queryParams]="{ attach: game.id }"

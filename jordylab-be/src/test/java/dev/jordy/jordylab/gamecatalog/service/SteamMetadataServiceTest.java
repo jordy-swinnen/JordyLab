@@ -15,13 +15,16 @@ import org.springframework.data.domain.PageRequest;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SteamMetadataServiceTest {
+
+    private static final int SCAN_CAP = 25;
 
     @Mock
     private GameRepository gameRepository;
@@ -44,8 +47,9 @@ class SteamMetadataServiceTest {
                 .thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata("Puzzle, Adventure", "Valve",
                         "Valve", 2011)));
 
-        steamMetadataService.fetchPendingMetadata();
+        int processed = steamMetadataService.fetchPending(SCAN_CAP);
 
+        assertThat(processed).isEqualTo(1);
         assertSoftly(softly -> {
             softly.assertThat(game.getGenres()).isEqualTo("Puzzle, Adventure");
             softly.assertThat(game.getDeveloper()).isEqualTo("Valve");
@@ -61,14 +65,14 @@ class SteamMetadataServiceTest {
         stubPendingBatch(List.of(game));
         when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.empty());
 
-        steamMetadataService.fetchPendingMetadata();
+        steamMetadataService.fetchPending(SCAN_CAP);
         assertSoftly(softly -> {
             softly.assertThat(game.getMetadataAttempts()).isEqualTo(1);
             softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
         });
 
-        steamMetadataService.fetchPendingMetadata();
-        steamMetadataService.fetchPendingMetadata();
+        steamMetadataService.fetchPending(SCAN_CAP);
+        steamMetadataService.fetchPending(SCAN_CAP);
         assertSoftly(softly -> {
             softly.assertThat(game.getMetadataAttempts()).isEqualTo(3);
             softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.FAILED);
@@ -76,40 +80,60 @@ class SteamMetadataServiceTest {
     }
 
     @Test
-    void dailyJobResetsFailedMetadataForRetry() {
-        Game failed = aSteamGame();
-        failed.recordMetadataFailure(1);
-        when(gameRepository.findByMetadataStatus(MetadataStatus.FAILED)).thenReturn(List.of(failed));
+    void refreshClearsTheFailureCounterAndReFetches() {
+        Game game = aSteamGame();
+        game.recordMetadataFailure(3);
+        when(steamAppDetailsClient.fetch("620"))
+                .thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata("Puzzle", "Valve", "Valve", 2011)));
 
-        steamMetadataService.resetFailedMetadata();
+        steamMetadataService.refresh(game);
 
         assertSoftly(softly -> {
-            softly.assertThat(failed.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
-            softly.assertThat(failed.getMetadataAttempts()).isZero();
+            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.OK);
+            softly.assertThat(game.getMetadataAttempts()).isZero();
+            softly.assertThat(game.getDeveloper()).isEqualTo("Valve");
         });
+    }
+
+    @Test
+    void refreshClearsTheFailureCounterEvenWhenTheFetchFails() {
+        Game game = aSteamGame();
+        game.recordMetadataFailure(3);
+        when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.empty());
+
+        steamMetadataService.refresh(game);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
+            softly.assertThat(game.getMetadataAttempts()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void fetchPendingRespectsThePerScanCap() {
+        when(gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
+                PageRequest.of(0, 7))).thenReturn(List.of());
+
+        int processed = steamMetadataService.fetchPending(7);
+
+        assertThat(processed).isZero();
+        verify(gameRepository).findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
+                PageRequest.of(0, 7));
     }
 
     @Test
     void emptyPendingBatchSkipsSteamCalls() {
         stubPendingBatch(List.of());
 
-        steamMetadataService.fetchPendingMetadata();
+        int processed = steamMetadataService.fetchPending(SCAN_CAP);
 
+        assertThat(processed).isZero();
         verifyNoInteractions(steamAppDetailsClient);
     }
 
-    @Test
-    void batchIsLimitedToConfiguredBatchSize() {
-        stubPendingBatch(List.of());
-
-        steamMetadataService.fetchPendingMetadata();
-
-        verify(gameRepository).findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
-                PageRequest.of(0, 25));
-    }
-
     private void stubPendingBatch(List<Game> games) {
-        when(gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING, PageRequest.of(0, 25)))
+        when(gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
+                PageRequest.of(0, SCAN_CAP)))
                 .thenReturn(games);
     }
 
@@ -125,9 +149,9 @@ class SteamMetadataServiceTest {
         return new GameCatalogProperties(
                 new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
                 30,
-                new GameCatalogProperties.Enrichment(50, 3),
+                new GameCatalogProperties.Enrichment(8, 3),
                 new GameCatalogProperties.Chat(50),
-                new GameCatalogProperties.Metadata(25, 3),
+                new GameCatalogProperties.Metadata(SCAN_CAP, 3),
                 new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
     }
 }

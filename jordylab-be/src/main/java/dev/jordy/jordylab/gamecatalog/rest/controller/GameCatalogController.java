@@ -6,11 +6,14 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.HostsResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformsResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.RefreshAllResponse;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkService;
+import dev.jordy.jordylab.gamecatalog.service.CatalogRefreshService;
 import dev.jordy.jordylab.gamecatalog.service.ChatAttachmentException;
 import dev.jordy.jordylab.gamecatalog.service.ChatService;
 import dev.jordy.jordylab.gamecatalog.service.ChatUnavailableException;
 import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
+import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -42,6 +45,7 @@ public class GameCatalogController {
     private final GameQueryService gameQueryService;
     private final ArtworkService artworkService;
     private final ChatService chatService;
+    private final CatalogRefreshService catalogRefreshService;
 
     @GetMapping("/games")
     public GamesPageResponse getGames(@RequestParam(required = false) String search,
@@ -69,6 +73,25 @@ public class GameCatalogController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/games/{id}/metadata/refresh")
+    public ResponseEntity<GameDetailResponse> refreshMetadata(@PathVariable UUID id) {
+        return catalogRefreshService.refreshMetadata(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/games/{id}/enrichment/refresh")
+    public ResponseEntity<GameDetailResponse> refreshEnrichment(@PathVariable UUID id) {
+        return catalogRefreshService.refreshEnrichment(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/games/refresh")
+    public RefreshAllResponse refreshPending() {
+        return catalogRefreshService.refreshPending();
+    }
+
     @PostMapping("/chat")
     public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
         return chatService.ask(request.question(), request.gameIds() == null ? List.of() : request.gameIds());
@@ -88,6 +111,11 @@ public class GameCatalogController {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ChatErrorBody> handleInvalidChatRequest(MethodArgumentNotValidException exception) {
         return ResponseEntity.badRequest().body(new ChatErrorBody("QUESTION_INVALID"));
+    }
+
+    @ExceptionHandler(MetadataNotSupportedException.class)
+    public ResponseEntity<ChatErrorBody> handleMetadataNotSupported(MetadataNotSupportedException exception) {
+        return ResponseEntity.badRequest().body(new ChatErrorBody("METADATA_NOT_SUPPORTED"));
     }
 
     private record ChatErrorBody(String reason) {

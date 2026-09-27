@@ -11,12 +11,16 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.HostRef;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.HostsResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformsResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.RefreshAllResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.RefreshCountResponse;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkContent;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkService;
+import dev.jordy.jordylab.gamecatalog.service.CatalogRefreshService;
 import dev.jordy.jordylab.gamecatalog.service.ChatAttachmentException;
 import dev.jordy.jordylab.gamecatalog.service.ChatService;
 import dev.jordy.jordylab.gamecatalog.service.ChatUnavailableException;
 import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
+import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +62,9 @@ class GameCatalogControllerTest {
 
     @MockitoBean
     private ChatService chatService;
+
+    @MockitoBean
+    private CatalogRefreshService catalogRefreshService;
 
     @Test
     void gamesReturnsPaginatedSummaries() throws Exception {
@@ -169,6 +176,64 @@ class GameCatalogControllerTest {
     }
 
     @Test
+    void refreshMetadataReturnsTheUpdatedDetail() throws Exception {
+        when(catalogRefreshService.refreshMetadata(GAME_ID)).thenReturn(Optional.of(aDetail()));
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/metadata/refresh", GAME_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.developer").value("Valve"))
+                .andExpect(jsonPath("$.metadataSource").value("STEAM"));
+    }
+
+    @Test
+    void refreshMetadataForANonSteamGameIsBadRequest() throws Exception {
+        when(catalogRefreshService.refreshMetadata(GAME_ID))
+                .thenThrow(new MetadataNotSupportedException("deterministic metadata is Steam-only"));
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/metadata/refresh", GAME_ID))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("METADATA_NOT_SUPPORTED"));
+    }
+
+    @Test
+    void refreshMetadataForAnInvisibleGameIsNotFound() throws Exception {
+        when(catalogRefreshService.refreshMetadata(GAME_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/metadata/refresh", GAME_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void refreshEnrichmentReturnsTheUpdatedDetail() throws Exception {
+        when(catalogRefreshService.refreshEnrichment(GAME_ID)).thenReturn(Optional.of(aDetail()));
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/enrichment/refresh", GAME_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("A classic."));
+    }
+
+    @Test
+    void refreshEnrichmentForAnInvisibleGameIsNotFound() throws Exception {
+        when(catalogRefreshService.refreshEnrichment(GAME_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/enrichment/refresh", GAME_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void refreshPendingReturnsProcessedAndRemainingCounts() throws Exception {
+        when(catalogRefreshService.refreshPending())
+                .thenReturn(new RefreshAllResponse(new RefreshCountResponse(3, 0), new RefreshCountResponse(2, 5)));
+
+        mockMvc.perform(post("/api/gamecatalog/games/refresh"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.metadata.processed").value(3))
+                .andExpect(jsonPath("$.metadata.remaining").value(0))
+                .andExpect(jsonPath("$.enrichment.processed").value(2))
+                .andExpect(jsonPath("$.enrichment.remaining").value(5));
+    }
+
+    @Test
     void chatReturnsAnswerWithCitations() throws Exception {
         when(chatService.ask("which games support 4-player co-op?", List.of()))
                 .thenReturn(new ChatResponse("One game supports 4-player local co-op.",
@@ -252,6 +317,15 @@ class GameCatalogControllerTest {
 
         mockMvc.perform(get("/api/gamecatalog/games/{id}/artwork", GAME_ID))
                 .andExpect(status().isNotFound());
+    }
+
+    private GameDetailResponse aDetail() {
+        return new GameDetailResponse(GAME_ID, "Portal 2", "Steam",
+                List.of(new HostRef("jordybox", SourceType.STEAM)),
+                ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
+                ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
+                EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
+                2, false, true, "A classic.", FIRST_SEEN_AT);
     }
 
     @Language("JSON")

@@ -57,6 +57,8 @@ public class ScanService {
     private final GameInstallationRepository gameInstallationRepository;
     private final ReconciliationService reconciliationService;
     private final ArtworkService artworkService;
+    private final SteamMetadataService steamMetadataService;
+    private final EnrichmentService enrichmentService;
     private final GameCatalogProperties properties;
     private final ObjectMapper objectMapper;
     private final Map<String, LibraryParser> parsers;
@@ -109,6 +111,8 @@ public class ScanService {
 
         ReconciliationCounts counts = reconciliationService.applySnapshot(source, valid, receivedAt);
         artworkService.processArtworkAfterSync(source, valid);
+        populateCatalogData();
+        reconciliationService.purgeUninstalledGames();
         source.recordApplied(payloadHash);
         recordDigest(source, request.clientDigest());
         persistReport(source, request, SyncOutcome.APPLIED, receivedAt, payloadHash, counts, valid.size(),
@@ -117,6 +121,16 @@ public class ScanService {
         return new ScanResponse(SyncOutcome.APPLIED, source.isEnabled(),
                 new SyncCounts(valid.size(), counts.added(), counts.updated(), counts.removed(),
                         rejections.size()), rejections, null);
+    }
+
+    /**
+     * Fetches deterministic metadata and AI enrichment inline for games still awaiting them, capped
+     * per scan so the client's read timeout is never hit. Leftovers drain on the next applied scan
+     * or via the manual refresh endpoints — there is no scheduler.
+     */
+    private void populateCatalogData() {
+        steamMetadataService.fetchPending(properties.metadata().batchSize());
+        enrichmentService.enrichPending(properties.enrichment().batchSize());
     }
 
     /**

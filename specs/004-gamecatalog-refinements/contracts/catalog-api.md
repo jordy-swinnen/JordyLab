@@ -91,6 +91,24 @@ Serves locally stored artwork (unchanged from 002) — now semantically the **co
 
 Unchanged from 002.
 
+## POST `/api/gamecatalog/games/{id}/metadata/refresh` — new
+
+Force re-fetches the deterministic metadata (Steam appdetails) for one game, clearing its failure counter first. `200` with the updated `GameDetailResponse`; `404` when not visible; `400 { "reason": "METADATA_NOT_SUPPORTED" }` for a game with no deterministic source (i.e. not a Steam game).
+
+## POST `/api/gamecatalog/games/{id}/enrichment/refresh` — new
+
+Force re-runs AI enrichment (facts + prose) for one game, clearing its failure counter first. `200` with the updated `GameDetailResponse`; `404` when not visible.
+
+## POST `/api/gamecatalog/games/refresh` — new
+
+Bulk drain of PENDING + FAILED data (no body). Processes up to the per-scan caps and returns the counts so a caller can repeat until `remaining` is zero:
+
+```json
+{ "metadata": { "processed": 3, "remaining": 0 }, "enrichment": { "processed": 2, "remaining": 5 } }
+```
+
+`metadata.remaining` counts only Steam games. There is **no scheduler** in this module: the same passes run inline on every applied scan (capped), and this endpoint drains any leftovers or retries failures on demand.
+
 ## POST `/api/gamecatalog/chat`
 
 ### Request — new optional field in 004

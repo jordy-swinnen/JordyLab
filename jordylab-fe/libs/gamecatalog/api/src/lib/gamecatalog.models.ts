@@ -107,3 +107,13 @@ export interface ChatMessage {
   games?: ChatGameRef[];
   unavailable?: boolean;
 }
+
+export interface RefreshCount {
+  processed: number;
+  remaining: number;
+}
+
+export interface RefreshAll {
+  metadata: RefreshCount;
+  enrichment: RefreshCount;
+}

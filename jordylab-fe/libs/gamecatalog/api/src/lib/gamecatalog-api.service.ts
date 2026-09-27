@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
-import { ChatAnswer, ChatAskResponse, GameDetail, GameSummary, GamesPage, ScanLibraryType, ScanSource } from './gamecatalog.models';
+import { ChatAnswer, ChatAskResponse, GameDetail, GameSummary, GamesPage, RefreshAll, ScanLibraryType, ScanSource } from './gamecatalog.models';
 
 export interface GamesQuery {
   search?: string;
@@ -60,6 +60,18 @@ export class GameCatalogApiService {
 
   setSourceEnabled(id: string, enabled: boolean): Observable<{ id: string; enabled: boolean }> {
     return this.#http.put<{ id: string; enabled: boolean }>(`/api/gamecatalog/sources/${id}/enabled`, { enabled });
+  }
+
+  refreshGameMetadata(id: string): Observable<GameDetail> {
+    return this.#http.post<GameDetail>(`/api/gamecatalog/games/${id}/metadata/refresh`, {});
+  }
+
+  refreshGameEnrichment(id: string): Observable<GameDetail> {
+    return this.#http.post<GameDetail>(`/api/gamecatalog/games/${id}/enrichment/refresh`, {});
+  }
+
+  refreshPending(): Observable<RefreshAll> {
+    return this.#http.post<RefreshAll>('/api/gamecatalog/games/refresh', {});
   }
 
   getScanClient(libraryType: ScanLibraryType): Observable<Blob> {

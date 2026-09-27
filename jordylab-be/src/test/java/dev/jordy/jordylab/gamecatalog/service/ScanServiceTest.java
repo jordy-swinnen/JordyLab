@@ -67,6 +67,12 @@ class ScanServiceTest {
     private ArtworkService artworkService;
 
     @Mock
+    private SteamMetadataService steamMetadataService;
+
+    @Mock
+    private EnrichmentService enrichmentService;
+
+    @Mock
     private LibraryParser emuDeckParser;
 
     @Test
@@ -130,6 +136,46 @@ class ScanServiceTest {
         verify(syncReportRepository, times(1)).save(reportCaptor.capture());
         assertThat(reportCaptor.getValue().getOutcome()).isEqualTo(SyncOutcome.APPLIED);
         assertThat(source.getLastOutcome()).isEqualTo(SyncOutcome.APPLIED);
+    }
+
+    @Test
+    void appliedScanPopulatesCatalogDataInlineAndPurges() {
+        ScanService service = serviceWithLimits(100, 1_000_000);
+        ScanSource source = anEnabledSource();
+        ScanRequest request = aScanRequest(null, false, null);
+        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
+                .thenReturn(Optional.of(source));
+        when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)),
+                org.mockito.ArgumentMatchers.any(Instant.class)))
+                .thenReturn(new ReconciliationCounts(1, 0, 0));
+
+        service.submitScan(request);
+
+        verify(steamMetadataService).fetchPending(25);
+        verify(enrichmentService).enrichPending(8);
+        verify(reconciliationService).purgeUninstalledGames();
+    }
+
+    @Test
+    void noChangeScanSkipsInlinePopulationAndPurge() {
+        ScanService service = serviceWithLimits(100, 1_000_000);
+        ScanSource source = anEnabledSource();
+        ScanRequest request = aScanRequest(null, false, null);
+        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
+                .thenReturn(Optional.of(source));
+        when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)),
+                org.mockito.ArgumentMatchers.any(Instant.class)))
+                .thenReturn(new ReconciliationCounts(1, 0, 0));
+        service.submitScan(request);
+
+        ScanResponse duplicate = service.submitScan(request);
+
+        assertThat(duplicate.outcome()).isEqualTo(SyncOutcome.NO_CHANGE);
+        verify(steamMetadataService, times(1)).fetchPending(25);
+        verify(enrichmentService, times(1)).enrichPending(8);
+        verify(reconciliationService, times(1)).purgeUninstalledGames();
     }
 
     @Test
@@ -401,13 +447,14 @@ class ScanServiceTest {
         GameCatalogProperties properties = new GameCatalogProperties(
                 new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),
                 30,
-                new GameCatalogProperties.Enrichment(50, 3),
+                new GameCatalogProperties.Enrichment(8, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(maxGamesPerSource, maxPayloadBytes, 262_144, 0.5));
 
         return new ScanService(scanSourceRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
-                artworkService, properties, new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
+                artworkService, steamMetadataService, enrichmentService, properties,
+                new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
     }
 
     private static ScanRequest aScanRequest(String machineId, boolean force, List<ClientGame> games) {

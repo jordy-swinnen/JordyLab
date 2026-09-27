@@ -11,7 +11,6 @@ import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -55,27 +54,28 @@ public class EnrichmentService {
     private final ObjectMapper objectMapper;
     private final GameCatalogProperties properties;
 
-    @Scheduled(fixedDelayString = "PT15M", initialDelayString = "PT1M")
+    /**
+     * Enriches up to {@code maxGames} PENDING games. Invoked inline by the scan flow and by the
+     * manual bulk refresh — there is no scheduler.
+     */
     @Transactional
-    public void enrichPendingGames() {
+    public int enrichPending(int maxGames) {
         List<Game> pending = gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(
-                EnrichmentStatus.PENDING, PageRequest.of(0, properties.enrichment().batchSize()));
+                EnrichmentStatus.PENDING, PageRequest.of(0, maxGames));
         if (pending.isEmpty()) {
-            return;
+            return 0;
         }
         log.info("Enriching {} pending game(s)", pending.size());
         pending.forEach(this::enrichOne);
+
+        return pending.size();
     }
 
-    @Scheduled(cron = "0 0 5 * * *")
+    /** Force-regenerates one game's AI facts and prose, clearing its failure counter first. */
     @Transactional
-    public void resetFailedEnrichments() {
-        List<Game> failed = gameRepository.findByEnrichmentStatus(EnrichmentStatus.FAILED);
-        if (failed.isEmpty()) {
-            return;
-        }
-        failed.forEach(Game::resetEnrichmentForRetry);
-        log.info("Reset {} FAILED enrichment(s) for retry", failed.size());
+    public void refresh(Game game) {
+        game.resetEnrichmentForRetry();
+        enrichOne(game);
     }
 
     private void enrichOne(Game game) {

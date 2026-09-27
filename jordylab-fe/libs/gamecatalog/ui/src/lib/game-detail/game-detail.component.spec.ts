@@ -9,14 +9,22 @@ describe('GameDetailComponent', () => {
   const loading = signal(true);
   const notFound = signal(false);
   const error = signal<string | null>(null);
+  const refreshingMetadata = signal(false);
+  const refreshingEnrichment = signal(false);
   const load = vi.fn<GameDetailStore['load']>();
+  const refreshMetadata = vi.fn<GameDetailStore['refreshMetadata']>();
+  const refreshEnrichment = vi.fn<GameDetailStore['refreshEnrichment']>();
 
   const storeMock = {
     game: game.asReadonly(),
     loading: loading.asReadonly(),
     notFound: notFound.asReadonly(),
     error: error.asReadonly(),
+    refreshingMetadata: refreshingMetadata.asReadonly(),
+    refreshingEnrichment: refreshingEnrichment.asReadonly(),
     load,
+    refreshMetadata,
+    refreshEnrichment,
   };
 
   let spectator: Spectator<GameDetailComponent>;
@@ -39,7 +47,11 @@ describe('GameDetailComponent', () => {
     loading.set(true);
     notFound.set(false);
     error.set(null);
+    refreshingMetadata.set(false);
+    refreshingEnrichment.set(false);
     load.mockReset();
+    refreshMetadata.mockReset();
+    refreshEnrichment.mockReset();
     spectator = createComponent();
   });
 
@@ -85,6 +97,37 @@ describe('GameDetailComponent', () => {
     expect(askLink).toBeTruthy();
     expect(askLink?.getAttribute('href')).toContain('/games/chat');
     expect(askLink?.getAttribute('href')).toContain('attach=1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
+  });
+
+  it('forwards the refresh actions to the store', () => {
+    show(aGameDetailMock({ platform: 'Steam' }));
+
+    const buttons = spectator.queryAll('button');
+    const facts = buttons.find((button) => button.textContent?.includes('Refresh facts'));
+    const regenerate = buttons.find((button) => button.textContent?.includes('Regenerate description'));
+    spectator.click(facts as Element);
+    spectator.click(regenerate as Element);
+
+    expect(refreshMetadata).toHaveBeenCalled();
+    expect(refreshEnrichment).toHaveBeenCalled();
+  });
+
+  it('shows a refreshing label while a refresh is in flight', () => {
+    show(aGameDetailMock({ platform: 'Steam' }));
+    refreshingMetadata.set(true);
+    refreshingEnrichment.set(true);
+    spectator.detectChanges();
+
+    expect(spectator.element).toHaveText('Refreshing facts…');
+    expect(spectator.element).toHaveText('Regenerating…');
+  });
+
+  it('hides the deterministic refresh button for non-Steam games', () => {
+    show(aGameDetailMock({ platform: 'SNES' }));
+
+    const buttons = spectator.queryAll('button');
+    expect(buttons.find((button) => button.textContent?.includes('Refresh facts'))).toBeUndefined();
+    expect(buttons.find((button) => button.textContent?.includes('Regenerate description'))).toBeTruthy();
   });
 
   it('shows a banner plate instead of an image when there is no banner', () => {

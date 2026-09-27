@@ -61,7 +61,7 @@ jordylab:
       lookup-timeout-ms: 2000
     grace-period-days: 30
     enrichment:
-      batch-size: 50
+      batch-size: 8
       max-attempts: 3
     chat:
       max-result-games: 50

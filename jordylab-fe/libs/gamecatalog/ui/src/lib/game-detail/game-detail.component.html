@@ -3,4 +3,8 @@
   [loading]="loading()"
   [notFound]="notFound()"
   [error]="error()"
+  [refreshingMetadata]="refreshingMetadata()"
+  [refreshingEnrichment]="refreshingEnrichment()"
+  (refreshMetadata)="onRefreshMetadata()"
+  (refreshEnrichment)="onRefreshEnrichment()"
 />

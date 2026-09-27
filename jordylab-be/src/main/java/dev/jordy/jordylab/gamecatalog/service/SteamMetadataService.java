@@ -8,7 +8,6 @@ import dev.jordy.jordylab.gamecatalog.rest.client.SteamAppDetailsClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,27 +23,28 @@ public class SteamMetadataService {
     private final SteamAppDetailsClient steamAppDetailsClient;
     private final GameCatalogProperties properties;
 
-    @Scheduled(fixedDelayString = "PT15M", initialDelayString = "PT2M")
+    /**
+     * Fetches deterministic metadata for up to {@code maxGames} PENDING Steam games. Invoked inline
+     * by the scan flow and by the manual bulk refresh — there is no scheduler.
+     */
     @Transactional
-    public void fetchPendingMetadata() {
+    public int fetchPending(int maxGames) {
         List<Game> pending = gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
-                PageRequest.of(0, properties.metadata().batchSize()));
+                PageRequest.of(0, maxGames));
         if (pending.isEmpty()) {
-            return;
+            return 0;
         }
         log.info("Fetching deterministic metadata for {} Steam game(s)", pending.size());
         pending.forEach(this::fetchOne);
+
+        return pending.size();
     }
 
-    @Scheduled(cron = "0 30 5 * * *")
+    /** Force re-fetches one Steam game's metadata, clearing its failure counter first. */
     @Transactional
-    public void resetFailedMetadata() {
-        List<Game> failed = gameRepository.findByMetadataStatus(MetadataStatus.FAILED);
-        if (failed.isEmpty()) {
-            return;
-        }
-        failed.forEach(Game::resetMetadataForRetry);
-        log.info("Reset {} FAILED metadata fetch(es) for retry", failed.size());
+    public void refresh(Game game) {
+        game.resetMetadataForRetry();
+        fetchOne(game);
     }
 
     private void fetchOne(Game game) {

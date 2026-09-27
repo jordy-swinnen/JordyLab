@@ -10,10 +10,13 @@ describe('ScanSourceStore', () => {
   const getSources = vi.fn<GameCatalogApiService['getSources']>();
   const setSourceEnabled = vi.fn<GameCatalogApiService['setSourceEnabled']>();
   const getScanClient = vi.fn<GameCatalogApiService['getScanClient']>();
+  const refreshPending = vi.fn<GameCatalogApiService['refreshPending']>();
 
   const createService = createServiceFactory({
     service: ScanSourceStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getSources, setSourceEnabled, getScanClient } }],
+    providers: [
+      { provide: GameCatalogApiService, useValue: { getSources, setSourceEnabled, getScanClient, refreshPending } },
+    ],
   });
 
   beforeEach(() => {
@@ -23,6 +26,10 @@ describe('ScanSourceStore', () => {
     setSourceEnabled.mockImplementation((id, enabled) => of({ id, enabled }));
     getScanClient.mockReset();
     getScanClient.mockReturnValue(of(new Blob(['#!/bin/sh'])));
+    refreshPending.mockReset();
+    refreshPending.mockReturnValue(
+      of({ metadata: { processed: 0, remaining: 0 }, enrichment: { processed: 0, remaining: 0 } })
+    );
   });
 
   describe('load', () => {
@@ -177,6 +184,64 @@ describe('ScanSourceStore', () => {
       expect(spectator.service.error()).toBe('Failed to generate the steam scan client.');
       expect(spectator.service.downloading()).toBeNull();
       expect(onReady).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('refreshPending', () => {
+    it('drains in batches until nothing remains', () => {
+      spectator = createService();
+      refreshPending
+        .mockReturnValueOnce(
+          of({ metadata: { processed: 5, remaining: 5 }, enrichment: { processed: 2, remaining: 5 } })
+        )
+        .mockReturnValueOnce(
+          of({ metadata: { processed: 5, remaining: 0 }, enrichment: { processed: 5, remaining: 0 } })
+        );
+
+      spectator.service.refreshPending();
+
+      expect(refreshPending).toHaveBeenCalledTimes(2);
+      expect(spectator.service.refreshingPending()).toBe(false);
+      expect(spectator.service.refreshProgress()).toBeNull();
+      expect(spectator.service.error()).toBeNull();
+    });
+
+    it('stops with an error when a batch makes no progress', () => {
+      spectator = createService();
+      refreshPending.mockReturnValue(
+        of({ metadata: { processed: 0, remaining: 3 }, enrichment: { processed: 0, remaining: 2 } })
+      );
+
+      spectator.service.refreshPending();
+
+      expect(refreshPending).toHaveBeenCalledTimes(2);
+      expect(spectator.service.refreshingPending()).toBe(false);
+      expect(spectator.service.error()).toContain('stalled');
+    });
+
+    it('reports a failure and stops refreshing', () => {
+      spectator = createService();
+      refreshPending.mockReturnValue(throwError(() => new Error('network error')));
+
+      spectator.service.refreshPending();
+
+      expect(spectator.service.error()).toBe('Failed to refresh catalog data.');
+      expect(spectator.service.refreshingPending()).toBe(false);
+      expect(spectator.service.refreshProgress()).toBeNull();
+    });
+
+    it('ignores a refresh while one is already running', () => {
+      spectator = createService();
+      const inFlight = new Subject<{
+        metadata: { processed: number; remaining: number };
+        enrichment: { processed: number; remaining: number };
+      }>();
+      refreshPending.mockReturnValue(inFlight.asObservable());
+
+      spectator.service.refreshPending();
+      spectator.service.refreshPending();
+
+      expect(refreshPending).toHaveBeenCalledTimes(1);
     });
   });
 });

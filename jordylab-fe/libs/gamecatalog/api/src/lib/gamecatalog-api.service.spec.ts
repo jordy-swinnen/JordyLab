@@ -255,4 +255,38 @@ describe('GameCatalogApiService', () => {
 
     expect(bannerUrl(game)).toBeNull();
   });
+
+  it('posts a deterministic metadata refresh for a game', () => {
+    const refreshed = aGameDetail({ developer: 'Valve' });
+
+    spectator.service.refreshGameMetadata('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
+      expect(detail).toEqual(refreshed);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/metadata/refresh', HttpMethod.POST)
+      .flush(refreshed);
+  });
+
+  it('posts an AI enrichment refresh for a game', () => {
+    const regenerated = aGameDetail({ description: 'Regenerated.' });
+
+    spectator.service.refreshGameEnrichment('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f').subscribe((detail) => {
+      expect(detail).toEqual(regenerated);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/games/1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f/enrichment/refresh', HttpMethod.POST)
+      .flush(regenerated);
+  });
+
+  it('posts a bulk refresh and returns the processed and remaining counts', () => {
+    const counts = { metadata: { processed: 3, remaining: 0 }, enrichment: { processed: 2, remaining: 5 } };
+
+    spectator.service.refreshPending().subscribe((result) => {
+      expect(result).toEqual(counts);
+    });
+
+    spectator.expectOne('/api/gamecatalog/games/refresh', HttpMethod.POST).flush(counts);
+  });
 });

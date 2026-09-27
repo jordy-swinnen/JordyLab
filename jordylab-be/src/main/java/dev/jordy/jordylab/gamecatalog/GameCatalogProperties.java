@@ -49,7 +49,7 @@ public record GameCatalogProperties(
     public record Enrichment(int batchSize, int maxAttempts) {
         public Enrichment {
             if (batchSize <= 0) {
-                batchSize = 50;
+                batchSize = 8;
             }
             if (maxAttempts <= 0) {
                 maxAttempts = 3;

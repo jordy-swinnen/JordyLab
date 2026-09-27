@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
@@ -16,6 +16,11 @@ export class GameDetailViewComponent {
   loading = input.required<boolean>();
   notFound = input.required<boolean>();
   error = input.required<string | null>();
+  refreshingMetadata = input.required<boolean>();
+  refreshingEnrichment = input.required<boolean>();
+
+  refreshMetadata = output<void>();
+  refreshEnrichment = output<void>();
 
   protected readonly coverUrl = coverUrl;
   protected readonly bannerUrl = bannerUrl;

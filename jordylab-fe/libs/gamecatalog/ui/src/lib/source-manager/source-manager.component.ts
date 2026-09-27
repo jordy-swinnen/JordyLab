@@ -16,9 +16,15 @@ export class SourceManagerComponent {
   readonly error = this.#store.error;
   readonly togglingId = this.#store.togglingId;
   readonly downloading = this.#store.downloading;
+  readonly refreshingPending = this.#store.refreshingPending;
+  readonly refreshProgress = this.#store.refreshProgress;
 
   onToggle(source: ScanSource): void {
     this.#store.toggle(source);
+  }
+
+  onRefreshPending(): void {
+    this.#store.refreshPending();
   }
 
   onDownloadClient(libraryType: ScanClientType): void {

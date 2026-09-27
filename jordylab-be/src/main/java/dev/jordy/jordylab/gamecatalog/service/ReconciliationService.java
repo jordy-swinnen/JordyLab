@@ -13,7 +13,6 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -67,7 +66,10 @@ public class ReconciliationService {
         return new ReconciliationCounts(added, updated, removed);
     }
 
-    @Scheduled(cron = "0 0 4 * * *")
+    /**
+     * Deletes installations past the grace period and any game left with no installations. Invoked
+     * inline by the scan flow — there is no scheduler.
+     */
     public void purgeUninstalledGames() {
         Instant cutoff = Instant.now().minus(properties.gracePeriodDays(), ChronoUnit.DAYS);
         List<GameInstallation> expired = gameInstallationRepository
