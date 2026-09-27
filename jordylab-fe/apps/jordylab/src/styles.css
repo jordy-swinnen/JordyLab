@@ -2,28 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Night Lab — blackberry-ink ground, Flare (vermilion) for action, Iris for Steam/secondary data. */
 @layer base {
   :root {
-    --background: 225 44% 4%;
-    --foreground: 210 40% 96%;
-    --card: 225 40% 7%;
-    --card-foreground: 210 40% 96%;
-    --popover: 225 40% 7%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 152 56% 48%;
-    --primary-foreground: 225 44% 4%;
-    --secondary: 220 30% 12%;
-    --secondary-foreground: 210 15% 65%;
-    --muted: 220 25% 10%;
-    --muted-foreground: 215 15% 48%;
-    --accent: 220 30% 14%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 62% 55%;
+    --background: 255 25% 6%;
+    --foreground: 39 35% 92%;
+    --card: 255 24% 10%;
+    --card-foreground: 39 35% 92%;
+    --popover: 255 24% 10%;
+    --popover-foreground: 39 35% 92%;
+    --primary: 14 100% 62%;
+    --primary-foreground: 15 75% 6%;
+    --secondary: 255 24% 13%;
+    --secondary-foreground: 261 12% 67%;
+    --muted: 255 24% 13%;
+    --muted-foreground: 260 9% 58%;
+    --accent: 255 24% 13%;
+    --accent-foreground: 39 35% 92%;
+    --destructive: 0 72% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 20% 14%;
-    --input: 220 25% 12%;
-    --ring: 152 56% 48%;
-    --radius: 0.625rem;
+    --border: 258 19% 18%;
+    --input: 257 17% 25%;
+    --ring: 14 100% 62%;
+    --radius: 0.75rem;
+
+    --rail: 250 25% 5%;
+    --iris: 248 100% 77%;
+    --deep: 247 36% 23%;
   }
 
   * {
@@ -33,22 +38,25 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'Outfit', system-ui, sans-serif;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom scrollbar */
+  ::selection {
+    background: hsl(var(--primary) / 0.35);
+  }
+
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
   }
   ::-webkit-scrollbar-track {
     background: hsl(var(--background));
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 3px;
+    background: hsl(var(--input));
+    border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
@@ -56,35 +64,79 @@
 }
 
 @layer components {
-  /* Prose overrides for dark theme briefing */
+  /* Typography */
+  .eyebrow {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-primary;
+  }
+  .mono-label {
+    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground;
+  }
+  .page-title {
+    @apply font-display font-bold leading-[0.95] tracking-[-0.035em];
+    font-size: clamp(2.75rem, 5vw, 4.25rem);
+    font-variation-settings: 'wdth' 86;
+  }
+  .section-title {
+    @apply font-display text-3xl font-bold tracking-[-0.025em];
+    font-variation-settings: 'wdth' 88;
+  }
+  .display-md {
+    @apply font-display font-semibold tracking-[-0.02em];
+  }
+
+  /* Status pills */
+  .pill {
+    @apply inline-flex items-center gap-[7px] rounded-full bg-primary/15 px-[11px] py-[6px] font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-primary;
+  }
+  .pill::before {
+    content: '';
+    @apply h-1.5 w-1.5 rounded-full bg-current;
+  }
+  .pill-muted {
+    @apply bg-secondary text-muted-foreground;
+  }
+
+  /* Surfaces */
+  .panel {
+    @apply rounded-2xl border border-border bg-card;
+  }
+  .notice-error {
+    @apply rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive;
+  }
+
+  /* Cover plates: flat colour + big initials, used when a game has no artwork */
+  .plate {
+    @apply relative flex aspect-[2/3] w-full flex-col justify-between overflow-hidden p-4;
+  }
+  .plate-initials {
+    @apply font-display font-extrabold leading-[0.85] tracking-[-0.05em];
+    font-size: clamp(2.5rem, 4.4vw, 3.6rem);
+    font-variation-settings: 'wdth' 80;
+  }
+  .cover-frame {
+    @apply overflow-hidden rounded-2xl border border-input transition duration-200;
+  }
+  .card-link:hover .cover-frame,
+  .card-link:focus-visible .cover-frame {
+    @apply -translate-y-1 border-primary;
+  }
+
+  /* Prose overrides for the AI briefing */
   .prose {
-    --tw-prose-body: hsl(210 20% 78%);
+    --tw-prose-body: hsl(39 20% 84%);
     --tw-prose-headings: hsl(var(--foreground));
     --tw-prose-bold: hsl(var(--foreground));
     --tw-prose-links: hsl(var(--primary));
     --tw-prose-counters: hsl(var(--muted-foreground));
-    --tw-prose-bullets: hsl(var(--muted-foreground));
+    --tw-prose-bullets: hsl(var(--primary));
     --tw-prose-hr: hsl(var(--border));
+    --tw-prose-quotes: hsl(var(--foreground));
+    --tw-prose-quote-borders: hsl(var(--primary));
   }
-
-  /* Glow effect utility for primary actions */
-  .glow-primary {
-    box-shadow: 0 0 20px -4px hsla(var(--primary) / 0.3);
-  }
-  .hover\:glow-primary:hover {
-    box-shadow: 0 0 24px -2px hsla(var(--primary) / 0.45);
-  }
-
-  /* Subtle noise texture overlay */
-  .noise-bg::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    opacity: 0.015;
-    pointer-events: none;
-    z-index: 9999;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px 256px;
+  .prose h2,
+  .prose h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-variation-settings: 'wdth' 88;
+    letter-spacing: -0.025em;
   }
 }

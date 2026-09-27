@@ -1,84 +1,113 @@
-<div class="mb-8 flex items-baseline justify-between">
-  <h2
-    class="text-3xl tracking-tight text-foreground"
-    style="font-family: 'Instrument Serif', serif"
-  >
-    Investment Briefing
-  </h2>
+<div class="flex flex-wrap items-end justify-between gap-6">
+  <div class="flex flex-col gap-3.5">
+    <div class="eyebrow">
+      FNA
+      @if (briefing(); as briefing) {
+        · generated {{ briefing.generatedAt | date: 'MMM d, yyyy · h:mm a' }}
+      }
+    </div>
+    <h2 class="page-title">Investment briefing</h2>
+  </div>
   @if (briefing(); as briefing) {
     <button
       hlmBtn
       variant="outline"
-      size="sm"
-      class="text-muted-foreground transition-all duration-200 hover:text-foreground"
+      class="h-11 gap-2 rounded-xl border-input px-5 text-[15px] font-semibold text-foreground"
       (click)="generate.emit()"
     >
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path
+          d="M4 12a8 8 0 0 1 14-5l2 2M20 4v5h-5M20 12a8 8 0 0 1-14 5l-2-2M4 20v-5h5"
+        />
+      </svg>
       Regenerate
     </button>
   }
 </div>
 
-@if (loading()) {
-  <div
-    class="flex flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card/30 py-20"
-  >
-    <div class="relative">
+<div class="mt-11">
+  @if (loading()) {
+    <div class="panel flex flex-col items-center justify-center gap-4 py-24">
       <span
         class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
       ></span>
-    </div>
-    <div class="text-center">
-      <p class="text-sm font-medium text-foreground/70">
-        Analyzing your portfolio…
-      </p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        Claude is reviewing the latest market news
-      </p>
-    </div>
-  </div>
-} @else if (briefing(); as briefing) {
-  <div class="space-y-6">
-    <div class="flex items-center gap-4 text-xs text-muted-foreground">
-      <div class="flex items-center gap-1.5">
-        <span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>
-        <span>{{ briefing.generatedAt | date: 'MMM d, yyyy · h:mm a' }}</span>
+      <div class="text-center">
+        <p class="text-sm font-medium text-foreground/80">
+          Analyzing your portfolio…
+        </p>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Claude is reviewing the latest market news
+        </p>
       </div>
-      <span class="text-border">|</span>
-      <span
-        class="uppercase tracking-wider"
-        style="font-family: 'IBM Plex Mono', monospace"
-      >
-        {{ briefing.modelUsed }}
-      </span>
     </div>
-    <div
-      class="prose prose-sm max-w-none rounded-xl border border-border bg-card/40 p-8 text-card-foreground prose-headings:font-medium prose-headings:tracking-tight prose-h2:text-lg prose-p:leading-relaxed prose-strong:text-foreground"
-      style="font-family: 'Outfit', sans-serif"
-      [innerHTML]="briefing.content | markdown"
-    ></div>
-  </div>
-} @else {
-  <div
-    class="flex flex-col items-center justify-center gap-6 rounded-xl border border-dashed border-border/60 bg-card/20 py-24"
-  >
-    <div class="text-center">
-      <p
-        class="text-xl text-foreground/60"
-        style="font-family: 'Instrument Serif', serif"
+  } @else if (briefing(); as briefing) {
+    <div class="flex flex-col gap-10 xl:flex-row xl:items-start xl:gap-16">
+      <article
+        class="prose prose-lg min-w-0 max-w-[45rem] flex-1 prose-headings:font-semibold prose-h2:mt-11 prose-h2:text-3xl prose-p:leading-[1.75] prose-strong:text-foreground prose-li:leading-relaxed"
+        [innerHTML]="briefing.content | markdown"
+      ></article>
+
+      <aside
+        class="panel w-full flex-shrink-0 px-6 pb-3 pt-1 xl:sticky xl:top-8 xl:w-[300px]"
       >
-        No briefing generated yet
-      </p>
-      <p class="mt-2 max-w-xs text-sm text-muted-foreground">
-        Generate an AI-powered analysis of your portfolio against the latest
-        financial news
-      </p>
+        <h3 class="eyebrow pb-1 pt-[18px]">Built from</h3>
+        <dl class="text-sm">
+          <div
+            class="flex items-baseline justify-between gap-3 border-b border-border py-3.5"
+          >
+            <dt class="mono-label">Generated</dt>
+            <dd class="font-medium">
+              {{ briefing.generatedAt | date: 'MMM d, h:mm a' }}
+            </dd>
+          </div>
+          <div class="flex items-baseline justify-between gap-3 py-3.5">
+            <dt class="mono-label">Model</dt>
+            <dd>
+              <span class="font-mono text-[13px] font-medium uppercase">{{
+                briefing.modelUsed
+              }}</span>
+            </dd>
+          </div>
+        </dl>
+      </aside>
     </div>
-    <button
-      hlmBtn
-      class="glow-primary hover:glow-primary transition-shadow duration-300"
-      (click)="generate.emit()"
+
+    <p
+      class="mt-10 max-w-[45rem] rounded-xl border border-dashed border-input px-5 py-4 text-sm leading-relaxed text-muted-foreground"
     >
-      Generate Briefing
-    </button>
-  </div>
-}
+      AI-generated analysis from your portfolio and recent articles. Not
+      financial advice.
+    </p>
+  } @else {
+    <div
+      class="flex flex-col items-center justify-center gap-6 rounded-2xl border border-dashed border-input py-24"
+    >
+      <div class="text-center">
+        <p class="font-display text-xl font-semibold text-foreground/70">
+          No briefing generated yet
+        </p>
+        <p class="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+          Generate an AI-powered analysis of your portfolio against the latest
+          financial news
+        </p>
+      </div>
+      <button
+        hlmBtn
+        class="h-11 px-6 text-[15px] font-semibold"
+        (click)="generate.emit()"
+      >
+        Generate Briefing
+      </button>
+    </div>
+  }
+</div>

@@ -86,4 +86,17 @@ describe('GameChatComponent', () => {
 
     expect(spectator.element).toHaveText('Chat is currently unavailable.');
   });
+
+  it('renders **bold** markers from the model as emphasis instead of raw asterisks', () => {
+    messages.set([
+      { role: 'user', text: 'co-op games?' },
+      { role: 'assistant', text: 'Try **For The King** (up to 3 players).', games: [] },
+    ]);
+    spectator.detectChanges();
+
+    const bold = spectator.query('span.font-semibold');
+
+    expect(bold).toHaveText('For The King');
+    expect(spectator.element).not.toHaveText('**');
+  });
 });

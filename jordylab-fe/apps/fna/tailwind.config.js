@@ -10,7 +10,7 @@ module.exports = {
     join(__dirname, '../../node_modules/@spartan-ng/**/!(*.spec).{js,mjs,ts}'),
   ],
   theme: {
-    extend: {},
+    extend: require('../../tailwind.theme.js'),
   },
   plugins: [require('@tailwindcss/typography')],
 };

@@ -1,79 +1,127 @@
-<div class="mb-8 flex items-baseline justify-between">
-  <h2
-    class="text-3xl tracking-tight text-foreground"
-    style="font-family: 'Instrument Serif', serif"
-  >
-    Ask the Catalog
-  </h2>
+<div class="flex flex-col gap-3.5">
+  <div class="eyebrow">Game Catalog · grounded in your library</div>
+  <h2 class="page-title">Ask the Catalog</h2>
 </div>
 
-<div class="flex min-h-[50vh] flex-col gap-4">
+<div class="mt-11 flex min-h-[50vh] flex-col gap-8">
   @if (messages().length === 0) {
-    <div class="py-16 text-center text-muted-foreground">
+    <div
+      class="rounded-2xl border border-dashed border-input py-16 text-center text-muted-foreground"
+    >
       <p class="text-sm">Ask a question about your installed games.</p>
       <p class="mt-1 text-xs">
-        For example: "which games support 4-player local co-op?" — answers come only from your catalog.
+        For example: "which games support 4-player local co-op?" — answers come
+        only from your catalog.
       </p>
     </div>
   }
 
   @for (message of messages(); track $index) {
-    <div class="flex" [class.justify-end]="message.role === 'user'">
-      <div
-        class="max-w-prose rounded-lg border px-4 py-3 text-sm"
-        [class]="
-          message.role === 'user'
-            ? 'border-primary/40 bg-primary/10 text-foreground'
-            : message.unavailable
-              ? 'border-dashed border-border text-muted-foreground'
-              : 'border-border bg-card text-foreground/90'
-        "
-      >
-        <p class="leading-relaxed">{{ message.text }}</p>
-        @if (message.games && message.games!.length > 0) {
-          <div class="mt-2 flex flex-wrap gap-1.5">
-            @for (game of message.games!; track game.id) {
-              <a hlmBadge variant="secondary" [routerLink]="['/games', game.id]" class="cursor-pointer">
-                {{ game.title }}
-              </a>
-            }
-          </div>
-        }
+    @if (message.role === 'user') {
+      <div class="flex justify-end">
+        <div
+          class="max-w-[34rem] rounded-[20px] rounded-br-[5px] bg-primary px-[22px] py-[15px] text-base font-semibold leading-snug text-primary-foreground"
+        >
+          {{ message.text }}
+        </div>
       </div>
-    </div>
+    } @else {
+      <div class="flex max-w-[51rem] items-start gap-4">
+        <lib-brand-mark
+          class="mt-0.5"
+          [size]="30"
+          [radius]="9"
+          background="hsl(var(--secondary))"
+          foreground="hsl(var(--primary))"
+        />
+        <div
+          class="min-w-0 text-[17px] leading-[1.65]"
+          [class]="
+            message.unavailable ? 'text-muted-foreground' : 'text-foreground'
+          "
+        >
+          <p>
+            @for (segment of segments(message.text); track $index) {
+              <span [class.font-semibold]="segment.bold">{{
+                segment.text
+              }}</span>
+            }
+          </p>
+          @if (message.games && message.games!.length > 0) {
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+              <span class="mono-label mr-1">Cited</span>
+              @for (game of message.games!; track game.id) {
+                <a
+                  hlmBadge
+                  variant="outline"
+                  [routerLink]="['/games', game.id]"
+                  class="cursor-pointer gap-2 border-input py-1 pl-1 pr-3 text-[13px] font-medium text-secondary-foreground transition-colors hover:border-primary hover:text-foreground"
+                >
+                  <span
+                    class="h-[22px] w-[22px] rounded-full"
+                    [style.background]="palette(game.title).background"
+                    aria-hidden="true"
+                  ></span>
+                  {{ game.title }}
+                </a>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
   }
 
   @if (asking()) {
-    <div class="flex">
-      <div class="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-        <span
-          class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"
-        ></span>
-        Thinking…
-      </div>
+    <div class="flex items-center gap-4 text-sm text-muted-foreground">
+      <lib-brand-mark
+        [size]="30"
+        [radius]="9"
+        background="hsl(var(--secondary))"
+        foreground="hsl(var(--primary))"
+      />
+      <span
+        class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"
+      ></span>
+      Thinking…
     </div>
   }
 </div>
 
-<div class="sticky bottom-6 mt-6 flex gap-2">
+<div
+  class="sticky bottom-6 mt-8 flex gap-3 bg-gradient-to-t from-background via-background to-transparent pt-4"
+>
   <input
     #questionInput
     hlmInput
     type="text"
     placeholder="Ask about your games…"
     aria-label="Ask a question about your games"
-    class="flex-1"
+    class="h-14 flex-1 rounded-2xl border-input bg-card px-[22px] text-base"
     [disabled]="asking()"
     (keydown.enter)="onSubmit(questionInput)"
   />
   <button
     type="button"
     hlmBadge
-    class="px-4 py-2"
+    class="h-14 gap-2 rounded-xl border-transparent bg-primary px-6 text-[15px] font-semibold text-primary-foreground hover:bg-primary/90"
     [class.opacity-40]="asking()"
     [disabled]="asking()"
     (click)="onSubmit(questionInput)"
   >
     Ask
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
   </button>
 </div>
