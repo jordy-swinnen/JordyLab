@@ -107,6 +107,119 @@
 </div>
 
 <div class="mb-5 mt-12 flex flex-wrap items-center justify-between gap-4">
+  <h2 class="section-title">Steam library</h2>
+</div>
+
+<div class="panel flex flex-col gap-5 p-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <button
+      hlmBtn
+      variant="outline"
+      [disabled]="
+        librarySyncing() !== null || libraryStatus()?.ownedConfigured === false
+      "
+      (click)="onSyncOwned()"
+      data-testid="sync-owned-library"
+    >
+      {{ librarySyncing() === 'OWNED' ? 'Syncing…' : 'Sync owned library' }}
+    </button>
+    @if (libraryStatus()?.owned; as owned) {
+      <span class="mono-label">
+        {{ owned.entriesActive }} owned
+        @if (owned.lastSuccessAt) {
+          · last sync {{ owned.lastSuccessAt | date: 'short' }}
+        }
+      </span>
+    }
+  </div>
+  @if (libraryStatus()?.ownedConfigured === false) {
+    <p class="mono-label text-muted-foreground">
+      Steam account not configured — set STEAM_WEB_API_KEY and STEAM_ID to sync
+      the owned library.
+    </p>
+  }
+
+  <div class="flex flex-col gap-3 border-t border-border pt-5">
+    <div class="mono-label">Family library</div>
+    <p class="text-sm text-muted-foreground">
+      Paste a short-lived Steam access token (about 24 hours). It is used for
+      one sync and never stored.
+    </p>
+    <details class="text-sm text-muted-foreground">
+      <summary class="cursor-pointer font-medium text-foreground">
+        How do I get a token?
+      </summary>
+      <ol class="mt-2 list-decimal space-y-1 pl-5">
+        <li>In a browser, sign in to your Steam account.</li>
+        <li>
+          Open the
+          <a
+            href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="underline"
+            >Steam Points Summary config page</a
+          >.
+        </li>
+        <li>
+          Copy the <code class="font-mono">webapi_token</code> value (a long
+          string) and paste it above.
+        </li>
+      </ol>
+      <p class="mt-2">
+        The token expires roughly every 24 hours — paste a fresh one to sync
+        again. This uses Steam's undocumented family API; see the
+        <a
+          href="https://steamapi.xpaw.me/#IFamilyGroupsService/GetSharedLibraryApps"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline"
+          >family API reference</a
+        >.
+      </p>
+    </details>
+    <div class="flex flex-wrap items-center gap-3">
+      <input
+        hlmInput
+        type="password"
+        placeholder="Steam access token"
+        aria-label="Steam family access token"
+        class="h-10 w-full max-w-sm"
+        #familyTokenInput
+        (input)="onFamilyTokenInput($event)"
+      />
+      <button
+        hlmBtn
+        variant="outline"
+        [disabled]="librarySyncing() !== null"
+        (click)="onSyncFamily(familyTokenInput)"
+        data-testid="sync-family-library"
+      >
+        {{ librarySyncing() === 'FAMILY' ? 'Syncing…' : 'Sync family library' }}
+      </button>
+    </div>
+    @if (libraryStatus()?.family; as family) {
+      <span class="mono-label">
+        {{ family.entriesActive }} shared
+        @if (family.lastSuccessAt) {
+          · last sync {{ family.lastSuccessAt | date: 'short' }}
+        }
+        @if (family.stale) {
+          · may be out of date
+        }
+      </span>
+    }
+  </div>
+
+  @if (lastLibraryRun(); as run) {
+    <div class="mono-label border-t border-border pt-5">
+      {{ run.librarySource }} · {{ run.outcome }} · {{ run.entriesAdded }} added
+      · {{ run.metadataCalls }} metadata calls · {{ run.aiCalls }} AI calls
+    </div>
+  }
+</div>
+
+<div class="mb-5 mt-12 flex flex-wrap items-center justify-between gap-4">
   <h2 class="section-title">Scan sources</h2>
   <div class="flex items-center gap-4">
     @if (refreshProgress(); as progress) {

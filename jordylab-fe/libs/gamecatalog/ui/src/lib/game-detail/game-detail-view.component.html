@@ -21,14 +21,16 @@
 <div class="mt-9">
   @if (loading()) {
     <div class="flex flex-col gap-10">
-      <hlm-skeleton class="aspect-[16/5] w-full rounded-[20px]" />
-      <div class="flex flex-col gap-10 md:flex-row">
-        <hlm-skeleton class="aspect-[2/3] w-full max-w-[280px] rounded-[20px]" />
-        <div class="flex-1 space-y-4">
-          <hlm-skeleton class="h-24 w-2/3" />
-          <hlm-skeleton class="h-5 w-32" />
-          <hlm-skeleton class="h-40 w-full" />
-        </div>
+      <div class="relative">
+        <hlm-skeleton class="aspect-[16/5] w-full rounded-[20px]" />
+        <hlm-skeleton
+          class="static mt-4 aspect-[2/3] w-24 rounded-2xl border-4 border-background sm:absolute sm:-bottom-10 sm:left-6 sm:mt-0 sm:w-32 md:left-8 md:w-40"
+        />
+      </div>
+      <div class="mt-4 flex-1 space-y-4">
+        <hlm-skeleton class="h-24 w-2/3" />
+        <hlm-skeleton class="h-5 w-32" />
+        <hlm-skeleton class="h-40 w-full" />
       </div>
     </div>
   } @else if (notFound()) {
@@ -44,57 +46,52 @@
       {{ error() }}
     </div>
   } @else if (game(); as game) {
-    @if (bannerUrl(game); as bannerSrc) {
-      <img
-        [src]="bannerSrc"
-        [alt]="game.title + ' banner'"
-        class="aspect-[16/5] w-full rounded-[20px] border border-input object-cover"
-      />
-    } @else {
+    <div class="relative">
+      @if (bannerUrl(game); as bannerSrc) {
+        <img
+          [src]="bannerSrc"
+          [alt]="game.title + ' banner'"
+          class="aspect-[16/5] w-full rounded-[20px] border border-input object-cover"
+        />
+      } @else {
+        <div
+          class="plate aspect-[16/5] w-full rounded-[20px]"
+          [style.background]="palette(game.title).background"
+          [style.color]="palette(game.title).color"
+          [attr.aria-label]="'No banner for ' + game.title"
+          role="img"
+        >
+          <div class="font-mono text-[10.5px] uppercase tracking-[0.12em] opacity-75">
+            {{ game.platform }}
+          </div>
+          <div class="plate-initials !text-[4rem]">{{ initials(game.title) }}</div>
+        </div>
+      }
+
       <div
-        class="plate aspect-[16/5] w-full rounded-[20px]"
-        [style.background]="palette(game.title).background"
-        [style.color]="palette(game.title).color"
-        [attr.aria-label]="'No banner for ' + game.title"
-        role="img"
+        class="static mt-4 aspect-[2/3] w-24 overflow-hidden rounded-2xl border-4 border-background shadow-xl sm:absolute sm:-bottom-10 sm:left-6 sm:mt-0 sm:w-32 md:left-8 md:w-40"
       >
-        <div class="font-mono text-[10.5px] uppercase tracking-[0.12em] opacity-75">
-          {{ game.platform }}
-        </div>
-        <div class="plate-initials !text-[4rem]">{{ initials(game.title) }}</div>
+        @if (coverUrl(game); as coverSrc) {
+          <img
+            [src]="coverSrc"
+            [alt]="game.title + ' cover'"
+            class="h-full w-full object-cover"
+          />
+        } @else {
+          <div
+            class="plate h-full w-full"
+            [style.background]="palette(game.title).background"
+            [style.color]="palette(game.title).color"
+            [attr.aria-label]="'No artwork for ' + game.title"
+            role="img"
+          >
+            <div class="plate-initials !text-[2rem]">{{ initials(game.title) }}</div>
+          </div>
+        }
       </div>
-    }
+    </div>
 
-    <div class="mt-10 flex flex-col gap-10 md:flex-row md:items-start lg:gap-14">
-      <div class="w-full max-w-[280px] flex-shrink-0">
-        <div class="overflow-hidden rounded-[20px] border border-input">
-          @if (coverUrl(game); as coverSrc) {
-            <img
-              [src]="coverSrc"
-              [alt]="game.title + ' cover'"
-              class="w-full object-cover"
-            />
-          } @else {
-            <div
-              class="plate"
-              [style.background]="palette(game.title).background"
-              [style.color]="palette(game.title).color"
-              [attr.aria-label]="'No artwork for ' + game.title"
-              role="img"
-            >
-              <div
-                class="font-mono text-[10.5px] uppercase tracking-[0.12em] opacity-75"
-              >
-                {{ game.platform }}
-              </div>
-              <div class="plate-initials !text-[5rem]">
-                {{ initials(game.title) }}
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-
+    <div class="mt-6 flex flex-col gap-10 sm:mt-16 md:mt-20">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2.5">
           <span
@@ -117,8 +114,17 @@
         @if (game.hosts.length > 0) {
           <div class="mono-label mt-4">Installed on · {{ hostnames(game) }}</div>
         }
+        <div class="mono-label mt-2 flex flex-wrap items-center gap-2">
+          <span hlmBadge variant="outline" static>
+            {{ game.installStatus === 'INSTALLED' ? 'Installed' : 'Not installed' }}
+          </span>
+          <span hlmBadge variant="outline" static>{{ sourceLabel(game) }}</span>
+        </div>
+        @if (game.familyOwners.length > 0) {
+          <div class="mono-label mt-2">Family · {{ game.familyOwners.join(', ') }}</div>
+        }
 
-        @if (game.enrichmentStatus === 'ENRICHED') {
+        @if (game.enrichmentStatus === 'ENRICHED' || game.metadataSource !== null) {
           <div class="mt-10 flex flex-col gap-10 xl:flex-row xl:items-start">
             <div
               class="panel w-full flex-shrink-0 px-6 pb-2.5 pt-1 xl:w-[380px]"
@@ -165,13 +171,46 @@
                     </dd>
                   </div>
                 }
-                @if (game.maxLocalPlayers !== null) {
+                @if (game.localMultiplayer !== null) {
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
                     <dt class="mono-label">Local co-op</dt>
                     <dd class="text-base font-medium text-foreground">
-                      up to {{ game.maxLocalPlayers }} players
+                      {{ game.localMultiplayer ? 'Yes' : 'No' }}
+                      @if (game.maxLocalPlayers !== null) {
+                        · up to {{ game.maxLocalPlayers }} players
+                      }
+                    </dd>
+                  </div>
+                }
+                @if (game.splitScreen !== null) {
+                  <div
+                    class="flex items-baseline justify-between gap-4 border-b border-border py-4"
+                  >
+                    <dt class="mono-label">Split-screen</dt>
+                    <dd class="text-base font-medium text-foreground">
+                      {{ game.splitScreen ? 'Yes' : 'No' }}
+                    </dd>
+                  </div>
+                }
+                @if (game.onlineOnly !== null) {
+                  <div
+                    class="flex items-baseline justify-between gap-4 border-b border-border py-4"
+                  >
+                    <dt class="mono-label">Online only</dt>
+                    <dd class="text-base font-medium text-foreground">
+                      {{ game.onlineOnly ? 'Yes' : 'No' }}
+                    </dd>
+                  </div>
+                }
+                @if (game.multiplayerSource !== 'UNKNOWN') {
+                  <div
+                    class="flex items-baseline justify-between gap-4 border-b border-border py-4"
+                  >
+                    <dt class="mono-label">Multiplayer data</dt>
+                    <dd class="text-base font-medium text-foreground">
+                      {{ game.multiplayerSource === 'STEAM' ? 'Steam' : 'IGDB' }}
                     </dd>
                   </div>
                 }
@@ -208,9 +247,13 @@
 
             <div class="min-w-0 flex-1 pt-1.5">
               <div class="mono-label">
-                About · written by Claude
-                @if (game.metadataSource) {
-                  · facts from {{ game.metadataSource === 'STEAM' ? 'Steam' : 'AI' }}
+                @if (game.enrichmentStatus === 'ENRICHED') {
+                  About · written by Claude
+                  @if (game.metadataSource) {
+                    · facts from {{ game.metadataSource === 'STEAM' ? 'Steam' : 'AI' }}
+                  }
+                } @else {
+                  About · from Steam
                 }
               </div>
               <p

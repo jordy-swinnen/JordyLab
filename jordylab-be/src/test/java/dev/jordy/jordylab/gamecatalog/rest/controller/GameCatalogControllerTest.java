@@ -2,6 +2,9 @@ package dev.jordy.jordylab.gamecatalog.rest.controller;
 
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
+import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
+import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
+import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatGameRef;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatResponse;
@@ -68,10 +71,10 @@ class GameCatalogControllerTest {
 
     @Test
     void gamesReturnsPaginatedSummaries() throws Exception {
-        when(gameQueryService.getGames(isNull(), isNull(), isNull(), eq(0), eq(60)))
+        when(gameQueryService.getGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(0), eq(60)))
                 .thenReturn(new GamesPageResponse(List.of(
                         new GameSummaryResponse(GAME_ID, "Super Mario World", "SNES", ArtworkStatus.EXTERNAL_URL,
-                                "https://example.com/smw.png", null)),
+                                "https://example.com/smw.png", null, InstallStatus.INSTALLED, LibrarySource.LOCAL, null)),
                         0, 60, 312, 6));
 
         mockMvc.perform(get("/api/gamecatalog/games"))
@@ -90,7 +93,7 @@ class GameCatalogControllerTest {
 
     @Test
     void gamesPassesSearchPlatformHostAndPagination() throws Exception {
-        when(gameQueryService.getGames(eq("mario"), eq("SNES"), eq("jordybox"), eq(2), eq(30)))
+        when(gameQueryService.getGames(eq("mario"), eq("SNES"), eq("jordybox"), eq("INSTALLED"), isNull(), isNull(), eq(2), eq(30)))
                 .thenReturn(new GamesPageResponse(List.of(), 2, 30, 0, 0));
 
         mockMvc.perform(get("/api/gamecatalog/games")
@@ -101,18 +104,18 @@ class GameCatalogControllerTest {
                         .param("size", "30"))
                 .andExpect(status().isOk());
 
-        verify(gameQueryService).getGames("mario", "SNES", "jordybox", 2, 30);
+        verify(gameQueryService).getGames("mario", "SNES", "jordybox", "INSTALLED", null, null, 2, 30);
     }
 
     @Test
     void gamesCapsPageSizeAtTwoHundred() throws Exception {
-        when(gameQueryService.getGames(isNull(), isNull(), isNull(), eq(0), eq(200)))
+        when(gameQueryService.getGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(0), eq(200)))
                 .thenReturn(new GamesPageResponse(List.of(), 0, 200, 0, 0));
 
         mockMvc.perform(get("/api/gamecatalog/games").param("size", "5000"))
                 .andExpect(status().isOk());
 
-        verify(gameQueryService).getGames(null, null, null, 0, 200);
+        verify(gameQueryService).getGames(null, null, null, "INSTALLED", null, null, 0, 200);
     }
 
     @Test
@@ -144,7 +147,7 @@ class GameCatalogControllerTest {
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                         EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
-                        2, false, true, "A classic.", FIRST_SEEN_AT)));
+                        2, false, true, "A classic.", FIRST_SEEN_AT, InstallStatus.INSTALLED, LibrarySource.OWNED, List.of("jordy"), null, null, null, MultiplayerSource.UNKNOWN)));
 
         mockMvc.perform(get("/api/gamecatalog/games/{id}", GAME_ID))
                 .andExpect(status().isOk())
@@ -223,7 +226,7 @@ class GameCatalogControllerTest {
     @Test
     void refreshPendingReturnsProcessedAndRemainingCounts() throws Exception {
         when(catalogRefreshService.refreshPending())
-                .thenReturn(new RefreshAllResponse(new RefreshCountResponse(3, 0), new RefreshCountResponse(2, 5)));
+                .thenReturn(new RefreshAllResponse(new RefreshCountResponse(3, 0), new RefreshCountResponse(2, 5), new RefreshCountResponse(1, 4)));
 
         mockMvc.perform(post("/api/gamecatalog/games/refresh"))
                 .andExpect(status().isOk())
@@ -237,7 +240,7 @@ class GameCatalogControllerTest {
     void chatReturnsAnswerWithCitations() throws Exception {
         when(chatService.ask("which games support 4-player co-op?", List.of()))
                 .thenReturn(new ChatResponse("One game supports 4-player local co-op.",
-                        List.of(new ChatGameRef(GAME_ID, "Super Mario World", "SNES")), false));
+                        List.of(new ChatGameRef(GAME_ID, "Super Mario World", "SNES", null, null)), false));
 
         mockMvc.perform(post("/api/gamecatalog/chat")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -252,7 +255,8 @@ class GameCatalogControllerTest {
     @Test
     void chatPassesAttachedGameIdsToTheService() throws Exception {
         when(chatService.ask("is this good for 4 players?", List.of(GAME_ID)))
-                .thenReturn(new ChatResponse("Yes.", List.of(new ChatGameRef(GAME_ID, "Portal 2", "Steam")), false));
+                .thenReturn(new ChatResponse("Yes.",
+                        List.of(new ChatGameRef(GAME_ID, "Portal 2", "Steam", null, null)), false));
 
         mockMvc.perform(post("/api/gamecatalog/chat")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -343,7 +347,7 @@ class GameCatalogControllerTest {
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                 EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
-                2, false, true, "A classic.", FIRST_SEEN_AT);
+                2, false, true, "A classic.", FIRST_SEEN_AT, InstallStatus.INSTALLED, LibrarySource.OWNED, List.of("jordy"), null, null, null, MultiplayerSource.UNKNOWN);
     }
 
     @Language("JSON")

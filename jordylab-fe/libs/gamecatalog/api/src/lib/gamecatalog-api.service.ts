@@ -1,12 +1,15 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
-import { ChatAnswer, ChatAskResponse, GameDetail, GameSummary, GamesPage, RefreshAll, ScanLibraryType, ScanSource } from './gamecatalog.models';
+import { ChatAnswer, ChatAskResponse, GameDetail, GamesPage, InstallStatus, LibrarySource, LibraryStatus, LibrarySyncRun, RefreshAll, ScanLibraryType, ScanSource } from './gamecatalog.models';
 
 export interface GamesQuery {
   search?: string;
   platform?: string;
   host?: string;
+  installStatus?: InstallStatus;
+  librarySource?: LibrarySource[];
+  localMultiplayer?: boolean;
   page?: number;
   size?: number;
 }
@@ -25,6 +28,15 @@ export class GameCatalogApiService {
     }
     if (query.host) {
       params = params.set('host', query.host);
+    }
+    if (query.installStatus) {
+      params = params.set('installStatus', query.installStatus);
+    }
+    if (query.librarySource && query.librarySource.length > 0) {
+      params = params.set('librarySource', query.librarySource.join(','));
+    }
+    if (query.localMultiplayer) {
+      params = params.set('localMultiplayer', 'true');
     }
     if (query.page !== undefined) {
       params = params.set('page', query.page);
@@ -74,6 +86,18 @@ export class GameCatalogApiService {
     return this.#http.post<RefreshAll>('/api/gamecatalog/games/refresh', {});
   }
 
+  syncOwnedLibrary(force = false): Observable<LibrarySyncRun> {
+    return this.#http.post<LibrarySyncRun>('/api/gamecatalog/library/steam/sync', { force });
+  }
+
+  syncFamilyLibrary(accessToken: string, force = false): Observable<LibrarySyncRun> {
+    return this.#http.post<LibrarySyncRun>('/api/gamecatalog/library/steam-family/sync', { accessToken, force });
+  }
+
+  getLibraryStatus(): Observable<LibraryStatus> {
+    return this.#http.get<LibraryStatus>('/api/gamecatalog/library/status');
+  }
+
   getScanClient(libraryType: ScanLibraryType): Observable<Blob> {
     return this.#http.get(`/api/gamecatalog/ingest/client?libraryType=${libraryType}`, {
       responseType: 'blob',
@@ -95,7 +119,12 @@ export class GameCatalogApiService {
   }
 }
 
-export function coverUrl(game: GameSummary | GameDetail): string | null {
+export interface CoverArtwork {
+  coverUrl: string | null;
+  coverEndpoint: string | null;
+}
+
+export function coverUrl(game: CoverArtwork): string | null {
   return game.coverUrl ?? game.coverEndpoint;
 }
 

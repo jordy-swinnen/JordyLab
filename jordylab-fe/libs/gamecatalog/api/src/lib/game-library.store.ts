@@ -1,8 +1,8 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, debounceTime, distinctUntilChanged, of, startWith, Subject, switchMap } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { GamesPage, GameSummary } from './gamecatalog.models';
+import { GamesPage, GameSummary, InstallStatus, LibrarySource } from './gamecatalog.models';
 
 export const GAME_LIBRARY_PAGE_SIZE = 60;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -21,6 +21,9 @@ export class GameLibraryStore {
   readonly #searchTerm = signal('');
   readonly #selectedPlatform = signal<string | null>(null);
   readonly #selectedHost = signal<string | null>(null);
+  readonly #selectedInstallStatus = signal<InstallStatus>('INSTALLED');
+  readonly #selectedLibrarySource = signal<LibrarySource | null>(null);
+  readonly #localMultiplayerOnly = signal(false);
   readonly #page = signal(0);
   readonly #totalPages = signal(0);
   readonly #totalElements = signal(0);
@@ -33,9 +36,15 @@ export class GameLibraryStore {
   readonly searchTerm = this.#searchTerm.asReadonly();
   readonly selectedPlatform = this.#selectedPlatform.asReadonly();
   readonly selectedHost = this.#selectedHost.asReadonly();
+  readonly selectedInstallStatus = this.#selectedInstallStatus.asReadonly();
+  readonly selectedLibrarySource = this.#selectedLibrarySource.asReadonly();
+  readonly localMultiplayerOnly = this.#localMultiplayerOnly.asReadonly();
   readonly page = this.#page.asReadonly();
   readonly totalPages = this.#totalPages.asReadonly();
   readonly totalElements = this.#totalElements.asReadonly();
+
+  /** The host filter is not offered while "Not installed" is selected (FR-023). */
+  readonly hostFilterAvailable = computed(() => this.#selectedInstallStatus() !== 'NOT_INSTALLED');
 
   constructor() {
     this.#searchInput
@@ -52,12 +61,16 @@ export class GameLibraryStore {
         switchMap(() => {
           this.#loading.set(true);
           this.#error.set(null);
+          const selectedLibrarySource = this.#selectedLibrarySource();
 
           return this.#api
             .getGames({
               search: this.#searchTerm() || undefined,
               platform: this.#selectedPlatform() ?? undefined,
               host: this.#selectedHost() ?? undefined,
+              installStatus: this.#selectedInstallStatus(),
+              librarySource: selectedLibrarySource ? [selectedLibrarySource] : undefined,
+              localMultiplayer: this.#localMultiplayerOnly() || undefined,
               page: this.#page(),
               size: GAME_LIBRARY_PAGE_SIZE,
             })
@@ -103,6 +116,27 @@ export class GameLibraryStore {
 
   selectHost(host: string | null): void {
     this.#selectedHost.set(host);
+    this.#page.set(0);
+    this.#queryTrigger.next();
+  }
+
+  selectInstallStatus(status: InstallStatus): void {
+    this.#selectedInstallStatus.set(status);
+    if (status === 'NOT_INSTALLED') {
+      this.#selectedHost.set(null);
+    }
+    this.#page.set(0);
+    this.#queryTrigger.next();
+  }
+
+  selectLibrarySource(source: LibrarySource | null): void {
+    this.#selectedLibrarySource.set(source);
+    this.#page.set(0);
+    this.#queryTrigger.next();
+  }
+
+  toggleLocalMultiplayerOnly(): void {
+    this.#localMultiplayerOnly.update((value) => !value);
     this.#page.set(0);
     this.#queryTrigger.next();
   }

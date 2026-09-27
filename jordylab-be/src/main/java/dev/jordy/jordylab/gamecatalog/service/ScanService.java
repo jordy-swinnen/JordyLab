@@ -59,6 +59,8 @@ public class ScanService {
     private final ArtworkService artworkService;
     private final SteamMetadataService steamMetadataService;
     private final EnrichmentService enrichmentService;
+    private final SteamLibrarySyncService steamLibrarySyncService;
+    private final MultiplayerService multiplayerService;
     private final GameCatalogProperties properties;
     private final ObjectMapper objectMapper;
     private final Map<String, LibraryParser> parsers;
@@ -113,6 +115,9 @@ public class ScanService {
         artworkService.processArtworkAfterSync(source, valid);
         populateCatalogData();
         reconciliationService.purgeUninstalledGames();
+        if (source.getSourceType() == SourceType.STEAM) {
+            steamLibrarySyncService.syncOwnedIfDue();
+        }
         source.recordApplied(payloadHash);
         recordDigest(source, request.clientDigest());
         persistReport(source, request, SyncOutcome.APPLIED, receivedAt, payloadHash, counts, valid.size(),
@@ -131,6 +136,7 @@ public class ScanService {
     private void populateCatalogData() {
         steamMetadataService.fetchPending(properties.metadata().batchSize());
         enrichmentService.enrichPending(properties.enrichment().batchSize());
+        multiplayerService.derivePending(properties.metadata().batchSize());
     }
 
     /**

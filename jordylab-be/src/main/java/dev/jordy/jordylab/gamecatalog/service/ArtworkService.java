@@ -5,6 +5,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
+import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.ArtworkLookupClient;
@@ -58,6 +59,58 @@ public class ArtworkService {
                 .filter(game -> game.getCoverStatus() == ArtworkStatus.LOCAL_UPLOAD)
                 .filter(game -> game.getCoverRef() != null)
                 .flatMap(game -> readArtworkFile(game.getCoverRef()));
+    }
+
+    /**
+     * Resolves cover and banner artwork for games discovered by a library sync (FR-006). Library
+     * games are Steam titles with no scan source and no local-art upload path, so a missing CDN
+     * asset becomes an explicit placeholder rather than a local-fallback request. Idempotent:
+     * already-resolved slots are skipped.
+     */
+    public int processLibraryGames(List<Game> games) {
+        int processed = 0;
+        for (Game game : games) {
+            if (game.getSteamAppId() == null) {
+                continue;
+            }
+            resolveSteamCover(game);
+            resolveSteamBanner(game);
+            processed++;
+        }
+
+        return processed;
+    }
+
+    private void resolveSteamCover(Game game) {
+        if (game.getCoverStatus() != ArtworkStatus.PENDING) {
+            return;
+        }
+        if (properties.artwork().externalLookupEnabled()) {
+            Optional<String> externalUrl = artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM,
+                    game.getPlatform(), game.getSteamAppId(), game.getTitle());
+            if (externalUrl.isPresent()) {
+                game.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, externalUrl.get());
+
+                return;
+            }
+        }
+        game.applyCoverArtwork(ArtworkStatus.PLACEHOLDER, null);
+    }
+
+    private void resolveSteamBanner(Game game) {
+        if (game.getBannerStatus() != ArtworkStatus.PENDING) {
+            return;
+        }
+        if (properties.artwork().externalLookupEnabled()) {
+            Optional<String> externalUrl = artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM,
+                    game.getPlatform(), game.getSteamAppId(), game.getTitle());
+            if (externalUrl.isPresent()) {
+                game.applyBannerArtwork(ArtworkStatus.EXTERNAL_URL, externalUrl.get());
+
+                return;
+            }
+        }
+        game.applyBannerArtwork(ArtworkStatus.PLACEHOLDER, null);
     }
 
     private void resolveCover(ScanSource source, Game game, GamePayload entry, List<String> requested) {

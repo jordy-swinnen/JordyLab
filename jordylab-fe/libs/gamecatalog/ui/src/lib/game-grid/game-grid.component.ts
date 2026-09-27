@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { GameLibraryStore } from '@jordylab-fe/gamecatalog/api';
+import { GameLibraryStore, InstallStatus, LibrarySource } from '@jordylab-fe/gamecatalog/api';
 import { GameGridViewComponent } from './game-grid-view.component';
 
 @Component({
@@ -18,6 +18,10 @@ export class GameGridComponent {
   readonly error = this.#store.error;
   readonly selectedPlatform = this.#store.selectedPlatform;
   readonly selectedHost = this.#store.selectedHost;
+  readonly selectedInstallStatus = this.#store.selectedInstallStatus;
+  readonly selectedLibrarySource = this.#store.selectedLibrarySource;
+  readonly localMultiplayerOnly = this.#store.localMultiplayerOnly;
+  readonly hostFilterAvailable = this.#store.hostFilterAvailable;
   readonly page = this.#store.page;
   readonly totalPages = this.#store.totalPages;
   readonly totalElements = this.#store.totalElements;
@@ -32,6 +36,18 @@ export class GameGridComponent {
 
   onHostSelected(host: string | null): void {
     this.#store.selectHost(host);
+  }
+
+  onInstallStatusSelected(status: InstallStatus): void {
+    this.#store.selectInstallStatus(status);
+  }
+
+  onLibrarySourceSelected(source: LibrarySource | null): void {
+    this.#store.selectLibrarySource(source);
+  }
+
+  onLocalMultiplayerOnlyToggled(): void {
+    this.#store.toggleLocalMultiplayerOnly();
   }
 
   onPageChanged(page: number): void {

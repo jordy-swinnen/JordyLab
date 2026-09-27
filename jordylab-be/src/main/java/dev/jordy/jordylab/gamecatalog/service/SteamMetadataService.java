@@ -3,8 +3,10 @@ package dev.jordy.jordylab.gamecatalog.service;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
+import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.SteamAppDetailsClient;
+import dev.jordy.jordylab.gamecatalog.rest.client.SteamRateLimitedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -24,20 +26,41 @@ public class SteamMetadataService {
     private final GameCatalogProperties properties;
 
     /**
-     * Fetches deterministic metadata for up to {@code maxGames} PENDING Steam games. Invoked inline
-     * by the scan flow and by the manual bulk refresh — there is no scheduler.
+     * Fetches deterministic metadata for up to {@code maxGames} PENDING Steam games, unpaced.
+     * Invoked inline by the scan flow — there is no scheduler.
      */
     @Transactional
     public int fetchPending(int maxGames) {
-        List<Game> pending = gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
-                PageRequest.of(0, maxGames));
+        return fetchPending(maxGames, 0L);
+    }
+
+    /**
+     * Fetches deterministic metadata for up to {@code maxGames} PENDING Steam games, pacing calls
+     * {@code minIntervalMs} apart and pausing the batch on HTTP 429 without recording a failure.
+     * Used by the library sync so a large first sync respects Steam's store rate limit.
+     */
+    @Transactional
+    public int fetchPending(int maxGames, long minIntervalMs) {
+        List<Game> pending = gameRepository.findMetadataBacklog(MetadataStatus.PENDING, PageRequest.of(0, maxGames));
         if (pending.isEmpty()) {
             return 0;
         }
         log.info("Fetching deterministic metadata for {} Steam game(s)", pending.size());
-        pending.forEach(this::fetchOne);
+        int processed = 0;
+        for (Game game : pending) {
+            if (processed > 0 && minIntervalMs > 0) {
+                pause(minIntervalMs);
+            }
+            try {
+                fetchOne(game);
+            } catch (SteamRateLimitedException rateLimited) {
+                log.warn("Steam store rate limit hit; pausing metadata batch after {} game(s)", processed);
+                break;
+            }
+            processed++;
+        }
 
-        return pending.size();
+        return processed;
     }
 
     /** Force re-fetches one Steam game's metadata, clearing its failure counter first. */
@@ -57,6 +80,31 @@ public class SteamMetadataService {
         }
 
         SteamAppDetailsClient.SteamMetadata facts = metadata.get();
+        if (!facts.isGame()) {
+            // A tool/runtime that slipped past the deny-list: keep it out of retry loops.
+            log.info("Marking '{}' (appid {}) as non-game; no metadata applied", game.getTitle(), game.getSteamAppId());
+            game.markMetadataFetched();
+
+            return;
+        }
         game.applyDeterministicMetadata(facts.genres(), facts.developer(), facts.publisher(), facts.releaseYear());
+        SteamAppDetailsClient.MultiplayerFacts multiplayer = facts.multiplayer();
+        if (multiplayer != null && multiplayer.categoriesPresent()) {
+            game.applyDeterministicMultiplayerFlags(multiplayer.singlePlayer(), multiplayer.onlineMultiplayer());
+            // Steam categories carry no player counts, so maxLocalPlayers stays untouched.
+            game.applyDeterministicMultiplayer(multiplayer.localMultiplayer(), multiplayer.splitScreen(), null,
+                    MultiplayerSource.STEAM);
+        }
+        game.applyDeterministicDescription(facts.shortDescription());
+        game.markMetadataFetched();
+    }
+
+    private void pause(long minIntervalMs) {
+        try {
+            Thread.sleep(minIntervalMs);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while pacing Steam metadata calls", interrupted);
+        }
     }
 }

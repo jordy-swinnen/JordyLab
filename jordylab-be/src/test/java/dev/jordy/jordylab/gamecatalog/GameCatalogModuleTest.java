@@ -10,11 +10,15 @@ import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
+import dev.jordy.jordylab.gamecatalog.domain.TitleSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameLibraryEntryRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.LibrarySyncRunRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.SteamAppDetailsClient;
+import dev.jordy.jordylab.gamecatalog.rest.client.SteamOwnedGamesClient;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
@@ -24,8 +28,12 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkService;
 import dev.jordy.jordylab.gamecatalog.service.CatalogRefreshService;
+import dev.jordy.jordylab.gamecatalog.service.EnrichmentService;
 import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
+import dev.jordy.jordylab.gamecatalog.service.ReconciliationService;
 import dev.jordy.jordylab.gamecatalog.service.ScanService;
+import dev.jordy.jordylab.gamecatalog.service.SteamLibrarySyncService;
+import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import org.mockito.Answers;
 import org.junit.jupiter.api.Test;
@@ -46,6 +54,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ApplicationModuleTest
@@ -72,6 +81,8 @@ class GameCatalogModuleTest {
     @org.junit.jupiter.api.BeforeEach
     void cleanCatalog() {
         syncReportRepository.deleteAll();
+        librarySyncRunRepository.deleteAll();
+        gameLibraryEntryRepository.deleteAll();
         gameInstallationRepository.deleteAll();
         gameRepository.deleteAll();
         scanSourceRepository.deleteAll();
@@ -89,6 +100,21 @@ class GameCatalogModuleTest {
     @Autowired
     private CatalogRefreshService catalogRefreshService;
 
+    @Autowired
+    private EnrichmentService enrichmentService;
+
+    @Autowired
+    private SteamLibrarySyncService steamLibrarySyncService;
+
+    @Autowired
+    private ReconciliationService reconciliationService;
+
+    @Autowired
+    private GameLibraryEntryRepository gameLibraryEntryRepository;
+
+    @Autowired
+    private LibrarySyncRunRepository librarySyncRunRepository;
+
     // Unstubbed calls return a mock AiCallResult whose success() is false, so inline enrichment
     // degrades to a recorded failure instead of a null dereference.
     @MockitoBean(answers = Answers.RETURNS_MOCKS)
@@ -96,6 +122,9 @@ class GameCatalogModuleTest {
 
     @MockitoBean
     private SteamAppDetailsClient steamAppDetailsClient;
+
+    @MockitoBean
+    private SteamOwnedGamesClient ownedGamesClient;
 
     @TestConfiguration
     static class ObjectMapperTestConfiguration {
@@ -184,9 +213,9 @@ class GameCatalogModuleTest {
                 null);
         scanService.submitScan(steamRequest);
 
-        GamesPageResponse all = gameQueryService.getGames(null, null, null, 0, 60);
-        GamesPageResponse searched = gameQueryService.getGames("Portal", null, null, 0, 60);
-        GamesPageResponse platformFiltered = gameQueryService.getGames(null, "PlayStation 2", null, 0, 60);
+        GamesPageResponse all = gameQueryService.getGames(null, null, null, null, null, null, 0, 60);
+        GamesPageResponse searched = gameQueryService.getGames("Portal", null, null, null, null, null, 0, 60);
+        GamesPageResponse platformFiltered = gameQueryService.getGames(null, "PlayStation 2", null, null, null, null, 0, 60);
 
         assertSoftly(softly -> {
             softly.assertThat(all.content())
@@ -203,7 +232,7 @@ class GameCatalogModuleTest {
         source.setEnabled(false);
         scanSourceRepository.save(source);
 
-        GamesPageResponse afterDisable = gameQueryService.getGames(null, null, null, 0, 60);
+        GamesPageResponse afterDisable = gameQueryService.getGames(null, null, null, null, null, null, 0, 60);
         assertSoftly(softly -> {
             softly.assertThat(afterDisable.content()).isEmpty();
             softly.assertThat(gameQueryService.getPlatforms().platforms()).isEmpty();
@@ -297,9 +326,9 @@ class GameCatalogModuleTest {
         scanService.submitScan(aSteamRequest("jordybox", Map.of("440", "Team Fortress 2", "620", "Portal 2")));
         scanService.submitScan(aSteamRequest("ryzen-desktop", Map.of("620", "Portal 2")));
 
-        GamesPageResponse all = gameQueryService.getGames(null, null, null, 0, 60);
-        GamesPageResponse jordybox = gameQueryService.getGames(null, null, "jordybox", 0, 60);
-        GamesPageResponse desktop = gameQueryService.getGames(null, null, "ryzen-desktop", 0, 60);
+        GamesPageResponse all = gameQueryService.getGames(null, null, null, null, null, null, 0, 60);
+        GamesPageResponse jordybox = gameQueryService.getGames(null, null, "jordybox", null, null, null, 0, 60);
+        GamesPageResponse desktop = gameQueryService.getGames(null, null, "ryzen-desktop", null, null, null, 0, 60);
 
         assertSoftly(softly -> {
             softly.assertThat(all.content()).hasSize(2);
@@ -314,7 +343,7 @@ class GameCatalogModuleTest {
     @Test
     void scanPopulatesDeterministicMetadataInline() {
         when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(
-                new SteamAppDetailsClient.SteamMetadata("Puzzle, Adventure", "Valve", "Valve", 2011)));
+                new SteamAppDetailsClient.SteamMetadata("Puzzle, Adventure", "Valve", "Valve", 2011, null, "game", null)));
 
         scanService.submitScan(aSteamRequest("jordybox", "620", "Portal 2"));
 
@@ -330,7 +359,7 @@ class GameCatalogModuleTest {
     @Test
     void bulkRefreshDrainsPendingDataAndReportsRemaining() {
         when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(
-                new SteamAppDetailsClient.SteamMetadata("Puzzle", "Valve", "Valve", 2011)));
+                new SteamAppDetailsClient.SteamMetadata("Puzzle", "Valve", "Valve", 2011, null, "game", null)));
 
         scanService.submitScan(aSteamRequest("jordybox", "620", "Portal 2"));
         RefreshAllResponse response = catalogRefreshService.refreshPending();
@@ -340,6 +369,49 @@ class GameCatalogModuleTest {
             softly.assertThat(response.metadata().remaining()).isZero();
             softly.assertThat(response.enrichment().processed()).isEqualTo(1);
             softly.assertThat(response.enrichment().remaining()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void steamAppIdIsUniqueAtTheDatabaseLevel() {
+        Game first = reconciliationService.resolveOrCreateSteamGame("620", "Portal 2", TitleSource.MANIFEST);
+        Game second = reconciliationService.resolveOrCreateSteamGame("620", "Portal 2 Reloaded", TitleSource.LIBRARY);
+
+        assertSoftly(softly -> {
+            softly.assertThat(second.getId()).isEqualTo(first.getId());
+            softly.assertThat(gameRepository.count()).isEqualTo(1);
+            softly.assertThat(gameRepository.findBySteamAppId("620")).isPresent();
+        });
+    }
+
+    @Test
+    void libraryReportingAnEnrichedGameCausesNoNewStoreOrAiCalls() {
+        when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata(
+                "Puzzle, Adventure", "Valve", "Valve", 2011, "A puzzle platformer.", "game",
+                new SteamAppDetailsClient.MultiplayerFacts(true, false, false, false, true))));
+        scanService.submitScan(aSteamRequest("jordybox", "620", "Portal 2"));
+        Game game = gameRepository.findAll().getFirst();
+        when(resilientAiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+                eq("Game: Portal 2\nPlatform: Steam\nKnown multiplayer facts (use verbatim, do not contradict):"
+                        + "\n- Local multiplayer: no\n- Split-screen: no")))
+                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", """
+                        {"genre":"Puzzle","genres":"Puzzle, Adventure","developer":"Valve","publisher":"Valve",
+                         "releaseYear":2011,"onlineMultiplayer":false,"singlePlayer":true,
+                         "description":"A classic."}
+                        """));
+        catalogRefreshService.refreshEnrichment(game.getId());
+        org.mockito.Mockito.clearInvocations(steamAppDetailsClient, resilientAiService);
+
+        when(ownedGamesClient.fetchOwnedGames())
+                .thenReturn(Optional.of(List.of(new SteamOwnedGamesClient.OwnedGame("620", "Portal 2"))));
+        when(ownedGamesClient.isConfigured()).thenReturn(true);
+        steamLibrarySyncService.syncOwned(false);
+
+        org.mockito.Mockito.verifyNoInteractions(steamAppDetailsClient);
+        org.mockito.Mockito.verifyNoInteractions(resilientAiService);
+        assertSoftly(softly -> {
+            softly.assertThat(gameRepository.count()).isEqualTo(1);
+            softly.assertThat(gameLibraryEntryRepository.count()).isEqualTo(1);
         });
     }
 

@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { ScanLibraryType, ScanSource } from './gamecatalog.models';
+import { LibraryStatus, LibrarySyncRun, ScanLibraryType, ScanSource } from './gamecatalog.models';
 
 @Injectable({ providedIn: 'root' })
 export class ScanSourceStore {
@@ -14,6 +14,9 @@ export class ScanSourceStore {
   readonly #downloading = signal<ScanLibraryType | null>(null);
   readonly #refreshingPending = signal(false);
   readonly #refreshProgress = signal<string | null>(null);
+  readonly #libraryStatus = signal<LibraryStatus | null>(null);
+  readonly #librarySyncing = signal<'OWNED' | 'FAMILY' | null>(null);
+  readonly #lastLibraryRun = signal<LibrarySyncRun | null>(null);
 
   readonly sources = this.#sources.asReadonly();
   readonly loading = this.#loading.asReadonly();
@@ -22,9 +25,13 @@ export class ScanSourceStore {
   readonly downloading = this.#downloading.asReadonly();
   readonly refreshingPending = this.#refreshingPending.asReadonly();
   readonly refreshProgress = this.#refreshProgress.asReadonly();
+  readonly libraryStatus = this.#libraryStatus.asReadonly();
+  readonly librarySyncing = this.#librarySyncing.asReadonly();
+  readonly lastLibraryRun = this.#lastLibraryRun.asReadonly();
 
   constructor() {
     this.load();
+    this.loadLibraryStatus();
   }
 
   load(): void {
@@ -106,7 +113,8 @@ export class ScanSourceStore {
           return;
         }
 
-        const remaining = result.metadata.remaining + result.enrichment.remaining;
+        const remaining =
+          result.metadata.remaining + result.enrichment.remaining + result.multiplayer.remaining;
         if (remaining === 0) {
           this.#refreshingPending.set(false);
           this.#refreshProgress.set(null);
@@ -125,13 +133,11 @@ export class ScanSourceStore {
         this.#drainPending(remaining);
       });
   }
-
   /** Generating the client is state; saving it is a browser side effect, so the blob is handed to `onReady`. */
   downloadClient(libraryType: ScanLibraryType, onReady: (blob: Blob) => void): void {
     if (this.#downloading()) {
       return;
     }
-
     this.#downloading.set(libraryType);
     this.#error.set(null);
 
@@ -148,6 +154,47 @@ export class ScanSourceStore {
         this.#downloading.set(null);
         if (blob) {
           onReady(blob);
+        }
+      });
+  }
+
+  loadLibraryStatus(): void {
+    this.#api
+      .getLibraryStatus()
+      .pipe(catchError(() => of(null)))
+      .subscribe((status) => this.#libraryStatus.set(status));
+  }
+
+  syncOwnedLibrary(): void {
+    this.#runLibrarySync('OWNED', () => this.#api.syncOwnedLibrary());
+  }
+
+  syncFamilyLibrary(accessToken: string): void {
+    this.#runLibrarySync('FAMILY', () => this.#api.syncFamilyLibrary(accessToken));
+  }
+
+  #runLibrarySync(source: 'OWNED' | 'FAMILY', call: () => Observable<LibrarySyncRun>): void {
+    if (this.#librarySyncing()) {
+      return;
+    }
+
+    this.#librarySyncing.set(source);
+    this.#error.set(null);
+
+    call()
+      .pipe(
+        catchError(() => {
+          this.#error.set(`Failed to sync the ${source.toLowerCase()} library.`);
+          this.#librarySyncing.set(null);
+
+          return of(null);
+        })
+      )
+      .subscribe((run) => {
+        this.#librarySyncing.set(null);
+        if (run) {
+          this.#lastLibraryRun.set(run);
+          this.loadLibraryStatus();
         }
       });
   }

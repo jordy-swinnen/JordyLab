@@ -8,6 +8,7 @@ import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameLibraryEntryRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameSummaryResponse;
@@ -52,21 +53,25 @@ class GameQueryServiceTest {
     @Mock
     private GameInstallationRepository gameInstallationRepository;
 
+    @Mock
+    private GameLibraryEntryRepository gameLibraryEntryRepository;
+
     private GameQueryService gameQueryService;
 
     @BeforeEach
     void setUp() {
-        gameQueryService = new GameQueryService(gameRepository, gameInstallationRepository);
+        gameQueryService = new GameQueryService(gameRepository, gameInstallationRepository,
+                gameLibraryEntryRepository);
     }
 
     @Test
     void mapsVisibleGamesToSummariesWithExternalCoverUrl() {
         Game game = aGame("Super Mario World");
         game.applyCoverArtwork(ArtworkStatus.EXTERNAL_URL, "https://example.com/smw.png");
-        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(game), 1));
 
-        GamesPageResponse response = gameQueryService.getGames(null, null, null, 0, 60);
+        GamesPageResponse response = gameQueryService.getGames(null, null, null, null, null, null, 0, 60);
 
         assertSoftly(softly -> {
             softly.assertThat(response.content()).hasSize(1);
@@ -88,10 +93,10 @@ class GameQueryServiceTest {
     void mapsLocalUploadToCoverEndpointInsteadOfUrl() {
         Game game = aGame("Chrono Trigger");
         game.applyCoverArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/abc123.png");
-        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(game), 1));
 
-        GamesPageResponse response = gameQueryService.getGames(null, null, null, 0, 60);
+        GamesPageResponse response = gameQueryService.getGames(null, null, null, null, null, null, 0, 60);
 
         assertSoftly(softly -> {
             softly.assertThat(response.content().getFirst().coverUrl()).isNull();
@@ -105,10 +110,10 @@ class GameQueryServiceTest {
         Game pending = aGame("Pending Game");
         Game placeholder = aGame("Placeholder Game");
         placeholder.applyCoverArtwork(ArtworkStatus.PLACEHOLDER, null);
-        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(pending, placeholder), 2));
 
-        GamesPageResponse response = gameQueryService.getGames(null, null, null, 0, 60);
+        GamesPageResponse response = gameQueryService.getGames(null, null, null, null, null, null, 0, 60);
 
         assertThat(response.content()).allSatisfy(summary -> assertSoftly(softly -> {
             softly.assertThat(summary.coverUrl()).isNull();
@@ -119,22 +124,22 @@ class GameQueryServiceTest {
     @Test
     void passesSearchPlatformHostAndPaginationToRepository() {
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        when(gameRepository.findVisibleGames(eq("mario"), eq(PLATFORM), eq("jordybox"), pageableCaptor.capture()))
+        when(gameRepository.findVisibleGames(eq("mario"), eq(PLATFORM), eq("jordybox"), eq("INSTALLED"), isNull(), isNull(), pageableCaptor.capture()))
                 .thenReturn(pageOf(List.of(), 0));
 
-        gameQueryService.getGames("mario", PLATFORM, "jordybox", 2, 60);
+        gameQueryService.getGames("mario", PLATFORM, "jordybox", null, null, null, 2, 60);
 
         assertThat(pageableCaptor.getValue()).isEqualTo(PageRequest.of(2, 60));
     }
 
     @Test
     void blankFiltersBecomeNullForRepository() {
-        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE)))
+        when(gameRepository.findVisibleGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(FIRST_PAGE)))
                 .thenReturn(pageOf(List.of(), 0));
 
-        gameQueryService.getGames(" ", "", " ", 0, 60);
+        gameQueryService.getGames(" ", "", " ", null, null, null, 0, 60);
 
-        verify(gameRepository).findVisibleGames(isNull(), isNull(), isNull(), eq(FIRST_PAGE));
+        verify(gameRepository).findVisibleGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(FIRST_PAGE));
     }
 
     @Test
@@ -158,7 +163,7 @@ class GameQueryServiceTest {
     @Test
     void detailExposesEnrichmentFieldsForEnrichedGame() {
         Game game = aGame("Super Mario World");
-        game.applyEnrichment("Platformer", 2, false, true, "A classic.");
+        game.applyEnrichment("Platformer", false, true, "A classic.");
         GameInstallation installation = anInstallation(game, aSource("jordybox", SourceType.EMUDECK));
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
         when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(installation));
@@ -167,9 +172,7 @@ class GameQueryServiceTest {
 
         assertSoftly(softly -> {
             softly.assertThat(detail).isPresent();
-            softly.assertThat(detail.get().genre()).isEqualTo("Platformer");
-            softly.assertThat(detail.get().maxLocalPlayers()).isEqualTo(2);
-            softly.assertThat(detail.get().description()).isEqualTo("A classic.");
+            softly.assertThat(detail.get().genre()).isEqualTo("Platformer");            softly.assertThat(detail.get().description()).isEqualTo("A classic.");
             softly.assertThat(detail.get().hosts()).hasSize(1);
             softly.assertThat(detail.get().hosts().getFirst().hostname()).isEqualTo("jordybox");
             softly.assertThat(detail.get().hosts().getFirst().sourceType()).isEqualTo(SourceType.EMUDECK);
@@ -199,6 +202,7 @@ class GameQueryServiceTest {
                 .title("Portal 2")
                 .build();
         game.applyDeterministicMetadata("Puzzle, Adventure", "Valve", "Valve", 2011);
+        game.markMetadataFetched();
         GameInstallation installation = anInstallation(game, aSource("jordybox", SourceType.STEAM));
         when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
         when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(installation));

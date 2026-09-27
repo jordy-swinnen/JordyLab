@@ -9,6 +9,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationReposito
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatGameRef;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatResponse;
+import dev.jordy.jordylab.gamecatalog.util.ArtworkUrls;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import lombok.RequiredArgsConstructor;
@@ -38,10 +39,13 @@ public class ChatService {
     private static final int MAX_LOCAL_PLAYERS_UPPER_BOUND = 64;
     private static final int MAX_FILTER_PLATFORMS = 10;
     private static final int MAX_FILTER_HOSTS = 10;
+    private static final int MAX_FILTER_LIBRARY_SOURCES = 3;
     private static final int MAX_ATTACHED_GAMES = 5;
     private static final Set<String> ALLOWED_FILTER_FIELDS = Set.of("titleSearch", "genre", "genresSearch",
             "developerSearch", "releaseYearMin", "releaseYearMax", "minLocalPlayers", "onlineMultiplayer",
-            "singlePlayer", "platforms", "hosts");
+            "singlePlayer", "platforms", "hosts", "installStatus", "librarySources", "localMultiplayer");
+    private static final Set<String> ALLOWED_INSTALL_STATUSES = Set.of("INSTALLED", "NOT_INSTALLED");
+    private static final List<String> ALLOWED_LIBRARY_SOURCES = List.of("OWNED", "FAMILY", "LOCAL");
 
     static final String TRANSLATION_SYSTEM_PROMPT = """
             You translate questions about a personal video game catalog into a strict JSON filter.
@@ -57,7 +61,10 @@ public class ChatService {
               "onlineMultiplayer": "true/false, or null",
               "singlePlayer": "true/false, or null",
               "platforms": "array of platform names from the provided platform list, or null",
-              "hosts": "array of host names from the provided host list, or null"
+              "hosts": "array of host names from the provided host list, or null",
+              "installStatus": "INSTALLED or NOT_INSTALLED, or null for no constraint",
+              "librarySources": "array of OWNED, FAMILY, LOCAL, or null for no constraint",
+              "localMultiplayer": "true to require local/couch multiplayer support, or null"
             }
             Every field you do not need must be null. Never invent fields, platform names, or host names.
             """;
@@ -83,10 +90,15 @@ public class ChatService {
         List<String> visibleHosts = gameRepository.findVisibleHosts();
         ChatFilter filter = translate(question, visiblePlatforms, visibleHosts);
 
-        List<Game> rows = gameRepository.findForChatFilter(filter.titleSearch(), filter.genre(),
-                filter.genresSearch(), filter.developerSearch(), filter.releaseYearMin(), filter.releaseYearMax(),
-                filter.minLocalPlayers(), filter.onlineMultiplayer(), filter.singlePlayer(), filter.platforms(),
-                filter.hosts(), PageRequest.of(0, properties.chat().maxResultGames()));
+        List<Game> rows = filter.isEmpty() && !attachedGames.isEmpty()
+                ? List.of()
+                : gameRepository.findForChatFilter(filter.titleSearch(), filter.genre(), filter.genresSearch(),
+                        filter.developerSearch(), filter.releaseYearMin(), filter.releaseYearMax(),
+                        filter.minLocalPlayers(), filter.onlineMultiplayer(), filter.singlePlayer(),
+                        filter.platforms(), filter.hosts(),
+                        filter.installStatus() == null ? "ALL" : filter.installStatus(), filter.librarySources(),
+                        filter.localMultiplayer(),
+                        PageRequest.of(0, properties.chat().maxResultGames()));
 
         List<Game> contextRows = mergeContext(attachedGames, rows, properties.chat().maxResultGames());
         if (contextRows.isEmpty()) {
@@ -215,9 +227,14 @@ public class ChatService {
             Boolean singlePlayer = optionalBoolean(node, "singlePlayer");
             List<String> platforms = optionalMembers(node, "platforms", visiblePlatforms, MAX_FILTER_PLATFORMS);
             List<String> hosts = optionalMembers(node, "hosts", visibleHosts, MAX_FILTER_HOSTS);
+            String installStatus = optionalEnumText(node, "installStatus", ALLOWED_INSTALL_STATUSES);
+            List<String> librarySources = optionalMembers(node, "librarySources", ALLOWED_LIBRARY_SOURCES,
+                    MAX_FILTER_LIBRARY_SOURCES);
+            Boolean localMultiplayer = optionalBoolean(node, "localMultiplayer");
 
             return Optional.of(new ChatFilter(titleSearch, genre, genresSearch, developerSearch, releaseYearMin,
-                    releaseYearMax, minLocalPlayers, onlineMultiplayer, singlePlayer, platforms, hosts));
+                    releaseYearMax, minLocalPlayers, onlineMultiplayer, singlePlayer, platforms, hosts, installStatus,
+                    librarySources, localMultiplayer));
         } catch (Exception exception) {
             log.warn("Chat filter parse failed: {}", exception.getMessage());
 
@@ -272,6 +289,18 @@ public class ChatService {
         return value.asBoolean();
     }
 
+    private String optionalEnumText(JsonNode node, String field, Set<String> allowed) {
+        JsonNode value = node.get(field);
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (!value.isTextual() || !allowed.contains(value.asText())) {
+            throw new IllegalArgumentException(field + " must be one of " + allowed);
+        }
+
+        return value.asText();
+    }
+
     private List<String> optionalMembers(JsonNode node, String field, List<String> visibleMembers, int maxSize) {
         JsonNode value = node.get(field);
         if (value == null || value.isNull()) {
@@ -302,11 +331,20 @@ public class ChatService {
     }
 
     private ChatGameRef toRef(Game game) {
-        return new ChatGameRef(game.getId(), game.getTitle(), game.getPlatform());
+        return new ChatGameRef(game.getId(), game.getTitle(), game.getPlatform(),
+                ArtworkUrls.externalCoverUrl(game), ArtworkUrls.localCoverEndpoint(game));
     }
 
     private record ChatFilter(String titleSearch, String genre, String genresSearch, String developerSearch,
             Integer releaseYearMin, Integer releaseYearMax, Integer minLocalPlayers, Boolean onlineMultiplayer,
-            Boolean singlePlayer, List<String> platforms, List<String> hosts) {
+            Boolean singlePlayer, List<String> platforms, List<String> hosts, String installStatus,
+            List<String> librarySources, Boolean localMultiplayer) {
+
+        boolean isEmpty() {
+            return titleSearch == null && genre == null && genresSearch == null && developerSearch == null
+                    && releaseYearMin == null && releaseYearMax == null && minLocalPlayers == null
+                    && onlineMultiplayer == null && singlePlayer == null && platforms == null && hosts == null
+                    && installStatus == null && librarySources == null && localMultiplayer == null;
+        }
     }
 }

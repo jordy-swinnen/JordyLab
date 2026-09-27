@@ -15,6 +15,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
 @WireMockTest(httpPort = 9995)
 class SteamAppDetailsClientTest {
@@ -44,6 +46,28 @@ class SteamAppDetailsClientTest {
     }
 
     @Test
+    void parsesWhenSteamKeysTheResponseByADifferentAppId() {
+        stubAppDetails("620", """
+                { "323180": { "success": true, "data": {
+                    "steam_appid": 620,
+                    "type": "game",
+                    "name": "Portal 2",
+                    "genres": [ { "id": "4", "description": "Puzzle" } ],
+                    "short_description": "A puzzle platformer."
+                } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("620");
+
+        assertSoftly(softly -> {
+            softly.assertThat(metadata).isPresent();
+            softly.assertThat(metadata.get().genres()).isEqualTo("Puzzle");
+            softly.assertThat(metadata.get().shortDescription()).isEqualTo("A puzzle platformer.");
+            softly.assertThat(metadata.get().isGame()).isTrue();
+        });
+    }
+
+    @Test
     void unsuccessfulAppIsEmpty() {
         stubAppDetails("620", """
                 { "620": { "success": false } }
@@ -53,9 +77,11 @@ class SteamAppDetailsClientTest {
     }
 
     @Test
-    void missingAppIdInResponseIsEmpty() {
+    void responseWithNoSuccessfulEntryIsEmpty() {
+        // Steam mis-keys the payload, so a different key is accepted — but a non-successful
+        // entry (or one without data) is still an empty result.
         stubAppDetails("620", """
-                { "999": { "success": true, "data": { "name": "Other" } } }
+                { "999": { "success": false } }
                 """);
 
         assertThat(steamAppDetailsClient.fetch("620")).isEmpty();
@@ -106,6 +132,96 @@ class SteamAppDetailsClientTest {
     }
 
     @Test
+    void rateLimitRaisesRateLimitedException() {
+        stubFor(get(urlPathEqualTo("/api/appdetails")).willReturn(aResponse().withStatus(429)));
+
+        assertThatThrownBy(() -> steamAppDetailsClient.fetch("620"))
+                .isInstanceOf(SteamRateLimitedException.class);
+    }
+
+    @Test
+    void parsesTypeShortDescriptionAndMultiplayerCategories() {
+        stubAppDetails("620", """
+                { "620": { "success": true, "data": {
+                    "type": "game",
+                    "short_description": "A puzzle platformer.",
+                    "categories": [
+                      { "id": 2, "description": "Single-player" },
+                      { "id": 9, "description": "Co-op" },
+                      { "id": 24, "description": "Shared/Split Screen" }
+                    ]
+                } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("620");
+
+        assertThat(metadata).isPresent();
+        assertSoftly(softly -> {
+            softly.assertThat(metadata.get().shortDescription()).isEqualTo("A puzzle platformer.");
+            softly.assertThat(metadata.get().isGame()).isTrue();
+            softly.assertThat(metadata.get().multiplayer().categoriesPresent()).isTrue();
+            softly.assertThat(metadata.get().multiplayer().singlePlayer()).isTrue();
+            softly.assertThat(metadata.get().multiplayer().onlineMultiplayer()).isTrue();
+            softly.assertThat(metadata.get().multiplayer().localMultiplayer()).isTrue();
+            softly.assertThat(metadata.get().multiplayer().splitScreen()).isTrue();
+        });
+    }
+
+    @Test
+    void localCoopWithoutSplitScreenIsLocalButNotSplitScreen() {
+        stubAppDetails("620", """
+                { "620": { "success": true, "data": {
+                    "type": "game",
+                    "categories": [ { "id": 9, "description": "Co-op" }, { "id": 39, "description": "Local Co-op" } ]
+                } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("620");
+
+        assertThat(metadata).isPresent();
+        assertSoftly(softly -> {
+            softly.assertThat(metadata.get().multiplayer().localMultiplayer()).isTrue();
+            softly.assertThat(metadata.get().multiplayer().splitScreen()).isFalse();
+        });
+    }
+
+    @Test
+    void missingCategoriesAreReportedAsAbsent() {
+        stubAppDetails("620", """
+                { "620": { "success": true, "data": { "type": "game", "name": "Portal 2" } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("620");
+
+        assertThat(metadata).isPresent();
+        assertThat(metadata.get().multiplayer().categoriesPresent()).isFalse();
+    }
+
+    @Test
+    void toolTypeIsNotAGame() {
+        stubAppDetails("228980", """
+                { "228980": { "success": true, "data": { "type": "tool", "name": "Steamworks Common Redistributables" } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("228980");
+
+        assertThat(metadata).isPresent();
+        assertThat(metadata.get().isGame()).isFalse();
+    }
+
+    @Test
+    void missingTypeFailsClosedAsNotAGame() {
+        stubAppDetails("620", """
+                { "620": { "success": true, "data": { "name": "Portal 2" } } }
+                """);
+
+        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch("620");
+
+        assertThat(metadata).isPresent();
+        assertThat(metadata.get().isGame()).isFalse();
+    }
+
+    @Test
     void blankAppIdIsEmpty() {
         assertThat(steamAppDetailsClient.fetch(" ")).isEmpty();
     }
@@ -134,7 +250,7 @@ class SteamAppDetailsClientTest {
     private void stubAppDetails(String appId, @Language("JSON") String body) {
         stubFor(get(urlPathEqualTo("/api/appdetails"))
                 .withQueryParam("appids", equalTo(appId))
-                .withQueryParam("filters", equalTo("basic"))
+                .withQueryParam("filters", equalTo("basic,genres,categories,developers,publishers,release_date"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
@@ -148,6 +264,6 @@ class SteamAppDetailsClientTest {
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5), null);
     }
 }

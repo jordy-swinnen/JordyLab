@@ -53,9 +53,13 @@ public class GameCatalogController {
     public GamesPageResponse getGames(@RequestParam(required = false) String search,
             @RequestParam(required = false) String platform,
             @RequestParam(required = false) String host,
+            @RequestParam(required = false, defaultValue = "INSTALLED") String installStatus,
+            @RequestParam(required = false) List<String> librarySource,
+            @RequestParam(required = false) Boolean localMultiplayer,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "60") int size) {
-        return gameQueryService.getGames(search, platform, host, Math.max(page, 0), clampPageSize(size));
+        return gameQueryService.getGames(search, platform, host, installStatus, librarySource, localMultiplayer,
+                Math.max(page, 0), clampPageSize(size));
     }
 
     @GetMapping("/platforms")
@@ -85,6 +89,13 @@ public class GameCatalogController {
     @PostMapping("/games/{id}/enrichment/refresh")
     public ResponseEntity<GameDetailResponse> refreshEnrichment(@PathVariable UUID id) {
         return catalogRefreshService.refreshEnrichment(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/games/{id}/multiplayer/refresh")
+    public ResponseEntity<GameDetailResponse> refreshMultiplayer(@PathVariable UUID id) {
+        return catalogRefreshService.refreshMultiplayer(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

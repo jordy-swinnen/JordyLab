@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -74,7 +74,7 @@ class ChatServiceTest {
                  "onlineMultiplayer": null, "singlePlayer": null, "platforms": null, "hosts": null}
                 """);
         when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq(4),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+                isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario, kart));
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(compositionPromptFor(mario, kart))))
@@ -100,7 +100,7 @@ class ChatServiceTest {
         stubVisibleFilters();
         stubTranslation(ALL_NULL_FILTER);
         when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+                isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario));
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(compositionPromptFor(mario))))
@@ -123,9 +123,6 @@ class ChatServiceTest {
         stubVisibleFilters();
         stubTranslation(ALL_NULL_FILTER);
         when(gameRepository.findVisibleById(portal.getId())).thenReturn(Optional.of(portal));
-        when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
-                .thenReturn(List.of());
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(attachedCompositionPromptFor(portal))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
@@ -142,14 +139,40 @@ class ChatServiceTest {
     }
 
     @Test
-    void attachedGameIsMergedWithFilterRowsAndCitedOnce() {
+    void attachedGameWithAnEmptyFilterOnlyCitesTheAttachedGame() {
         Game portal = aGame("Portal 2", "Steam");
         Game mario = aGame("Super Mario World", "SNES");
         stubVisibleFilters();
         stubTranslation(ALL_NULL_FILTER);
         when(gameRepository.findVisibleById(portal.getId())).thenReturn(Optional.of(portal));
-        when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+        // Lenient: proves that even though the repo *could* return the whole library for an
+        // empty filter, the fix never consults it, so mario never leaks into the citations.
+        lenient().when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+                .thenReturn(List.of(portal, mario));
+        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+                eq(attachedCompositionPromptFor(portal))))
+                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
+                        "Portal 2 supports 4-player local co-op."));
+
+        ChatResponse response = chatService.ask(QUESTION, List.of(portal.getId()));
+
+        assertThat(response.games()).extracting("id").containsExactly(portal.getId());
+    }
+
+    @Test
+    void attachedGameIsMergedWithFilterRowsAndCitedOnce() {
+        Game portal = aGame("Portal 2", "Steam");
+        Game mario = aGame("Super Mario World", "SNES");
+        stubVisibleFilters();
+        stubTranslation("""
+                {"titleSearch": "mario", "genre": null, "genresSearch": null, "developerSearch": null,
+                 "releaseYearMin": null, "releaseYearMax": null, "minLocalPlayers": null,
+                 "onlineMultiplayer": null, "singlePlayer": null, "platforms": null, "hosts": null}
+                """);
+        when(gameRepository.findVisibleById(portal.getId())).thenReturn(Optional.of(portal));
+        when(gameRepository.findForChatFilter(eq("mario"), isNull(), isNull(), isNull(), isNull(), isNull(),
+                isNull(), isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(portal, mario));
         String expectedPrompt = "Question: " + QUESTION + "\n\nCatalog rows:\n"
                 + rowLine(portal, true) + "\n" + rowLine(mario, false) + "\n";
@@ -262,7 +285,7 @@ class ChatServiceTest {
                  "onlineMultiplayer": null, "singlePlayer": null, "platforms": null, "hosts": null}
                 """);
         when(gameRepository.findForChatFilter(eq("mario"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+                isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario));
         when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(compositionPromptFor(mario))))
@@ -282,7 +305,7 @@ class ChatServiceTest {
                  "onlineMultiplayer": null, "singlePlayer": null, "platforms": null, "hosts": null}
                 """);
         when(gameRepository.findForChatFilter(eq("zelda"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+                isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of());
 
         ChatResponse response = chatService.ask(QUESTION, List.of());
@@ -302,7 +325,7 @@ class ChatServiceTest {
         stubVisibleFilters();
         stubTranslation(ALL_NULL_FILTER);
         when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), eq(PageRequest.of(0, 50))))
+                isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of());
 
         chatService.ask(QUESTION, List.of());
@@ -373,7 +396,7 @@ class ChatServiceTest {
                 .platform(platform)
                 .title(title)
                 .build();
-        game.applyEnrichment("Platformer", 4, false, true, "A classic.");
+        game.applyEnrichment("Platformer", false, true, "A classic.");
 
         return game;
     }
@@ -385,6 +408,6 @@ class ChatServiceTest {
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5), null);
     }
 }

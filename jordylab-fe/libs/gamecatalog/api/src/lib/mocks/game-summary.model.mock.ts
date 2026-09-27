@@ -8,6 +8,9 @@ export function aGameSummaryMock(overrides: Partial<GameSummary> = {}): GameSumm
     coverStatus: 'EXTERNAL_URL',
     coverUrl: 'https://example.com/smw.png',
     coverEndpoint: null,
+    installStatus: 'INSTALLED',
+    librarySource: 'LOCAL',
+    localMultiplayer: false,
     ...overrides,
   };
 }

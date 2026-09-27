@@ -73,6 +73,12 @@ class ScanServiceTest {
     private EnrichmentService enrichmentService;
 
     @Mock
+    private SteamLibrarySyncService steamLibrarySyncService;
+
+    @Mock
+    private MultiplayerService multiplayerService;
+
+    @Mock
     private LibraryParser emuDeckParser;
 
     @Test
@@ -456,10 +462,10 @@ class ScanServiceTest {
                 new GameCatalogProperties.Enrichment(8, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
-                new GameCatalogProperties.Scan(maxGamesPerSource, maxPayloadBytes, 262_144, 0.5));
+                new GameCatalogProperties.Scan(maxGamesPerSource, maxPayloadBytes, 262_144, 0.5), null);
 
         return new ScanService(scanSourceRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
-                artworkService, steamMetadataService, enrichmentService, properties,
+                artworkService, steamMetadataService, enrichmentService, steamLibrarySyncService, multiplayerService, properties,
                 new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
     }
 

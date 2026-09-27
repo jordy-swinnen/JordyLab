@@ -1,6 +1,14 @@
 import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { aScanSourceMock, ScanLibraryType, ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
+import {
+  aLibraryStatusMock,
+  aScanSourceMock,
+  LibraryStatus,
+  LibrarySyncRun,
+  ScanLibraryType,
+  ScanSource,
+  ScanSourceStore,
+} from '@jordylab-fe/gamecatalog/api';
 import { SourceManagerComponent } from './source-manager.component';
 
 describe('SourceManagerComponent', () => {
@@ -11,10 +19,15 @@ describe('SourceManagerComponent', () => {
   const downloading = signal<ScanLibraryType | null>(null);
   const refreshingPending = signal(false);
   const refreshProgress = signal<string | null>(null);
+  const libraryStatus = signal<LibraryStatus | null>(null);
+  const librarySyncing = signal<'OWNED' | 'FAMILY' | null>(null);
+  const lastLibraryRun = signal<LibrarySyncRun | null>(null);
 
   const toggle = vi.fn<ScanSourceStore['toggle']>();
   const downloadClient = vi.fn<ScanSourceStore['downloadClient']>();
   const refreshPending = vi.fn<ScanSourceStore['refreshPending']>();
+  const syncOwnedLibrary = vi.fn<ScanSourceStore['syncOwnedLibrary']>();
+  const syncFamilyLibrary = vi.fn<ScanSourceStore['syncFamilyLibrary']>();
 
   const storeMock = {
     sources: sources.asReadonly(),
@@ -24,9 +37,14 @@ describe('SourceManagerComponent', () => {
     downloading: downloading.asReadonly(),
     refreshingPending: refreshingPending.asReadonly(),
     refreshProgress: refreshProgress.asReadonly(),
+    libraryStatus: libraryStatus.asReadonly(),
+    librarySyncing: librarySyncing.asReadonly(),
+    lastLibraryRun: lastLibraryRun.asReadonly(),
     toggle,
     downloadClient,
     refreshPending,
+    syncOwnedLibrary,
+    syncFamilyLibrary,
   };
 
   let spectator: Spectator<SourceManagerComponent>;
@@ -44,9 +62,14 @@ describe('SourceManagerComponent', () => {
     downloading.set(null);
     refreshingPending.set(false);
     refreshProgress.set(null);
+    libraryStatus.set(null);
+    librarySyncing.set(null);
+    lastLibraryRun.set(null);
     toggle.mockReset();
     downloadClient.mockReset();
     refreshPending.mockReset();
+    syncOwnedLibrary.mockReset();
+    syncFamilyLibrary.mockReset();
     spectator = createComponent();
   });
 
@@ -73,8 +96,12 @@ describe('SourceManagerComponent', () => {
   it('exposes Steam and EmuDeck download buttons', () => {
     populate([]);
 
-    expect(spectator.query('[data-testid="download-steam-client"]')).not.toBeNull();
-    expect(spectator.query('[data-testid="download-emudeck-client"]')).not.toBeNull();
+    expect(
+      spectator.query('[data-testid="download-steam-client"]'),
+    ).not.toBeNull();
+    expect(
+      spectator.query('[data-testid="download-emudeck-client"]'),
+    ).not.toBeNull();
   });
 
   it('shows an empty state when no sources exist', () => {
@@ -88,7 +115,9 @@ describe('SourceManagerComponent', () => {
     error.set('Failed to load scan sources.');
     spectator.detectChanges();
 
-    expect(spectator.query('.text-destructive')).toHaveText('Failed to load scan sources.');
+    expect(spectator.query('.text-destructive')).toHaveText(
+      'Failed to load scan sources.',
+    );
   });
 
   it('forwards the source to the store when its toggle is clicked', () => {
@@ -123,7 +152,9 @@ describe('SourceManagerComponent', () => {
       Object.assign(URL, { createObjectURL, revokeObjectURL });
       createObjectURL.mockClear();
       revokeObjectURL.mockClear();
-      anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      anchorClick = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => undefined);
       populate([]);
     });
 
@@ -136,7 +167,10 @@ describe('SourceManagerComponent', () => {
     it('requests the Steam client from the store', () => {
       spectator.click('[data-testid="download-steam-client"]');
 
-      expect(downloadClient).toHaveBeenCalledWith('steam', expect.any(Function));
+      expect(downloadClient).toHaveBeenCalledWith(
+        'steam',
+        expect.any(Function),
+      );
     });
 
     it('saves the generated client as a file named after the library', () => {
@@ -148,6 +182,47 @@ describe('SourceManagerComponent', () => {
       const link = anchorClick.mock.contexts[0] as HTMLAnchorElement;
       expect(link.download).toBe('jordylab-scan-emudeck.py');
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:script');
+    });
+  });
+
+  describe('library', () => {
+    it('asks the store to sync the owned library', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.click('[data-testid="sync-owned-library"]');
+
+      expect(syncOwnedLibrary).toHaveBeenCalled();
+    });
+
+    it('sends the pasted family token to the store', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.typeInElement('family-token', 'input[type="password"]');
+      spectator.click('[data-testid="sync-family-library"]');
+
+      expect(syncFamilyLibrary).toHaveBeenCalledWith('family-token');
+    });
+
+    it('clears the pasted family token from the input once it is sent', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.typeInElement('family-token', 'input[type="password"]');
+      spectator.click('[data-testid="sync-family-library"]');
+
+      const input = spectator.query(
+        'input[type="password"]',
+      ) as HTMLInputElement;
+      expect(input.value).toBe('');
+    });
+
+    it('disables the owned sync and shows a hint when Steam is not configured', () => {
+      populate([aScanSourceMock()]);
+      libraryStatus.set(aLibraryStatusMock({ ownedConfigured: false }));
+      spectator.detectChanges();
+
+      const button = spectator.query('[data-testid="sync-owned-library"]');
+      expect(button?.hasAttribute('disabled')).toBe(true);
+      expect(spectator.element).toHaveText('Steam account not configured');
     });
   });
 });

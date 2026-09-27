@@ -9,7 +9,8 @@ public record GameCatalogProperties(
         Enrichment enrichment,
         Chat chat,
         Metadata metadata,
-        Scan scan) {
+        Scan scan,
+        Library library) {
 
     public GameCatalogProperties {
         artwork = artwork == null ? new Artwork(null, 0, null, 0) : artwork;
@@ -20,6 +21,25 @@ public record GameCatalogProperties(
         chat = chat == null ? new Chat(0) : chat;
         metadata = metadata == null ? new Metadata(0, 0) : metadata;
         scan = scan == null ? new Scan(0, 0, 0, 0) : scan;
+        library = library == null ? new Library(0, 0, 0, 0) : library;
+    }
+
+    /** Steam library sync tuning: trigger interval, staleness hint, store pacing, HTTP timeout. */
+    public record Library(int minIntervalMinutes, int staleAfterDays, int storeMinIntervalMs, int callTimeoutMs) {
+        public Library {
+            if (minIntervalMinutes <= 0) {
+                minIntervalMinutes = 720;
+            }
+            if (staleAfterDays <= 0) {
+                staleAfterDays = 14;
+            }
+            if (storeMinIntervalMs <= 0) {
+                storeMinIntervalMs = 1500;
+            }
+            if (callTimeoutMs <= 0) {
+                callTimeoutMs = 10000;
+            }
+        }
     }
 
     public record Metadata(int batchSize, int maxAttempts) {
