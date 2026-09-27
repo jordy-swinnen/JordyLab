@@ -62,24 +62,24 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('td')).toHaveText('ABI');
-    expect(spectator.query('p.text-2xl')).toHaveText('€705.00');
+    expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
   });
 
   it('shows each position value as shares times last price, in the total-worth colour', () => {
     positions.set([aPortfolioPositionMock({ shareCount: 0.137, lastPrice: 73805.21 })]);
     spectator.detectChanges();
 
-    const value = spectator.query('tbody td span.text-primary');
+    const value = spectator.query('[data-testid="row-value"]');
 
     expect(value).toHaveText('€10,111.31');
-    expect(spectator.query('tbody td span.text-sky-400')).toHaveText('€73,805.21');
+    expect(spectator.query('[data-testid="row-price"]')).toHaveText('€73,805.21');
   });
 
   it('shows a dash for the value of an unpriced position', () => {
     positions.set([aPortfolioPositionMock({ lastPrice: null, lastPriceFetchedAt: null })]);
     spectator.detectChanges();
 
-    expect(spectator.query('tbody td span.text-primary')).toBeNull();
+    expect(spectator.query('[data-testid="row-value"]')).toBeNull();
   });
 
   it('displays an empty state when no positions exist', () => {
@@ -110,5 +110,19 @@ describe('PortfolioManagerComponent', () => {
     spectator.component.deletePosition('p1');
 
     expect(removePosition).toHaveBeenCalledWith('p1');
+  });
+
+  it('draws an allocation bar with a slice per priced position', () => {
+    positions.set([
+      aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' }),
+      aPortfolioPositionMock({ id: 'p2', ticker: 'KBC', shareCount: 5, lastPrice: null, lastPriceFetchedAt: null }),
+    ]);
+    spectator.detectChanges();
+
+    const legend = spectator.queryAll('ul li');
+
+    expect(legend).toHaveLength(1);
+    expect(legend[0]).toHaveText('ABI');
+    expect(legend[0]).toHaveText('100%');
   });
 });

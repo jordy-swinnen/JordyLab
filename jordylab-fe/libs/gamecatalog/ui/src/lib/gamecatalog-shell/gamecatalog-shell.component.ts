@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
+import { RouterOutlet } from '@angular/router';
 
+/** Route container for the domain. Section navigation lives in the host sidebar (and the dev harness header). */
 @Component({
   selector: 'lib-gamecatalog-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, HlmButtonDirective],
+  imports: [RouterOutlet],
   templateUrl: './gamecatalog-shell.component.html',
 })
 export class GamecatalogShellComponent {}

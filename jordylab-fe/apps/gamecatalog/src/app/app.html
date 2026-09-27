@@ -1,21 +1,37 @@
-<div class="noise-bg min-h-screen">
-  <header
-    class="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl"
-  >
-    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-8">
-      <div class="flex items-center gap-8">
-        <a routerLink="/grid" class="flex items-baseline gap-1.5">
-          <span
-            class="font-serif text-2xl italic tracking-tight text-primary"
-            style="font-family: 'Instrument Serif', serif"
-          >
-            Game Catalog
-          </span>
-        </a>
-      </div>
+<header class="border-b border-border bg-rail">
+  <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-8">
+    <div class="flex items-center gap-8">
+      <a
+        routerLink="/"
+        class="flex items-center gap-3"
+        aria-label="Game Catalog dev harness home"
+      >
+        <lib-brand-mark [size]="30" />
+        <span class="mono-label">Game Catalog · dev harness</span>
+      </a>
+      <nav class="flex gap-1" aria-label="Game Catalog sections">
+        <a
+          routerLink="/grid"
+          routerLinkActive="bg-secondary text-foreground"
+          class="rounded-[10px] px-3 py-2 text-sm font-medium text-secondary-foreground hover:text-foreground"
+          >Library</a
+        >
+        <a
+          routerLink="/chat"
+          routerLinkActive="bg-secondary text-foreground"
+          class="rounded-[10px] px-3 py-2 text-sm font-medium text-secondary-foreground hover:text-foreground"
+          >Chat</a
+        >
+        <a
+          routerLink="/sources"
+          routerLinkActive="bg-secondary text-foreground"
+          class="rounded-[10px] px-3 py-2 text-sm font-medium text-secondary-foreground hover:text-foreground"
+          >Sources</a
+        >
+      </nav>
     </div>
-  </header>
-  <main class="mx-auto max-w-6xl px-8 py-10">
-    <router-outlet />
-  </main>
-</div>
+  </div>
+</header>
+<main class="mx-auto max-w-6xl px-8 py-10">
+  <router-outlet />
+</main>

@@ -2,7 +2,7 @@ export { artworkUrl, GameCatalogApiService } from './lib/gamecatalog-api.service
 export type { GamesQuery } from './lib/gamecatalog-api.service';
 export { GameChatStore } from './lib/game-chat.store';
 export { GameDetailStore } from './lib/game-detail.store';
-export { GameLibraryStore } from './lib/game-library.store';
+export { GAME_LIBRARY_PAGE_SIZE, GameLibraryStore } from './lib/game-library.store';
 export { ScanSourceStore } from './lib/scan-source.store';
 export type {
   ArtworkStatus,

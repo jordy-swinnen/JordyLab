@@ -59,4 +59,12 @@ describe('ArticleListComponent', () => {
 
     expect(spectator.query('div.text-destructive')).toHaveText('Failed to load articles.');
   });
+
+  it('groups articles under a Today heading with the calendar date', () => {
+    loading.set(false);
+    articles.set([anArticleSummaryMock({ publishedAt: new Date().toISOString() })]);
+    spectator.detectChanges();
+
+    expect(spectator.element).toHaveText('Today');
+  });
 });

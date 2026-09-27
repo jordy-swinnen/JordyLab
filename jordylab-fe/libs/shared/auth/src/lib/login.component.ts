@@ -7,18 +7,29 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
   standalone: true,
   imports: [HlmButtonDirective],
   template: `
-    <div class="noise-bg flex min-h-screen items-center justify-center">
-      <div class="w-full max-w-md rounded-lg border border-border bg-card p-8 shadow-lg">
-        <h1 class="mb-2 font-serif text-3xl italic tracking-tight text-primary" style="font-family: 'Instrument Serif', serif;">
-          JordyLab
-        </h1>
-        <p class="mb-6 text-sm text-muted-foreground">Sign in to access your library and game catalog.</p>
-        <button
-          hlmBtn
-          variant="default"
-          (click)="onLogin()"
-          class="w-full"
-        >
+    <div class="flex min-h-[80vh] items-center justify-center">
+      <div class="panel w-full max-w-md p-9">
+        <div class="flex items-center gap-3">
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <rect width="48" height="48" rx="13" fill="hsl(var(--primary))" />
+            <path
+              d="M30 10V27C30 32.5 26 36 21 36C17.5 36 15 34.5 13.5 32"
+              stroke="hsl(var(--primary-foreground))"
+              stroke-width="6.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle cx="17" cy="21" r="3.6" fill="hsl(var(--primary-foreground))" />
+            <circle cx="21.5" cy="12.5" r="2.4" fill="hsl(var(--primary-foreground))" />
+          </svg>
+          <h1 class="font-display text-[28px] leading-none tracking-[-0.03em]" style="font-variation-settings: 'wdth' 88">
+            <span class="font-normal">Jordy</span><span class="font-extrabold text-primary">Lab</span>
+          </h1>
+        </div>
+        <p class="mt-6 text-[15px] leading-relaxed text-secondary-foreground">
+          Sign in to access your library and game catalog.
+        </p>
+        <button hlmBtn variant="default" (click)="onLogin()" class="mt-7 h-11 w-full text-[15px] font-semibold">
           Sign in with Keycloak
         </button>
       </div>

@@ -30,6 +30,9 @@
       "@jordylab-fe/gamecatalog/ui": [
         "libs/gamecatalog/ui/src/index.ts"
       ],
+      "@jordylab-fe/shared/brand": [
+        "libs/shared/brand/src/index.ts"
+      ],
       "@jordylab-fe/shared/auth": [
         "libs/shared/auth/src/index.ts"
       ],

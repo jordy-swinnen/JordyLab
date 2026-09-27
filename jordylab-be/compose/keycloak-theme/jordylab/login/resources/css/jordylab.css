@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Hanken+Grotesk:wght@400;500;600&display=swap');
+
+/* Night Lab tokens (same values as jordylab-fe/apps/jordylab/src/styles.css) */
+:root,
+:root.pf-v5-theme-dark {
+  color-scheme: dark;
+  --jl-bg: #0e0c14;
+  --jl-card: #16131f;
+  --jl-secondary: #1e1a2a;
+  --jl-line: #2a2536;
+  --jl-line-strong: #3a3449;
+  --jl-text: #f2ede4;
+  --jl-mute: #a9a2b6;
+  --jl-dim: #8a8398;
+  --jl-flare: #ff6a3d;
+  --jl-ink: #1c0a04;
+  --keycloak-card-top-color: transparent;
+  --pf-v5-global--FontFamily--text: 'Hanken Grotesk', system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --pf-v5-global--link--Color: var(--jl-flare);
+  --pf-v5-global--link--Color--hover: #ff8a66;
+  --pf-v5-global--primary-color--100: var(--jl-flare);
+  --pf-v5-global--primary-color--200: #ff8a66;
+}
+
+/* Page */
+.login-pf body,
+.pf-v5-c-login {
+  background: var(--jl-bg);
+  color: var(--jl-text);
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.login-pf body {
+  background-image: none;
+}
+
+/* Brand block: flask-J mark above a two-weight wordmark (text comes from CSS, the realm name is hidden) */
+#kc-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+#kc-header::before {
+  content: '';
+  width: 56px;
+  height: 56px;
+  background: url('../img/mark.svg') no-repeat center / contain;
+}
+#kc-header-wrapper {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  background: none;
+  /* hide the realm name text node; the wordmark below is drawn by the pseudo-elements */
+  font-size: 0;
+  color: transparent;
+  text-transform: none;
+  letter-spacing: 0;
+}
+#kc-header-wrapper::before,
+#kc-header-wrapper::after {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 34px;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: -0.03em;
+  font-variation-settings: 'wdth' 88;
+}
+#kc-header-wrapper::before {
+  content: 'Jordy';
+  font-weight: 400;
+  color: var(--jl-text);
+}
+#kc-header-wrapper::after {
+  content: 'Lab';
+  font-weight: 800;
+  color: var(--jl-flare);
+}
+
+/* Card */
+.pf-v5-c-login__main {
+  background: var(--jl-card);
+  border: 1px solid var(--jl-line);
+  border-radius: 20px;
+  box-shadow: none;
+  overflow: hidden;
+}
+.pf-v5-c-login__main-header {
+  border-top: 0;
+}
+.pf-v5-c-login__main-header .pf-v5-c-title,
+#kc-page-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variation-settings: 'wdth' 88;
+  color: var(--jl-text);
+}
+
+/* Form */
+.pf-v5-c-form__label-text,
+.pf-v5-c-form__label {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-weight: 500;
+  color: var(--jl-mute);
+}
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BackgroundColor: var(--jl-bg);
+  --pf-v5-c-form-control--BorderColor: var(--jl-line-strong);
+  --pf-v5-c-form-control--Color: var(--jl-text);
+  border-radius: 12px;
+  background-color: var(--jl-bg);
+  color: var(--jl-text);
+  min-height: 48px;
+}
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after {
+  border-radius: 12px;
+}
+.pf-v5-c-form-control:focus-within::after,
+.pf-v5-c-form-control:focus-within {
+  --pf-v5-c-form-control--BorderColor: var(--jl-flare);
+  --pf-v5-c-form-control--focus--BorderBottomColor: var(--jl-flare);
+  border-color: var(--jl-flare);
+}
+.pf-v5-c-form-control input {
+  color: var(--jl-text);
+}
+.pf-v5-c-form-control input::placeholder {
+  color: var(--jl-dim);
+}
+/* Chrome autofill keeps the dark field */
+.pf-v5-c-form-control input:-webkit-autofill {
+  -webkit-text-fill-color: var(--jl-text);
+  -webkit-box-shadow: 0 0 0 100px var(--jl-bg) inset;
+}
+
+/* Buttons */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--jl-flare);
+  --pf-v5-c-button--m-primary--Color: var(--jl-ink);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #ff8a66;
+  --pf-v5-c-button--m-primary--hover--Color: var(--jl-ink);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: #ff8a66;
+  --pf-v5-c-button--m-primary--focus--Color: var(--jl-ink);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: #ff8a66;
+  --pf-v5-c-button--m-primary--active--Color: var(--jl-ink);
+  background-color: var(--jl-flare);
+  color: var(--jl-ink);
+  border-radius: 12px;
+  font-weight: 600;
+  min-height: 48px;
+}
+.pf-v5-c-button.pf-m-control {
+  --pf-v5-c-button--m-control--BackgroundColor: var(--jl-bg);
+  --pf-v5-c-button--m-control--Color: var(--jl-mute);
+  background-color: var(--jl-bg);
+  color: var(--jl-mute);
+}
+.pf-v5-c-button.pf-m-secondary {
+  --pf-v5-c-button--m-secondary--Color: var(--jl-text);
+  --pf-v5-c-button--m-secondary--BorderColor: var(--jl-line-strong);
+  border-radius: 12px;
+}
+
+/* Links, footer, messages */
+a {
+  color: var(--jl-flare);
+}
+.pf-v5-c-login__main-footer-band {
+  background: var(--jl-secondary);
+  border-top: 1px solid var(--jl-line);
+}
+.pf-v5-c-alert {
+  --pf-v5-c-alert--BackgroundColor: var(--jl-secondary);
+  border-radius: 12px;
+}
+
+/* Polish: label size, password group spacing */
+.pf-v5-c-form__label-text {
+  font-size: 0.875rem;
+}
+.pf-v5-c-input-group {
+  gap: 8px;
+}
+.pf-v5-c-button.pf-m-control {
+  border-radius: 12px;
+  border: 1px solid var(--jl-line-strong);
+  min-height: 48px;
+}
+.pf-v5-c-button.pf-m-control::after {
+  border: 0;
+}
+
+/* One clean focus treatment: flare border on the field, no PatternFly underline or browser ring */
+.pf-v5-c-form-control::after {
+  display: none;
+}
+.pf-v5-c-form-control input:focus,
+.pf-v5-c-form-control input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.pf-v5-c-form-control:focus-within {
+  border: 1px solid var(--jl-flare);
+  box-shadow: 0 0 0 3px rgba(255, 106, 61, 0.2);
+}
+
+.pf-v5-c-form-control {
+  border: 1px solid var(--jl-line-strong);
+}

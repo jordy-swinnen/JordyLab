@@ -1,17 +1,23 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
-import { HlmCardDirective } from '@spartan-ng/ui-card-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
-import { artworkUrl, GameSummary } from '@jordylab-fe/gamecatalog/api';
+import { artworkUrl, GAME_LIBRARY_PAGE_SIZE, GameSummary } from '@jordylab-fe/gamecatalog/api';
+import { coverInitials, coverPalette, platformTagClass } from '../cover';
 
-const SKELETON_CARD_COUNT = 12;
+const SKELETON_CARD_COUNT = 10;
+const CHIP = 'h-10 cursor-pointer px-4 text-sm font-semibold';
 
 @Component({
   selector: 'lib-game-grid-view',
   standalone: true,
-  imports: [RouterLink, HlmBadgeDirective, HlmCardDirective, HlmInputDirective, HlmSkeletonComponent],
+  imports: [
+    RouterLink,
+    HlmBadgeDirective,
+    HlmInputDirective,
+    HlmSkeletonComponent,
+  ],
   templateUrl: './game-grid-view.component.html',
 })
 export class GameGridViewComponent {
@@ -28,8 +34,22 @@ export class GameGridViewComponent {
   platformChange = output<string | null>();
   pageChange = output<number>();
 
-  protected readonly skeletonCards = Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => index);
+  protected readonly skeletonCards = Array.from(
+    { length: SKELETON_CARD_COUNT },
+    (_, index) => index,
+  );
   protected readonly artworkUrl = artworkUrl;
+  protected readonly initials = coverInitials;
+  protected readonly palette = coverPalette;
+  protected readonly tagClass = platformTagClass;
+
+  protected readonly chipActive = `${CHIP} border-foreground bg-foreground text-background`;
+  protected readonly chipIdle = `${CHIP} text-secondary-foreground hover:text-foreground`;
+
+  /** Catalogue number shown on cover plates, continuing across pages. */
+  protected catalogNumber(index: number): string {
+    return String(this.page() * GAME_LIBRARY_PAGE_SIZE + index + 1).padStart(3, '0');
+  }
 
   onSearchInput(event: Event) {
     this.searchChange.emit((event.target as HTMLInputElement).value);

@@ -4,7 +4,7 @@ import { catchError, debounceTime, distinctUntilChanged, of, startWith, Subject,
 import { GameCatalogApiService } from './gamecatalog-api.service';
 import { GamesPage, GameSummary } from './gamecatalog.models';
 
-const PAGE_SIZE = 60;
+export const GAME_LIBRARY_PAGE_SIZE = 60;
 const SEARCH_DEBOUNCE_MS = 300;
 
 @Injectable({ providedIn: 'root' })
@@ -54,7 +54,7 @@ export class GameLibraryStore {
               search: this.#searchTerm() || undefined,
               platform: this.#selectedPlatform() ?? undefined,
               page: this.#page(),
-              size: PAGE_SIZE,
+              size: GAME_LIBRARY_PAGE_SIZE,
             })
             .pipe(
               catchError(() => {

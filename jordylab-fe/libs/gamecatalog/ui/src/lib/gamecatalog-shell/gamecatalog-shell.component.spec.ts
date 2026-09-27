@@ -14,18 +14,8 @@ describe('GamecatalogShellComponent', () => {
     spectator = createComponent();
   });
 
-  it('renders the section links in order', () => {
-    const navLinks = spectator.queryAll('nav a');
-
-    expect(navLinks.length).toBe(3);
-    expect(navLinks[0].textContent).toContain('Library');
-    expect(navLinks[1].textContent).toContain('Chat');
-    expect(navLinks[2].textContent).toContain('Sources');
-  });
-
-  it('links relative to the shell route so it works under any mount point', () => {
-    const hrefs = spectator.queryAll('nav a').map((link) => link.getAttribute('href'));
-
-    expect(hrefs).toEqual(['/grid', '/chat', '/sources']);
+  it('only hosts the router outlet — section navigation belongs to the app shell', () => {
+    expect(spectator.query('router-outlet')).toBeTruthy();
+    expect(spectator.query('nav')).toBeNull();
   });
 });

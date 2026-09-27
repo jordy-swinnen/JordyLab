@@ -1,5 +1,6 @@
 const { createGlobPatternsForDependencies } = require('@nx/angular/tailwind');
 const { join } = require('path');
+const nightLab = require('../../tailwind.theme.js');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -10,7 +11,7 @@ module.exports = {
     join(__dirname, '../../node_modules/@spartan-ng/**/!(*.spec).{js,mjs,ts}'),
   ],
   theme: {
-    extend: {},
+    extend: nightLab.extend,
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [require('@tailwindcss/typography'), nightLab.plugin],
 };
