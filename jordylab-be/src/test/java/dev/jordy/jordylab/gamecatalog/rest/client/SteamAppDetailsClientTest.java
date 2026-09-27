@@ -25,7 +25,9 @@ class SteamAppDetailsClientTest {
 
     @BeforeEach
     void setUp() {
-        steamAppDetailsClient = new SteamAppDetailsClient(properties(), new ObjectMapper(), STORE_BASE_URL);
+        steamAppDetailsClient = new SteamAppDetailsClient(properties(), new ObjectMapper());
+        steamAppDetailsClient.storeBaseUrl = STORE_BASE_URL;
+        steamAppDetailsClient.init();
     }
 
     @Test

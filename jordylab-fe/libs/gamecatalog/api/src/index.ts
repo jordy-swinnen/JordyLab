@@ -24,7 +24,10 @@ export type {
   ChatAskResponse,
   ChatMessage,
 } from './lib/gamecatalog.models';
+export { aAttachedGameMock } from './lib/mocks/attached-game.model.mock';
 export { aChatAnswerMock } from './lib/mocks/chat-answer.model.mock';
+export { aRefreshAllMock } from './lib/mocks/refresh-all.model.mock';
+export { aRefreshCountMock } from './lib/mocks/refresh-count.model.mock';
 export { aGameDetailMock } from './lib/mocks/game-detail.model.mock';
 export { aGameSummaryMock } from './lib/mocks/game-summary.model.mock';
 export { aGamesPageMock } from './lib/mocks/games-page.model.mock';

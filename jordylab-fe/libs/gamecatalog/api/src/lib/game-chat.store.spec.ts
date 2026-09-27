@@ -3,6 +3,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { ChatAskResponse } from './gamecatalog.models';
 import { GameCatalogApiService } from './gamecatalog-api.service';
 import { GameChatStore } from './game-chat.store';
+import { aAttachedGameMock } from './mocks/attached-game.model.mock';
 import { aChatAnswerMock } from './mocks/chat-answer.model.mock';
 import { aGameDetailMock } from './mocks/game-detail.model.mock';
 
@@ -64,7 +65,7 @@ describe('GameChatStore', () => {
     spectator.service.attachGame('game-1');
 
     expect(getGame).toHaveBeenCalledWith('game-1');
-    expect(spectator.service.attachedGame()).toEqual({ id: 'game-1', title: 'Portal 2' });
+    expect(spectator.service.attachedGame()).toEqual(aAttachedGameMock({ id: 'game-1', title: 'Portal 2' }));
   });
 
   it('ignores a blank or duplicate attachment', () => {

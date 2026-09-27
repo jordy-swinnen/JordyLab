@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, ParamMap, RouterModule } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { AttachedGame, ChatMessage, GameChatStore } from '@jordylab-fe/gamecatalog/api';
+import { aAttachedGameMock, AttachedGame, ChatMessage, GameChatStore } from '@jordylab-fe/gamecatalog/api';
 import { Subject } from 'rxjs';
 import { GameChatComponent } from './game-chat.component';
 
@@ -79,7 +79,7 @@ describe('GameChatComponent', () => {
   });
 
   it('renders the attached game as a removable chip', () => {
-    attachedGame.set({ id: 'game-1', title: 'Portal 2' });
+    attachedGame.set(aAttachedGameMock({ id: 'game-1', title: 'Portal 2' }));
     spectator.detectChanges();
 
     expect(spectator.element).toHaveText('Asking about Portal 2');
@@ -91,7 +91,7 @@ describe('GameChatComponent', () => {
   });
 
   it('disables the remove button while a question is in flight', () => {
-    attachedGame.set({ id: 'game-1', title: 'Portal 2' });
+    attachedGame.set(aAttachedGameMock({ id: 'game-1', title: 'Portal 2' }));
     asking.set(true);
     spectator.detectChanges();
 

@@ -66,6 +66,7 @@ jordylab:
     chat:
       max-result-games: 50
     metadata:
+      store-base-url: https://store.steampowered.com
       batch-size: 25
       max-attempts: 3
     scan:

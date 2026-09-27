@@ -1,8 +1,10 @@
 import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { ScanSource } from './gamecatalog.models';
+import { RefreshAll, ScanSource } from './gamecatalog.models';
 import { ScanSourceStore } from './scan-source.store';
+import { aRefreshAllMock } from './mocks/refresh-all.model.mock';
+import { aRefreshCountMock } from './mocks/refresh-count.model.mock';
 import { aScanSourceMock } from './mocks/scan-source.model.mock';
 
 describe('ScanSourceStore', () => {
@@ -28,7 +30,7 @@ describe('ScanSourceStore', () => {
     getScanClient.mockReturnValue(of(new Blob(['#!/bin/sh'])));
     refreshPending.mockReset();
     refreshPending.mockReturnValue(
-      of({ metadata: { processed: 0, remaining: 0 }, enrichment: { processed: 0, remaining: 0 } })
+      of(aRefreshAllMock({ metadata: aRefreshCountMock({ processed: 0 }), enrichment: aRefreshCountMock({ processed: 0 }) }))
     );
   });
 
@@ -192,10 +194,20 @@ describe('ScanSourceStore', () => {
       spectator = createService();
       refreshPending
         .mockReturnValueOnce(
-          of({ metadata: { processed: 5, remaining: 5 }, enrichment: { processed: 2, remaining: 5 } })
+          of(
+            aRefreshAllMock({
+              metadata: aRefreshCountMock({ processed: 5, remaining: 5 }),
+              enrichment: aRefreshCountMock({ processed: 2, remaining: 5 }),
+            })
+          )
         )
         .mockReturnValueOnce(
-          of({ metadata: { processed: 5, remaining: 0 }, enrichment: { processed: 5, remaining: 0 } })
+          of(
+            aRefreshAllMock({
+              metadata: aRefreshCountMock({ processed: 5 }),
+              enrichment: aRefreshCountMock({ processed: 5 }),
+            })
+          )
         );
 
       spectator.service.refreshPending();
@@ -209,7 +221,12 @@ describe('ScanSourceStore', () => {
     it('stops with an error when a batch makes no progress', () => {
       spectator = createService();
       refreshPending.mockReturnValue(
-        of({ metadata: { processed: 0, remaining: 3 }, enrichment: { processed: 0, remaining: 2 } })
+        of(
+          aRefreshAllMock({
+            metadata: aRefreshCountMock({ processed: 0, remaining: 3 }),
+            enrichment: aRefreshCountMock({ processed: 0, remaining: 2 }),
+          })
+        )
       );
 
       spectator.service.refreshPending();
@@ -232,10 +249,7 @@ describe('ScanSourceStore', () => {
 
     it('ignores a refresh while one is already running', () => {
       spectator = createService();
-      const inFlight = new Subject<{
-        metadata: { processed: number; remaining: number };
-        enrichment: { processed: number; remaining: number };
-      }>();
+      const inFlight = new Subject<RefreshAll>();
       refreshPending.mockReturnValue(inFlight.asObservable());
 
       spectator.service.refreshPending();

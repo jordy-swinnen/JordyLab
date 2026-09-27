@@ -21,9 +21,9 @@ describe('GameLibraryStore', () => {
     getGames.mockReset();
     getGames.mockReturnValue(of(aGamesPageMock()));
     getPlatforms.mockReset();
-    getPlatforms.mockReturnValue(of(["SNES", "Steam"]));
+    getPlatforms.mockReturnValue(of(['SNES', 'Steam']));
     getHosts.mockReset();
-    getHosts.mockReturnValue(of(["jordybox", "ryzen-desktop"]));
+    getHosts.mockReturnValue(of(['jordybox', 'ryzen-desktop']));
   });
 
   it('loads the first page and the platforms on construction', () => {
@@ -151,7 +151,7 @@ describe('GameLibraryStore', () => {
 
     expect(spectator.service.selectedPlatform()).toBe('SNES');
     expect(spectator.service.page()).toBe(0);
-    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: "SNES", host: undefined, page: 0, size: 60 });
+    expect(getGames).toHaveBeenLastCalledWith({ search: undefined, platform: 'SNES', host: undefined, page: 0, size: 60 });
   });
 
   it('clears the platform filter when null is selected', () => {

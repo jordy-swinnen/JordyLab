@@ -3,7 +3,10 @@ package dev.jordy.jordylab.gamecatalog.rest.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -22,6 +25,7 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class SteamAppDetailsClient {
 
     private static final String STORE_APP_DETAILS_BASE_URL = "https://store.steampowered.com";
@@ -31,23 +35,21 @@ public class SteamAppDetailsClient {
     private static final int MAX_RELEASE_YEAR = 2028;
     private static final Pattern YEAR_PATTERN = Pattern.compile("\\b(19\\d{2}|20\\d{2})\\b");
 
-    private final RestClient restClient;
-    private final String storeBaseUrl;
+    @Value("${jordylab.gamecatalog.metadata.store-base-url:" + STORE_APP_DETAILS_BASE_URL + "}")
+    String storeBaseUrl;
+
+    private final GameCatalogProperties properties;
     private final ObjectMapper objectMapper;
 
-    @org.springframework.beans.factory.annotation.Autowired
-    public SteamAppDetailsClient(GameCatalogProperties properties, ObjectMapper objectMapper) {
-        this(properties, objectMapper, STORE_APP_DETAILS_BASE_URL);
-    }
+    private RestClient restClient;
 
-    SteamAppDetailsClient(GameCatalogProperties properties, ObjectMapper objectMapper, String storeBaseUrl) {
+    @PostConstruct
+    void init() {
         int timeoutMs = (int) properties.artwork().lookupTimeoutMs();
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
         this.restClient = RestClient.builder().requestFactory(requestFactory).build();
-        this.storeBaseUrl = storeBaseUrl;
-        this.objectMapper = objectMapper;
     }
 
     public Optional<SteamMetadata> fetch(String steamAppId) {

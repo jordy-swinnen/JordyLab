@@ -99,6 +99,17 @@ public class GameCatalogController {
         return chatService.ask(request.question(), request.gameIds() == null ? List.of() : request.gameIds());
     }
 
+    @GetMapping("/games/{id}/artwork")
+    public ResponseEntity<byte[]> getArtwork(@PathVariable UUID id) {
+        return artworkService.loadVisibleArtwork(id)
+                .map(content -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(content.mediaType()))
+                        .header("X-Content-Type-Options", "nosniff")
+                        .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic())
+                        .body(content.bytes()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @ExceptionHandler(ChatUnavailableException.class)
     public ResponseEntity<ChatErrorBody> handleChatUnavailable(ChatUnavailableException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -125,6 +136,14 @@ public class GameCatalogController {
         return ResponseEntity.badRequest().body(new ChatErrorBody(reasonForUnreadable(exception)));
     }
 
+    private int clampPageSize(int size) {
+        if (size < 1) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
     /**
      * A non-UUID entry in {@code gameIds} fails deserialization before {@link ChatAttachmentException}
      * can run, so it is reported as {@code GAME_IDS_INVALID}; any other unreadable field (e.g. a
@@ -145,24 +164,5 @@ public class GameCatalogController {
     }
 
     private record ChatErrorBody(String reason) {
-    }
-
-    @GetMapping("/games/{id}/artwork")
-    public ResponseEntity<byte[]> getArtwork(@PathVariable UUID id) {
-        return artworkService.loadVisibleArtwork(id)
-                .map(content -> ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(content.mediaType()))
-                        .header("X-Content-Type-Options", "nosniff")
-                        .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic())
-                        .body(content.bytes()))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    private int clampPageSize(int size) {
-        if (size < 1) {
-            return DEFAULT_PAGE_SIZE;
-        }
-
-        return Math.min(size, MAX_PAGE_SIZE);
     }
 }

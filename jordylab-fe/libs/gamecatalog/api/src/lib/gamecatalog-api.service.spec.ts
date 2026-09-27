@@ -3,6 +3,7 @@ import { bannerUrl, coverUrl, GameCatalogApiService } from './gamecatalog-api.se
 import { GamesPage } from './gamecatalog.models';
 import { aGameDetailMock } from './mocks/game-detail.model.mock';
 import { aGameSummaryMock } from './mocks/game-summary.model.mock';
+import { aRefreshAllMock } from './mocks/refresh-all.model.mock';
 
 describe('GameCatalogApiService', () => {
   let spectator: SpectatorHttp<GameCatalogApiService>;
@@ -247,7 +248,7 @@ describe('GameCatalogApiService', () => {
   });
 
   it('posts a bulk refresh and returns the processed and remaining counts', () => {
-    const counts = { metadata: { processed: 3, remaining: 0 }, enrichment: { processed: 2, remaining: 5 } };
+    const counts = aRefreshAllMock();
 
     spectator.service.refreshPending().subscribe((result) => {
       expect(result).toEqual(counts);

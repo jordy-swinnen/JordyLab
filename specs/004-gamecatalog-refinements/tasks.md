@@ -98,7 +98,7 @@ description: "Task list for Game Catalog Refinements (card-fitted covers + banne
 
 - [x] T027 [P] [US4] `metadata()` config record on `GameCatalogProperties` in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/GameCatalogProperties.java` (+ defaults in `jordylab-be/src/main/resources/application.yaml`, `GameCatalogPropertiesTest`)
 - [x] T028 [P] [US4] `SteamAppDetailsClient` in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/client/SteamAppDetailsClient.java`: RestClient `GET store.steampowered.com/api/appdetails?appids={steamAppId}&filters=basic`; parse + bound/validate `genres[]`→`genres` (≤200), `developers[0]`→`developer` (≤100), `publishers[0]`→`publisher` (≤100), `release_date.date`→`releaseYear` (1950..2028) + WireMock tests `SteamAppDetailsClientTest` in `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/client/SteamAppDetailsClientTest.java`
-- [x] T029 [US4] `SteamMetadataService` in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/SteamMetadataService.java`: scheduled batch over Steam games with `metadataStatus = PENDING` (batch size/attempts from T027, daily FAILED reset mirroring `EnrichmentService`), applies via `applyDeterministicMetadata` (depends T028)
+- [x] T029 [US4] `SteamMetadataService` in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/SteamMetadataService.java`: `fetchPending(cap)` fetches deterministic metadata for up to `metadata().batchSize` PENDING Steam games, invoked inline on every applied scan (`ScanService.populateCatalogData`) and by the manual bulk refresh — no scheduler; FAILED games are retried through the refresh paths, which clear the attempt counter (amended from the original scheduled design — see plan.md) (depends T028)
 - [x] T030 [US4] Extended enrichment in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/EnrichmentService.java`: system prompt + parse/validate gain `genres`/`developer`/`publisher`/`releaseYear` (same bounds), `applyEnrichment` sets them + `metadataStatus = OK` for ROM games + `EnrichmentServiceTest` additions
 - [x] T031 [US4] Detail response + contract: `genres`/`developer`/`publisher`/`releaseYear`/`metadataSource` on `GameDetailResponse` in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/model/GameDetailResponse.java` + `GameQueryService` mapping + `GameCatalogControllerTest` additions (depends T029, T030)
 - [x] T032 [US4] Chat grounded-filter extension in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/ChatService.java` + `GameRepository.findForChatFilter` in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/domain/repository/GameRepository.java`: translation prompt + strict-JSON fields gain `genresSearch`, `developerSearch`, `releaseYearMin`, `releaseYearMax`, `hosts` (validated against visible hosts); composition rows include the new fields + `ChatServiceTest`/`GameCatalogModuleTest` additions (depends T030, T024)
@@ -195,3 +195,14 @@ Then:
 - [P] tasks = different files, no dependencies; same-file chains are ordered and never [P]
 - Verify acceptance per story against quickstart.md before checking the story's checkpoint
 - Commit after each task or logical group; never commit secrets (per root AGENTS.md)
+
+---
+
+## Follow-up amendment — scan-driven data, no schedulers
+
+Landed after the initial 004 implementation (see plan.md's "Amendment (follow-up)" note). Recorded here so tasks.md matches the shipped code.
+
+- [x] T043 Remove every `@Scheduled` method in `gamecatalog` (enrichment/metadata batches + daily FAILED resets, 4am purge); shared `@EnableScheduling` stays for `fna`
+- [x] T044 Fetch on scan: `ScanService.populateCatalogData()` runs `SteamMetadataService.fetchPending(metadata cap)` + `EnrichmentService.enrichPending(enrichment cap)` inline on every applied scan; `ReconciliationService.purgeUninstalledGames()` also runs inline after each applied scan
+- [x] T045 `CatalogRefreshService` + endpoints `POST /games/{id}/metadata/refresh`, `POST /games/{id}/enrichment/refresh`, `POST /games/refresh` (bulk drain, `{processed, remaining}`); ROM metadata refresh → `400 METADATA_NOT_SUPPORTED`
+- [x] T046 Frontend: "Refresh facts" + "Regenerate description" on the detail page; "Refresh pending data" bulk action on the sources page (loops with a no-progress guard)

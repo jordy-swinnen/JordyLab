@@ -146,12 +146,15 @@ class ScanServiceTest {
         when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
                 .thenReturn(Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
-        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)),
-                org.mockito.ArgumentMatchers.any(Instant.class)))
+        ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
+        Instant before = Instant.now();
 
         service.submitScan(request);
 
+        Instant after = Instant.now();
+        assertThat(snapshotCaptor.getValue()).isBetween(before, after);
         verify(steamMetadataService).fetchPending(25);
         verify(enrichmentService).enrichPending(8);
         verify(reconciliationService).purgeUninstalledGames();
@@ -165,13 +168,16 @@ class ScanServiceTest {
         when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
                 .thenReturn(Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
-        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)),
-                org.mockito.ArgumentMatchers.any(Instant.class)))
+        ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
+        Instant before = Instant.now();
         service.submitScan(request);
 
         ScanResponse duplicate = service.submitScan(request);
 
+        Instant after = Instant.now();
+        assertThat(snapshotCaptor.getValue()).isBetween(before, after);
         assertThat(duplicate.outcome()).isEqualTo(SyncOutcome.NO_CHANGE);
         verify(steamMetadataService, times(1)).fetchPending(25);
         verify(enrichmentService, times(1)).enrichPending(8);
