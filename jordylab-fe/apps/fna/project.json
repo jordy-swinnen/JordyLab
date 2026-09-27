@@ -11,7 +11,7 @@
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/fna",
-        "baseHref": "/fna",
+        "baseHref": "/fna/",
         "browser": "apps/fna/src/main.ts",
         "tsConfig": "apps/fna/tsconfig.app.json",
         "assets": [

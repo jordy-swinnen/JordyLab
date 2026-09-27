@@ -11,7 +11,7 @@
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/gamecatalog",
-        "baseHref": "/games",
+        "baseHref": "/games/",
         "browser": "apps/gamecatalog/src/main.ts",
         "tsConfig": "apps/gamecatalog/tsconfig.app.json",
         "assets": [
