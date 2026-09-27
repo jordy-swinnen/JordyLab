@@ -18,6 +18,9 @@ export class SourceManagerComponent {
   readonly downloading = this.#store.downloading;
   readonly refreshingPending = this.#store.refreshingPending;
   readonly refreshProgress = this.#store.refreshProgress;
+  readonly libraryStatus = this.#store.libraryStatus;
+  readonly librarySyncing = this.#store.librarySyncing;
+  readonly lastLibraryRun = this.#store.lastLibraryRun;
 
   onToggle(source: ScanSource): void {
     this.#store.toggle(source);
@@ -25,6 +28,14 @@ export class SourceManagerComponent {
 
   onRefreshPending(): void {
     this.#store.refreshPending();
+  }
+
+  onSyncOwnedLibrary(): void {
+    this.#store.syncOwnedLibrary();
+  }
+
+  onSyncFamilyLibrary(accessToken: string): void {
+    this.#store.syncFamilyLibrary(accessToken);
   }
 
   onDownloadClient(libraryType: ScanClientType): void {

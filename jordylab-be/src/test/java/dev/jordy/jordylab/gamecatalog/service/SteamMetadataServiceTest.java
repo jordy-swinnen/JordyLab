@@ -45,7 +45,7 @@ class SteamMetadataServiceTest {
         stubPendingBatch(List.of(game));
         when(steamAppDetailsClient.fetch("620"))
                 .thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata("Puzzle, Adventure", "Valve",
-                        "Valve", 2011)));
+                        "Valve", 2011, null, "game", null)));
 
         int processed = steamMetadataService.fetchPending(SCAN_CAP);
 
@@ -84,7 +84,7 @@ class SteamMetadataServiceTest {
         Game game = aSteamGame();
         game.recordMetadataFailure(3);
         when(steamAppDetailsClient.fetch("620"))
-                .thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata("Puzzle", "Valve", "Valve", 2011)));
+                .thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata("Puzzle", "Valve", "Valve", 2011, null, "game", null)));
 
         steamMetadataService.refresh(game);
 
@@ -111,13 +111,13 @@ class SteamMetadataServiceTest {
 
     @Test
     void fetchPendingRespectsThePerScanCap() {
-        when(gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
+        when(gameRepository.findMetadataBacklog(MetadataStatus.PENDING,
                 PageRequest.of(0, 7))).thenReturn(List.of());
 
         int processed = steamMetadataService.fetchPending(7);
 
         assertThat(processed).isZero();
-        verify(gameRepository).findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
+        verify(gameRepository).findMetadataBacklog(MetadataStatus.PENDING,
                 PageRequest.of(0, 7));
     }
 
@@ -132,7 +132,7 @@ class SteamMetadataServiceTest {
     }
 
     private void stubPendingBatch(List<Game> games) {
-        when(gameRepository.findByMetadataStatusAndSteamAppIdIsNotNull(MetadataStatus.PENDING,
+        when(gameRepository.findMetadataBacklog(MetadataStatus.PENDING,
                 PageRequest.of(0, SCAN_CAP)))
                 .thenReturn(games);
     }
@@ -152,6 +152,6 @@ class SteamMetadataServiceTest {
                 new GameCatalogProperties.Enrichment(8, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(SCAN_CAP, 3),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5), null);
     }
 }

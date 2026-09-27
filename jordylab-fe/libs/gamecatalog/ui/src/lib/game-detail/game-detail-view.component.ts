@@ -31,4 +31,15 @@ export class GameDetailViewComponent {
   protected hostnames(game: GameDetail): string {
     return game.hosts.map((host) => host.hostname).join(', ');
   }
+
+  protected sourceLabel(game: GameDetail): string {
+    switch (game.librarySource) {
+      case 'OWNED':
+        return 'Owned';
+      case 'FAMILY':
+        return 'Family';
+      default:
+        return 'Local';
+    }
+  }
 }

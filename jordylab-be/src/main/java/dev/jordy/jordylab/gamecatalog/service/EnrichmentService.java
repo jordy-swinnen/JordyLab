@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
@@ -26,9 +27,8 @@ public class EnrichmentService {
     private static final String MODULE_NAME = "gamecatalog";
     private static final int MAX_GENRE_LENGTH = 100;
     private static final int MAX_DESCRIPTION_LENGTH = 4000;
-    private static final int MAX_LOCAL_PLAYERS_UPPER_BOUND = 64;
 
-    static final String SYSTEM_PROMPT = """
+    public static final String SYSTEM_PROMPT = """
             You are a video game metadata expert. The user gives you a game title and platform.
             Respond with ONLY a JSON object in exactly this shape — no markdown, no prose:
             {
@@ -37,11 +37,12 @@ public class EnrichmentService {
               "developer": "developer name, max 100 characters, or null if unknown",
               "publisher": "publisher name, max 100 characters, or null if unknown",
               "releaseYear": "integer release year, or null if unknown",
-              "maxLocalPlayers": "integer 1-64 for max simultaneous local players, or null if none/unknown",
               "onlineMultiplayer": "true/false if the game has online multiplayer, or null if unknown",
               "singlePlayer": "true/false if the game has a single-player mode, or null if unknown",
               "description": "one short paragraph about the game, max 4000 characters"
             }
+            The user may list known multiplayer facts. Use them verbatim and never contradict them.
+            Never state or imply local/couch multiplayer support unless it is provided as a known fact.
             """;
 
     private static final int MAX_GENRES_LENGTH = 200;
@@ -55,13 +56,15 @@ public class EnrichmentService {
     private final GameCatalogProperties properties;
 
     /**
-     * Enriches up to {@code maxGames} PENDING games. Invoked inline by the scan flow and by the
-     * manual bulk refresh — there is no scheduler.
+     * Enriches up to {@code maxGames} PENDING games that are eligible for AI: games with an
+     * installation (installed or within grace), installed first, and Steam games whose
+     * deterministic metadata pass has finished. Library-only games are never selected
+     * (FR-022) — they receive deterministic data only.
      */
     @Transactional
     public int enrichPending(int maxGames) {
-        List<Game> pending = gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(
-                EnrichmentStatus.PENDING, PageRequest.of(0, maxGames));
+        List<Game> pending = gameRepository.findEnrichmentBacklog(EnrichmentStatus.PENDING,
+                PageRequest.of(0, maxGames));
         if (pending.isEmpty()) {
             return 0;
         }
@@ -95,14 +98,33 @@ public class EnrichmentService {
             return;
         }
 
-        game.applyEnrichment(facts.get().genre(), facts.get().maxLocalPlayers(), facts.get().onlineMultiplayer(),
+        game.applyEnrichment(facts.get().genre(), facts.get().onlineMultiplayer(),
                 facts.get().singlePlayer(), facts.get().description());
         game.applyDeterministicMetadata(facts.get().genres(), facts.get().developer(), facts.get().publisher(),
                 facts.get().releaseYear());
+        if (game.getSteamAppId() == null) {
+            // ROMs have no Steam metadata pass; AI is their deterministic-metadata authority.
+            game.markMetadataFetched();
+        }
     }
 
     private String buildUserPrompt(Game game) {
-        return "Game: " + game.getTitle() + "\nPlatform: " + game.getPlatform();
+        StringBuilder prompt = new StringBuilder("Game: ").append(game.getTitle())
+                .append("\nPlatform: ").append(game.getPlatform());
+        if (game.getMultiplayerSource() != null && game.getMultiplayerSource() != MultiplayerSource.UNKNOWN) {
+            prompt.append("\nKnown multiplayer facts (use verbatim, do not contradict):");
+            if (game.getLocalMultiplayer() != null) {
+                prompt.append("\n- Local multiplayer: ").append(game.getLocalMultiplayer() ? "yes" : "no");
+            }
+            if (game.getSplitScreen() != null) {
+                prompt.append("\n- Split-screen: ").append(game.getSplitScreen() ? "yes" : "no");
+            }
+            if (game.getMaxLocalPlayers() != null) {
+                prompt.append("\n- Max local players: ").append(game.getMaxLocalPlayers());
+            }
+        }
+
+        return prompt.toString();
     }
 
     private Optional<EnrichmentFacts> parseAndValidate(String content) {
@@ -114,7 +136,6 @@ public class EnrichmentService {
             String developer = optionalText(node, "developer", MAX_NAME_LENGTH);
             String publisher = optionalText(node, "publisher", MAX_NAME_LENGTH);
             Integer releaseYear = optionalBoundedInt(node, "releaseYear", MIN_RELEASE_YEAR, MAX_RELEASE_YEAR);
-            Integer maxLocalPlayers = optionalBoundedInt(node, "maxLocalPlayers", 1, MAX_LOCAL_PLAYERS_UPPER_BOUND);
             Boolean onlineMultiplayer = optionalBoolean(node, "onlineMultiplayer");
             Boolean singlePlayer = optionalBoolean(node, "singlePlayer");
             if (genre == null || description == null) {
@@ -122,7 +143,7 @@ public class EnrichmentService {
             }
 
             return Optional.of(new EnrichmentFacts(genre, genres, developer, publisher, releaseYear,
-                    maxLocalPlayers, onlineMultiplayer, singlePlayer, description));
+                    onlineMultiplayer, singlePlayer, description));
         } catch (Exception exception) {
             return Optional.empty();
         }
@@ -184,7 +205,7 @@ public class EnrichmentService {
     }
 
     private record EnrichmentFacts(String genre, String genres, String developer, String publisher,
-            Integer releaseYear, Integer maxLocalPlayers, Boolean onlineMultiplayer, Boolean singlePlayer,
+            Integer releaseYear, Boolean onlineMultiplayer, Boolean singlePlayer,
             String description) {
     }
 }

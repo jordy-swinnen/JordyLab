@@ -25,7 +25,12 @@ export class GameChatStore {
       .pipe(catchError(() => of(null)))
       .subscribe((game) => {
         if (game) {
-          this.#attachedGame.set({ id: game.id, title: game.title });
+          this.#attachedGame.set({
+            id: game.id,
+            title: game.title,
+            coverUrl: game.coverUrl,
+            coverEndpoint: game.coverEndpoint,
+          });
         }
       });
   }

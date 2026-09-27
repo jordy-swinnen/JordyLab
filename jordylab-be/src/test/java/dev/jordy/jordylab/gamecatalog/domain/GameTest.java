@@ -105,11 +105,10 @@ class GameTest {
     void applyEnrichmentStoresFactsAndProse() {
         Game game = GameTestBuilder.aDefaultGame();
 
-        game.applyEnrichment("Platformer", 2, false, true, "A classic side-scrolling platformer.");
+        game.applyEnrichment("Platformer", false, true, "A classic side-scrolling platformer.");
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(game.getGenre()).isEqualTo("Platformer");
-            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(2);
             softly.assertThat(game.getOnlineMultiplayer()).isFalse();
             softly.assertThat(game.getSinglePlayer()).isTrue();
             softly.assertThat(game.getDescription()).isEqualTo("A classic side-scrolling platformer.");
@@ -118,7 +117,50 @@ class GameTest {
     }
 
     @Test
-    void applyDeterministicMetadataStoresFieldsAndMarksOk() {
+    void applyDeterministicMultiplayerSetsFactsSourceAndClearsAttempts() {
+        Game game = GameTestBuilder.aDefaultGame();
+        game.recordMultiplayerFailure();
+        game.recordMultiplayerFailure();
+
+        game.applyDeterministicMultiplayer(true, true, 4, MultiplayerSource.IGDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+            softly.assertThat(game.getSplitScreen()).isTrue();
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+        });
+    }
+
+    @Test
+    void applyDeterministicMultiplayerKeepsMaxPlayersWhenNull() {
+        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+                .maxLocalPlayers(4).build();
+
+        game.applyDeterministicMultiplayer(true, true, null, MultiplayerSource.STEAM);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.STEAM);
+        });
+    }
+
+    @Test
+    void recordMultiplayerFailureIncrementsAndResetClears() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.recordMultiplayerFailure();
+        game.recordMultiplayerFailure();
+        assertThat(game.getMultiplayerAttempts()).isEqualTo(2);
+
+        game.resetMultiplayerForRetry();
+
+        assertThat(game.getMultiplayerAttempts()).isZero();
+    }
+
+    @Test
+    void applyDeterministicMetadataFillsFieldsWithoutTouchingStatus() {
         Game game = GameTestBuilder.aDefaultGame();
 
         game.applyDeterministicMetadata("Platformer, Action", "Nintendo", "Nintendo", 1990);
@@ -128,8 +170,59 @@ class GameTest {
             softly.assertThat(game.getDeveloper()).isEqualTo("Nintendo");
             softly.assertThat(game.getPublisher()).isEqualTo("Nintendo");
             softly.assertThat(game.getReleaseYear()).isEqualTo(1990);
-            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.OK);
+            softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
         });
+    }
+
+    @Test
+    void applyDeterministicMetadataOnlyFillsNullFields() {
+        Game game = GameTestBuilder.aDefaultGame();
+        game.applyDeterministicMetadata("Steam Genres", "Steam Dev", "Steam Pub", 2011);
+
+        game.applyDeterministicMetadata("AI Genres", "AI Dev", "AI Pub", 1999);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getGenres()).isEqualTo("Steam Genres");
+            softly.assertThat(game.getDeveloper()).isEqualTo("Steam Dev");
+            softly.assertThat(game.getPublisher()).isEqualTo("Steam Pub");
+            softly.assertThat(game.getReleaseYear()).isEqualTo(2011);
+        });
+    }
+
+    @Test
+    void markMetadataFetchedMarksOkWithoutData() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.markMetadataFetched();
+
+        assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.OK);
+    }
+
+    @Test
+    void applyDeterministicMultiplayerFlagsOnlyFillsNulls() {
+        Game game = GameTestBuilder.aDefaultGame();
+        game.applyDeterministicMultiplayerFlags(true, false);
+
+        game.applyDeterministicMultiplayerFlags(false, true);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getSinglePlayer()).isTrue();
+            softly.assertThat(game.getOnlineMultiplayer()).isFalse();
+        });
+    }
+
+    @Test
+    void updateCatalogInfoRespectsTitleAuthority() {
+        Game game = Game.builder().platform("Steam").steamAppId("620").title("Library Name")
+                .titleSource(TitleSource.LIBRARY).build();
+
+        game.updateCatalogInfo("Manifest Name", "Steam", TitleSource.MANIFEST);
+
+        assertThat(game.getTitle()).isEqualTo("Library Name");
+
+        game.updateCatalogInfo("New Library Name", "Steam", TitleSource.LIBRARY);
+
+        assertThat(game.getTitle()).isEqualTo("New Library Name");
     }
 
     @Test

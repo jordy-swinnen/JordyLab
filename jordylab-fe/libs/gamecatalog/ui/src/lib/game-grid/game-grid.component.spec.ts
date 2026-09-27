@@ -12,6 +12,10 @@ describe('GameGridComponent', () => {
   const error = signal<string | null>(null);
   const selectedPlatform = signal<string | null>(null);
   const selectedHost = signal<string | null>(null);
+  const selectedInstallStatus = signal<GameSummary['installStatus']>('INSTALLED');
+  const selectedLibrarySource = signal<GameSummary['librarySource'] | null>(null);
+  const localMultiplayerOnly = signal(false);
+  const hostFilterAvailable = signal(true);
   const page = signal(0);
   const totalPages = signal(0);
   const totalElements = signal(0);
@@ -19,6 +23,9 @@ describe('GameGridComponent', () => {
   const search = vi.fn<GameLibraryStore['search']>();
   const selectPlatform = vi.fn<GameLibraryStore['selectPlatform']>();
   const selectHost = vi.fn<GameLibraryStore['selectHost']>();
+  const selectInstallStatus = vi.fn<GameLibraryStore['selectInstallStatus']>();
+  const selectLibrarySource = vi.fn<GameLibraryStore['selectLibrarySource']>();
+  const toggleLocalMultiplayerOnly = vi.fn<GameLibraryStore['toggleLocalMultiplayerOnly']>();
   const goToPage = vi.fn<GameLibraryStore['goToPage']>();
 
   const storeMock = {
@@ -29,12 +36,19 @@ describe('GameGridComponent', () => {
     error: error.asReadonly(),
     selectedPlatform: selectedPlatform.asReadonly(),
     selectedHost: selectedHost.asReadonly(),
+    selectedInstallStatus: selectedInstallStatus.asReadonly(),
+    selectedLibrarySource: selectedLibrarySource.asReadonly(),
+    localMultiplayerOnly: localMultiplayerOnly.asReadonly(),
+    hostFilterAvailable: hostFilterAvailable.asReadonly(),
     page: page.asReadonly(),
     totalPages: totalPages.asReadonly(),
     totalElements: totalElements.asReadonly(),
     search,
     selectPlatform,
     selectHost,
+    selectInstallStatus,
+    selectLibrarySource,
+    toggleLocalMultiplayerOnly,
     goToPage,
   };
 
@@ -54,12 +68,19 @@ describe('GameGridComponent', () => {
     error.set(null);
     selectedPlatform.set(null);
     selectedHost.set(null);
+    selectedInstallStatus.set('INSTALLED');
+    selectedLibrarySource.set(null);
+    localMultiplayerOnly.set(false);
+    hostFilterAvailable.set(true);
     page.set(0);
     totalPages.set(0);
     totalElements.set(0);
     search.mockReset();
     selectPlatform.mockReset();
     selectHost.mockReset();
+    selectInstallStatus.mockReset();
+    selectLibrarySource.mockReset();
+    toggleLocalMultiplayerOnly.mockReset();
     goToPage.mockReset();
     spectator = createComponent();
   });
@@ -153,5 +174,52 @@ describe('GameGridComponent', () => {
     expect(chips).toContain('Steam');
     expect(chips).toContain('Any');
     expect(chips).toContain('jordybox');
+  });
+
+  it('selects the install status in the store when a status chip is clicked', () => {
+    populate([aGameSummaryMock()]);
+
+    const notInstalled = spectator
+      .queryAll('button[hlmbadge]')
+      .find((chip) => chip.textContent?.trim() === 'Not installed');
+    spectator.click(notInstalled as Element);
+
+    expect(selectInstallStatus).toHaveBeenCalledWith('NOT_INSTALLED');
+  });
+
+  it('selects the library source in the store when a source chip is clicked', () => {
+    populate([aGameSummaryMock()]);
+
+    const owned = spectator
+      .queryAll('button[hlmbadge]')
+      .find((chip) => chip.textContent?.trim() === 'Owned');
+    spectator.click(owned as Element);
+
+    expect(selectLibrarySource).toHaveBeenCalledWith('OWNED');
+  });
+
+  it('shows install status and library source badges on a card', () => {
+    populate([aGameSummaryMock({ installStatus: 'NOT_INSTALLED', librarySource: 'OWNED' })]);
+
+    expect(spectator.element).toHaveText('Not installed');
+    expect(spectator.element).toHaveText('Owned');
+  });
+
+  it('hides the host filter while the status is not installed', () => {
+    selectedInstallStatus.set('NOT_INSTALLED');
+    hostFilterAvailable.set(false);
+    populate([aGameSummaryMock()]);
+
+    const chipLabels = spectator.queryAll('button[hlmbadge]').map((chip) => chip.textContent?.trim());
+    expect(chipLabels).not.toContain('Any');
+    expect(chipLabels).not.toContain('jordybox');
+  });
+
+  it('toggles the local multiplayer filter in the store', () => {
+    populate([aGameSummaryMock()]);
+
+    spectator.click('[data-testid="local-multiplayer-toggle"]');
+
+    expect(toggleLocalMultiplayerOnly).toHaveBeenCalled();
   });
 });

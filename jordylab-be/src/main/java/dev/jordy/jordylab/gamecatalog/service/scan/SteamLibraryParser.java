@@ -4,6 +4,7 @@ import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.util.TextSanitizer;
+import dev.jordy.jordylab.gamecatalog.util.ToolExclusion;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -53,6 +54,10 @@ public class SteamLibraryParser implements LibraryParser {
                 continue;
             }
             String appId = matcher.group(1);
+            if (ToolExclusion.isToolAppId(appId)) {
+                log.info("Skipping Steam tool/runtime manifest '{}' (appid {})", relpath, appId);
+                continue;
+            }
             String title = extractTitle(text);
             if (!StringUtils.hasText(title)) {
                 log.info("Skipping unparseable Steam manifest '{}' (no title)", relpath);

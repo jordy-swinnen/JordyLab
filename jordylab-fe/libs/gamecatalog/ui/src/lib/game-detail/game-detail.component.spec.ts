@@ -141,6 +141,7 @@ describe('GameDetailComponent', () => {
     show(
       aGameDetailMock({
         enrichmentStatus: 'PENDING',
+        metadataSource: null,
         genre: null,
         genres: null,
         developer: null,
@@ -162,6 +163,7 @@ describe('GameDetailComponent', () => {
     show(
       aGameDetailMock({
         enrichmentStatus: 'FAILED',
+        metadataSource: null,
         genre: null,
         genres: null,
         maxLocalPlayers: null,

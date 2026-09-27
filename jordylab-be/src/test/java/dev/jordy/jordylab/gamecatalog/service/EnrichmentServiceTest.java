@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
+import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
@@ -30,7 +31,7 @@ class EnrichmentServiceTest {
 
     private static final int SCAN_CAP = 50;
     private static final String VALID_JSON = """
-            {"genre": "Platformer", "maxLocalPlayers": 2, "onlineMultiplayer": false, "singlePlayer": true,
+            {"genre": "Platformer", "onlineMultiplayer": false, "singlePlayer": true,
              "description": "A classic SNES platformer."}
             """;
 
@@ -60,9 +61,7 @@ class EnrichmentServiceTest {
         assertThat(processed).isEqualTo(1);
         assertSoftly(softly -> {
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
-            softly.assertThat(game.getGenre()).isEqualTo("Platformer");
-            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(2);
-            softly.assertThat(game.getOnlineMultiplayer()).isFalse();
+            softly.assertThat(game.getGenre()).isEqualTo("Platformer");            softly.assertThat(game.getOnlineMultiplayer()).isFalse();
             softly.assertThat(game.getSinglePlayer()).isTrue();
             softly.assertThat(game.getDescription()).isEqualTo("A classic SNES platformer.");
         });
@@ -107,6 +106,23 @@ class EnrichmentServiceTest {
     }
 
     @Test
+    void userPromptIncludesKnownMultiplayerFacts() {
+        Game game = aGame("Super Mario World");
+        game.applyDeterministicMultiplayer(true, true, 4, MultiplayerSource.IGDB);
+        stubPendingBatch(List.of(game));
+        String expectedPrompt = "Game: Super Mario World\nPlatform: SNES"
+                + "\nKnown multiplayer facts (use verbatim, do not contradict):"
+                + "\n- Local multiplayer: yes\n- Split-screen: yes\n- Max local players: 4";
+        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT), eq(expectedPrompt)))
+                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
+
+        int processed = enrichmentService.enrichPending(SCAN_CAP);
+
+        assertThat(processed).isEqualTo(1);
+        verify(aiService).call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT), eq(expectedPrompt));
+    }
+
+    @Test
     void outOfBoundsValuesRecordAttemptWithoutFabricating() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
@@ -114,7 +130,7 @@ class EnrichmentServiceTest {
                 eq(userPromptFor(game))))
                 .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
                         """
-                        {"genre": "Platformer", "maxLocalPlayers": 99, "onlineMultiplayer": false,
+                        {"genre": "Platformer", "releaseYear": 3000, "onlineMultiplayer": false,
                          "singlePlayer": true, "description": "A classic."}
                         """));
 
@@ -163,13 +179,13 @@ class EnrichmentServiceTest {
 
     @Test
     void enrichPendingRespectsThePerScanCap() {
-        when(gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
+        when(gameRepository.findEnrichmentBacklog(EnrichmentStatus.PENDING,
                 PageRequest.of(0, 7))).thenReturn(List.of());
 
         int processed = enrichmentService.enrichPending(7);
 
         assertThat(processed).isZero();
-        verify(gameRepository).findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
+        verify(gameRepository).findEnrichmentBacklog(EnrichmentStatus.PENDING,
                 PageRequest.of(0, 7));
     }
 
@@ -222,7 +238,7 @@ class EnrichmentServiceTest {
     }
 
     private void stubPendingBatch(List<Game> games) {
-        when(gameRepository.findByEnrichmentStatusOrderByCreatedDateAsc(EnrichmentStatus.PENDING,
+        when(gameRepository.findEnrichmentBacklog(EnrichmentStatus.PENDING,
                 PageRequest.of(0, SCAN_CAP)))
                 .thenReturn(games);
     }
@@ -245,6 +261,6 @@ class EnrichmentServiceTest {
                 new GameCatalogProperties.Enrichment(SCAN_CAP, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5), null);
     }
 }

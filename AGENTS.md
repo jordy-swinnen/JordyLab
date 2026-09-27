@@ -53,7 +53,7 @@ Per-module provider selection via `ResilientAiService` with health-check-and-cac
 | Module | Provider | Model | Rationale | MVP1 Status |
 |--------|----------|-------|-----------|-------------|
 | `fna` | Anthropic | Claude Sonnet | Financial analysis needs quality | **Wired** |
-| `gamecatalog` | Anthropic | Claude Sonnet | Structured JSON + grounded chat share provider for prompt consistency | **Wired** |
+| `gamecatalog` | Anthropic | Claude Haiku | Structured JSON + grounded chat share provider for prompt consistency; Haiku for cost | **Wired** |
 | `recipe` | Ollama | Llama 3.1 8B | Cost-effective for structured tasks | Deferred |
 
 ## Infrastructure

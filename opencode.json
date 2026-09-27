@@ -33,10 +33,10 @@
   },
   "agent": {
     "build": {
-      "model": "opencode/deepseek-v4.1-flash"
+      "model": "opencode-go/deepseek-v4.1-flash"
     },
     "plan": {
-      "model": "opencode/glm-5.2",
+      "model": "opencode-go/glm-5.2",
       "permission": {
         "edit": {
           "*": "deny",

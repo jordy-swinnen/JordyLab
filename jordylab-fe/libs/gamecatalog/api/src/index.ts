@@ -11,6 +11,9 @@ export type {
   SyncOutcome,
   ScanLibraryType,
   MetadataSource,
+  InstallStatus,
+  LibrarySource,
+  LibrarySyncOutcome,
   HostRef,
   AttachedGame,
   RefreshCount,
@@ -19,6 +22,9 @@ export type {
   GamesPage,
   GameDetail,
   ScanSource,
+  LibrarySyncRun,
+  LibrarySourceStatus,
+  LibraryStatus,
   ChatAnswer,
   ChatGameRef,
   ChatAskResponse,
@@ -32,3 +38,5 @@ export { aGameDetailMock } from './lib/mocks/game-detail.model.mock';
 export { aGameSummaryMock } from './lib/mocks/game-summary.model.mock';
 export { aGamesPageMock } from './lib/mocks/games-page.model.mock';
 export { aScanSourceMock } from './lib/mocks/scan-source.model.mock';
+export { aLibrarySyncRunMock } from './lib/mocks/library-sync-run.model.mock';
+export { aLibraryStatusMock } from './lib/mocks/library-status.model.mock';

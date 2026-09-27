@@ -2,6 +2,9 @@ package dev.jordy.jordylab.gamecatalog.rest.controller.model;
 
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
+import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
+import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
+import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,5 +32,12 @@ public record GameDetailResponse(
         Boolean onlineMultiplayer,
         Boolean singlePlayer,
         String description,
-        Instant firstSeenAt) {
+        Instant firstSeenAt,
+        InstallStatus installStatus,
+        LibrarySource librarySource,
+        List<String> familyOwners,
+        Boolean localMultiplayer,
+        Boolean splitScreen,
+        Boolean onlineOnly,
+        MultiplayerSource multiplayerSource) {
 }

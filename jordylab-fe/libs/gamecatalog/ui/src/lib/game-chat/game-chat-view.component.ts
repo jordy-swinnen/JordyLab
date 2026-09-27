@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
-import { AttachedGame, ChatMessage } from '@jordylab-fe/gamecatalog/api';
+import { AttachedGame, ChatMessage, coverUrl } from '@jordylab-fe/gamecatalog/api';
 import { BrandMarkComponent } from '@jordylab-fe/shared/brand';
 import { coverPalette } from '../cover';
 
@@ -31,6 +31,7 @@ export class GameChatViewComponent {
   removeAttachment = output<void>();
 
   protected readonly palette = coverPalette;
+  protected readonly coverUrl = coverUrl;
 
   /** Splits `**bold**` markers from the model into segments so they render as emphasis, not asterisks. */
   protected segments(text: string): TextSegment[] {

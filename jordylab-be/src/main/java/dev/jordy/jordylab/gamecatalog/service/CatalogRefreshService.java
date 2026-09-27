@@ -36,6 +36,7 @@ public class CatalogRefreshService {
     private final GameQueryService gameQueryService;
     private final EnrichmentService enrichmentService;
     private final SteamMetadataService steamMetadataService;
+    private final MultiplayerService multiplayerService;
     private final GameCatalogProperties properties;
 
     @Transactional
@@ -64,14 +65,28 @@ public class CatalogRefreshService {
     }
 
     @Transactional
+    public Optional<GameDetailResponse> refreshMultiplayer(UUID gameId) {
+        Optional<Game> game = gameRepository.findVisibleById(gameId);
+        if (game.isEmpty()) {
+            return Optional.empty();
+        }
+        multiplayerService.refresh(game.get());
+
+        return gameQueryService.getGameDetail(gameId);
+    }
+
+    @Transactional
     public RefreshAllResponse refreshPending() {
         int metadataProcessed = steamMetadataService.fetchPending(properties.metadata().batchSize());
         int enrichmentProcessed = enrichmentService.enrichPending(properties.enrichment().batchSize());
+        int multiplayerProcessed = multiplayerService.derivePending(properties.metadata().batchSize());
 
         return new RefreshAllResponse(
                 new RefreshCountResponse(metadataProcessed,
                         gameRepository.countByMetadataStatusInAndSteamAppIdIsNotNull(METADATA_RETRYABLE)),
                 new RefreshCountResponse(enrichmentProcessed,
-                        gameRepository.countByEnrichmentStatusIn(ENRICHMENT_RETRYABLE)));
+                        gameRepository.countEnrichmentBacklog(ENRICHMENT_RETRYABLE)),
+                new RefreshCountResponse(multiplayerProcessed,
+                        gameRepository.countMultiplayerBacklog(properties.metadata().maxAttempts())));
     }
 }

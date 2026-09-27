@@ -44,6 +44,9 @@ public class Game extends BaseEntity<Game> {
 
     private String title;
 
+    @Enumerated(EnumType.STRING)
+    private TitleSource titleSource;
+
     private String genre;
 
     private String genres;
@@ -59,6 +62,15 @@ public class Game extends BaseEntity<Game> {
     private Boolean onlineMultiplayer;
 
     private Boolean singlePlayer;
+
+    private Boolean localMultiplayer;
+
+    private Boolean splitScreen;
+
+    @Enumerated(EnumType.STRING)
+    private MultiplayerSource multiplayerSource;
+
+    private int multiplayerAttempts;
 
     private String description;
 
@@ -84,26 +96,90 @@ public class Game extends BaseEntity<Game> {
 
     private int artworkFallbackRequests;
 
-    public void updateCatalogInfo(String title, String platform) {
-        this.title = title;
+    /**
+     * Updates the title and platform. The title only changes when the reporting source has at
+     * least the authority of the current one (FR-012) — a scan never overwrites a library title.
+     */
+    public void updateCatalogInfo(String title, String platform, TitleSource source) {
         this.platform = platform;
+        if (source.outranks(this.titleSource)) {
+            this.title = title;
+            this.titleSource = source;
+        }
     }
 
-    public void applyEnrichment(String genre, Integer maxLocalPlayers, Boolean onlineMultiplayer, Boolean singlePlayer,
-            String description) {
+    public void applyEnrichment(String genre, Boolean onlineMultiplayer, Boolean singlePlayer, String description) {
         this.genre = genre;
-        this.maxLocalPlayers = maxLocalPlayers;
-        this.onlineMultiplayer = onlineMultiplayer;
-        this.singlePlayer = singlePlayer;
+        if (this.onlineMultiplayer == null) {
+            this.onlineMultiplayer = onlineMultiplayer;
+        }
+        if (this.singlePlayer == null) {
+            this.singlePlayer = singlePlayer;
+        }
         this.description = description;
         this.enrichmentStatus = EnrichmentStatus.ENRICHED;
     }
 
+    /** Deterministic metadata fills only still-null fields; AI output never overwrites it (FR-005). */
     public void applyDeterministicMetadata(String genres, String developer, String publisher, Integer releaseYear) {
-        this.genres = genres;
-        this.developer = developer;
-        this.publisher = publisher;
-        this.releaseYear = releaseYear;
+        if (this.genres == null && genres != null) {
+            this.genres = genres;
+        }
+        if (this.developer == null && developer != null) {
+            this.developer = developer;
+        }
+        if (this.publisher == null && publisher != null) {
+            this.publisher = publisher;
+        }
+        if (this.releaseYear == null && releaseYear != null) {
+            this.releaseYear = releaseYear;
+        }
+    }
+
+    /** Deterministic multiplayer flags derived from Steam categories; fill-only. */
+    public void applyDeterministicMultiplayerFlags(Boolean singlePlayer, Boolean onlineMultiplayer) {
+        if (this.singlePlayer == null && singlePlayer != null) {
+            this.singlePlayer = singlePlayer;
+        }
+        if (this.onlineMultiplayer == null && onlineMultiplayer != null) {
+            this.onlineMultiplayer = onlineMultiplayer;
+        }
+    }
+
+    /** Deterministic description (e.g. Steam's short description) for not-installed library games. */
+    public void applyDeterministicDescription(String description) {
+        if (this.description == null && description != null) {
+            this.description = description;
+        }
+    }
+
+    /**
+     * Applies structured local-multiplayer facts from a deterministic source (Steam categories or
+     * IGDB). Sets provenance and clears the attempt counter. A {@code null} max player count leaves
+     * the current value untouched (e.g. Steam categories carry no counts).
+     */
+    public void applyDeterministicMultiplayer(Boolean localMultiplayer, Boolean splitScreen, Integer maxLocalPlayers,
+            MultiplayerSource source) {
+        this.localMultiplayer = localMultiplayer;
+        this.splitScreen = splitScreen;
+        if (maxLocalPlayers != null) {
+            this.maxLocalPlayers = maxLocalPlayers;
+        }
+        this.multiplayerSource = source;
+        this.multiplayerAttempts = 0;
+    }
+
+    /** Counts a failed/unresolved multiplayer lookup; the backlog query parks games at max attempts. */
+    public void recordMultiplayerFailure() {
+        this.multiplayerAttempts++;
+    }
+
+    public void resetMultiplayerForRetry() {
+        this.multiplayerAttempts = 0;
+    }
+
+    /** Marks the deterministic metadata pass complete, even when Steam returned no usable fields. */
+    public void markMetadataFetched() {
         this.metadataStatus = MetadataStatus.OK;
     }
 
@@ -178,9 +254,13 @@ public class Game extends BaseEntity<Game> {
             if (bannerStatus == null) {
                 bannerStatus = ArtworkStatus.PENDING;
             }
+            if (multiplayerSource == null) {
+                multiplayerSource = MultiplayerSource.UNKNOWN;
+            }
 
-            return new Game(id, platform, steamAppId, title, genre, genres, developer, publisher, releaseYear,
-                    maxLocalPlayers, onlineMultiplayer, singlePlayer, description, enrichmentStatus,
+            return new Game(id, platform, steamAppId, title, titleSource, genre, genres, developer, publisher,
+                    releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer, splitScreen,
+                    multiplayerSource, multiplayerAttempts, description, enrichmentStatus,
                     enrichmentAttempts, metadataStatus, metadataAttempts, coverStatus, coverRef, bannerStatus,
                     bannerRef, artworkFallbackRequests);
         }

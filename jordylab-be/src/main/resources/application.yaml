@@ -52,7 +52,7 @@ jordylab:
         model: claude-sonnet-5
       gamecatalog:
         provider: anthropic
-        model: claude-sonnet-5
+        model: claude-haiku-4-5-20251001
   gamecatalog:
     artwork:
       dir: ${GAMECATALOG_ARTWORK_DIR:/var/jordylab/artwork}
@@ -74,5 +74,10 @@ jordylab:
       max-payload-bytes: 1048576
       max-manifest-bytes-per-source: 262144
       max-shrink-fraction: 0.5
+    library:
+      min-interval-minutes: 720
+      stale-after-days: 14
+      store-min-interval-ms: 1500
+      call-timeout-ms: 10000
   cors:
     allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400

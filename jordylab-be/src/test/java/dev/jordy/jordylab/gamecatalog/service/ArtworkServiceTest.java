@@ -275,6 +275,50 @@ class ArtworkServiceTest {
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(installations);
     }
 
+    @Test
+    void resolvesLibraryGameArtworkFromSteamCdn() {
+        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2").build();
+        when(artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
+                .thenReturn(Optional.of("https://cdn.example/620/library_600x900.jpg"));
+        when(artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
+                .thenReturn(Optional.of("https://cdn.example/620/library_hero.jpg"));
+
+        int processed = artworkService.processLibraryGames(List.of(game));
+
+        assertSoftly(softly -> {
+            softly.assertThat(processed).isEqualTo(1);
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+            softly.assertThat(game.getCoverRef()).isEqualTo("https://cdn.example/620/library_600x900.jpg");
+            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
+        });
+    }
+
+    @Test
+    void libraryGameWithoutCdnArtBecomesPlaceholder() {
+        Game game = Game.builder().platform("Steam").steamAppId("999999").title("Obscure").build();
+        when(artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "999999", "Obscure"))
+                .thenReturn(Optional.empty());
+        when(artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "999999", "Obscure"))
+                .thenReturn(Optional.empty());
+
+        artworkService.processLibraryGames(List.of(game));
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
+            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
+        });
+    }
+
+    @Test
+    void libraryArtworkSkipsGamesWithoutSteamAppId() {
+        Game game = Game.builder().platform("SNES").title("Super Mario World").build();
+
+        int processed = artworkService.processLibraryGames(List.of(game));
+
+        assertThat(processed).isZero();
+        verifyNoInteractions(artworkLookupClient);
+    }
+
     private ScanSource aSource(SourceType sourceType) {
         return ScanSource.builder()
                 .hostname(HOSTNAME)
@@ -302,6 +346,6 @@ class ArtworkServiceTest {
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5), null);
     }
 }

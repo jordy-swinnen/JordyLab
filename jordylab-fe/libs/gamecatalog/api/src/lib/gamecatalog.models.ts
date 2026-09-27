@@ -19,6 +19,14 @@ export type ScanLibraryType = 'steam' | 'emudeck';
 
 export type MetadataSource = 'STEAM' | 'AI';
 
+export type MultiplayerSource = 'STEAM' | 'IGDB' | 'UNKNOWN';
+
+export type InstallStatus = 'INSTALLED' | 'NOT_INSTALLED' | 'ALL';
+
+export type LibrarySource = 'OWNED' | 'FAMILY' | 'LOCAL';
+
+export type LibrarySyncOutcome = 'APPLIED' | 'NO_CHANGE' | 'FAILED' | 'SUSPICIOUS';
+
 export interface HostRef {
   hostname: string;
   sourceType: SourceType;
@@ -31,6 +39,9 @@ export interface GameSummary {
   coverStatus: ArtworkStatus;
   coverUrl: string | null;
   coverEndpoint: string | null;
+  installStatus: InstallStatus;
+  librarySource: LibrarySource;
+  localMultiplayer: boolean | null;
 }
 
 export interface GamesPage {
@@ -64,6 +75,13 @@ export interface GameDetail {
   singlePlayer: boolean | null;
   description: string | null;
   firstSeenAt: string;
+  installStatus: InstallStatus;
+  librarySource: LibrarySource;
+  familyOwners: string[];
+  localMultiplayer: boolean | null;
+  splitScreen: boolean | null;
+  onlineOnly: boolean | null;
+  multiplayerSource: MultiplayerSource;
 }
 
 export interface ScanSource {
@@ -84,11 +102,15 @@ export interface ChatGameRef {
   id: string;
   title: string;
   platform: string;
+  coverUrl: string | null;
+  coverEndpoint: string | null;
 }
 
 export interface AttachedGame {
   id: string;
   title: string;
+  coverUrl: string | null;
+  coverEndpoint: string | null;
 }
 
 export interface ChatAnswer {
@@ -116,4 +138,34 @@ export interface RefreshCount {
 export interface RefreshAll {
   metadata: RefreshCount;
   enrichment: RefreshCount;
+  multiplayer: RefreshCount;
+}
+
+export interface LibrarySyncRun {
+  librarySource: 'OWNED' | 'FAMILY';
+  outcome: LibrarySyncOutcome;
+  startedAt: string;
+  finishedAt: string;
+  entriesSubmitted: number;
+  entriesAdded: number;
+  entriesRemoved: number;
+  metadataCalls: number;
+  aiCalls: number;
+  errorCode: string | null;
+}
+
+export interface LibrarySourceStatus {
+  lastSuccessAt: string | null;
+  lastOutcome: LibrarySyncOutcome | null;
+  entriesActive: number;
+  metadataCalls: number;
+  aiCalls: number;
+  familyTokenPresent: boolean;
+  stale: boolean;
+}
+
+export interface LibraryStatus {
+  owned: LibrarySourceStatus;
+  family: LibrarySourceStatus;
+  ownedConfigured: boolean;
 }

@@ -6,7 +6,12 @@
   [downloading]="downloading()"
   [refreshingPending]="refreshingPending()"
   [refreshProgress]="refreshProgress()"
+  [libraryStatus]="libraryStatus()"
+  [librarySyncing]="librarySyncing()"
+  [lastLibraryRun]="lastLibraryRun()"
   (toggleSource)="onToggle($event)"
   (downloadClient)="onDownloadClient($event)"
   (refreshPending)="onRefreshPending()"
+  (syncOwnedLibrary)="onSyncOwnedLibrary()"
+  (syncFamilyLibrary)="onSyncFamilyLibrary($event)"
 />

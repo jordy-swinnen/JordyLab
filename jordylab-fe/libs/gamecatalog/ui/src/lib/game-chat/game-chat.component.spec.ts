@@ -117,7 +117,15 @@ describe('GameChatComponent', () => {
       {
         role: 'assistant',
         text: 'Super Mario World supports 2-player co-op.',
-        games: [{ id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', title: 'Super Mario World', platform: 'SNES' }],
+        games: [
+          {
+            id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
+            title: 'Super Mario World',
+            platform: 'SNES',
+            coverUrl: null,
+            coverEndpoint: null,
+          },
+        ],
       },
     ]);
     spectator.detectChanges();

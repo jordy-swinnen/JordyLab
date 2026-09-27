@@ -57,11 +57,19 @@
                   [routerLink]="['/games', game.id]"
                   class="cursor-pointer gap-2 border-input py-1 pl-1 pr-3 text-[13px] font-medium text-secondary-foreground transition-colors hover:border-primary hover:text-foreground"
                 >
-                  <span
-                    class="h-[22px] w-[22px] rounded-full"
-                    [style.background]="palette(game.title).background"
-                    aria-hidden="true"
-                  ></span>
+                  @if (coverUrl(game); as artworkSrc) {
+                    <img
+                      [src]="artworkSrc"
+                      [alt]="''"
+                      class="h-[22px] w-[22px] rounded-full object-cover"
+                    />
+                  } @else {
+                    <span
+                      class="h-[22px] w-[22px] rounded-full"
+                      [style.background]="palette(game.title).background"
+                      aria-hidden="true"
+                    ></span>
+                  }
                   {{ game.title }}
                 </a>
               }
@@ -96,11 +104,19 @@
       <span
         class="inline-flex items-center gap-2 rounded-full border border-input bg-card py-1.5 pl-1.5 pr-2.5 text-[13px] font-medium text-secondary-foreground"
       >
-        <span
-          class="h-[22px] w-[22px] rounded-full"
-          [style.background]="palette(attached.title).background"
-          aria-hidden="true"
-        ></span>
+        @if (coverUrl(attached); as artworkSrc) {
+          <img
+            [src]="artworkSrc"
+            [alt]="''"
+            class="h-[22px] w-[22px] rounded-full object-cover"
+          />
+        } @else {
+          <span
+            class="h-[22px] w-[22px] rounded-full"
+            [style.background]="palette(attached.title).background"
+            aria-hidden="true"
+          ></span>
+        }
         Asking about {{ attached.title }}
         <button
           type="button"

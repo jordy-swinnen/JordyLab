@@ -7,7 +7,9 @@ import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
+import dev.jordy.jordylab.gamecatalog.domain.TitleSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameLibraryEntryRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import org.assertj.core.api.SoftAssertions;
@@ -47,6 +49,9 @@ class ReconciliationServiceTest {
     @Mock
     private GameInstallationRepository gameInstallationRepository;
 
+    @Mock
+    private GameLibraryEntryRepository gameLibraryEntryRepository;
+
     @TempDir
     private Path artworkDir;
 
@@ -54,7 +59,8 @@ class ReconciliationServiceTest {
 
     @BeforeEach
     void setUp() {
-        reconciliationService = new ReconciliationService(gameRepository, gameInstallationRepository, properties());
+        reconciliationService = new ReconciliationService(gameRepository, gameInstallationRepository,
+                gameLibraryEntryRepository, properties());
     }
 
     @Test
@@ -81,25 +87,14 @@ class ReconciliationServiceTest {
     }
 
     @Test
-    void newSteamGameCarriesSteamAppIdAsIdentity() {
-        ScanSource source = aSource(SourceType.STEAM);
-        when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of());
-        ArgumentCaptor<Game> gameCaptor = ArgumentCaptor.forClass(Game.class);
-        when(gameRepository.save(gameCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        reconciliationService.applySnapshot(source, List.of(new GamePayload("620", "Portal 2", "Steam", false)), NOW);
-
-        assertThat(gameCaptor.getValue().getSteamAppId()).isEqualTo("620");
-    }
-
-    @Test
     void sameSteamGameFromAnotherHostIsAdoptedWithoutTouchingTheGame() {
-        Game existing = Game.builder().platform("Steam").steamAppId("620").title("Portal 2").build();
-        existing.applyEnrichment("Puzzle", 2, true, true, "A classic.");
+        Game existing = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+                .titleSource(TitleSource.MANIFEST).build();
+        existing.applyEnrichment("Puzzle", true, true, "A classic.");
         existing.applyDeterministicMetadata("Puzzle, Adventure", "Valve", "Valve", 2011);
         ScanSource secondHost = aSource(SourceType.STEAM);
         when(gameInstallationRepository.findAllBySourceId(secondHost.getId())).thenReturn(List.of());
-        when(gameRepository.findByPlatformAndSteamAppId("Steam", "620")).thenReturn(Optional.of(existing));
+        when(gameRepository.findBySteamAppId("620")).thenReturn(Optional.of(existing));
 
         reconciliationService.applySnapshot(secondHost,
                 List.of(new GamePayload("620", "Portal 2", "Steam", false)), NOW);
@@ -113,7 +108,9 @@ class ReconciliationServiceTest {
                     .isEqualTo(dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus.ENRICHED);
             softly.assertThat(existing.getDescription()).isEqualTo("A classic.");
             softly.assertThat(existing.getReleaseYear()).isEqualTo(2011);
+            softly.assertThat(existing.getTitle()).isEqualTo("Portal 2");
         });
+        verify(gameRepository, never()).save(existing);
     }
 
     @Test
@@ -169,7 +166,7 @@ class ReconciliationServiceTest {
     void rediscoveredGameWithinGraceIsRestoredWithDataIntact() {
         ScanSource source = aSource();
         GameInstallation existing = anInstallation(source, "rom.smc", "Some Game");
-        existing.getGame().applyEnrichment("Platformer", 2, false, true, "A classic.");
+        existing.getGame().applyEnrichment("Platformer", false, true, "A classic.");
         existing.markUninstalled(NOW.minusSeconds(86400));
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of(existing));
 
@@ -308,6 +305,6 @@ class ReconciliationServiceTest {
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),
                 new GameCatalogProperties.Metadata(25, 3),
-                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5));
+                new GameCatalogProperties.Scan(10000, 1_048_576, 262_144, 0.5), null);
     }
 }

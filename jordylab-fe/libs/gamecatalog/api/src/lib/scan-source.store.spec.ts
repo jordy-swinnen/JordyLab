@@ -1,7 +1,7 @@
 import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { RefreshAll, ScanSource } from './gamecatalog.models';
+import { LibraryStatus, RefreshAll, ScanSource } from './gamecatalog.models';
 import { ScanSourceStore } from './scan-source.store';
 import { aRefreshAllMock } from './mocks/refresh-all.model.mock';
 import { aRefreshCountMock } from './mocks/refresh-count.model.mock';
@@ -13,11 +13,25 @@ describe('ScanSourceStore', () => {
   const setSourceEnabled = vi.fn<GameCatalogApiService['setSourceEnabled']>();
   const getScanClient = vi.fn<GameCatalogApiService['getScanClient']>();
   const refreshPending = vi.fn<GameCatalogApiService['refreshPending']>();
+  const getLibraryStatus = vi.fn<GameCatalogApiService['getLibraryStatus']>();
+  const syncOwnedLibrary = vi.fn<GameCatalogApiService['syncOwnedLibrary']>();
+  const syncFamilyLibrary = vi.fn<GameCatalogApiService['syncFamilyLibrary']>();
 
   const createService = createServiceFactory({
     service: ScanSourceStore,
     providers: [
-      { provide: GameCatalogApiService, useValue: { getSources, setSourceEnabled, getScanClient, refreshPending } },
+      {
+        provide: GameCatalogApiService,
+        useValue: {
+          getSources,
+          setSourceEnabled,
+          getScanClient,
+          refreshPending,
+          getLibraryStatus,
+          syncOwnedLibrary,
+          syncFamilyLibrary,
+        },
+      },
     ],
   });
 
@@ -32,6 +46,10 @@ describe('ScanSourceStore', () => {
     refreshPending.mockReturnValue(
       of(aRefreshAllMock({ metadata: aRefreshCountMock({ processed: 0 }), enrichment: aRefreshCountMock({ processed: 0 }) }))
     );
+    getLibraryStatus.mockReset();
+    getLibraryStatus.mockReturnValue(of(anEmptyLibraryStatus()));
+    syncOwnedLibrary.mockReset();
+    syncFamilyLibrary.mockReset();
   });
 
   describe('load', () => {
@@ -259,3 +277,17 @@ describe('ScanSourceStore', () => {
     });
   });
 });
+
+function anEmptyLibraryStatus(): LibraryStatus {
+  const empty = {
+    lastSuccessAt: null,
+    lastOutcome: null,
+    entriesActive: 0,
+    metadataCalls: 0,
+    aiCalls: 0,
+    familyTokenPresent: false,
+    stale: false,
+  } as const;
+
+  return { owned: { ...empty }, family: { ...empty }, ownedConfigured: false };
+}

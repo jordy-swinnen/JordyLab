@@ -24,6 +24,13 @@ export function aGameDetailMock(overrides: Partial<GameDetail> = {}): GameDetail
     singlePlayer: true,
     description: 'A classic SNES platformer.',
     firstSeenAt: '2026-08-02T10:15:00Z',
+    installStatus: 'INSTALLED',
+    librarySource: 'LOCAL',
+    familyOwners: [],
+    localMultiplayer: false,
+    splitScreen: false,
+    onlineOnly: false,
+    multiplayerSource: 'STEAM',
     ...overrides,
   };
 }
