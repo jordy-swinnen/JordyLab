@@ -3,11 +3,10 @@ import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
-import { artworkUrl, GameSummary } from '@jordylab-fe/gamecatalog/api';
+import { artworkUrl, GAME_LIBRARY_PAGE_SIZE, GameSummary } from '@jordylab-fe/gamecatalog/api';
 import { coverInitials, coverPalette, platformTagClass } from '../cover';
 
 const SKELETON_CARD_COUNT = 10;
-const PAGE_SIZE = 60;
 const CHIP = 'h-10 cursor-pointer px-4 text-sm font-semibold';
 
 @Component({
@@ -49,7 +48,7 @@ export class GameGridViewComponent {
 
   /** Catalogue number shown on cover plates, continuing across pages. */
   protected catalogNumber(index: number): string {
-    return String(this.page() * PAGE_SIZE + index + 1).padStart(3, '0');
+    return String(this.page() * GAME_LIBRARY_PAGE_SIZE + index + 1).padStart(3, '0');
   }
 
   onSearchInput(event: Event) {
