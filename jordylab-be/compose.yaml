@@ -48,3 +48,4 @@ services:
       - '8180:8080'
     volumes:
       - './compose/keycloak-realm-export.json:/opt/keycloak/data/import/jordylab-realm.json:ro'
+      - './compose/keycloak-theme/jordylab:/opt/keycloak/themes/jordylab:ro'

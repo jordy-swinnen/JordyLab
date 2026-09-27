@@ -1,6 +1,7 @@
 {
   "realm": "jordylab",
   "enabled": true,
+  "loginTheme": "jordylab",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
