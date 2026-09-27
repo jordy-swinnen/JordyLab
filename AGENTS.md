@@ -39,6 +39,13 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 - After implementing a feature or fix, immediately run relevant tests to verify only the changed code works — no full test suite runs unless explicitly requested.
 - After completing a plan or task, always test the end-to-end flow of the features built or changed. Test only the scope that was touched — avoid full-suite integration tests unless the change warrants it.
 
+## Validation Data
+
+- **Never hand-seed the database.** Do not `INSERT`/`COPY`/seed rows directly into the running database (`gamecatalog` schema or any other) to validate a feature, populate a demo, or check a UI/E2E flow. This is forbidden.
+- Real data comes from the real scanner: download the Python client (`GET /api/gamecatalog/ingest/client`) and run it on the actual machine — currently macOS, and also Linux/CachyOS — against the running backend. The scan auto-registers/adopts the source, and the catalog reflects that device's real libraries.
+- If real data is unavailable (no library present, scanner auth fails, backend unreachable), stop and report it — never substitute hand-written rows.
+- Automated tests are the exception: synthetic data belongs in Testcontainers fixtures and mocks inside test code, never in the live dev database.
+
 ## AI Routing
 
 Per-module provider selection via `ResilientAiService` with health-check-and-cache pattern. MVP1 wires one provider (Anthropic) across the modules that need AI; local inference (Ollama) is deferred to a separate feature. The table below describes the target architecture — `fna` and `gamecatalog` are wired today.
