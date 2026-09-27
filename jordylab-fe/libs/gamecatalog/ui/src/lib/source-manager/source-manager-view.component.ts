@@ -4,7 +4,12 @@ import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
-import { LibraryStatus, LibrarySyncRun, ScanSource, SourceType } from '@jordylab-fe/gamecatalog/api';
+import {
+  LibraryStatus,
+  LibrarySyncRun,
+  ScanSource,
+  SourceType,
+} from '@jordylab-fe/gamecatalog/api';
 import { platformTagClass } from '../cover';
 
 export type ScanClientType = 'steam' | 'emudeck';
@@ -53,10 +58,14 @@ export class SourceManagerViewComponent {
     this.familyToken.set((event.target as HTMLInputElement).value);
   }
 
-  onSyncFamily(): void {
+  onSyncFamily(tokenInput: HTMLInputElement): void {
     const token = this.familyToken().trim();
     if (token.length > 0) {
       this.syncFamilyLibrary.emit(token);
+      // The token is used only for this one request (FR-011) — clear it from both the signal
+      // and the (uncontrolled) input's own value rather than letting it linger in memory/DOM.
+      this.familyToken.set('');
+      tokenInput.value = '';
     }
   }
 

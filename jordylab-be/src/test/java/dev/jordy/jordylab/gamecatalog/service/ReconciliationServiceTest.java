@@ -4,6 +4,8 @@ import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
+import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
+import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
@@ -235,6 +237,32 @@ class ReconciliationServiceTest {
                     after.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS));
         });
         verify(gameInstallationRepository).deleteAll(List.of(expired));
+        verify(gameRepository).delete(game);
+    }
+
+    @Test
+    void purgeDeletesExpiredLibraryEntryBeforeDeletingTheGame() {
+        Game game = Game.builder().platform(PLATFORM).title("Old Game").build();
+        GameInstallation expiredInstallation = anInstallation(aSource(), game, "old.smc");
+        expiredInstallation.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
+        GameLibraryEntry expiredEntry = GameLibraryEntry.builder()
+                .game(game)
+                .librarySource(LibrarySource.OWNED)
+                .firstSeenAt(NOW.minusSeconds(60L * 24 * 3600))
+                .lastSeenAt(NOW.minusSeconds(40L * 24 * 3600))
+                .removedAt(NOW.minusSeconds(40L * 24 * 3600))
+                .build();
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
+        when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
+                cutoffCaptor.capture())).thenReturn(List.of(expiredInstallation));
+        when(gameInstallationRepository.countByGameId(game.getId())).thenReturn(0L);
+        when(gameLibraryEntryRepository.findAllByGameId(game.getId())).thenReturn(List.of(expiredEntry));
+        when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+        reconciliationService.purgeUninstalledGames();
+
+        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
+        verify(gameLibraryEntryRepository).deleteAll(List.of(expiredEntry));
         verify(gameRepository).delete(game);
     }
 

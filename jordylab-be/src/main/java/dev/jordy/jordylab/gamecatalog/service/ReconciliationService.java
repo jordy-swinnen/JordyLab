@@ -116,6 +116,9 @@ public class ReconciliationService {
             }
             Optional<Game> orphanedGame = gameRepository.findById(gameId);
             if (orphanedGame.isPresent()) {
+                // heldInLibrary was false above, so any remaining entries for this game are past
+                // grace; delete them first — the FK from game_library_entry to game has no cascade.
+                gameLibraryEntryRepository.deleteAll(gameLibraryEntryRepository.findAllByGameId(gameId));
                 deleteLocalArtworkFile(orphanedGame.get());
                 gameRepository.delete(orphanedGame.get());
                 purgedGames++;

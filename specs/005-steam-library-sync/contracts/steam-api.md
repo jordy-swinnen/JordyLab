@@ -29,8 +29,10 @@ Response (relevant shape):
 - **Secret handling**: the key is a query parameter. The client must never log the full URI;
   log method + path + status only. WireMock fixture uses a placeholder key.
 
-Fixtures (`gamecatalog/rest/client/SteamOwnedGamesClientTest`):
-`owned-games-normal.json`, `owned-games-empty.json`, `owned-games-error.html`.
+Tests: `SteamOwnedGamesClientTest` (WireMock, inline JSON stubs — no separate fixture files, matching
+the pattern already used by `SteamAppDetailsClientTest`/`IgdbClientTest`), covering the normal
+response, the documented no-`games`-key empty-library shape, a non-array `games` value, entries
+missing `appid`, an HTTP error, and an unreadable body.
 
 ## 2. Family library — `IFamilyGroupsService` (undocumented)
 
@@ -59,8 +61,10 @@ Token is a user access token valid ~24 h, supplied per request; never stored.
   (`UNKNOWN_RESPONSE`); no rows touched.
 - Token rejected (401/403) → `FAILED` (`TOKEN_EXPIRED`), HTTP 502 to the caller.
 
-The sanitised capture is frozen as `family-shared-apps.json` BEFORE the mapping is written
-(research action). A placeholder fixture is used until the capture exists.
+Tests: `SteamFamilyClientTest` (WireMock, inline JSON stubs) covers the group-id field-name
+fallback chain, an excluded (non-shareable) app, entries missing `appid`, a missing group id, a
+non-array `apps`, a missing top-level `response` key, and the `401`/`403` → `TOKEN_EXPIRED` and
+other-status → `UNKNOWN_RESPONSE` mappings.
 
 ## 3. Store metadata — `store.steampowered.com/api/appdetails` (keyless, rate-limited)
 

@@ -96,8 +96,12 @@ describe('SourceManagerComponent', () => {
   it('exposes Steam and EmuDeck download buttons', () => {
     populate([]);
 
-    expect(spectator.query('[data-testid="download-steam-client"]')).not.toBeNull();
-    expect(spectator.query('[data-testid="download-emudeck-client"]')).not.toBeNull();
+    expect(
+      spectator.query('[data-testid="download-steam-client"]'),
+    ).not.toBeNull();
+    expect(
+      spectator.query('[data-testid="download-emudeck-client"]'),
+    ).not.toBeNull();
   });
 
   it('shows an empty state when no sources exist', () => {
@@ -111,7 +115,9 @@ describe('SourceManagerComponent', () => {
     error.set('Failed to load scan sources.');
     spectator.detectChanges();
 
-    expect(spectator.query('.text-destructive')).toHaveText('Failed to load scan sources.');
+    expect(spectator.query('.text-destructive')).toHaveText(
+      'Failed to load scan sources.',
+    );
   });
 
   it('forwards the source to the store when its toggle is clicked', () => {
@@ -146,7 +152,9 @@ describe('SourceManagerComponent', () => {
       Object.assign(URL, { createObjectURL, revokeObjectURL });
       createObjectURL.mockClear();
       revokeObjectURL.mockClear();
-      anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      anchorClick = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => undefined);
       populate([]);
     });
 
@@ -159,7 +167,10 @@ describe('SourceManagerComponent', () => {
     it('requests the Steam client from the store', () => {
       spectator.click('[data-testid="download-steam-client"]');
 
-      expect(downloadClient).toHaveBeenCalledWith('steam', expect.any(Function));
+      expect(downloadClient).toHaveBeenCalledWith(
+        'steam',
+        expect.any(Function),
+      );
     });
 
     it('saves the generated client as a file named after the library', () => {
@@ -190,6 +201,18 @@ describe('SourceManagerComponent', () => {
       spectator.click('[data-testid="sync-family-library"]');
 
       expect(syncFamilyLibrary).toHaveBeenCalledWith('family-token');
+    });
+
+    it('clears the pasted family token from the input once it is sent', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.typeInElement('family-token', 'input[type="password"]');
+      spectator.click('[data-testid="sync-family-library"]');
+
+      const input = spectator.query(
+        'input[type="password"]',
+      ) as HTMLInputElement;
+      expect(input.value).toBe('');
     });
 
     it('disables the owned sync and shows a hint when Steam is not configured', () => {

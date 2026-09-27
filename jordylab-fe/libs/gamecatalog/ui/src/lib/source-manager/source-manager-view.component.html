@@ -115,7 +115,9 @@
     <button
       hlmBtn
       variant="outline"
-      [disabled]="librarySyncing() !== null || libraryStatus()?.ownedConfigured === false"
+      [disabled]="
+        librarySyncing() !== null || libraryStatus()?.ownedConfigured === false
+      "
       (click)="onSyncOwned()"
       data-testid="sync-owned-library"
     >
@@ -132,18 +134,21 @@
   </div>
   @if (libraryStatus()?.ownedConfigured === false) {
     <p class="mono-label text-muted-foreground">
-      Steam account not configured — set STEAM_WEB_API_KEY and STEAM_ID to sync the owned library.
+      Steam account not configured — set STEAM_WEB_API_KEY and STEAM_ID to sync
+      the owned library.
     </p>
   }
 
   <div class="flex flex-col gap-3 border-t border-border pt-5">
     <div class="mono-label">Family library</div>
     <p class="text-sm text-muted-foreground">
-      Paste a short-lived Steam access token (about 24 hours). It is used for one sync and never
-      stored.
+      Paste a short-lived Steam access token (about 24 hours). It is used for
+      one sync and never stored.
     </p>
     <details class="text-sm text-muted-foreground">
-      <summary class="cursor-pointer font-medium text-foreground">How do I get a token?</summary>
+      <summary class="cursor-pointer font-medium text-foreground">
+        How do I get a token?
+      </summary>
       <ol class="mt-2 list-decimal space-y-1 pl-5">
         <li>In a browser, sign in to your Steam account.</li>
         <li>
@@ -157,13 +162,13 @@
           >.
         </li>
         <li>
-          Copy the <code class="font-mono">webapi_token</code> value (a long string) and paste it
-          above.
+          Copy the <code class="font-mono">webapi_token</code> value (a long
+          string) and paste it above.
         </li>
       </ol>
       <p class="mt-2">
-        The token expires roughly every 24 hours — paste a fresh one to sync again. This uses
-        Steam's undocumented family API; see the
+        The token expires roughly every 24 hours — paste a fresh one to sync
+        again. This uses Steam's undocumented family API; see the
         <a
           href="https://steamapi.xpaw.me/#IFamilyGroupsService/GetSharedLibraryApps"
           target="_blank"
@@ -180,13 +185,14 @@
         placeholder="Steam access token"
         aria-label="Steam family access token"
         class="h-10 w-full max-w-sm"
+        #familyTokenInput
         (input)="onFamilyTokenInput($event)"
       />
       <button
         hlmBtn
         variant="outline"
         [disabled]="librarySyncing() !== null"
-        (click)="onSyncFamily()"
+        (click)="onSyncFamily(familyTokenInput)"
         data-testid="sync-family-library"
       >
         {{ librarySyncing() === 'FAMILY' ? 'Syncing…' : 'Sync family library' }}
@@ -207,8 +213,8 @@
 
   @if (lastLibraryRun(); as run) {
     <div class="mono-label border-t border-border pt-5">
-      {{ run.librarySource }} · {{ run.outcome }} · {{ run.entriesAdded }} added ·
-      {{ run.metadataCalls }} metadata calls · {{ run.aiCalls }} AI calls
+      {{ run.librarySource }} · {{ run.outcome }} · {{ run.entriesAdded }} added
+      · {{ run.metadataCalls }} metadata calls · {{ run.aiCalls }} AI calls
     </div>
   }
 </div>
