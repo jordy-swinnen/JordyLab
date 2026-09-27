@@ -15,7 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -27,13 +26,13 @@ import java.util.UUID;
 
 /**
  * Enforces the guest daily chat limit (FR-009, research D5) on {@code POST /api/gamecatalog/chat}.
- * Registered with Spring Boot's default filter ordering, which places a plain {@code @Component}
- * filter bean after the security filter chain — so it only ever runs once the request has
- * already been authenticated and authorized, with a fully populated {@link SecurityContextHolder}.
- * Admins are exempt; the check runs before the call, the increment only after a 2xx response, so
- * a failed AI call never burns a guest's budget.
+ * Declared as a {@code @Bean} in {@link dev.jordy.jordylab.settings.SettingsConfiguration} rather
+ * than {@code @Component} (see that class's javadoc for why), but registered with the same
+ * default Spring Boot filter ordering — after the security filter chain — so it only ever runs
+ * once the request has already been authenticated and authorized, with a fully populated
+ * {@link SecurityContextHolder}. Admins are exempt; the check runs before the call, the increment
+ * only after a 2xx response, so a failed AI call never burns a guest's budget.
  */
-@Component
 @RequiredArgsConstructor
 public class GuestChatLimitFilter extends OncePerRequestFilter {
 
