@@ -32,9 +32,11 @@
     }
   },
   "agent": {
-    "sdd-plan": {
-      "mode": "primary",
-      "model": "glm-5.2",
+    "build": {
+      "model": "opencode/deepseek-v4.1-flash"
+    },
+    "plan": {
+      "model": "opencode/glm-5.2",
       "permission": {
         "edit": {
           "*": "deny",
@@ -51,10 +53,6 @@
           "git rev-parse*": "allow"
         }
       }
-    },
-    "sdd-build": {
-      "mode": "primary",
-      "model": "ollama/qwen3.6:27b-64k"
     }
   }
 }
