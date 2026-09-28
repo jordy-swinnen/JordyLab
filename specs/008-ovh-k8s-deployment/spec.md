@@ -48,6 +48,15 @@ Podman, the feature also ships a learning guide and an operational runbook built
 
 ---
 
+## Clarifications
+
+### Session 2026-09-28
+
+- Q: How should CI reach the k3s API server to deploy? → A: Keep 6443 firewalled from the public internet; GitHub
+  Actions joins a WireGuard/Tailscale network for the deploy step.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - JordyLab is live on a public HTTPS domain (Priority: P1)
@@ -329,10 +338,9 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 - **FR-018**: A runbook MUST cover bootstrap (VPS hardening + k3s install), deploy, rollback, logs, DB
   backup/restore, secret rotation, certificate troubleshooting, k3s/OS upgrades and full VPS rebuild.
 - **FR-019**: The VPS MUST be hardened: SSH key-only access, no root password login, automatic security updates,
-  and a firewall exposing only SSH (restricted), 80 and 443. Kubelet and flannel ports MUST NOT be public.
-  [NEEDS CLARIFICATION: how CI reaches the Kubernetes API (6443) to deploy — options considered include exposing
-  6443 publicly behind a namespace-scoped token only, keeping 6443 firewalled with CI joining a WireGuard/Tailscale
-  network for the deploy step, or deploying over SSH]
+  and a firewall exposing only SSH (restricted), 80 and 443. Kubelet and flannel ports MUST NOT be public. The
+  Kubernetes API (6443) MUST also stay firewalled from the public internet; CI reaches it for deploys by joining a
+  WireGuard/Tailscale network.
 - **FR-020**: The repository MUST carry a single root `LICENSE` with "all rights reserved, source available for
   viewing only" terms, replacing all four MIT licence files; package manifests, the README and image labels MUST
   match, and third-party licences MUST be preserved. This MUST land before go-live.
@@ -367,8 +375,8 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 - **SC-006**: Jordy can explain and do every runbook procedure alone after working through the learning guide.
 - **SC-007**: No MIT licence file or MIT licence declaration remains in the repo (excluding third-party files), and
   a CI check keeps it that way.
-- **SC-008**: A public port scan of the VPS shows only 80, 443 and (restricted) SSH, plus 6443 only if the CI-access
-  clarification lands on exposing it. `/auth/admin` is not reachable.
+- **SC-008**: A public port scan of the VPS shows only 80, 443 and (restricted) SSH — 6443 is never publicly
+  reachable, since CI reaches it over WireGuard/Tailscale instead. `/auth/admin` is not reachable.
 
 ## Assumptions
 
