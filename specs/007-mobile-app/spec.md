@@ -42,6 +42,7 @@ nudges each platform toward the right install path exactly once.
   app screen.
 - Q: Should "Save to FNA" (the admin-only share destination) stay in this feature's scope? → A: Keep it, at P3 — it
   needs a small new FNA endpoint to accept a manually shared article URL.
+- Q: What's the oldest Android version this app needs to support? → A: Android 10 (API 29) and newer.
 
 ---
 
@@ -213,6 +214,8 @@ the home screen, and confirm it opens full-screen with no further prompt.
   the release pipeline fails if the signing-cert fingerprint differs from the configured one.
 - The download link is shared outside the group: it expires after minutes. The APK is useless without an approved
   account anyway.
+- A friend's phone runs Android 9 or older: the OS refuses to install the APK. No in-app fallback is provided; the
+  install dialog's steps assume Android 10+.
 - The app is offline: it shows a clear "can't reach JordyLab" state, not a blank screen.
 - The admin revokes a guest who has biometric unlock: the next refresh fails and the app returns to login.
 - 2027 Android developer verification: the app must be registered under a Limited Distribution account before the
@@ -258,6 +261,8 @@ the home screen, and confirm it opens full-screen with no further prompt.
 - **FR-015**: Notification taps MUST open the matching screen in the app.
 - **FR-017**: Confirming "Save to FNA" on a share MUST queue the shared link as an article candidate for the next
   daily briefing. This destination MUST remain admin-only.
+- **FR-018**: The app MUST support Android 10 (API 29) and newer. Installation is not supported on older Android
+  versions.
 - **FR-016**: The system MUST notify the admin when a new sign-up is pending and when the daily briefing is ready, via
   the existing Ntfy server with a click-through link that opens the matching app screen.
 
@@ -274,8 +279,8 @@ the home screen, and confirm it opens full-screen with no further prompt.
 
 ### Measurable Outcomes
 
-- **SC-001**: A guest on a fresh Android phone goes from opening the website to a logged-in app in under 3 minutes,
-  following only the on-screen steps.
+- **SC-001**: A guest on a fresh Android 10+ phone goes from opening the website to a logged-in app in under 3
+  minutes, following only the on-screen steps.
 - **SC-002**: 100% of API calls and artwork images load correctly in the app (no relative-URL failures), verified by
   a device test pass.
 - **SC-003**: With biometric unlock on, reopening the app after 7 days needs no password.
@@ -299,5 +304,7 @@ the home screen, and confirm it opens full-screen with no further prompt.
 - Notifications are delivered through the existing Ntfy server (see FR-016), reused rather than replaced. Guests have
   no notification use case in this feature; FCM or a UnifiedPush plugin remain options for a future feature if guests
   need push.
+- The app supports Android 10 (API 29) and newer (see FR-018); the current friend group's devices are assumed to meet
+  this floor.
 - Losing the release signing key would force every installed app to be uninstalled and reinstalled; the key is
   created once and backed up outside of source control.

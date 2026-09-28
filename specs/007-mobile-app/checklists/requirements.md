@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,12 +31,13 @@
 
 ## Notes
 
-- One [NEEDS CLARIFICATION] marker is left in the spec **intentionally**, per explicit instruction in this
-  feature's `/speckit-specify` invocation ("Keep the push-notification channel as [NEEDS CLARIFICATION]"):
-  the notification delivery channel in User Story 6 and FR-016 (Ntfy + deep links / Firebase Cloud
-  Messaging / custom UnifiedPush plugin — see `research.md` §4 for the tradeoffs). This is deferred to
-  `/speckit-clarify`, not resolved here, so the checklist item above is left unchecked rather than iterated
-  on.
+- The one [NEEDS CLARIFICATION] marker deliberately left by `/speckit-specify` (the push-notification
+  delivery channel, User Story 6 / FR-016) was resolved in the 2026-09-27 (session-dated 2026-09-28)
+  `/speckit-clarify` round: **Ntfy + deep links**, reusing the existing server rather than adding Firebase
+  Cloud Messaging or a custom UnifiedPush plugin. Two further decisions were made in the same round and are
+  recorded under `## Clarifications` in spec.md: "Save to FNA" stays in scope at P3 (FR-017), and the app's
+  minimum supported OS is Android 10 / API 29 (FR-018), raised from Capacitor's default floor of API 24 to
+  shrink the test matrix.
 - "Capacitor" (Android shell) and "home-screen web app" (iOS) are retained as product/distribution
   decisions taken directly from the user's feature description — the request is specifically about *this*
   distribution model (sideloaded APK, no Play Store, no native iOS build), not an internal implementation
