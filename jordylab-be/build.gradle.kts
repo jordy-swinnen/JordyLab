@@ -85,6 +85,10 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Tests that boot a Spring context (JordylabApplicationTests, KeycloakIntegrationTest,
+    // @ApplicationModuleTest) need a valid profile active or EnvironmentProfileGuard fails them
+    // fast, per FR-002. "local" matches how the app actually runs outside prod.
+    systemProperty("spring.profiles.active", "local")
 }
 
 // The Spring Boot bootstrap class is a single `main` method delegating to
