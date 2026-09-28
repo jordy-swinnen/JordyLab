@@ -1,0 +1,47 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../k8s/base
+  - ../../k8s/cluster/cert-manager-clusterissuer.yaml
+  - ../../k8s/cluster/cnpg-cluster.yaml
+  - ../../k8s/cluster/ovh-object-storage.yaml
+  - ../../k8s/cluster/ci-deploy-rbac.yaml
+  - secrets.sops.yaml
+
+images:
+  - name: ghcr.io/jordy-swinnen/jordylab-backend
+    newTag: placeholder # set by `kustomize edit set image` in deploy-prod.yml, per the deployed commit SHA
+  - name: ghcr.io/jordy-swinnen/jordylab-frontend
+    newTag: placeholder
+  - name: ghcr.io/jordy-swinnen/jordylab-keycloak
+    newTag: placeholder
+
+configMapGenerator:
+  - name: backend-config
+    literals:
+      - KEYCLOAK_URL=https://__DOMAIN__/auth
+      - JORDYLAB_CORS_ALLOWED_ORIGINS=https://__DOMAIN__,https://localhost
+      - MOBILE_PRODUCTION_DOMAIN=__DOMAIN__
+      - NTFY_BASE_URL=https://__DOMAIN__/ntfy
+  - name: keycloak-config
+    literals:
+      - KC_HOSTNAME=https://__DOMAIN__/auth
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_PROXY_HEADERS=xforwarded
+      # Restrict to the in-cluster Traefik Service CIDR — fill in at implementation time from
+      # `kubectl get svc -n kube-system traefik -o jsonpath='{.spec.clusterIP}'` or the pod CIDR.
+      - KC_PROXY_TRUSTED_ADDRESSES=__TRAEFIK_CIDR__
+
+patches:
+  - target:
+      kind: Certificate
+      name: jordylab-tls
+    patch: |-
+      - op: replace
+        path: /spec/dnsNames/0
+        value: __DOMAIN__
+
+# NOTE: __DOMAIN__ and __TRAEFIK_CIDR__ are placeholders until the domain is bought (spec.md
+# Assumptions) and the cluster exists (US8 bootstrap). Replace with the real values here, or via
+# `kustomize edit set` / a sed step in deploy-prod.yml, before the first real deploy.

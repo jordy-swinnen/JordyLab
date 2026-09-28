@@ -1,0 +1,20 @@
+# Local development defaults. Only active under the "local" Spring profile — never merged into
+# application.yaml, so these values can never leak into prod (FR-002).
+#
+# Matches podman compose (../compose.yaml): Postgres and Keycloak run in Podman on localhost.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/jordylab
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/jordylab
+
+jordylab:
+  settings:
+    keycloak:
+      server-url: http://localhost:8180
+  cors:
+    # One origin per per-domain dev server (Angular's jordylab/fna/gamecatalog apps on nx serve).
+    allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400

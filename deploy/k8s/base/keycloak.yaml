@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: ghcr.io/jordy-swinnen/jordylab-keycloak:placeholder
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          envFrom:
+            - configMapRef:
+                name: keycloak-config
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://cnpg-cluster-rw:5432/jordylab?currentSchema=keycloak
+            - name: KC_DB_SCHEMA
+              value: keycloak
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: KEYCLOAK_DB_USERNAME
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: KEYCLOAK_DB_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: KEYCLOAK_ADMIN_BOOTSTRAP_USERNAME
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: KEYCLOAK_ADMIN_BOOTSTRAP_PASSWORD
+            # KC_HOSTNAME, KC_HTTP_RELATIVE_PATH, KC_PROXY_HEADERS, KC_PROXY_TRUSTED_ADDRESSES come
+            # from the `keycloak-config` ConfigMap above, populated with the real domain by the
+            # prod overlay (deploy/k8s/overlays/prod/kustomization.yaml, T021) — the image itself
+            # stays domain-agnostic (research.md §9).
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: management
+            initialDelaySeconds: 45
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              cpu: "1"
+              memory: 1024Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    # Port 9000 (management: health/metrics/admin) is deliberately NOT exposed on this Service's
+    # port list beyond what's needed for the probes above, and no HTTPRoute ever targets it
+    # (FR-009, contracts/http-routing.md). Reach it with `kubectl port-forward` only.

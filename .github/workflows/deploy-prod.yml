@@ -1,0 +1,69 @@
+name: Deploy to Production
+
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to deploy (defaults to the latest successful Build run)"
+        required: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production # required reviewer = Jordy (docs/runbook.md §9) — this is the manual approval gate (FR-006)
+    env:
+      SHA: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Join Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Install sops, age, kustomize, kubectl
+        run: |
+          curl -sSLo /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.13.2/sops-v3.13.2.linux.amd64
+          chmod +x /usr/local/bin/sops
+          curl -sSL https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz | tar -xz -C /tmp
+          sudo mv /tmp/age/age* /usr/local/bin/
+          curl -sSL "https://get.k8s.io/kustomize" | bash
+          sudo mv kustomize /usr/local/bin/
+          curl -LO "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CA_CERT }}" | base64 -d > /tmp/ca.crt
+          kubectl config set-cluster jordylab --server="${{ secrets.KUBE_SERVER }}" --certificate-authority=/tmp/ca.crt
+          kubectl config set-credentials ci-deploy --token="${{ secrets.KUBE_TOKEN }}"
+          kubectl config set-context jordylab --cluster=jordylab --user=ci-deploy --namespace=jordylab
+          kubectl config use-context jordylab
+
+      - name: Decrypt secrets and apply
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          cd deploy/k8s/overlays/prod
+          # Decrypts in place, in this ephemeral, never-committed checkout only — the ciphertext
+          # in git is untouched. kustomization.yaml's `resources:` already points at this
+          # filename, so `kustomize build` below picks up the now-plaintext Secret.
+          sops --output secrets.sops.yaml -d secrets.sops.yaml
+          kustomize edit set image \
+            ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:sha-${SHA}" \
+            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:sha-${SHA}" \
+            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:sha-${SHA}"
+          kustomize build . | kubectl apply -f -
+
+      - name: Wait for a healthy rollout
+        run: |
+          kubectl -n jordylab rollout status deploy/backend --timeout=8m
+          kubectl -n jordylab rollout status deploy/frontend --timeout=5m
+          kubectl -n jordylab rollout status deploy/keycloak --timeout=8m

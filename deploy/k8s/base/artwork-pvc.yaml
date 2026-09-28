@@ -1,0 +1,23 @@
+# Persistent storage for game artwork and 007's APK files (FR-016) — survives pod restarts and
+# VPS reboots (not a VPS loss; see docs/runbook.md §16).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gamecatalog-artwork
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mobile-releases
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

@@ -1,0 +1,32 @@
+# Multi-stage build for jordylab-be (Spring Boot 4, Java 25).
+# Built by CI for linux/amd64 only (research.md; never run a MacBook-built arm64 image in prod).
+#
+# Build context is the repo root, e.g.:
+#   docker build -f deploy/containers/backend/Containerfile -t jordylab-backend .
+
+# --- Build stage ---
+FROM eclipse-temurin:25-jdk-noble AS build
+WORKDIR /workspace
+
+COPY jordylab-be/gradlew jordylab-be/gradlew.bat ./
+COPY jordylab-be/gradle ./gradle
+COPY jordylab-be/build.gradle.kts jordylab-be/settings.gradle.kts ./
+RUN ./gradlew --version
+
+COPY jordylab-be/src ./src
+RUN ./gradlew bootJar --no-daemon -x test
+
+# --- Runtime stage ---
+FROM eclipse-temurin:25-jre-noble AS runtime
+RUN useradd --create-home --shell /usr/sbin/nologin jordylab
+USER jordylab
+WORKDIR /home/jordylab
+
+COPY --from=build --chown=jordylab:jordylab /workspace/build/libs/*.jar app.jar
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+LABEL org.opencontainers.image.title="jordylab-backend"
+LABEL org.opencontainers.image.source="https://github.com/jordy-swinnen/JordyLab"
+# org.opencontainers.image.licenses is set once the licence text lands (see US7, T060).

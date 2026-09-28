@@ -1,0 +1,7 @@
+# Helm values for installing the Barman Cloud Plugin (research.md §6):
+#   helm install barman-cloud cnpg/plugin-barman-cloud -n cnpg-system -f deploy/k8s/cluster/barman-cloud-plugin-values.yaml
+#
+# The plugin itself has no image-registry-specific values to override for this single-cluster
+# setup — installed with chart defaults. This file exists as the pinned-values record per
+# plan.md's project structure, and as the place to add overrides if a future need arises.
+replicaCount: 1

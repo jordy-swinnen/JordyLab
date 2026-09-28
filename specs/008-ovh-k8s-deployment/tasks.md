@@ -38,17 +38,17 @@ k8s/overlays/prod/, k8s/cluster/, keycloak/), `docs/` (new: learn/, runbook.md, 
 **Purpose**: Scaffold the new directories and placeholder files this feature adds. Nothing here touches a live
 server.
 
-- [ ] T001 Create the `deploy/` directory skeleton: `deploy/containers/{backend,frontend,keycloak}/`,
+- [X] T001 Create the `deploy/` directory skeleton: `deploy/containers/{backend,frontend,keycloak}/`,
   `deploy/host/`, `deploy/k8s/base/`, `deploy/k8s/overlays/prod/`, `deploy/k8s/cluster/`, `deploy/keycloak/`
-- [ ] T002 [P] Create the `docs/` skeleton: `docs/learn/`, a stub `docs/runbook.md` with section headings matching
+- [X] T002 [P] Create the `docs/` skeleton: `docs/learn/`, a stub `docs/runbook.md` with section headings matching
   FR-018's list (bootstrap, deploy, rollback, logs, backup/restore, secret rotation, certificate troubleshooting,
   k3s/OS upgrades, full VPS rebuild), and a stub `docs/environments.md`
-- [ ] T003 [P] Create stub `.github/workflows/build.yml` and `.github/workflows/deploy-prod.yml` (name + trigger
+- [X] T003 [P] Create stub `.github/workflows/build.yml` and `.github/workflows/deploy-prod.yml` (name + trigger
   only, no jobs yet)
-- [ ] T004 [P] Create `.sops.yaml` at the repo root with the `creation_rules` shape from `research.md` §7
+- [X] T004 [P] Create `.sops.yaml` at the repo root with the `creation_rules` shape from `research.md` §7
   (`encrypted_regex: ^(data|stringData)$`), age public key left as a `# TODO: Jordy's age public key` placeholder —
   do not generate a real keypair
-- [ ] T005 [P] Create `deploy/k8s/base/kustomization.yaml` declaring the `jordylab` Namespace, with an empty
+- [X] T005 [P] Create `deploy/k8s/base/kustomization.yaml` declaring the `jordylab` Namespace, with an empty
   resource list to be filled in by later phases
 
 **Checkpoint**: Directory structure exists; no live infrastructure touched yet.
@@ -62,23 +62,24 @@ feature's own phase-order note, this and Setup are the only phases that need no 
 
 **⚠️ CRITICAL**: No user story phase below can be meaningfully completed until this phase is done.
 
-- [ ] T006 [P] Split `jordylab-be/src/main/resources/application.yaml`: move every `localhost`, dev-Keycloak, and
+- [X] T006 [P] Split `jordylab-be/src/main/resources/application.yaml`: move every `localhost`, dev-Keycloak, and
   dev-CORS value into a new `jordylab-be/src/main/resources/application-local.yaml`, leaving `application.yaml`
   free of environment-specific values (FR-002)
-- [ ] T007 [P] Create `jordylab-be/src/main/resources/application-prod.yaml` with every value sourced from an
+- [X] T007 [P] Create `jordylab-be/src/main/resources/application-prod.yaml` with every value sourced from an
   environment variable — no literal hosts, origins, or credentials (FR-002)
-- [ ] T008 Implement a backend startup check that fails fast with a clear error message when neither `local` nor
+- [X] T008 Implement a backend startup check that fails fast with a clear error message when neither `local` nor
   `prod` is the active Spring profile (FR-002; depends on T006/T007 defining what "valid profile" means)
-- [ ] T009 [P] Create `jordylab-fe`'s production environment file pointing at the real domain (placeholder value
-  until the domain is bought) and confirm the existing local environment file is untouched (FR-001)
-- [ ] T010 [P] Create `deploy/containers/backend/Containerfile`: multi-stage Java 25/Gradle build producing a
+- [X] T009 [P] Create `jordylab-fe`'s production environment file pointing at the real domain (placeholder value
+  until the domain is bought) and confirm the existing local environment file is untouched (FR-001) — already
+  existed from feature 007's scaffolding (`apps/jordylab/src/environments/environment.prod.ts`); verified correct
+- [X] T010 [P] Create `deploy/containers/backend/Containerfile`: multi-stage Java 25/Gradle build producing a
   `linux/amd64` runtime image
-- [ ] T011 [P] Create `deploy/containers/frontend/Containerfile`: multi-stage Bun build running
+- [X] T011 [P] Create `deploy/containers/frontend/Containerfile`: multi-stage Bun build running
   `nx build jordylab --configuration=production`, final stage on `nginx/docker-nginx-unprivileged:1.29-alpine`
   (`research.md` §10) with SPA fallback and security headers
-- [ ] T012 [P] Create `deploy/containers/keycloak/Containerfile`: based on `quay.io/keycloak/keycloak:26.7.4`
+- [X] T012 [P] Create `deploy/containers/keycloak/Containerfile`: based on `quay.io/keycloak/keycloak:26.7.4`
   (`research.md` §9), running `kc.sh build` with the `jordylab` login theme baked in
-- [ ] T013 Add base `Deployment`/`Service` manifests for backend, frontend, and Keycloak in `deploy/k8s/base/`,
+- [X] T013 Add base `Deployment`/`Service` manifests for backend, frontend, and Keycloak in `deploy/k8s/base/`,
   each with readiness/liveness probes and resource requests/limits (FR-010), referencing the three images above
 
 **Checkpoint**: Environment split, images, and base workload manifests exist. User story phases can begin.
@@ -93,35 +94,39 @@ endpoints), and supports the mobile app and JordyBox scanner (spec.md US1).
 **Independent Test**: Open `https://<domain>` from a phone on mobile data, log in, open the Game Catalog, and
 confirm the certificate is valid (once the cluster from Phase 10/US8 is bootstrapped at least once).
 
-- [ ] T014 [P] [US1] Create `Gateway` + `HTTPRoute` manifests in `deploy/k8s/base/` for the public routes table in
+- [X] T014 [P] [US1] Create `Gateway` + `HTTPRoute` manifests in `deploy/k8s/base/` for the public routes table in
   `contracts/http-routing.md` (`/`, `/api/**`, `/auth/realms|resources|.well-known`,
   `/.well-known/assetlinks.json`)
-- [ ] T015 [US1] Create `deploy/host/traefik-helmchartconfig.yaml` (a `HelmChartConfig` enabling
+- [X] T015 [US1] Create `deploy/host/traefik-helmchartconfig.yaml` (a `HelmChartConfig` enabling
   `providers.kubernetesGateway.enabled` and `gateway.enabled`, per `research.md` §2) — this file is authored here;
   dropping it onto the live VPS is the **(operator step)** documented in T064
-- [ ] T016 [US1] Create `deploy/k8s/cluster/cert-manager-clusterissuer.yaml`: a Let's Encrypt `ClusterIssuer` using
+- [X] T016 [US1] Create `deploy/k8s/cluster/cert-manager-clusterissuer.yaml`: a Let's Encrypt `ClusterIssuer` using
   the `gatewayHTTPRoute` HTTP-01 solver (`research.md` §3)
-- [ ] T017 [US1] Configure the Keycloak container's start command (in the Containerfile or an entrypoint script)
+- [X] T017 [US1] Configure the Keycloak container's start command (in the Containerfile or an entrypoint script)
   with `--hostname=https://<domain>/auth`, `--http-relative-path=/auth`, `--proxy-headers=xforwarded`
   (`research.md` §9); confirm no `HTTPRoute` ever references `/auth/admin` or port `9000`
-  (`contracts/http-routing.md`)
-- [ ] T018 [US1] Create `deploy/keycloak/realm-prod.json`: the prod realm import file, with no dev users and no
+  (`contracts/http-routing.md`) — implemented as `KC_*` env vars sourced from the `keycloak-config` ConfigMap
+  (prod overlay), keeping the image itself domain-agnostic
+- [X] T018 [US1] Create `deploy/keycloak/realm-prod.json`: the prod realm import file, with no dev users and no
   localhost redirect URIs (spec.md US2 acceptance scenario 4), and with secret-bearing fields (e.g. the 006
   service-account client secret) referenced via `${ENV_VAR}` placeholders, paired with the
   `spi-admin-allowed-system-variables` allowlist those variable names need (`research.md` §9); consumed by T017's
   start command
-- [ ] T019 [P] [US1] Add CORS configuration for the mobile app origin and implement the
-  `/.well-known/assetlinks.json` route in the backend (spec 007 dependency, US1 acceptance scenario 6)
-- [ ] T020 [P] [US1] Create Deployment/Service/HTTPRoute manifests for the self-hosted `ntfy` instance in
+- [X] T019 [P] [US1] Add CORS configuration for the mobile app origin and implement the
+  `/.well-known/assetlinks.json` route in the backend (spec 007 dependency, US1 acceptance scenario 6) —
+  assetlinks.json already existed from feature 007 (`AssetLinksController`); CORS wired via
+  `JORDYLAB_CORS_ALLOWED_ORIGINS` including `https://localhost` (Capacitor's app origin) in the prod ConfigMap
+- [X] T020 [P] [US1] Create Deployment/Service/HTTPRoute manifests for the self-hosted `ntfy` instance in
   `deploy/k8s/base/` and `deploy/k8s/overlays/prod/` (FR-013, resolved in `/speckit-clarify`)
-- [ ] T021 [US1] Create `deploy/k8s/overlays/prod/kustomization.yaml` wiring the real domain, image SHA tag
+- [X] T021 [US1] Create `deploy/k8s/overlays/prod/kustomization.yaml` wiring the real domain, image SHA tag
   placeholders, and prod `ConfigMap` values (FR-008; depends on T014/T016/T020's resources existing to reference)
-- [ ] T022 [P] [US1] Write `docs/runbook.md`'s "DNS & first TLS issuance" section with exact steps and
+- [X] T022 [P] [US1] Write `docs/runbook.md`'s "DNS & first TLS issuance" section with exact steps and
   verification commands — **(operator step)**: Jordy points DNS at the VPS and verifies the certificate; do not
   change DNS yourself
 - [ ] T023 [US1] Once the cluster is bootstrapped and a first deploy has run, execute the US1 checks from
   `quickstart.md` (curl checks, `/auth/admin` unreachability, the mobile-data browser test) and record the results
-  in the runbook
+  in the runbook — **DEFERRED**: no live cluster exists yet; cannot be executed until Jordy completes Phase 10's
+  bootstrap and a first real deploy
 
 **Checkpoint**: US1's manifests and code are complete; full verification needs Phase 10 (bootstrap) and Phase 6
 (deploy pipeline) to have run at least once.
@@ -136,12 +141,16 @@ US2).
 **Independent Test**: Start the backend with no active profile and confirm it refuses to start; read
 `docs/environments.md` and confirm it lists every differing setting. No live cluster needed.
 
-- [ ] T024 [P] [US2] Add a backend test asserting startup fails fast with a clear error when no Spring profile is
-  active (JUnit 5 + AssertJ, per the constitution's Testing Discipline; verifies T008)
-- [ ] T025 [P] [US2] Write `docs/environments.md`: one row per setting that differs between `local` and `prod`,
+- [X] T024 [P] [US2] Add a backend test asserting startup fails fast with a clear error when no Spring profile is
+  active (JUnit 5 + AssertJ, per the constitution's Testing Discipline; verifies T008) — written using Spring
+  Boot's `ApplicationContextRunner`; **could not be executed in this environment** (Gradle's dependency
+  resolution is rate-limited by the sandbox's network proxy, unrelated to the test itself) — Jordy should run
+  `./gradlew test --tests "*EnvironmentProfileGuardTest*"` locally to confirm
+- [X] T025 [P] [US2] Write `docs/environments.md`: one row per setting that differs between `local` and `prod`,
   and where its value comes from (FR-003)
-- [ ] T026 [US2] Audit `application.yaml` (backend) and the Angular environment files (frontend) to confirm zero
-  localhost URLs, dev CORS origins, or credentials remain outside the `local`-only files (FR-002)
+- [X] T026 [US2] Audit `application.yaml` (backend) and the Angular environment files (frontend) to confirm zero
+  localhost URLs, dev CORS origins, or credentials remain outside the `local`-only files (FR-002) — verified via
+  grep, zero matches
 
 **Checkpoint**: US2 is fully testable independently, with no server required.
 
@@ -155,17 +164,17 @@ US2).
 **Independent Test**: Inspect `secrets.sops.yaml` in the repo without the age private key and confirm only key
 names and ciphertext are visible; confirm CI's secret scan runs on every push.
 
-- [ ] T027 [P] [US3] Create `deploy/k8s/overlays/prod/secrets.sops.yaml` with the key structure from
+- [X] T027 [P] [US3] Create `deploy/k8s/overlays/prod/secrets.sops.yaml` with the key structure from
   `contracts/secrets-schema.md`, values left as empty placeholders — Jordy fills in and encrypts the real values
   himself; never commit a real secret from this task
-- [ ] T028 [P] [US3] Add a `gitleaks/gitleaks-action@v3` secret-scan step to `.github/workflows/build.yml`
+- [X] T028 [P] [US3] Add a `gitleaks/gitleaks-action@v3` secret-scan step to `.github/workflows/build.yml`
   (`research.md` §11), failing the build on any finding (FR-012)
-- [ ] T029 [P] [US3] Write `docs/runbook.md`'s "Generate the age key" section: the exact `age-keygen` command,
+- [X] T029 [P] [US3] Write `docs/runbook.md`'s "Generate the age key" section: the exact `age-keygen` command,
   where the public key goes (`.sops.yaml`), and where the private key must live (password manager + the GitHub
   `production` environment secret) — **(operator step)**: do not generate or store a real key yourself
-- [ ] T030 [P] [US3] Write `docs/runbook.md`'s "Rotate a secret" section: the exact `sops` edit → commit → deploy →
+- [X] T030 [P] [US3] Write `docs/runbook.md`'s "Rotate a secret" section: the exact `sops` edit → commit → deploy →
   pod-restart sequence
-- [ ] T031 [US3] Write `docs/runbook.md`'s "Age key lost" recovery section (re-keying procedure, per spec.md's
+- [X] T031 [US3] Write `docs/runbook.md`'s "Age key lost" recovery section (re-keying procedure, per spec.md's
   edge case)
 
 **Checkpoint**: Secrets structure and CI scanning exist; the runbook has every documented procedure Jordy needs to
@@ -181,21 +190,21 @@ US4).
 **Independent Test**: Push to `main`, approve the deploy, confirm the rollout is healthy, then roll back and
 confirm the previous version returns.
 
-- [ ] T032 [US4] Implement `.github/workflows/build.yml`: run tests, then (after T028's gitleaks step passes)
+- [X] T032 [US4] Implement `.github/workflows/build.yml`: run tests, then (after T028's gitleaks step passes)
   build and push the three images to `ghcr.io/jordy-swinnen/jordylab-*` tagged by commit SHA, using
   `docker/login-action@v4`, `docker/build-push-action@v7`, `docker/metadata-action@v6` (`research.md` §11)
-- [ ] T033 [P] [US4] Create `deploy/k8s/cluster/ci-deploy-rbac.yaml`: a namespace-scoped `ServiceAccount` + `Role`
+- [X] T033 [P] [US4] Create `deploy/k8s/cluster/ci-deploy-rbac.yaml`: a namespace-scoped `ServiceAccount` + `Role`
   + `RoleBinding` limited to the `jordylab` namespace (FR-007) — manifest only; minting and storing the resulting
   token is the **(operator step)** in T035
-- [ ] T034 [US4] Implement `.github/workflows/deploy-prod.yml`: require the `production` GitHub Environment's
+- [X] T034 [US4] Implement `.github/workflows/deploy-prod.yml`: require the `production` GitHub Environment's
   approval, join Tailscale (`tailscale/github-action@v4`, `research.md` §8), decrypt `secrets.sops.yaml`,
   `kustomize edit set image`, `kubectl apply -k deploy/k8s/overlays/prod`, then `kubectl rollout status` with a
   hard failure on timeout (FR-006)
-- [ ] T035 [P] [US4] Write `docs/runbook.md`'s "First-time CI access setup" section: creating the GitHub
+- [X] T035 [P] [US4] Write `docs/runbook.md`'s "First-time CI access setup" section: creating the GitHub
   `production` environment with Jordy as the required reviewer, minting the namespace-scoped ServiceAccount token
   from T033, and adding it plus a Tailscale auth key as GitHub environment secrets — **(operator step)**: do not
   create these yourself
-- [ ] T036 [US4] Write `docs/runbook.md`'s "Deploy" and "Rollback" sections with the exact commands (push → approve
+- [X] T036 [US4] Write `docs/runbook.md`'s "Deploy" and "Rollback" sections with the exact commands (push → approve
   → verify rollout; `kubectl rollout undo` or re-run with the previous SHA)
 
 **Checkpoint**: The deploy pipeline exists; its first real run and RBAC/environment setup are Jordy's per T035 —
@@ -210,21 +219,24 @@ and, per T065 below, the VPS must already be joined to the same Tailscale networ
 **Independent Test**: Follow the restore runbook to restore the prod database to a point in time into a fresh
 database, and confirm the app works against it.
 
-- [ ] T037 [P] [US5] Create `deploy/k8s/cluster/cnpg-cluster.yaml`: a single-instance PostgreSQL 16 `Cluster` on
+- [X] T037 [P] [US5] Create `deploy/k8s/cluster/cnpg-cluster.yaml`: a single-instance PostgreSQL 16 `Cluster` on
   the `local-path` `StorageClass`, with the pgvector `ImageVolume` extension (`research.md` §6), including the
-  `keycloak` schema, with readiness/liveness probes and resource requests/limits configured (FR-010)
-- [ ] T038 [P] [US5] Create `deploy/k8s/cluster/barman-cloud-plugin-values.yaml` (Helm values for the Barman Cloud
+  `keycloak` schema, with readiness/liveness probes and resource requests/limits configured (FR-010) — CNPG
+  manages its own probes; explicit `resources` requests/limits added
+- [X] T038 [P] [US5] Create `deploy/k8s/cluster/barman-cloud-plugin-values.yaml` (Helm values for the Barman Cloud
   Plugin, `research.md` §6) and `deploy/k8s/cluster/ovh-object-storage.yaml` (an `ObjectStore` CRD referencing the
   S3 keys from `contracts/secrets-schema.md`)
-- [ ] T039 [US5] Configure the backup/`ScheduledBackup` retention policy for 7 daily + 4 weekly snapshots (per
-  `/speckit-clarify`, FR-014; depends on T038's `ObjectStore` existing)
-- [ ] T040 [P] [US5] Create PVC manifests for game artwork and 007's APK storage on the `local-path`
+- [X] T039 [US5] Configure the backup/`ScheduledBackup` retention policy for 7 daily + 4 weekly snapshots (per
+  `/speckit-clarify`, FR-014; depends on T038's `ObjectStore` existing) — approximated via two `ScheduledBackup`
+  schedules (daily/weekly) plus a coarse time-based `retentionPolicy`; flagged in-file for a closer look at
+  Barman's count-based retention options during a real deploy
+- [X] T040 [P] [US5] Create PVC manifests for game artwork and 007's APK storage on the `local-path`
   `StorageClass` in `deploy/k8s/base/` (FR-016)
-- [ ] T041 [P] [US5] Write `docs/runbook.md`'s "OVH Object Storage bucket" section — **(operator step)**: Jordy
+- [X] T041 [P] [US5] Write `docs/runbook.md`'s "OVH Object Storage bucket" section — **(operator step)**: Jordy
   creates the bucket and generates the S3 keys himself; this is a billable resource, do not create it yourself
-- [ ] T042 [US5] Write `docs/runbook.md`'s "Restore drill" section with the exact point-in-time-restore commands
+- [X] T042 [US5] Write `docs/runbook.md`'s "Restore drill" section with the exact point-in-time-restore commands
   into a fresh `Cluster`, to run once before go-live and quarterly after (FR-015, `/speckit-clarify`)
-- [ ] T043 [P] [US5] Write `docs/runbook.md`'s "Full VPS rebuild" section (git + SOPS files + Object Storage
+- [X] T043 [P] [US5] Write `docs/runbook.md`'s "Full VPS rebuild" section (git + SOPS files + Object Storage
   backups → a fresh cluster)
 
 **Checkpoint**: Database and storage manifests exist; the bucket, first backup, and restore drill are Jordy's to
@@ -239,26 +251,26 @@ run per T041/T042.
 
 **Independent Test**: Read each chapter and confirm it links to the real file it describes.
 
-- [ ] T044 [P] [US6] Write `docs/learn/01-containers-and-images.md` (images, Containerfiles — links to
+- [X] T044 [P] [US6] Write `docs/learn/01-containers-and-images.md` (images, Containerfiles — links to
   `deploy/containers/*` from T010–T012)
-- [ ] T045 [P] [US6] Write `docs/learn/02-podman.md` (rootless Podman, `podman machine` on macOS vs native Linux,
+- [X] T045 [P] [US6] Write `docs/learn/02-podman.md` (rootless Podman, `podman machine` on macOS vs native Linux,
   `podman compose`, `podman generate kube`/`podman kube play` as a learning bridge — never a cluster manager, per
   `research.md`'s carried-forward Podman decision)
-- [ ] T046 [P] [US6] Write `docs/learn/03-k3s-and-bundled-components.md` (containerd, Traefik, CoreDNS, ServiceLB,
+- [X] T046 [P] [US6] Write `docs/learn/03-k3s-and-bundled-components.md` (containerd, Traefik, CoreDNS, ServiceLB,
   local-path — what k3s bundles and what Jordy now owns as host operator, `research.md` §1–5)
-- [ ] T047 [P] [US6] Write `docs/learn/04-workloads.md` (Pod, Deployment, Service — links to `deploy/k8s/base/`
+- [X] T047 [P] [US6] Write `docs/learn/04-workloads.md` (Pod, Deployment, Service — links to `deploy/k8s/base/`
   from T013)
-- [ ] T048 [P] [US6] Write `docs/learn/05-gateway-api-and-tls.md` (Gateway/HTTPRoute, cert-manager — links to the
+- [X] T048 [P] [US6] Write `docs/learn/05-gateway-api-and-tls.md` (Gateway/HTTPRoute, cert-manager — links to the
   T014/T016 manifests)
-- [ ] T049 [P] [US6] Write `docs/learn/06-config-and-secrets.md` (ConfigMap, Secret, SOPS+age — links to
+- [X] T049 [P] [US6] Write `docs/learn/06-config-and-secrets.md` (ConfigMap, Secret, SOPS+age — links to
   `.sops.yaml` and `secrets.sops.yaml` from T004/T027, and the realm secret placeholders from T018)
-- [ ] T050 [P] [US6] Write `docs/learn/07-storage.md` (PVC/StorageClass/local-path — links to T040's PVCs)
-- [ ] T051 [P] [US6] Write `docs/learn/08-operators-and-crds.md` (the CloudNativePG operator, the Barman Cloud
+- [X] T050 [P] [US6] Write `docs/learn/07-storage.md` (PVC/StorageClass/local-path — links to T040's PVCs)
+- [X] T051 [P] [US6] Write `docs/learn/08-operators-and-crds.md` (the CloudNativePG operator, the Barman Cloud
   Plugin, ImageVolume extensions — links to T037/T038)
-- [ ] T052 [P] [US6] Write `docs/learn/09-probes-resources-rbac.md` (readiness/liveness probes, resource limits,
+- [X] T052 [P] [US6] Write `docs/learn/09-probes-resources-rbac.md` (readiness/liveness probes, resource limits,
   the `ci-deploy-rbac.yaml` from T033)
-- [ ] T053 [P] [US6] Write `docs/learn/10-cicd.md` (the `build.yml`/`deploy-prod.yml` workflows from T032/T034)
-- [ ] T054 [US6] Write `docs/learn/README.md` indexing all chapters and listing the hands-on exercises (build an
+- [X] T053 [P] [US6] Write `docs/learn/10-cicd.md` (the `build.yml`/`deploy-prod.yml` workflows from T032/T034)
+- [X] T054 [US6] Write `docs/learn/README.md` indexing all chapters and listing the hands-on exercises (build an
   image locally, sandbox a manifest with `podman kube play`, port-forward to the Keycloak admin console, read pod
   logs, rotate a SOPS secret, perform a rollback on prod)
 
@@ -302,24 +314,24 @@ task in this phase is a **(operator step)** — the deliverable is the written p
 **Independent Test**: Follow the bootstrap guide start to finish and confirm each listed end-state item is
 reached.
 
-- [ ] T062 [US8] Write `docs/runbook.md`'s "Order the VPS" section (OVH VPS-2, monthly/no-commitment term per
+- [X] T062 [US8] Write `docs/runbook.md`'s "Order the VPS" section (OVH VPS-2, monthly/no-commitment term per
   `/speckit-clarify`; the datacenter/region choice is left open per spec.md's Assumptions) — **(operator step)**:
   billable resource, do not order it yourself
-- [ ] T063 [US8] Write `docs/runbook.md`'s "Harden the OS" section (SSH key-only access, disable root/password
+- [X] T063 [US8] Write `docs/runbook.md`'s "Harden the OS" section (SSH key-only access, disable root/password
   login, unattended security upgrades, firewall: 22 restricted, 80/443 open, 10250 and 8472/udp closed) —
   **(operator step)**: do not run these commands yourself
-- [ ] T064 [US8] Write `docs/runbook.md`'s "Install k3s" section (pinned `INSTALL_K3S_VERSION=v1.37.0+k3s1` per
+- [X] T064 [US8] Write `docs/runbook.md`'s "Install k3s" section (pinned `INSTALL_K3S_VERSION=v1.37.0+k3s1` per
   `research.md` §1, copying the kubeconfig, verifying the bundled components, applying T015's
   `HelmChartConfig`) — **(operator step)**: do not run these commands yourself
-- [ ] T065 [US8] Write `docs/runbook.md`'s "Join the VPS to Tailscale" section: installing Tailscale on the VPS
+- [X] T065 [US8] Write `docs/runbook.md`'s "Join the VPS to Tailscale" section: installing Tailscale on the VPS
   and running `tailscale up` (tagged/ACL'd so port 6443 is reachable only from the tailnet, never the public
   internet — FR-019), so that T034's GitHub Actions job has a host to reach — **(operator step)**: do not run
   these commands yourself
-- [ ] T066 [US8] Write `docs/runbook.md`'s "Install cluster add-ons" section (cert-manager, the CloudNativePG
+- [X] T066 [US8] Write `docs/runbook.md`'s "Install cluster add-ons" section (cert-manager, the CloudNativePG
   operator + Barman Cloud Plugin, at the pinned versions in `research.md`) — **(operator step)**: do not run these
   commands yourself
-- [ ] T067 [P] [US8] Write `docs/runbook.md`'s "k3s / OS upgrades" section (FR-018)
-- [ ] T068 [P] [US8] Update `AGENTS.md`'s Infrastructure section, replacing the Hetzner/Compose/Watchtower/Ollama
+- [X] T067 [P] [US8] Write `docs/runbook.md`'s "k3s / OS upgrades" section (FR-018)
+- [X] T068 [P] [US8] Update `AGENTS.md`'s Infrastructure section, replacing the Hetzner/Compose/Watchtower/Ollama
   production description with the k3s-on-OVH-VPS setup (FR-021)
 
 **Checkpoint**: The bootstrap runbook is complete; Jordy can execute it once, start to finish, to reach a live
@@ -332,16 +344,18 @@ includes the VPS's own Tailscale membership (T065), not just the CI side (T034/T
 
 **Purpose**: Remaining runbook sections and a final end-to-end validation pass.
 
-- [ ] T069 [P] Write `docs/runbook.md`'s "Certificate troubleshooting" section (diagnosing a failed renewal, per
+- [X] T069 [P] Write `docs/runbook.md`'s "Certificate troubleshooting" section (diagnosing a failed renewal, per
   spec.md's edge case)
-- [ ] T070 [P] Write `docs/runbook.md`'s "Disk cleanup" section (`k3s crictl rmi --prune`, checking `local-path`
+- [X] T070 [P] Write `docs/runbook.md`'s "Disk cleanup" section (`k3s crictl rmi --prune`, checking `local-path`
   volume sizes, per spec.md's edge case)
-- [ ] T071 [P] Write `docs/runbook.md`'s "Logs" section (exact `kubectl logs` commands for each workload)
-- [ ] T072 Cross-check every runbook procedure against `docs/learn/`'s chapters for consistent terminology
+- [X] T071 [P] Write `docs/runbook.md`'s "Logs" section (exact `kubectl logs` commands for each workload)
+- [X] T072 Cross-check every runbook procedure against `docs/learn/`'s chapters for consistent terminology —
+  verified via grep across `docs/runbook.md` and `docs/learn/*.md`: `ClusterIssuer`, `backend-config`,
+  `ci-deploy`, `jordylab-gateway`, `jordylab-tls`, `keycloak-config` all spelled identically everywhere; no drift
 - [ ] T073 Run the full `quickstart.md` validation pass end-to-end once bootstrap and a first deploy are complete;
-  record the results
+  record the results — **DEFERRED**: no live cluster exists yet
 - [ ] T074 Final security review: confirm a public port scan matches FR-019/SC-008 exactly (only 22/80/443 public,
-  6443 never public)
+  6443 never public) — **DEFERRED**: no live VPS exists yet
 
 ---
 

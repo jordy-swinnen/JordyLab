@@ -60,11 +60,29 @@ Per-module provider selection via `ResilientAiService` with health-check-and-cac
 
 ## Infrastructure
 
-- **Hetzner VPS**: Compose stack (Spring Boot, PostgreSQL 16 + pgvector, Traefik, Watchtower, Keycloak). Local dev runs the same `jordylab-be/compose.yaml` with **Podman Compose**; the files are runtime-agnostic (Docker Compose is drop-in). Testcontainers-based tests need `DOCKER_HOST` pointed at the Podman machine socket
+- **Production**: a self-managed, single-node **k3s** cluster on one **OVH VPS-2** (4 vCores / 8 GB RAM / 75 GB
+  NVMe) — chosen over OVH Managed Kubernetes on cost (see `specs/008-ovh-k8s-deployment/research.md`). k3s's
+  bundled Traefik v3 (Gateway API enabled) handles ingress and TLS (cert-manager + Let's Encrypt) through k3s's
+  built-in ServiceLB on the VPS's own public IP — no cloud load balancer. Storage is k3s's default `local-path`
+  provisioner. PostgreSQL + pgvector runs in-cluster via CloudNativePG, backed up to OVH Object Storage through the
+  Barman Cloud Plugin. Secrets are SOPS + age encrypted in git, decrypted only by the GitHub Actions deploy
+  pipeline, which reaches the firewalled k3s API over Tailscale (never a public port 6443). See
+  `deploy/`, `docs/runbook.md` (operational procedures) and `docs/learn/` (the concepts, explained against these
+  same files).
 - **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — Ollama inference host, `0.0.0.0:11434` (LAN only)
 - **JordyBox**: i7-9700K, RTX 2070 Super — HTPC/gaming, NFS server for ROMs (where the downloaded scan client walks the libraries)
-- WireGuard connects VPS to home LAN for Ollama access
-- **Keycloak** lives in compose (port 8180 in dev). Stores its tables in the shared pgvector container under a dedicated `keycloak` schema. Single `jordylab` realm with two public clients (`jordylab-host` for the web UI, `gamecatalog-script` for device-code login) and two roles (`jordylab-user`, `gamecatalog-scanner`). The dev realm is auto-imported from `jordylab-be/compose/keycloak-realm-export.json` on first boot. The login page uses the custom `jordylab` login theme (`jordylab-be/compose/keycloak-theme/jordylab/`, CSS-only over `keycloak.v2`, mounted in compose); `loginTheme` in the export only applies on first import, so an existing realm needs `kcadm.sh update realms/jordylab -s loginTheme=jordylab`. `KC_HOSTNAME` and the issuer-uri in `application.yaml` must match the public hostname the browser sees (matters behind Traefik in prod)
+- WireGuard connects the home LAN to Ollama for local-inference access (unrelated to prod's Tailscale link above,
+  which is CI-to-cluster only)
+- **Keycloak**: `start-dev` in local Podman Compose (port 8180), `start --optimized` in prod (behind Traefik,
+  `deploy/containers/keycloak/Containerfile`). Stores its tables in the `keycloak` schema of the shared Postgres
+  instance (Podman Compose locally, CloudNativePG in prod). Single `jordylab` realm with clients `jordylab-host`
+  (web UI), `gamecatalog-script` (device-code login) and `jordylab-backend` (service account), and roles `admin`,
+  `guest`, `gamecatalog-scanner`. Local dev imports `jordylab-be/compose/keycloak-realm-export.json` (has a dev
+  user); prod imports `deploy/keycloak/realm-prod.json` (no dev user, real-domain redirect URIs, secrets via
+  `${env.VAR}` placeholders — see `deploy/keycloak/README.md`). The login page uses the custom `jordylab` theme
+  (`jordylab-be/compose/keycloak-theme/jordylab/`, CSS-only over `keycloak.v2`), baked into the prod image at
+  build time. `KC_HOSTNAME` and the backend's issuer-uri must match the public hostname the browser sees — in prod
+  this is enforced via the `keycloak-config`/`backend-config` ConfigMaps, not a literal in `application.yaml`.
 
 ## Reference Docs
 
