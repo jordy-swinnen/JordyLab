@@ -7,7 +7,11 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { AuthService } from '@jordylab-fe/shared/auth';
+import {
+  AuthService,
+  BiometricUnlockService,
+  BiometricUnlockToggleComponent,
+} from '@jordylab-fe/shared/auth';
 import {
   BrandMarkComponent,
   WordmarkComponent,
@@ -70,6 +74,7 @@ const startsWith = (prefix: string) => (url: string) => url.startsWith(prefix);
     AndroidAppQrEntryComponent,
     UpdateRequiredComponent,
     UpdateAvailableBannerComponent,
+    BiometricUnlockToggleComponent,
   ],
   templateUrl: './app.html',
 })
@@ -79,6 +84,7 @@ export class App {
   #apkDownload = inject(ApkDownloadService);
   #updateCheck = inject(UpdateCheckStore);
   #appLink = inject(AppLinkService);
+  #biometricUnlock = inject(BiometricUnlockService);
   protected readonly platform = inject(PlatformService);
   protected readonly installPrompt = inject(InstallPromptStore);
 
@@ -211,6 +217,9 @@ export class App {
   );
 
   async onLogout(): Promise<void> {
+    // Explicit wipe, not left to the next failed refresh (FR-012) — a no-op when biometric
+    // unlock was never enabled.
+    await this.#biometricUnlock.disable();
     await this.#auth.logout();
   }
 }

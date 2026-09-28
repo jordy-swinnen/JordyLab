@@ -166,6 +166,65 @@ export class AuthService {
     this.#applyNativeTokens(tokens.access_token, tokens.refresh_token, tokens.id_token, pending.nonce);
   }
 
+  /**
+   * The current `offline_access` refresh token, for {@link BiometricUnlockService} (spec US4) to
+   * store behind a biometric-protected Keystore entry. `null` when not authenticated or the
+   * session has no refresh token (e.g. the `offline_access` scope wasn't granted).
+   */
+  getRefreshToken(): string | null {
+    return this.#keycloak?.refreshToken ?? null;
+  }
+
+  /**
+   * Exchanges a refresh token recovered from biometric storage for a fresh access token (spec
+   * US4, `BiometricUnlockService.unlock()`) — same manual-exchange approach as
+   * {@link completeNativeLogin}, using the `refresh_token` grant instead of `authorization_code`.
+   * Returns `false` on any failure (expired/revoked token — e.g. an admin's FR-013 revocation,
+   * network error) so the caller falls back to a normal login, never a silent retry loop (FR-012).
+   */
+  async unlockWithRefreshToken(refreshToken: string): Promise<boolean> {
+    if (!this.#keycloak) {
+      await this.init();
+    }
+    if (!this.#keycloak) {
+      return false;
+    }
+
+    const tokenUrl = `${stripTrailingSlash(this.#config.keycloakUrl)}/realms/${encodeURIComponent(this.#config.keycloakRealm)}/protocol/openid-connect/token`;
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: this.#config.keycloakClientId,
+      refresh_token: refreshToken,
+    });
+
+    let response: Response;
+    try {
+      response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+    } catch (fetchError) {
+      console.error('Biometric unlock token refresh failed', fetchError);
+
+      return false;
+    }
+    if (!response.ok) {
+      console.error('Biometric unlock token refresh rejected', response.status);
+
+      return false;
+    }
+
+    const tokens = (await response.json()) as {
+      access_token: string;
+      refresh_token?: string;
+      id_token?: string;
+    };
+    this.#applyNativeTokens(tokens.access_token, tokens.refresh_token, tokens.id_token);
+
+    return true;
+  }
+
   async getToken(): Promise<string | null> {
     if (!this.#keycloak) {
       return null;
@@ -269,12 +328,12 @@ export class AuthService {
     accessToken: string,
     refreshToken: string | undefined,
     idToken: string | undefined,
-    expectedNonce: string,
+    expectedNonce?: string,
   ): void {
     if (!this.#keycloak) {
       return;
     }
-    if (idToken && decodeJwtPayload(idToken)['nonce'] !== expectedNonce) {
+    if (expectedNonce && idToken && decodeJwtPayload(idToken)['nonce'] !== expectedNonce) {
       console.error('Native login rejected: ID token nonce mismatch');
 
       return;

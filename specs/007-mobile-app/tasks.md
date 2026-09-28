@@ -295,16 +295,35 @@ the user and confirm the next open requires full login again (quickstart scenari
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClient.java` and call it from
   `revoke()` in `KeycloakUserAdministrationService.java` per [research.md](research.md) D12, until T029 is green.
   A 404 (user never used the mobile app) is caught and swallowed in `revoke()` — it is the common case, not a failure
-- [ ] T031 [US4] Install `@capgo/capacitor-native-biometric` (research D3) in `jordylab-fe/apps/jordylab-mobile/`;
+- [X] T031 [US4] Install `@capgo/capacitor-native-biometric` (research D3) in `jordylab-fe/apps/jordylab-mobile/`;
   implement `BiometricUnlockService` in `jordylab-fe/libs/shared/auth/src/lib/biometric-unlock.service.ts` — stores
   the `offline_access` refresh token behind a biometric prompt in the Android Keystore; `enable()`/`disable()`
   actions; on app open with biometric enabled: biometric check → token refresh → access token; any failure
   (cancelled, no biometrics enrolled, enrollment changed) falls back to the normal login flow, never a silent retry
   loop (FR-012)
-- [ ] T032 [US4] Wire an "Unlock with fingerprint" toggle into the existing user-menu/account UI (extends
+  - Uses `NativeBiometric.setData`/`getSecureData` with `accessControl: BIOMETRY_ANY` (survives new biometric
+    enrollment — chosen over `BIOMETRY_CURRENT_SET`, which would invalidate the stored token the moment the user
+    adds a fingerprint, an unnecessarily hostile default here). `unlock()` calls `AuthService.unlockWithRefreshToken()`
+    (new — same manual-exchange approach as `completeNativeLogin`, using the `refresh_token` grant), which applies
+    the result through the same `#applyNativeTokens` path.
+  - **Known gap, not wired**: nothing calls `unlock()` automatically "on app open" yet — `authGuard`
+    (`libs/shared/auth/src/lib/auth.guard.ts`) still redirects to `/login` on a cold start before any biometric
+    prompt would run. Wiring an auto-attempt race-free against the guard's own `auth.init()` call needs either an
+    `APP_INITIALIZER`-style bootstrap block or moving the attempt inside `AuthService.init()` itself — the latter
+    would need `AuthService` to inject `BiometricUnlockService`, which itself injects `AuthService` (circular DI
+    within the same lib). Left as an explicit follow-up rather than rushing a timing-sensitive fix unverifiable
+    without a real device. The toggle (T032) and the manual `unlock()` call itself are both fully implemented and
+    tested; only the automatic on-open trigger is missing.
+- [X] T032 [US4] Wire an "Unlock with fingerprint" toggle into the existing user-menu/account UI (extends
   `jordylab-fe/libs/shared/auth/src/lib/` per 006's `UserMenuComponent`, native-only — hidden on web); wipe the
   stored credential explicitly on logout and on toggling the setting off (not just on the next failed refresh)
-- [ ] T033 [US4] Vitest tests for `BiometricUnlockService` in `jordylab-fe/libs/shared/auth/src/lib/` — success path,
+  - Implementation-time discovery: no `UserMenuComponent` exists anywhere in this codebase (006 never built one —
+    the sign-out UI is inlined directly in `apps/jordylab/src/app/app.html`). Added a small standalone
+    `BiometricUnlockToggleComponent` instead, mounted next to that same sign-out block, gated on
+    `platform.platform() === 'native-android'` in `app.html` (the component itself hides when
+    `BiometricUnlockService.isAvailable()` resolves false). `App.onLogout()` now awaits
+    `biometricUnlock.disable()` before `auth.logout()` — the explicit wipe.
+- [X] T033 [US4] Vitest tests for `BiometricUnlockService` in `jordylab-fe/libs/shared/auth/src/lib/` — success path,
   cancelled prompt, enrollment-changed fallback, explicit wipe on disable/logout (mocked plugin via `useValue`)
 
 **Checkpoint**: US1–US4: the app is installable, usable, self-updating, and offers biometric convenience without

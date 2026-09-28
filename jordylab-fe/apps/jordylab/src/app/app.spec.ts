@@ -2,12 +2,13 @@ import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { AuthService } from '@jordylab-fe/shared/auth';
+import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
 import { UsersStore } from '@jordylab-fe/settings/api';
 import { App } from './app';
 
 describe('App', () => {
   const logout = vi.fn(() => Promise.resolve());
+  const disableBiometricUnlock = vi.fn(() => Promise.resolve());
   // Real signals back the mock's reactive state so tests can drive shell visibility.
   const hasAppRole = signal(true);
   const isAdmin = signal(false);
@@ -29,6 +30,10 @@ describe('App', () => {
       {
         provide: UsersStore,
         useValue: { pendingCount: pendingCount.asReadonly() },
+      },
+      {
+        provide: BiometricUnlockService,
+        useValue: { disable: disableBiometricUnlock },
       },
     ],
   });
@@ -92,13 +97,17 @@ describe('App', () => {
     expect(spectator.query('router-outlet')).toBeTruthy();
   });
 
-  it('shows the signed-in user and signs out on click', () => {
+  it('shows the signed-in user and signs out on click', async () => {
     const button = spectator.query(
       'button[aria-label="Sign out"]',
     ) as HTMLElement;
 
     expect(button).toHaveText('jordy');
     spectator.click(button);
+    // onLogout() awaits the (mocked) biometric-unlock wipe before auth.logout() — one microtask hop.
+    await Promise.resolve();
+
+    expect(disableBiometricUnlock).toHaveBeenCalled();
     expect(logout).toHaveBeenCalled();
   });
 

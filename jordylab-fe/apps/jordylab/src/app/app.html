@@ -115,6 +115,10 @@
     </button>
     }
 
+    @if (platform.platform() === 'native-android') {
+    <lib-biometric-unlock-toggle class="mt-3" />
+    }
+
     @if (platform.platform() === 'web-desktop') {
     <button
       type="button"
