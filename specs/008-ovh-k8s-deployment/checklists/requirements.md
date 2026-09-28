@@ -40,11 +40,13 @@
   intentionally left out of this spec and belongs in `specs/_drafts/008-deployment/plan-draft.md` for
   `/speckit-plan`. The sole "user" of this feature is Jordy himself operating his own infrastructure, so
   "non-technical stakeholders" does not apply in the usual sense.
-- **6 [NEEDS CLARIFICATION] markers remain by explicit instruction**, exceeding the standard 3-marker limit: the
-  user asked to carry forward every "Open question for `/speckit-clarify`" from `research.md` as a marker rather
-  than have them guessed or resolved inline during `/speckit-specify`. They are: (1) how CI reaches the k3s API to
-  deploy, (2) ntfy in-cluster vs. ntfy.sh, (3) backup retention schedule, (4) confirming the deploy trigger, (5) VPS
-  commitment term, (6) VPS/Object Storage datacenter region. All 6 are resolved with concrete recommendations in
-  `specs/_drafts/008-deployment/speckit-prompts.md` §2 for `/speckit-clarify` to apply.
-- **Next step is `/speckit-clarify`, not `/speckit-plan`** — the 6 markers above should be resolved there before
-  planning.
+- **`/speckit-clarify` ran on 2026-09-28** and resolved 5 of the original 6 open questions from `research.md`: CI's
+  path to the k3s API (WireGuard/Tailscale, not a public 6443), ntfy self-hosted in-cluster, backup retention
+  (7 daily + 4 weekly), the VPS commitment term (monthly, not 12-month upfront), and the restore-drill cadence
+  (quarterly). A 6th marker (confirming the deploy trigger) turned out to already be fully answered by User Story
+  4's acceptance scenarios and was resolved directly without spending a question slot.
+- **One [NEEDS CLARIFICATION] marker remains, deliberately deferred**: which OVH datacenter/region to provision the
+  VPS and Object Storage bucket in. It has near-zero architectural impact — any EU location works identically, and
+  Jordy picks it at OVH checkout — so it's left as a runbook-time decision rather than spent as one of the 5
+  `/speckit-clarify` question slots.
+- **Ready for `/speckit-plan`** — no remaining marker blocks architecture or task decomposition.

@@ -56,6 +56,11 @@ Podman, the feature also ships a learning guide and an operational runbook built
   Actions joins a WireGuard/Tailscale network for the deploy step.
 - Q: Where should push notifications for the mobile app (spec 007) come from? → A: A self-hosted ntfy instance
   running in this cluster, routed under the same domain.
+- Q: What backup retention schedule should the production database keep in OVH Object Storage? → A: 7 daily + 4
+  weekly snapshots (about a month of recovery points).
+- Q: Which OVH VPS-2 commitment term should the runbook target? → A: Monthly/no-commitment term, for flexibility
+  over the cheaper but locked-in 12-month upfront rate.
+- Q: After the mandatory pre-go-live restore drill, how often should the drill be repeated? → A: Quarterly.
 
 ---
 
@@ -306,9 +311,9 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 - **FR-004**: The backend, frontend and Keycloak (including the jordylab theme) MUST each be packaged as a container
   image, built reproducibly in CI for linux/amd64.
 - **FR-005**: Images MUST be tagged with the commit SHA. Prod MUST only run SHA-tagged images, never `latest`.
-- **FR-006**: Deployment to prod MUST require manual approval, MUST wait for a healthy rollout, and MUST support
-  rollback to the previous version. [NEEDS CLARIFICATION: confirm the deploy trigger — build and test run on every
-  push to `main`, and only the deploy-to-prod step is gated behind manual approval]
+- **FR-006**: CI MUST build and test the backend, frontend and Keycloak images on every push to `main`. Deployment
+  to prod MUST require manual approval on top of that, MUST wait for a healthy rollout, and MUST support rollback
+  to the previous version.
 - **FR-007**: CI deploy credentials MUST be limited to the JordyLab namespace.
 
 ### Functional: Exposure & security
@@ -326,10 +331,9 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 ### Functional: Data
 
 - **FR-014**: PostgreSQL with pgvector MUST run in the cluster on node-local storage, with continuous backups
-  (base backups + WAL) to OVH Object Storage and point-in-time restore. [NEEDS CLARIFICATION: backup retention
-  schedule — a rotation such as 7 daily + 4 weekly snapshots has been proposed but not confirmed]
-- **FR-015**: A restore drill MUST be performed and documented before go-live. [NEEDS CLARIFICATION: ongoing restore
-  drill cadence after go-live — a quarterly cadence has been proposed but not confirmed]
+  (base backups + WAL) to OVH Object Storage and point-in-time restore, retaining 7 daily and 4 weekly backups
+  (about a month of recovery points) before pruning.
+- **FR-015**: A restore drill MUST be performed and documented before go-live, and repeated quarterly thereafter.
 - **FR-016**: Game artwork (and 007 APK files) MUST be stored on persistent storage (k3s local-path) that survives
   pod restarts and VPS reboots.
 
@@ -383,10 +387,10 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 
 ## Assumptions
 
-- One OVH **VPS-2** (4 vCores / 8 GB / 75 GB NVMe, from €7.21/mo excl. VAT) running single-node **k3s**, on
-  [NEEDS CLARIFICATION: VPS commitment term — the 12-month upfront rate is the cheapest quoted price, but the
-  no-commitment/monthly price and the renewal price were not shown and need confirming at checkout]. Short downtime
-  during maintenance is accepted. VPS-3 is the upgrade path if memory runs short.
+- One OVH **VPS-2** (4 vCores / 8 GB / 75 GB NVMe) running single-node **k3s**, on a monthly/no-commitment term for
+  flexibility (the cheapest quoted price, from €7.21/mo excl. VAT, is only confirmed for a 12-month upfront term;
+  the monthly price must be confirmed at checkout and may push the total nearer SC-005's ≤€13/month ceiling). Short
+  downtime during maintenance is accepted. VPS-3 is the upgrade path if memory runs short.
 - [NEEDS CLARIFICATION: which OVH datacenter/region to provision the VPS and Object Storage bucket in — the closest
   EU location offered at checkout has been proposed, ideally the same region for both]
 - OVH Managed Kubernetes (MKS) was evaluated and rejected: MKS needs Public Cloud nodes plus a separately billed
