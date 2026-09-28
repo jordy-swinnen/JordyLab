@@ -65,7 +65,7 @@ class GuestChatLimitFilterTest {
     @BeforeEach
     void setUp() {
         SettingsProperties properties = new SettingsProperties(
-                new SettingsProperties.GuestChat(3, "UTC"), null, null);
+                new SettingsProperties.GuestChat(3, "UTC"), null);
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
