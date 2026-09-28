@@ -5,13 +5,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "jordylab.settings")
 public record SettingsProperties(
         GuestChat guestChat,
-        ModelCatalog modelCatalog,
-        Notifications notifications) {
+        ModelCatalog modelCatalog) {
 
     public SettingsProperties {
         guestChat = guestChat == null ? new GuestChat(0, null) : guestChat;
         modelCatalog = modelCatalog == null ? new ModelCatalog(0) : modelCatalog;
-        notifications = notifications == null ? new Notifications(null) : notifications;
     }
 
     /**
@@ -35,17 +33,5 @@ public record SettingsProperties(
                 cacheTtlMinutes = 60;
             }
         }
-    }
-
-    public record Notifications(Ntfy ntfy) {
-        public Notifications {
-            ntfy = ntfy == null ? new Ntfy(null, null, null) : ntfy;
-        }
-    }
-
-    /**
-     * Optional sign-up push; the notifier stays a no-op while baseUrl or topic is blank.
-     */
-    public record Ntfy(String baseUrl, String topic, String token) {
     }
 }

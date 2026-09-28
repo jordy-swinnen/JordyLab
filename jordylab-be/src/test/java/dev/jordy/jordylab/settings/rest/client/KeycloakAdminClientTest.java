@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.jordy.jordylab.settings.KeycloakAdminProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.List;
 import java.util.Optional;
@@ -145,6 +146,27 @@ class KeycloakAdminClientTest {
         client.endSessions("u1");
 
         verify(postRequestedFor(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/logout")));
+    }
+
+    @Test
+    void revokesConsentWithADeleteToTheConsentsEndpoint() {
+        stubToken();
+        stubFor(delete(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile"))
+                .willReturn(aResponse().withStatus(204)));
+
+        client.revokeConsent("u1", "jordylab-mobile");
+
+        verify(deleteRequestedFor(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile")));
+    }
+
+    @Test
+    void revokingAnUnknownConsentPropagatesNotFoundUnwrapped() {
+        stubToken();
+        stubFor(delete(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile"))
+                .willReturn(aResponse().withStatus(404)));
+
+        assertThatThrownBy(() -> client.revokeConsent("u1", "jordylab-mobile"))
+                .isInstanceOf(HttpClientErrorException.NotFound.class);
     }
 
     @Test

@@ -7,6 +7,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -145,9 +149,26 @@ class KeycloakUserAdministrationServiceTest {
     }
 
     @Test
-    void revokingAGuestRemovesTheRoleAndEndsSessions() {
+    void revokingAGuestRemovesTheRoleEndsSessionsAndRevokesMobileOfflineConsent() {
         when(keycloakAdminClient.findUser(GUEST_ID.toString()))
                 .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+
+        service.revoke(GUEST_ID);
+
+        verify(keycloakAdminClient).revokeRealmRole(GUEST_ID.toString(), "guest");
+        verify(keycloakAdminClient).endSessions(GUEST_ID.toString());
+        // spec 007 FR-013 / research D12: a plain session logout does not revoke offline_access
+        // grants, so revoke() must separately kill the mobile app's biometric-unlock consent.
+        verify(keycloakAdminClient).revokeConsent(GUEST_ID.toString(), "jordylab-mobile");
+    }
+
+    @Test
+    void revokingAGuestWhoNeverUsedTheMobileAppIsNotAnError() {
+        when(keycloakAdminClient.findUser(GUEST_ID.toString()))
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+        HttpClientErrorException noSuchConsent = HttpClientErrorException.create(
+                HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, new byte[0], null);
+        doThrow(noSuchConsent).when(keycloakAdminClient).revokeConsent(GUEST_ID.toString(), "jordylab-mobile");
 
         service.revoke(GUEST_ID);
 

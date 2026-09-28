@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.fna.service;
 
+import dev.jordy.jordylab.fna.BriefingReady;
 import dev.jordy.jordylab.fna.domain.Article;
 import dev.jordy.jordylab.fna.domain.Briefing;
 import dev.jordy.jordylab.fna.domain.PortfolioPosition;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class BriefingGeneratorService {
     private final ArticleRepository articleRepository;
     private final PortfolioPositionRepository positionRepository;
     private final BriefingRepository briefingRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("classpath:prompts/fna/briefing-system.st")
     Resource systemPromptResource;
@@ -66,13 +69,18 @@ public class BriefingGeneratorService {
             throw new BriefingGenerationException(result.failureReason());
         }
 
-        return briefingRepository.save(
+        Briefing briefing = briefingRepository.save(
                 Briefing.builder()
                         .generatedAt(Instant.now())
                         .content(result.content())
                         .modelUsed(result.model())
                         .build()
         );
+        // spec 007 FR-016 / research D9: mobile listens for this to push an admin notification —
+        // fna publishes a plain fact about what happened, nothing mobile-specific.
+        eventPublisher.publishEvent(new BriefingReady(briefing.getId(), briefing.getGeneratedAt()));
+
+        return briefing;
     }
 
     private String buildArticleContext(List<Article> articles) {

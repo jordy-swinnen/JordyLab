@@ -4,6 +4,7 @@ import dev.jordy.jordylab.settings.rest.client.KeycloakAdminClient;
 import dev.jordy.jordylab.settings.util.TemporaryPasswordGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +23,11 @@ public class KeycloakUserAdministrationService {
 
     private static final String ADMIN_ROLE = "admin";
     private static final String GUEST_ROLE = "guest";
+
+    /** The mobile app's Keycloak client id (spec 007 research D13) — kept as a plain constant
+     * here rather than a dependency on the {@code mobile} module, which {@code settings} must
+     * not depend on. */
+    private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
 
     private final KeycloakAdminClient keycloakAdminClient;
 
@@ -61,6 +67,21 @@ public class KeycloakUserAdministrationService {
         guardLastAdmin(user);
         keycloakAdminClient.revokeRealmRole(user.id(), GUEST_ROLE);
         keycloakAdminClient.endSessions(user.id());
+        revokeMobileOfflineConsent(user.id());
+    }
+
+    /**
+     * Kills any biometric-unlock offline token the mobile app holds for this user (spec 007
+     * FR-013, research D12) — a plain session logout above does not revoke {@code offline_access}
+     * grants. Most users never installed the app, so "no consent to revoke" is the common case,
+     * not an error.
+     */
+    private void revokeMobileOfflineConsent(String userId) {
+        try {
+            keycloakAdminClient.revokeConsent(userId, MOBILE_CLIENT_ID);
+        } catch (HttpClientErrorException.NotFound noConsentToRevoke) {
+            // Expected when the user never used the mobile app — nothing to revoke.
+        }
     }
 
     /** Returned once, to the admin, for out-of-band sharing — never logged or stored. */

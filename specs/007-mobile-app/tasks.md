@@ -33,17 +33,17 @@ frontend = `jordylab-fe/…` (libs, apps), native shell = `jordylab-fe/apps/jord
 
 **Purpose**: `mobile` module + frontend libs/app skeletons, schema, config keys
 
-- [ ] T001 Create the `mobile` module skeleton (root package `dev.jordy.jordylab.mobile` + `MobileProperties` for
+- [X] T001 Create the `mobile` module skeleton (root package `dev.jordy.jordylab.mobile` + `MobileProperties` for
   `jordylab.mobile.*`: `release.storage-dir`, `release.signing-cert-sha256` (placeholder — D14), `download-link.secret`
   + `.ttl-minutes` default 5, `release.min-supported-version-code` default, `app.package-name` + `app.production-domain`
   (placeholders — D13/D14), `notifications.ntfy.base-url|topic|token`) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/` — follow `/new-module` (package layout from
   `jordylab-be/AGENTS.md`, no new sub-packages beyond `domain/`, `rest/{client,controller}`, `service/`, `util/`); run
   `ModularityTests` green
-- [ ] T002 [P] Add `jordylab.mobile.*` config keys with dev defaults in
+- [X] T002 [P] Add `jordylab.mobile.*` config keys with dev defaults in
   `jordylab-be/src/main/resources/application.yaml`; remove the now-unused `jordylab.settings.notifications.ntfy.*`
   scaffold from `SettingsProperties.java` (research D10 — nothing reads it today)
-- [ ] T003 [P] Create Flyway migration
+- [X] T003 [P] Create Flyway migration
   `jordylab-be/src/main/resources/db/migration/V<yyyyMMdd>__mobile_create_tables.sql` — `mobile` schema, one table
   `mobile_release` with a unique index on `version_code`, per [data-model.md](data-model.md) — follow
   `/flyway-migration`
@@ -77,16 +77,19 @@ primitives (base-URL interceptor, platform detection) that everything native dep
   (`serviceAccountsEnabled=true`), new realm role `mobile-release-publisher` (granted only to that service account);
   **do not apply until the user confirms** — the production domain (feature 008) and application id (D14) are still
   placeholders
-- [ ] T008 [P] Create `MobileRelease` entity + repository per [data-model.md](data-model.md) in
+- [X] T008 [P] Create `MobileRelease` entity + repository per [data-model.md](data-model.md) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/domain/` — canonical entity structure via `/entity` (UUID id,
   unique `version_code`, builder guards in `build()`, `BaseEntity`); entity test + TestBuilder via `/test-builder` in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mobile/domain/`
-- [ ] T009 Add `/api/mobile/**` and `/.well-known/assetlinks.json` matchers to
+- [X] T009 Add `/api/mobile/**` and `/.well-known/assetlinks.json` matchers to
   `jordylab-be/src/main/java/dev/jordy/jordylab/shared/config/SecurityConfig.java` per
   [contracts/access-matrix.md](contracts/access-matrix.md) (`GET .../latest` + `POST .../download-link` →
   `admin|guest`; `GET /api/mobile/download/**` + `GET /.well-known/assetlinks.json` → permitAll; `POST
   /api/mobile/releases` → `hasRole("mobile-release-publisher")`); update `SecurityConfigTest`; depends on T007's role
-  existing in the test realm fixture
+  existing in the test realm fixture. **Deviation**: `SecurityConfigTest` itself only tests the JWT→authority
+  converter (no route-matching there in this codebase's actual convention) — added `mobile-release-publisher` to the
+  **test-only** `jordylab-test-realm.json` (not the gated prod realm export) and extended the existing
+  `settings/RoleMatrixTest.java` (the codebase's real shared access-matrix test) instead of `SecurityConfigTest`
 - [ ] T010 [P] Implement the base-URL interceptor (`HttpInterceptorFn`, registered after `authInterceptor`) and the
   `artworkUrl` pipe in `jordylab-fe/libs/shared/platform/api/src/lib/` — prefixes relative `/api/...` with
   `apiBaseUrl` only when `Capacitor.isNativePlatform()` is true (research D5,
@@ -112,14 +115,15 @@ the APK (quickstart scenario 5, plus the publish→latest→download round-trip 
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Write the release/download-link role-matrix integration test (red first) in
+- [X] T012 [P] [US1] Write the release/download-link role-matrix integration test (red first) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mobile/MobileModuleTest.java`: pending → 403 on download-link
   request; guest → 200 on `latest`; expired/tampered download token → `403 DOWNLOAD_LINK_INVALID` (spec SC-005) —
-  proves the automated half of scenario 1
+  proves the automated half of scenario 1. **Deviation**: added directly to `settings/RoleMatrixTest.java` (see T009)
+  rather than a new file — that's the established location for cross-module role-matrix assertions in this codebase
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement `MobileReleaseService` + `DownloadLinkService` in
+- [X] T013 [US1] Implement `MobileReleaseService` + `DownloadLinkService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/service/` per [research.md](research.md) D7/D8 —
   `DownloadLinkService` issues/verifies the HMAC-SHA256-signed, 5-minute token (releaseId + subject + expiry);
   `MobileReleaseService.publish(...)` validates the signing-cert SHA-256 against
@@ -127,18 +131,18 @@ the APK (quickstart scenario 5, plus the publish→latest→download round-trip 
   strictly greater than the current latest (`400 VERSION_CODE_NOT_MONOTONIC`), then stores the file under
   `release.storage-dir` and creates the `MobileRelease` row; unit tests for both services (signature/expiry
   validation, cert-mismatch rejection, non-monotonic rejection)
-- [ ] T014 [US1] Implement `MobileReleaseController` in `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/controller/`
+- [X] T014 [US1] Implement `MobileReleaseController` in `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/controller/`
   per [contracts/mobile-releases-api.md](contracts/mobile-releases-api.md) — `GET /api/mobile/releases/latest`
   (`updateAvailable`/`updateRequired` flags when `installedVersionCode` is given), `POST
   /api/mobile/releases/{id}/download-link`, `POST /api/mobile/releases` (multipart, `mobile-release-publisher` role);
   MockMvc tests (`@Language("JSON")`) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mobile/rest/controller/MobileReleaseControllerTest.java`
-- [ ] T015 [US1] Implement `MobileDownloadController` (`GET /api/mobile/download/{token}`, permitAll) in
+- [X] T015 [US1] Implement `MobileDownloadController` (`GET /api/mobile/download/{token}`, permitAll) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/controller/` — validates the token via
   `DownloadLinkService`, streams the file with `Content-Type: application/vnd.android.package-archive` and
   `Content-Disposition: attachment`; invalid/expired → `403 DOWNLOAD_LINK_INVALID`; MockMvc test (valid token streams
   correct headers + bytes; invalid/expired → 403, no partial stream)
-- [ ] T016 [P] [US1] Implement `AssetLinksController` (`GET /.well-known/assetlinks.json`, permitAll) in
+- [X] T016 [P] [US1] Implement `AssetLinksController` (`GET /.well-known/assetlinks.json`, permitAll) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/controller/` serving the JSON body from
   `jordylab.mobile.app.package-name` + the signing-cert SHA-256 config, per
   [mobile-releases-api.md](contracts/mobile-releases-api.md); MockMvc test asserting exact JSON shape, no redirect,
@@ -236,16 +240,19 @@ the user and confirm the next open requires full login again (quickstart scenari
 
 ### Tests for User Story 4
 
-- [ ] T029 [P] [US4] Write the offline-consent-revocation test (red first) in
+- [X] T029 [P] [US4] Write the offline-consent-revocation test (red first) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/service/KeycloakUserAdministrationServiceTest.java` — `revoke()`
   calls `DELETE /admin/realms/{realm}/users/{id}/consents/jordylab-mobile` in addition to the existing session logout
-  (WireMock-backed `KeycloakAdminClient`, explicit captor asserting the exact call)
+  (WireMock-backed `KeycloakAdminClient`, explicit captor asserting the exact call). Also added a
+  `revokingAGuestWhoNeverUsedTheMobileAppIsNotAnError` test — the common case where no consent exists must not break
+  the existing revoke flow, and two `KeycloakAdminClientTest` WireMock cases for the new client method
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Add `revokeOfflineConsent(userId)` to
+- [X] T030 [US4] Add `revokeConsent(userId, clientId)` to
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClient.java` and call it from
-  `revoke()` in `KeycloakUserAdministrationService.java` per [research.md](research.md) D12, until T029 is green
+  `revoke()` in `KeycloakUserAdministrationService.java` per [research.md](research.md) D12, until T029 is green.
+  A 404 (user never used the mobile app) is caught and swallowed in `revoke()` — it is the common case, not a failure
 - [ ] T031 [US4] Install `@capgo/capacitor-native-biometric` (research D3) in `jordylab-fe/apps/jordylab-mobile/`;
   implement `BiometricUnlockService` in `jordylab-fe/libs/shared/auth/src/lib/biometric-unlock.service.ts` — stores
   the `offline_access` refresh token behind a biometric prompt in the Android Keystore; `enable()`/`disable()`
@@ -273,15 +280,21 @@ to FNA"), confirm the article is queued (quickstart scenario 4)
 
 ### Tests for User Story 5
 
-- [ ] T034 [P] [US5] Write the `POST /api/fna/articles/manual` contract test (red first, admin-only) in
+- [X] T034 [P] [US5] Write the `POST /api/fna/articles/manual` contract test (red first, admin-only) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/fna/rest/controller/` — non-admin → 403; admin → 201, article queued
-  as a candidate for the next daily briefing
+  as a candidate for the next daily briefing. **Deviation**: role-gating assertions (admin 201 / guest 403) added to
+  `settings/RoleMatrixTest.java` (same rationale as T009/T012); `ManualArticleSubmissionServiceTest` covers the
+  service logic (queue, duplicate-URL rejection, missing-feed fail-fast) at the unit level
 
 ### Implementation for User Story 5
 
-- [ ] T035 [US5] Implement `POST /api/fna/articles/manual` in the **`fna`** module (new endpoint, not `mobile` — D6):
+- [X] T035 [US5] Implement `POST /api/fna/articles/manual` in the **`fna`** module (new endpoint, not `mobile` — D6):
   controller + service method queuing the submitted URL alongside the existing article-ingestion pipeline in
-  `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/` and `fna/service/`; until T034 is green
+  `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/` and `fna/service/`; until T034 is green.
+  **Implementation-time discovery**: `Article` requires a non-null `feed` (schema constraint), so manually-submitted
+  articles attach to one seeded, disabled "Manual Submissions" `Feed` row (`V20260928005` migration) rather than
+  needing a schema change — `BriefingGeneratorService` selects by `publishedAt`, not `feed.enabled`, so these are
+  still picked up for the next briefing
 - [ ] T036 [P] [US5] Install `@capgo/capacitor-share-target` (research D4) in `jordylab-fe/apps/jordylab-mobile/`;
   add the `ACTION_SEND` intent filter (text/URL mime types) to
   `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml`
@@ -307,7 +320,7 @@ the right screen (quickstart scenario 6)
 
 ### Tests for User Story 6
 
-- [ ] T039 [P] [US6] Write `MobileNotificationListener` unit tests (red first, mocked `NtfyClient`) in
+- [X] T039 [P] [US6] Write `MobileNotificationListener` unit tests (red first, mocked `NtfyClient`) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mobile/service/MobileNotificationListenerTest.java` — a
   `UserSignUpPending` event produces exactly one Ntfy call with a `screen=settings-users` click URL; a
   `BriefingReady` event produces exactly one call with `screen=fna-briefing`; a simulated Ntfy failure is logged and
@@ -315,25 +328,34 @@ the right screen (quickstart scenario 6)
 
 ### Implementation for User Story 6
 
-- [ ] T040 [US6] Change `settings`' pending-signup detection to publish a `UserSignUpPending` Modulith event
+- [X] T040 [US6] Change `settings`' pending-signup detection to publish a `UserSignUpPending` Modulith event
   (`userId`, `email`, `displayName`) instead of calling Ntfy directly (research D9 — 006 planned the direct call but
   never built it; this supersedes that plan before it's ever used) — touch point in
-  `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/`; unit test for the event payload
-- [ ] T041 [P] [US6] Add a `BriefingReady` Modulith event (`briefingId`, `date`), published by
+  `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/`; unit test for the event payload.
+  **Implementation-time discovery**: 006's pending-signup poller was never built either (only planned) — added
+  `PendingSignupWatcherService` (5-minute poll, in-memory last-seen set per 006 D6's "derive, don't persist"
+  precedent) from scratch, publishing the event instead of the direct-Ntfy call 006 had planned
+- [X] T041 [P] [US6] Add a `BriefingReady` Modulith event (`briefingId`, `date`), published by
   `jordylab-be/src/main/java/dev/jordy/jordylab/fna/service/BriefingGeneratorService.java` on completion (entirely
-  new — `fna` publishes no events today); unit test
-- [ ] T042 [US6] Implement `NtfyClient` (RestClient-based, `POST {base-url}/{topic}` with title/body + click-URL
+  new — `fna` publishes no events today); unit test. Updated `BriefingGeneratorServiceTest`'s existing constructor
+  call for the new `ApplicationEventPublisher` dependency
+- [X] T042 [US6] Implement `NtfyClient` (RestClient-based, `POST {base-url}/{topic}` with title/body + click-URL
   header — verify the exact header Ntfy expects, research §4 item 4) in
-  `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/client/NtfyClient.java`; WireMock test
-- [ ] T043 [US6] Implement `MobileNotificationListener` (two `@ApplicationModuleListener` methods) in
+  `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/client/NtfyClient.java`; WireMock test.
+  **Unverified assumption**: used `X-Title`/`X-Click` headers per Ntfy's publish-by-header convention — flagged in
+  the class javadoc as needing verification against the real Ntfy server version (research §4 item 4)
+- [X] T043 [US6] Implement `MobileNotificationListener` (two `@ApplicationModuleListener` methods) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/service/` — builds each event's App-Link click URL
   (`https://{PRODUCTION_DOMAIN}/mobile/open?screen=settings-users` / `.../open?screen=fna-briefing`) and calls
   `NtfyClient`; catches and logs any Ntfy failure without rethrowing; until T039 is green
 - [ ] T044 [US6] Wire the two real `screen` values into the App-Link routing table stubbed in T023
   (`jordylab-fe/libs/shared/platform/api/src/lib/app-link.service.ts`) — `settings-users` → `/settings/users`,
   `fna-briefing` → the existing briefing route; Vitest test asserting each `screen` value routes correctly
-- [ ] T045 Extend `ModularityTests` to confirm `settings`/`fna` have no direct dependency on `mobile` — only the new
-  event types cross the boundary (research D9's whole point)
+- [X] T045 Extend `ModularityTests` to confirm `settings`/`fna` have no direct dependency on `mobile` — only the new
+  event types cross the boundary (research D9's whole point). **No change needed**: `ModularityTests.verify()` is
+  already a blanket check with no per-module allowlist to extend — it already fails on any forbidden internal-package
+  import, and `mobile`'s only cross-module references are the two root-package (public API) event types, which
+  Modulith's convention explicitly permits
 
 **Checkpoint**: US1–US6: the admin is kept in the loop without checking the app manually, and the event-based design
 is proven not to create a forbidden module edge.
