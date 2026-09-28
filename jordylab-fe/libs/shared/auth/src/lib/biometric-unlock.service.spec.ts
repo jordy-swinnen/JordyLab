@@ -55,6 +55,28 @@ describe('BiometricUnlockService', () => {
     });
   });
 
+  describe('refresh', () => {
+    it('populates the available/enabled signals from the plugin', async () => {
+      isAvailable.mockResolvedValueOnce({ isAvailable: true });
+      isDataSaved.mockResolvedValueOnce({ isSaved: true });
+
+      await spectator.service.refresh();
+
+      expect(spectator.service.available()).toBe(true);
+      expect(spectator.service.enabled()).toBe(true);
+    });
+
+    it('leaves the signals false when biometrics are unavailable and nothing is stored', async () => {
+      isAvailable.mockResolvedValueOnce({ isAvailable: false });
+      isDataSaved.mockResolvedValueOnce({ isSaved: false });
+
+      await spectator.service.refresh();
+
+      expect(spectator.service.available()).toBe(false);
+      expect(spectator.service.enabled()).toBe(false);
+    });
+  });
+
   describe('enable', () => {
     it('stores the current refresh token behind biometric protection', async () => {
       getRefreshToken.mockReturnValue('the-refresh-token');
@@ -66,6 +88,7 @@ describe('BiometricUnlockService', () => {
       expect(setData).toHaveBeenCalledWith(
         expect.objectContaining({ value: 'the-refresh-token', accessControl: 2 }),
       );
+      expect(spectator.service.enabled()).toBe(true);
     });
 
     it('fails without calling the plugin when there is no refresh token on the session', async () => {
@@ -92,6 +115,7 @@ describe('BiometricUnlockService', () => {
       await spectator.service.disable();
 
       expect(deleteData).toHaveBeenCalledWith({ key: expect.any(String) });
+      expect(spectator.service.enabled()).toBe(false);
     });
 
     it('does not throw when nothing was stored', async () => {

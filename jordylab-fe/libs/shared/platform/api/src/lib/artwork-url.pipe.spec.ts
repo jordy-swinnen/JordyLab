@@ -1,37 +1,44 @@
-import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { API_BASE_URL } from './api-base-url.token';
 import { ArtworkUrlPipe } from './artwork-url.pipe';
 import { PlatformService } from './platform.service';
 
-function createPipe(isNative: boolean, apiBaseUrl = 'https://jordylab.example') {
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: PlatformService, useValue: { isNative: () => isNative } },
-      { provide: API_BASE_URL, useValue: apiBaseUrl },
-    ],
+describe('ArtworkUrlPipe', () => {
+  let spectator: SpectatorService<ArtworkUrlPipe>;
+
+  const createPipe = createServiceFactory({
+    service: ArtworkUrlPipe,
   });
 
-  return TestBed.runInInjectionContext(() => new ArtworkUrlPipe());
-}
+  function create(isNative: boolean, apiBaseUrl = 'https://jordylab.example') {
+    spectator = createPipe({
+      providers: [
+        { provide: PlatformService, useValue: { isNative: () => isNative } },
+        { provide: API_BASE_URL, useValue: apiBaseUrl },
+      ],
+    });
+  }
 
-describe('ArtworkUrlPipe', () => {
   it('leaves the URL unchanged on web', () => {
-    expect(createPipe(false).transform('/api/gamecatalog/games/1/cover')).toBe(
+    create(false);
+
+    expect(spectator.service.transform('/api/gamecatalog/games/1/cover')).toBe(
       '/api/gamecatalog/games/1/cover',
     );
   });
 
   it('prefixes a relative artwork URL with the API base URL when native', () => {
-    expect(createPipe(true).transform('/api/gamecatalog/games/1/cover')).toBe(
+    create(true);
+
+    expect(spectator.service.transform('/api/gamecatalog/games/1/cover')).toBe(
       'https://jordylab.example/api/gamecatalog/games/1/cover',
     );
   });
 
   it('passes through null/undefined unchanged', () => {
-    const pipe = createPipe(true);
+    create(true);
 
-    expect(pipe.transform(null)).toBeNull();
-    expect(pipe.transform(undefined)).toBeUndefined();
+    expect(spectator.service.transform(null)).toBeNull();
+    expect(spectator.service.transform(undefined)).toBeUndefined();
   });
 });

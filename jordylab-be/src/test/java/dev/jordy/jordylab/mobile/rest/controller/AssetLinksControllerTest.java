@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Collections;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,13 +26,17 @@ class AssetLinksControllerTest {
 
     @Test
     void servesTheDigitalAssetLinksStatementAsJson() throws Exception {
+        // The config value is plain hex ("b" x 64 — see PropertiesConfiguration below), but the
+        // Digital Asset Links spec requires colon-separated, uppercase hex pairs.
+        String expectedFingerprint = String.join(":", Collections.nCopies(32, "BB"));
+
         mockMvc.perform(get("/.well-known/assetlinks.json"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$[0].relation[0]").value("delegate_permission/common.handle_all_urls"))
                 .andExpect(jsonPath("$[0].target.namespace").value("android_app"))
                 .andExpect(jsonPath("$[0].target.package_name").value("dev.jordy.jordylab.mobile"))
-                .andExpect(jsonPath("$[0].target.sha256_cert_fingerprints[0]").value("b".repeat(64)));
+                .andExpect(jsonPath("$[0].target.sha256_cert_fingerprints[0]").value(expectedFingerprint));
     }
 
     @TestConfiguration

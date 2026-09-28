@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { AccessControl, NativeBiometric } from '@capgo/capacitor-native-biometric';
 import { AuthService } from './auth.service';
 
@@ -10,10 +10,26 @@ const STORAGE_KEY = 'jordylab.offline-refresh-token';
  * no biometrics enrolled, enrollment changed since storing, expired/revoked token — resolves to
  * `false`/no-op rather than throwing, so the caller always falls back to a normal login instead
  * of a silent retry loop (FR-012).
+ *
+ * `available`/`enabled` are exposed as signals (populated by {@link refresh}) so
+ * `BiometricUnlockToggleComponent` is a pure signal-reading component — API-backed state lives
+ * here, not scattered across the component (matches the `InstallPromptStore` pattern).
  */
 @Injectable({ providedIn: 'root' })
 export class BiometricUnlockService {
   readonly #auth = inject(AuthService);
+
+  readonly #available = signal(false);
+  readonly #enabled = signal(false);
+  readonly available = this.#available.asReadonly();
+  readonly enabled = this.#enabled.asReadonly();
+
+  /** Refreshes {@link available}/{@link enabled} — call once when mounting the toggle UI. */
+  async refresh(): Promise<void> {
+    const [available, enabled] = await Promise.all([this.isAvailable(), this.isEnabled()]);
+    this.#available.set(available);
+    this.#enabled.set(enabled);
+  }
 
   async isAvailable(): Promise<boolean> {
     try {
@@ -51,6 +67,7 @@ export class BiometricUnlockService {
         accessControl: AccessControl.BIOMETRY_ANY,
         title: 'Enable fingerprint unlock',
       });
+      this.#enabled.set(true);
 
       return true;
     } catch (error) {
@@ -66,6 +83,8 @@ export class BiometricUnlockService {
       await NativeBiometric.deleteData({ key: STORAGE_KEY });
     } catch {
       // Nothing was stored — already the desired end state.
+    } finally {
+      this.#enabled.set(false);
     }
   }
 

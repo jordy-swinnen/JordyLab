@@ -1,7 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { LatestReleaseResponse } from './latest-release.model';
 import { PlatformService } from './platform.service';
 import { UpdateCheckStore } from './update-check.store';
@@ -12,21 +11,6 @@ vi.mock('@capacitor/app', () => ({
     addListener: vi.fn(),
   },
 }));
-
-function createStore(isNative: boolean) {
-  TestBed.configureTestingModule({
-    providers: [
-      provideHttpClient(),
-      provideHttpClientTesting(),
-      { provide: PlatformService, useValue: { isNative: () => isNative } },
-    ],
-  });
-
-  return {
-    store: TestBed.inject(UpdateCheckStore),
-    httpMock: TestBed.inject(HttpTestingController),
-  };
-}
 
 const RESPONSE: LatestReleaseResponse = {
   id: '7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f',
@@ -42,23 +26,38 @@ const RESPONSE: LatestReleaseResponse = {
 };
 
 describe('UpdateCheckStore', () => {
+  let spectator: SpectatorService<UpdateCheckStore>;
+  let httpMock: HttpTestingController;
+
+  const createStore = createServiceFactory({
+    service: UpdateCheckStore,
+    providers: [provideHttpClient(), provideHttpClientTesting()],
+  });
+
+  function create(isNative: boolean) {
+    spectator = createStore({
+      providers: [{ provide: PlatformService, useValue: { isNative: () => isNative } }],
+    });
+    httpMock = spectator.inject(HttpTestingController);
+  }
+
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it('does nothing on web', async () => {
-    const { store, httpMock } = createStore(false);
+    create(false);
 
-    await store.checkForUpdate();
+    await spectator.service.checkForUpdate();
 
     httpMock.expectNone(() => true);
-    expect(store.latest()).toBeNull();
+    expect(spectator.service.latest()).toBeNull();
   });
 
   it('calls the latest endpoint with the native build as installedVersionCode', async () => {
-    const { store, httpMock } = createStore(true);
+    create(true);
 
-    const checkPromise = store.checkForUpdate();
+    const checkPromise = spectator.service.checkForUpdate();
     // Let the mocked App.getInfo() promise resolve before the HTTP call is made.
     await Promise.resolve();
     await Promise.resolve();
@@ -68,6 +67,6 @@ describe('UpdateCheckStore', () => {
     req.flush(RESPONSE);
     await checkPromise;
 
-    expect(store.latest()).toEqual(RESPONSE);
+    expect(spectator.service.latest()).toEqual(RESPONSE);
   });
 });

@@ -1,49 +1,49 @@
+import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { BiometricUnlockToggleComponent } from './biometric-unlock-toggle.component';
 import { BiometricUnlockService } from './biometric-unlock.service';
 
-// The constructor's Promise.all([...]) resolves outside Angular's zoneless change-detection
-// tracking, so tests flush it with two microtask hops (one for each promise, per the pattern
-// established in libs/shared/platform/api's async-store specs) rather than fixture.whenStable().
-async function flushMicrotasks(): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
-}
-
 describe('BiometricUnlockToggleComponent', () => {
-  const isAvailable = vi.fn();
-  const isEnabled = vi.fn();
+  const available = signal(false);
+  const enabled = signal(false);
+  const refresh = vi.fn().mockResolvedValue(undefined);
   const enable = vi.fn();
   const disable = vi.fn();
 
   const createComponent = createComponentFactory({
     component: BiometricUnlockToggleComponent,
     providers: [
-      { provide: BiometricUnlockService, useValue: { isAvailable, isEnabled, enable, disable } },
+      {
+        provide: BiometricUnlockService,
+        useValue: {
+          available: available.asReadonly(),
+          enabled: enabled.asReadonly(),
+          refresh,
+          enable,
+          disable,
+        },
+      },
     ],
   });
 
   let spectator: Spectator<BiometricUnlockToggleComponent>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    available.set(false);
+    enabled.set(false);
+    refresh.mockClear();
+    enable.mockReset();
+    disable.mockReset();
+    spectator = createComponent();
   });
 
-  it('renders nothing when biometrics are unavailable', async () => {
-    isAvailable.mockResolvedValue(false);
-    isEnabled.mockResolvedValue(false);
-    spectator = createComponent();
-    await flushMicrotasks();
-    spectator.detectChanges();
-
+  it('renders nothing when biometrics are unavailable', () => {
     expect(spectator.query('input')).toBeNull();
   });
 
-  it('shows the toggle, checked, when biometrics are available and already enabled', async () => {
-    isAvailable.mockResolvedValue(true);
-    isEnabled.mockResolvedValue(true);
-    spectator = createComponent();
-    await flushMicrotasks();
+  it('shows the toggle, checked, when biometrics are available and already enabled', () => {
+    available.set(true);
+    enabled.set(true);
     spectator.detectChanges();
 
     const checkbox = spectator.query<HTMLInputElement>('input[type="checkbox"]');
@@ -52,15 +52,17 @@ describe('BiometricUnlockToggleComponent', () => {
   });
 
   it('enables biometric unlock when toggled on', async () => {
-    isAvailable.mockResolvedValue(true);
-    isEnabled.mockResolvedValue(false);
-    enable.mockResolvedValue(true);
-    spectator = createComponent();
-    await flushMicrotasks();
+    available.set(true);
+    enabled.set(false);
+    enable.mockImplementation(async () => {
+      enabled.set(true);
+
+      return true;
+    });
     spectator.detectChanges();
 
     spectator.click('input[type="checkbox"]');
-    await flushMicrotasks();
+    await Promise.resolve();
     spectator.detectChanges();
 
     expect(enable).toHaveBeenCalledTimes(1);
@@ -68,15 +70,15 @@ describe('BiometricUnlockToggleComponent', () => {
   });
 
   it('disables biometric unlock when toggled off', async () => {
-    isAvailable.mockResolvedValue(true);
-    isEnabled.mockResolvedValue(true);
-    disable.mockResolvedValue(undefined);
-    spectator = createComponent();
-    await flushMicrotasks();
+    available.set(true);
+    enabled.set(true);
+    disable.mockImplementation(async () => {
+      enabled.set(false);
+    });
     spectator.detectChanges();
 
     spectator.click('input[type="checkbox"]');
-    await flushMicrotasks();
+    await Promise.resolve();
     spectator.detectChanges();
 
     expect(disable).toHaveBeenCalledTimes(1);

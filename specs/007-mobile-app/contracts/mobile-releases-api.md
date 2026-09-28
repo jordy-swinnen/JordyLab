@@ -50,8 +50,12 @@ Request: no body.
 Response `200`:
 
 ```json
-{ "downloadUrl": "https://{PRODUCTION_DOMAIN}/api/mobile/download/{signedToken}", "expiresAt": "2026-09-28T10:05:00Z" }
+{ "downloadUrl": "/api/mobile/download/{signedToken}", "expiresAt": "2026-09-28T10:05:00Z" }
 ```
+
+`downloadUrl` is relative — `MobileReleaseController` never has the public domain to build an absolute one from. The
+frontend resolves it to an absolute URL when needed (native only, via `resolveApiUrl`/`ApkDownloadService`, research
+D5); a web caller can use it as-is (same origin).
 
 - `{id}` unknown → `404 RELEASE_NOT_FOUND`.
 - The token is a signed, 5-minute, single-purpose credential (research D8) — not a database row, so there is nothing

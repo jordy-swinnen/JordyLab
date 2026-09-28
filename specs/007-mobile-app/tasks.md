@@ -54,7 +54,10 @@ frontend = `jordylab-fe/…` (libs, apps), native shell = `jordylab-fe/apps/jord
   Android SDK (it only copies the template; building needs the SDK). `appId` is the obvious placeholder
   `dev.jordylab.mobile.placeholder` (STOP-AND-REPORT gate, D14). Also applied the `/speckit-analyze` C1 fix
   (`minSdkVersion = 29` in `android/variables.gradle`) and added the App-Link (T024) + share-target (T036)
-  intent-filters to `AndroidManifest.xml` here while already in this area, ahead of their own task numbers
+  intent-filters to `AndroidManifest.xml` here while already in this area, ahead of their own task numbers.
+  **PR review finding (confirmed, fixed)**: the generated `sync`/`open-android` Nx targets in
+  `apps/jordylab-mobile/project.json` shelled out via `npx cap ...` — this repo requires `bun`/`bunx`, never
+  `npx`/`npm`/`yarn`. Changed both to `bunx cap ...`.
 - [X] T005 [P] Add a `mobile` build configuration to `jordylab-fe/apps/jordylab/project.json` (new
   `environment.mobile.ts`: absolute `apiBaseUrl` placeholder — D13 domain pending — `keycloakClientId:
   'jordylab-mobile'`); set `apps/jordylab-mobile`'s `webDir` to that configuration's build output
@@ -154,6 +157,12 @@ the APK (quickstart scenario 5, plus the publish→latest→download round-trip 
   `jordylab.mobile.app.package-name` + the signing-cert SHA-256 config, per
   [mobile-releases-api.md](contracts/mobile-releases-api.md); MockMvc test asserting exact JSON shape, no redirect,
   `Content-Type: application/json`
+  **PR review finding (confirmed, fixed)**: `sha256_cert_fingerprints` was built directly from
+  `jordylab.mobile.release.signing-cert-sha256` — plain hex, since that's the format
+  `ApkSigningCertificateReader`/`MobileReleaseService`'s publish-time check need — but the contract (and the
+  Digital Asset Links spec) require colon-separated hex. Added a `colonSeparate()` helper in the controller so the
+  format conversion happens at this one presentation boundary, without touching the config format the other two
+  consumers rely on. Updated `AssetLinksControllerTest`'s expected value accordingly.
 - [X] T017 [P] [US1] Create the install-prompt signal store in `jordylab-fe/libs/shared/platform/api/src/lib/install-prompt.store.ts`
   per `/angular-signal-store` — chooses at most one prompt by `platform` signal (T011), checks
   `AuthService`-derived `isApproved` before showing anything, per-device 30-day dismissal in `localStorage` (wrapped
@@ -294,7 +303,10 @@ the user and confirm the next open requires full login again (quickstart scenari
 - [X] T030 [US4] Add `revokeConsent(userId, clientId)` to
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClient.java` and call it from
   `revoke()` in `KeycloakUserAdministrationService.java` per [research.md](research.md) D12, until T029 is green.
-  A 404 (user never used the mobile app) is caught and swallowed in `revoke()` — it is the common case, not a failure
+  A 404 (user never used the mobile app) is caught and swallowed in `revoke()` — it is the common case, not a failure.
+  **PR review finding (confirmed, fixed)**: the new private `revokeMobileOfflineConsent()` helper had been placed
+  between the public `revoke()` and `resetPassword()` methods, breaking this file's public-then-private method-order
+  convention (`jordylab-be/AGENTS.md`). Moved it down next to the file's other private helpers.
 - [X] T031 [US4] Install `@capgo/capacitor-native-biometric` (research D3) in `jordylab-fe/apps/jordylab-mobile/`;
   implement `BiometricUnlockService` in `jordylab-fe/libs/shared/auth/src/lib/biometric-unlock.service.ts` — stores
   the `offline_access` refresh token behind a biometric prompt in the Android Keystore; `enable()`/`disable()`
@@ -325,6 +337,20 @@ the user and confirm the next open requires full login again (quickstart scenari
     `biometricUnlock.disable()` before `auth.logout()` — the explicit wipe.
 - [X] T033 [US4] Vitest tests for `BiometricUnlockService` in `jordylab-fe/libs/shared/auth/src/lib/` — success path,
   cancelled prompt, enrollment-changed fallback, explicit wipe on disable/logout (mocked plugin via `useValue`)
+  **PR review findings (confirmed, fixed)**: `biometric-unlock-toggle.component.spec.ts` called `createComponent()`
+  inside every `it()` instead of once in `beforeEach` (`jordylab-fe/AGENTS.md`'s testing convention). Fixing this
+  properly required moving `available`/`enabled` out of the component and onto `BiometricUnlockService` as signals
+  (a new `refresh()` method populates them) — the component previously computed this state itself via a one-shot
+  `Promise.all` in its constructor, which made a single shared `beforeEach` instance impossible since each test
+  needed different initial resolved values; with the state on the service (matching `InstallPromptStore`'s pattern),
+  tests now create the component once and drive state via real signals, same as `install-prompt.component.spec.ts`.
+  Also fixed `android-app-qr-entry.component.spec.ts` (same finding, simpler case — no per-test state, just moved
+  `createComponent()` into `beforeEach`), and reworked all six specs in `libs/shared/platform/api` that used raw
+  `TestBed.configureTestingModule()`/`TestBed.inject()` onto `createServiceFactory`/`SpectatorService` instead
+  (`api-base-url.interceptor.spec.ts`, `apk-download.service.spec.ts`, `app-link.service.spec.ts`,
+  `share-target.service.spec.ts`, `update-check.store.spec.ts`, `install-prompt.store.spec.ts`,
+  `artwork-url.pipe.spec.ts`) — a flagged-as-"not build-breaking" pattern-drift finding, fixed anyway since it was
+  mechanical and fully verifiable in this environment (unlike the backend).
 
 **Checkpoint**: US1–US4: the app is installable, usable, self-updating, and offers biometric convenience without
 weakening revocation.

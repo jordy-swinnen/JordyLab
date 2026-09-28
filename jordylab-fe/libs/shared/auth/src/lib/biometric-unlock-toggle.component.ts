@@ -5,7 +5,8 @@ import { BiometricUnlockService } from './biometric-unlock.service';
  * "Unlock with fingerprint" toggle (spec US4). Native-only — the app shell decides whether to
  * mount this at all (same pattern as the rest of `libs/shared/platform`'s platform-conditional
  * UI, e.g. the desktop QR entry): it always renders once mounted, but hides itself once
- * {@link BiometricUnlockService.isAvailable} resolves `false` (no biometric hardware/enrollment).
+ * {@link BiometricUnlockService.available} resolves `false` (no biometric hardware/enrollment).
+ * A pure signal-reading component — `available`/`enabled` live on the service, not here.
  *
  * **Implementation-time discovery**: the original task referenced extending a `UserMenuComponent`
  * from spec 006 — no such component exists in this codebase (the sign-out UI is inlined directly
@@ -32,12 +33,12 @@ import { BiometricUnlockService } from './biometric-unlock.service';
 export class BiometricUnlockToggleComponent {
   readonly #biometric = inject(BiometricUnlockService);
 
-  protected readonly available = signal(false);
-  protected readonly enabled = signal(false);
+  protected readonly available = this.#biometric.available;
+  protected readonly enabled = this.#biometric.enabled;
   protected readonly busy = signal(false);
 
   constructor() {
-    void this.#refreshState();
+    void this.#biometric.refresh();
   }
 
   protected async onToggle(): Promise<void> {
@@ -45,22 +46,11 @@ export class BiometricUnlockToggleComponent {
     try {
       if (this.enabled()) {
         await this.#biometric.disable();
-        this.enabled.set(false);
       } else {
-        const succeeded = await this.#biometric.enable();
-        this.enabled.set(succeeded);
+        await this.#biometric.enable();
       }
     } finally {
       this.busy.set(false);
     }
-  }
-
-  async #refreshState(): Promise<void> {
-    const [available, enabled] = await Promise.all([
-      this.#biometric.isAvailable(),
-      this.#biometric.isEnabled(),
-    ]);
-    this.available.set(available);
-    this.enabled.set(enabled);
   }
 }

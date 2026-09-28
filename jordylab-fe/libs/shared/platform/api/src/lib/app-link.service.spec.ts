@@ -1,5 +1,5 @@
-import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { AppLinkService } from './app-link.service';
 import { PlatformService } from './platform.service';
@@ -12,37 +12,40 @@ vi.mock('@capacitor/app', () => ({
   App: { addListener },
 }));
 
-function createService(isNative: boolean) {
+describe('AppLinkService', () => {
+  let spectator: SpectatorService<AppLinkService>;
   const completeNativeLogin = vi.fn().mockResolvedValue(undefined);
   const navigateByUrl = vi.fn().mockResolvedValue(true);
 
-  TestBed.configureTestingModule({
+  const createService = createServiceFactory({
+    service: AppLinkService,
     providers: [
-      { provide: PlatformService, useValue: { isNative: () => isNative } },
       { provide: AuthService, useValue: { completeNativeLogin } },
       { provide: Router, useValue: { navigateByUrl } },
     ],
   });
 
-  return { service: TestBed.inject(AppLinkService), completeNativeLogin, navigateByUrl };
-}
+  function create(isNative: boolean) {
+    spectator = createService({
+      providers: [{ provide: PlatformService, useValue: { isNative: () => isNative } }],
+    });
+  }
 
-describe('AppLinkService', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it('does not register a listener on web', () => {
-    const { service } = createService(false);
+    create(false);
 
-    service.listen();
+    spectator.service.listen();
 
     expect(addListener).not.toHaveBeenCalled();
   });
 
   it('completes the native login flow for a /mobile/callback URL', async () => {
-    const { service, completeNativeLogin, navigateByUrl } = createService(true);
-    service.listen();
+    create(true);
+    spectator.service.listen();
     const handler = addListener.mock.calls[0][1] as (event: { url: string }) => void;
 
     const callbackUrl = 'https://app.jordylab.test/mobile/callback?code=abc&state=xyz';
@@ -54,8 +57,8 @@ describe('AppLinkService', () => {
   });
 
   it('routes a settings-users screen tap to /settings/users', async () => {
-    const { service, navigateByUrl } = createService(true);
-    service.listen();
+    create(true);
+    spectator.service.listen();
     const handler = addListener.mock.calls[0][1] as (event: { url: string }) => void;
 
     handler({ url: 'https://app.jordylab.test/mobile/open?screen=settings-users' });
@@ -65,8 +68,8 @@ describe('AppLinkService', () => {
   });
 
   it('routes a fna-briefing screen tap to /fna/briefing', async () => {
-    const { service, navigateByUrl } = createService(true);
-    service.listen();
+    create(true);
+    spectator.service.listen();
     const handler = addListener.mock.calls[0][1] as (event: { url: string }) => void;
 
     handler({ url: 'https://app.jordylab.test/mobile/open?screen=fna-briefing' });
@@ -76,8 +79,8 @@ describe('AppLinkService', () => {
   });
 
   it('does nothing for an unknown screen value', async () => {
-    const { service, navigateByUrl } = createService(true);
-    service.listen();
+    create(true);
+    spectator.service.listen();
     const handler = addListener.mock.calls[0][1] as (event: { url: string }) => void;
 
     handler({ url: 'https://app.jordylab.test/mobile/open?screen=unknown-screen' });

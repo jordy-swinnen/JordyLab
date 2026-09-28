@@ -70,20 +70,6 @@ public class KeycloakUserAdministrationService {
         revokeMobileOfflineConsent(user.id());
     }
 
-    /**
-     * Kills any biometric-unlock offline token the mobile app holds for this user (spec 007
-     * FR-013, research D12) — a plain session logout above does not revoke {@code offline_access}
-     * grants. Most users never installed the app, so "no consent to revoke" is the common case,
-     * not an error.
-     */
-    private void revokeMobileOfflineConsent(String userId) {
-        try {
-            keycloakAdminClient.revokeConsent(userId, MOBILE_CLIENT_ID);
-        } catch (HttpClientErrorException.NotFound noConsentToRevoke) {
-            // Expected when the user never used the mobile app — nothing to revoke.
-        }
-    }
-
     /** Returned once, to the admin, for out-of-band sharing — never logged or stored. */
     public String resetPassword(UUID userId) {
         KeycloakAdminClient.KeycloakUser user = requireUser(userId);
@@ -103,6 +89,20 @@ public class KeycloakUserAdministrationService {
                 .count();
         if (enabledAdmins <= 1) {
             throw new LastAdminProtectedException();
+        }
+    }
+
+    /**
+     * Kills any biometric-unlock offline token the mobile app holds for this user (spec 007
+     * FR-013, research D12) — a plain session logout above does not revoke {@code offline_access}
+     * grants. Most users never installed the app, so "no consent to revoke" is the common case,
+     * not an error.
+     */
+    private void revokeMobileOfflineConsent(String userId) {
+        try {
+            keycloakAdminClient.revokeConsent(userId, MOBILE_CLIENT_ID);
+        } catch (HttpClientErrorException.NotFound noConsentToRevoke) {
+            // Expected when the user never used the mobile app — nothing to revoke.
         }
     }
 
