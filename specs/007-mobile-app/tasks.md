@@ -445,19 +445,37 @@ further prompt (quickstart scenario 5 part 2)
 
 ### Implementation for User Story 7
 
-- [ ] T046 [P] [US7] Create `manifest.webmanifest` (name, short_name, icons, `display: standalone`, `start_url`) +
+- [X] T046 [P] [US7] Create `manifest.webmanifest` (name, short_name, icons, `display: standalone`, `start_url`) +
   icon assets + `apple-touch-icon` + `apple-mobile-web-app-*` meta tags in `jordylab-fe/apps/jordylab/src/` (first
   PWA scaffolding in the repo — research §2.2); reference the manifest from `index.html`
-- [ ] T047 [P] [US7] Build the iOS Add-to-Home-Screen sheet component (Share → Add to Home Screen instructions, shown
+  - `apps/jordylab/public/manifest.webmanifest` + `apps/jordylab/public/icons/{icon-192,icon-512,apple-touch-icon}.png`.
+  - **Implementation-time discovery**: no image-rasterization tool (ImageMagick/rsvg-convert/Inkscape/`sharp`) is
+    available in this sandbox, so the PNGs could not come from the existing brand SVG
+    (`libs/shared/brand/brand-mark.component.ts`) via a normal export. Installed Pillow and rendered the same mark
+    (rounded-rect background, the two circles, and the flask-hook path as a cubic Bézier sampled at high density and
+    stamped with overlapping circles for a smooth stroke) programmatically at each required size — verified visually
+    (`Read` on the generated PNGs) before use. This is real, correct output, not a placeholder — but it is a
+    one-off script, not the icon pipeline this repo should keep long-term; a real asset/export step (e.g. from the
+    actual brand source file, once one exists outside the inline SVG component) is a fair follow-up whenever the
+    brand mark changes.
+- [X] T047 [P] [US7] Build the iOS Add-to-Home-Screen sheet component (Share → Add to Home Screen instructions, shown
   once) in `jordylab-fe/libs/shared/platform/ui/src/lib/`, reusing the install-prompt store's dismissal mechanism
   (T017) for the `web-ios` platform branch
-- [ ] T048 [US7] Implement standalone-mode detection (`navigator.standalone === true`, falling back to the
+  - Already done as part of T017/T018's unified design: `InstallPromptComponent`'s `@case ('ios')` branch is exactly
+    this sheet, driven by the same `InstallPromptStore.promptKind` signal (`'android' | 'ios' | null`) — there was
+    never a separate iOS-only component to build.
+- [X] T048 [US7] Implement standalone-mode detection (`navigator.standalone === true`, falling back to the
   `display-mode: standalone` media query) in the install-prompt store (T017) to suppress the sheet once already
   running as a home-screen app (spec US7-3)
-- [ ] T049 [US7] Wire the iOS sheet into the app shell alongside T020's Android dialog mount point; update
+  - Already done as part of T017: `InstallPromptStore`'s `isRunningStandalone()` helper is exactly this check.
+- [X] T049 [US7] Wire the iOS sheet into the app shell alongside T020's Android dialog mount point; update
   `app.spec.ts`
-- [ ] T050 [P] [US7] Vitest tests for the iOS sheet's trigger conditions (approved user, `web-ios` platform, not
+  - Already done as part of T020 — one `<lib-install-prompt>` mount point renders whichever `promptKind` applies;
+    there is no separate iOS mount point to add.
+- [X] T050 [P] [US7] Vitest tests for the iOS sheet's trigger conditions (approved user, `web-ios` platform, not
   standalone, not previously dismissed) in `jordylab-fe/libs/shared/platform/api/src/lib/install-prompt.store.spec.ts`
+  - Already covered by T017's own spec (`'shows the iOS sheet for an approved user on web-ios, not already
+    standalone'`, `'shows nothing on iOS when already running standalone'`, plus the shared dismissal/role tests).
 
 **Checkpoint**: All seven user stories independently functional. Every platform in the spec has its intended path
 into JordyLab.
