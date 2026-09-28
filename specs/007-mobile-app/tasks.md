@@ -486,26 +486,47 @@ into JordyLab.
 
 **Purpose**: CI pipeline, docs, and full validation across all stories
 
-- [ ] T051 [P] Create `.github/workflows/android-release.yml` (first build/release workflow in the repo — research
+- [X] T051 [P] Create `.github/workflows/android-release.yml` (first build/release workflow in the repo — research
   §2.1) — triggers on tag `mobile-v*`: setup Bun/Node 22+, JDK, Android SDK; `bunx nx build jordylab
   --configuration=mobile`; `npx cap sync android`; `./gradlew assembleRelease` with the keystore from a GitHub
   Actions secret (base64); compute SHA-256; `POST /api/mobile/releases` (T014) using the `mobile-release-ci` service
   account (T007)
+  - **Unverified**: written from the documented multipart contract (`MobileReleaseController.publish()`) and the
+    Keycloak client-credentials grant for `mobile-release-ci` (research D13) — this sandbox has no way to actually
+    trigger a GitHub Actions run, no real Android SDK/keystore, and the `mobile-release-ci` client doesn't exist yet
+    (T052/T007 gates). Assumes `secrets.KEYCLOAK_URL`, `secrets.JORDYLAB_API_BASE_URL`,
+    `secrets.MOBILE_RELEASE_CI_CLIENT_SECRET`, and the three `ANDROID_KEYSTORE_*`/`ANDROID_KEY_*` secrets from T052
+    exist; JDK 21 chosen for AGP 8.13 (untested against the real Android Gradle build in this sandbox). The tag
+    format `mobile-v<versionName>-<versionCode>` is this workflow's own invention (not specified elsewhere) —
+    confirm it before using this as the real release process.
 - [ ] T052 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): generate the release signing
   keystore, record its cert SHA-256 into `jordylab.mobile.release.signing-cert-sha256` (T001/T002) and the realm's
   App Link config, store the keystore as a base64 GitHub Actions secret plus an offline backup (research D14) — do
   not run T051's pipeline for a real release before this is confirmed
-- [ ] T053 [P] Update docs: root `AGENTS.md` (add `mobile` to the schema-per-module list; note the Capacitor
+- [X] T053 [P] Update docs: root `AGENTS.md` (add `mobile` to the schema-per-module list; note the Capacitor
   distribution model under Architecture Principles if relevant), `jordylab-be/AGENTS.md` (new "Mobile module (feature
   007)" section, `mobile` schema ownership, the `settings`/`fna` event touch-points from D9), `jordylab-fe/AGENTS.md`
   (`apps/jordylab-mobile`, `libs/shared/platform`, `scope:platform` eslint/tsconfig gotchas, "Adding a new domain"
   cross-reference)
+  - **Implementation-time discovery**: there is no `scope:platform` tag anywhere in this codebase — `libs/shared/platform/{api,ui}`
+    use the existing `scope:shared,type:api|ui` tags (same as `libs/shared/auth`), not a new scope. Documented that
+    accurately instead of inventing a tag that doesn't exist.
 - [ ] T054 Run the full [quickstart.md](quickstart.md) validation — all 7 scenarios, including the device-only
   checklist (login round-trip, biometric, share, App Link verification once feature 008's domain exists); record
   outcomes and any deviations from research §4's "verify at implementation time" list
+  - **Not run**: requires a real Android device/emulator, a deployed backend, and feature 008's production domain —
+    none available in this sandboxed session. Frontend-verifiable pieces (build, lint, unit tests across every
+    touched project) are green; see T055.
 - [ ] T055 Final green run: `./gradlew build` (full backend suite, `ModularityTests`, JaCoCo) +
   `bunx nx run-many -t test lint -p shared-platform shared-auth jordylab jordylab-mobile` (all affected FE projects);
   run `/modularity-check` once more
+  - **Partially run**: `./gradlew build`/`ModularityTests`/`/modularity-check` need JDK 25 + the Android SDK, neither
+    available in this sandbox — backend remains unverified throughout this implementation, per the up-front
+    AskUserQuestion answer. The frontend half ran (`bunx nx run-many -t test lint -p shared-auth platform-api
+    platform-ui jordylab gamecatalog-ui` — the real project names; `shared-platform`/`jordylab-mobile` above are
+    not actual Nx project names): every project is green except `jordylab:lint`'s one pre-existing
+    `@nx/enforce-module-boundaries` finding on `app.ts`'s `settings-ui` import, confirmed present on the base commit
+    before any of this feature's changes (unrelated to 007).
 
 ---
 
