@@ -75,6 +75,9 @@ public class MobileReleaseService {
                     .build();
 
             return repository.save(release);
+        } catch (IOException exception) {
+            deleteQuietly(tempFile);
+            throw new IllegalStateException("Unable to finalize APK release", exception);
         } catch (RuntimeException failure) {
             deleteQuietly(tempFile);
             throw failure;
