@@ -12,7 +12,12 @@ class EnvironmentProfileGuardTest {
 
     @Test
     void refusesToStartWithNoActiveProfile() {
-        contextRunner.run(context -> assertThat(context).hasFailed());
+        // The Gradle `test` task sets spring.profiles.active=local as a JVM system property (so
+        // every context-loading test satisfies this guard by default) — ApplicationContextRunner
+        // inherits system properties, so this override is needed to actually simulate "no
+        // profile active" here.
+        contextRunner.withSystemProperties("spring.profiles.active=")
+                .run(context -> assertThat(context).hasFailed());
     }
 
     @Test
