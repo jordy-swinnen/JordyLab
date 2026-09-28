@@ -33,6 +33,16 @@ nudges each platform toward the right install path exactly once.
 
 ---
 
+## Clarifications
+
+### Session 2026-09-28
+
+- Q: Which channel should deliver push notifications to the admin (new sign-up pending, briefing ready)? → A: Ntfy +
+  deep links — the backend publishes to the existing Ntfy server with a click-through link that opens the matching
+  app screen.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Install the Android app from the website (Priority: P1)
@@ -166,7 +176,8 @@ for each that opens the right screen when tapped.
    opens Settings → Users in the app.
 2. **Given** the daily FNA briefing is generated, **When** it's ready, **Then** the admin gets a notification, and
    tapping it opens the briefing in the app.
-3. Delivery channel: [NEEDS CLARIFICATION: Ntfy + deep links / Firebase Cloud Messaging / custom UnifiedPush]
+3. **Given** either event, **When** the backend publishes it, **Then** delivery goes through the existing Ntfy server
+   with a click-through link that opens the matching app screen.
 
 ---
 
@@ -243,9 +254,8 @@ the home screen, and confirm it opens full-screen with no further prompt.
 - **FR-014**: The app MUST register as a share target for text and URLs, and MUST only offer the destinations the
   user's role allows.
 - **FR-015**: Notification taps MUST open the matching screen in the app.
-- **FR-016**: The system MUST notify the admin when a new sign-up is pending and when the daily briefing is ready,
-  via [NEEDS CLARIFICATION: delivery channel — Ntfy with deep links, Firebase Cloud Messaging, or a custom UnifiedPush
-  plugin].
+- **FR-016**: The system MUST notify the admin when a new sign-up is pending and when the daily briefing is ready, via
+  the existing Ntfy server with a click-through link that opens the matching app screen.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -282,7 +292,8 @@ the home screen, and confirm it opens full-screen with no further prompt.
   validated end-to-end on a real device until 008 exists.
 - The Keycloak realm and the admin/guest roles from spec 006 already exist; the mobile app reuses the same accounts
   and approval state, including revocation.
-- A push mechanism (channel to be decided — see FR-016) is reachable from the backend for admin-only notifications.
-  Guests have no notification use case in this feature.
+- Notifications are delivered through the existing Ntfy server (see FR-016), reused rather than replaced. Guests have
+  no notification use case in this feature; FCM or a UnifiedPush plugin remain options for a future feature if guests
+  need push.
 - Losing the release signing key would force every installed app to be uninstalled and reinstalled; the key is
   created once and backed up outside of source control.
