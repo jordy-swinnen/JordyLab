@@ -18,6 +18,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -49,6 +50,7 @@ public class BriefingGeneratorService {
     }
 
     @Scheduled(cron = "0 30 6 * * *")
+    @Transactional
     public Briefing generateBriefing() {
         List<Article> articles = articleRepository.findTop50ByOrderByPublishedAtDesc();
         List<PortfolioPosition> positions = positionRepository.findAllByOrderByTickerAsc();

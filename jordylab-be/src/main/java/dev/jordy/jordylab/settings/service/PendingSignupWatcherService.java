@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -34,6 +35,7 @@ public class PendingSignupWatcherService {
     private final Set<UUID> lastSeenPendingUserIds = ConcurrentHashMap.newKeySet();
 
     @Scheduled(fixedDelay = POLL_DELAY_MS)
+    @Transactional
     public void checkForNewPendingSignups() {
         List<AppUser> pending = userAdministrationService.listUsers(UserStatus.PENDING);
 

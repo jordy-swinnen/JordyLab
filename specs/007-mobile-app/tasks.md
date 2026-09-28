@@ -405,11 +405,26 @@ the right screen (quickstart scenario 6)
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/`; unit test for the event payload.
   **Implementation-time discovery**: 006's pending-signup poller was never built either (only planned) — added
   `PendingSignupWatcherService` (5-minute poll, in-memory last-seen set per 006 D6's "derive, don't persist"
-  precedent) from scratch, publishing the event instead of the direct-Ntfy call 006 had planned
+  precedent) from scratch, publishing the event instead of the direct-Ntfy call 006 had planned.
+  **PR review finding (confirmed, fixed)**: `checkForNewPendingSignups()` ran off `@Scheduled` with no surrounding
+  transaction — `MobileNotificationListener.on(UserSignUpPending)` is `@ApplicationModuleListener`
+  (= `@TransactionalEventListener(phase = AFTER_COMMIT)`, `fallbackExecution = false` by default), which silently
+  drops an event published with no active transaction bound to the thread. Added `@Transactional` to the method so
+  the publish now has a transaction to commit against. The existing Mockito unit tests only assert `publishEvent(...)`
+  was called, not that a real Spring transactional context delivers it — an `@ApplicationModuleTest`/`@SpringBootTest`
+  proving the Ntfy call actually fires end-to-end is still a follow-up (not added here — the backend remains
+  unverified/uncompiled throughout this implementation, no JDK 25 in this sandbox).
 - [X] T041 [P] [US6] Add a `BriefingReady` Modulith event (`briefingId`, `date`), published by
   `jordylab-be/src/main/java/dev/jordy/jordylab/fna/service/BriefingGeneratorService.java` on completion (entirely
   new — `fna` publishes no events today); unit test. Updated `BriefingGeneratorServiceTest`'s existing constructor
-  call for the new `ApplicationEventPublisher` dependency
+  call for the new `ApplicationEventPublisher` dependency.
+  **PR review finding (confirmed, fixed)**: same transactional-event-listener gap as T040 —
+  `generateBriefing()` wasn't `@Transactional`, so `eventPublisher.publishEvent(new BriefingReady(...))` (which runs
+  after `briefingRepository.save(...)`'s own transaction has already committed and closed) had no active transaction
+  to bind to; `MobileNotificationListener`'s `AFTER_COMMIT` listener would have silently never fired. Fixed by adding
+  `@Transactional` to `generateBriefing()`, so `save()` now joins that outer transaction instead of committing its
+  own, and the event correctly fires once the whole method's transaction commits. Same integration-test follow-up
+  as T040 applies.
 - [X] T042 [US6] Implement `NtfyClient` (RestClient-based, `POST {base-url}/{topic}` with title/body + click-URL
   header — verify the exact header Ntfy expects, research §4 item 4) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/rest/client/NtfyClient.java`; WireMock test.
