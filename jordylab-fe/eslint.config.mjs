@@ -9,7 +9,6 @@ export default [
       '**/dist',
       '**/out-tsc',
       '**/vitest.config.*.timestamp*',
-      // Vendored spartan/ui helm source: upstream code checked in for styling, not maintained here
       'libs/ui/helm/**/*',
     ],
   },

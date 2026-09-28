@@ -67,6 +67,7 @@ class MobileReleaseControllerTest {
 
         mockMvc.perform(get("/api/mobile/releases/latest").param("installedVersionCode", "12"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(RELEASE_ID.toString()))
                 .andExpect(jsonPath("$.versionName").value("1.3.0"))
                 .andExpect(jsonPath("$.updateAvailable").value(true))
                 .andExpect(jsonPath("$.updateRequired").value(false));

@@ -47,17 +47,23 @@ frontend = `jordylab-fe/…` (libs, apps), native shell = `jordylab-fe/apps/jord
   `jordylab-be/src/main/resources/db/migration/V<yyyyMMdd>__mobile_create_tables.sql` — `mobile` schema, one table
   `mobile_release` with a unique index on `version_code`, per [data-model.md](data-model.md) — follow
   `/flyway-migration`
-- [ ] T004 [P] Scaffold the native shell Nx app `jordylab-fe/apps/jordylab-mobile/` (`capacitor.config.ts` —
+- [X] T004 [P] Scaffold the native shell Nx app `jordylab-fe/apps/jordylab-mobile/` (`capacitor.config.ts` —
   `androidScheme: 'https'`, `hostname: 'localhost'` — + `android/`, generated via `npx cap add android`); commit
   `android/`, gitignore `android/app/build/` and Gradle caches; install `@capacitor/core`, `@capacitor/android`,
-  `@capacitor/cli`, `@capacitor/browser`, `@capacitor/app` (research D1)
-- [ ] T005 [P] Add a `mobile` build configuration to `jordylab-fe/apps/jordylab/project.json` (new
+  `@capacitor/cli`, `@capacitor/browser`, `@capacitor/app` (research D1). `npx cap add android` worked without an
+  Android SDK (it only copies the template; building needs the SDK). `appId` is the obvious placeholder
+  `dev.jordylab.mobile.placeholder` (STOP-AND-REPORT gate, D14). Also applied the `/speckit-analyze` C1 fix
+  (`minSdkVersion = 29` in `android/variables.gradle`) and added the App-Link (T024) + share-target (T036)
+  intent-filters to `AndroidManifest.xml` here while already in this area, ahead of their own task numbers
+- [X] T005 [P] Add a `mobile` build configuration to `jordylab-fe/apps/jordylab/project.json` (new
   `environment.mobile.ts`: absolute `apiBaseUrl` placeholder — D13 domain pending — `keycloakClientId:
   'jordylab-mobile'`); set `apps/jordylab-mobile`'s `webDir` to that configuration's build output
-- [ ] T006 [P] Scaffold `jordylab-fe/libs/shared/platform/{api,ui}` via `bunx nx g @nx/angular:library` (tags
+- [X] T006 [P] Scaffold `jordylab-fe/libs/shared/platform/{api,ui}` via `bunx nx g @nx/angular:library` (tags
   `scope:platform,type:api|ui`), add `@jordylab-fe/shared/platform/api|ui` paths to
   `jordylab-fe/tsconfig.base.json`, add `scope:platform` to the `type:app` constraint in
-  `jordylab-fe/eslint.config.mjs`, create barrels
+  `jordylab-fe/eslint.config.mjs`, create barrels. **Deviation**: tagged `scope:shared` instead of inventing
+  `scope:platform` — matches `libs/shared/auth`/`libs/shared/brand`, and `type:app` already allows `scope:shared`, so
+  no `eslint.config.mjs` depConstraint change was needed at all
 
 **Checkpoint**: Module skeletons, schema, and app/lib scaffolding exist. Nothing functional yet.
 
@@ -90,12 +96,13 @@ primitives (base-URL interceptor, platform detection) that everything native dep
   converter (no route-matching there in this codebase's actual convention) — added `mobile-release-publisher` to the
   **test-only** `jordylab-test-realm.json` (not the gated prod realm export) and extended the existing
   `settings/RoleMatrixTest.java` (the codebase's real shared access-matrix test) instead of `SecurityConfigTest`
-- [ ] T010 [P] Implement the base-URL interceptor (`HttpInterceptorFn`, registered after `authInterceptor`) and the
+- [X] T010 [P] Implement the base-URL interceptor (`HttpInterceptorFn`, registered after `authInterceptor`) and the
   `artworkUrl` pipe in `jordylab-fe/libs/shared/platform/api/src/lib/` — prefixes relative `/api/...` with
   `apiBaseUrl` only when `Capacitor.isNativePlatform()` is true (research D5,
   [contracts/app-shell-contract.md](contracts/app-shell-contract.md)); Vitest tests proving both are no-ops on web and
-  correct on native (`useValue` platform mock)
-- [ ] T011 [P] Implement the `platform` signal (`'web-android' | 'web-ios' | 'web-desktop' | 'native-android'`) in
+  correct on native (`useValue` platform mock). **Verified**: 18/18 Vitest tests pass, lint clean (this environment
+  has a working Bun/Nx toolchain, unlike the backend — see commit message)
+- [X] T011 [P] Implement the `platform` signal (`'web-android' | 'web-ios' | 'web-desktop' | 'native-android'`) in
   `jordylab-fe/libs/shared/platform/api/src/lib/platform.service.ts` — `Capacitor.isNativePlatform()` +
   `navigator.userAgentData` with UA-string fallback; Vitest tests per platform branch
 
@@ -147,21 +154,25 @@ the APK (quickstart scenario 5, plus the publish→latest→download round-trip 
   `jordylab.mobile.app.package-name` + the signing-cert SHA-256 config, per
   [mobile-releases-api.md](contracts/mobile-releases-api.md); MockMvc test asserting exact JSON shape, no redirect,
   `Content-Type: application/json`
-- [ ] T017 [P] [US1] Create the install-prompt signal store in `jordylab-fe/libs/shared/platform/api/src/lib/install-prompt.store.ts`
+- [X] T017 [P] [US1] Create the install-prompt signal store in `jordylab-fe/libs/shared/platform/api/src/lib/install-prompt.store.ts`
   per `/angular-signal-store` — chooses at most one prompt by `platform` signal (T011), checks
   `AuthService`-derived `isApproved` before showing anything, per-device 30-day dismissal in `localStorage` (wrapped
   in try/catch per [app-shell-contract.md](contracts/app-shell-contract.md)); specs per `/angular-test`
-- [ ] T018 [US1] Build the Android install-prompt dialog component ("Get the JordyLab app": download button + 3
+- [X] T018 [US1] Build the Android install-prompt dialog component ("Get the JordyLab app": download button + 3
   allow-install steps) and the desktop user-menu "Get the Android app" QR-code entry in
   `jordylab-fe/libs/shared/platform/ui/src/lib/` — Download calls the `download-link` endpoint then triggers the
   browser download; specs with the store mocked (`useValue`)
-- [ ] T019 [US1] Capture and suppress Android's own `beforeinstallprompt` (`event.preventDefault()`, unconditionally,
+- [X] T019 [US1] Capture and suppress Android's own `beforeinstallprompt` (`event.preventDefault()`, unconditionally,
   even after "Not now") in `jordylab-fe/libs/shared/platform/api/src/lib/install-prompt.store.ts` (FR-007); Vitest
   test asserting `preventDefault` is always called
-- [ ] T020 [US1] Wire the install-prompt dialog + QR entry into the app shell
+- [X] T020 [US1] Wire the install-prompt dialog + QR entry into the app shell
   (`jordylab-fe/apps/jordylab/src/app/app.ts` + `app.html`) — dialog mounts only for `web-android` + approved users;
   QR entry always in the user menu; nothing for pending/logged-out (spec scenario 4) or `native-android` (FR-005);
   update `app.spec.ts`
+  - Implementation-time discovery: `apps/jordylab-mobile`'s `capacitor.config.ts` packages the same
+    `dist/apps/jordylab/browser` build (`webDir`) rather than a separate native entry point (research D5), so "the
+    app shell" is literally `apps/jordylab/src/app/app.ts` for both web and native — there is no second bootstrap to
+    wire separately.
 
 **Checkpoint**: US1 independently functional — a real device can go from the website to an installed APK. This is
 the MVP.
@@ -215,16 +226,21 @@ the update prompt (or mandatory block) appears (quickstart scenario 1 step 5)
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Create the update-check signal store in `jordylab-fe/libs/shared/platform/api/src/lib/update-check.store.ts`
+- [X] T026 [P] [US3] Create the update-check signal store in `jordylab-fe/libs/shared/platform/api/src/lib/update-check.store.ts`
   per `/angular-signal-store` — calls `GET /api/mobile/releases/latest?installedVersionCode=` (T014) on app start and
   on `App.addListener('resume', ...)`, reading the installed `versionCode` from `@capacitor/app`'s `App.getInfo()`
   (never hardcoded — research D11); specs per `/angular-test`
-- [ ] T027 [P] [US3] Build the mandatory "Update required" blocking screen (no dismissal, no other UI reachable) and
+- [X] T027 [P] [US3] Build the mandatory "Update required" blocking screen (no dismissal, no other UI reachable) and
   the dismissible "Update available: vX.Y" banner (release notes + a download-link-triggered install, reusing T018's
   download flow) in `jordylab-fe/libs/shared/platform/ui/src/lib/`; specs with the store mocked
-- [ ] T028 [US3] Wire the update-check store into the native app bootstrap (`apps/jordylab-mobile` main entry) —
+- [X] T028 [US3] Wire the update-check store into the native app bootstrap (`apps/jordylab-mobile` main entry) —
   runs only when `Capacitor.isNativePlatform()`; `updateRequired` renders the blocking screen ahead of any other
   route; update `app.spec.ts`/route tests accordingly
+  - Implementation-time discovery: same shared-shell architecture as T020 — `UpdateCheckStore.checkForUpdate()` is a
+    no-op on web (its own `PlatformService.isNative()` guard, asserted by the "does nothing on web" spec) and is
+    invoked unconditionally from `App`'s constructor; `app.html` wraps the whole shell in
+    `@if (latestRelease()?.updateRequired) { <lib-update-required /> } @else { ... }` so the blocking screen preempts
+    every other route.
 
 **Checkpoint**: US1 + US2 + US3: install, log in, and stay current — the P1 slice is complete.
 

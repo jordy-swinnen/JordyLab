@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   NavigationEnd,
@@ -13,6 +13,18 @@ import {
   WordmarkComponent,
 } from '@jordylab-fe/shared/brand';
 import { PendingCountBadgeComponent } from '@jordylab-fe/settings/ui';
+import {
+  ApkDownloadService,
+  InstallPromptStore,
+  PlatformService,
+  UpdateCheckStore,
+} from '@jordylab-fe/shared/platform/api';
+import {
+  AndroidAppQrEntryComponent,
+  InstallPromptComponent,
+  UpdateAvailableBannerComponent,
+  UpdateRequiredComponent,
+} from '@jordylab-fe/shared/platform/ui';
 
 interface NavItem {
   label: string;
@@ -53,16 +65,45 @@ const startsWith = (prefix: string) => (url: string) => url.startsWith(prefix);
     BrandMarkComponent,
     WordmarkComponent,
     PendingCountBadgeComponent,
+    InstallPromptComponent,
+    AndroidAppQrEntryComponent,
+    UpdateRequiredComponent,
+    UpdateAvailableBannerComponent,
   ],
   templateUrl: './app.html',
 })
 export class App {
   #auth = inject(AuthService);
   #router = inject(Router);
+  #apkDownload = inject(ApkDownloadService);
+  #updateCheck = inject(UpdateCheckStore);
+  protected readonly platform = inject(PlatformService);
+  protected readonly installPrompt = inject(InstallPromptStore);
 
   username = this.#auth.username;
   hasAppRole = this.#auth.hasAppRole;
   isAdmin = this.#auth.isAdmin;
+
+  protected readonly showQrEntry = signal(false);
+  protected readonly latestRelease = this.#updateCheck.latest;
+
+  constructor() {
+    this.installPrompt.suppressBrowserInstallPrompt();
+    this.#updateCheck.checkForUpdate();
+    this.#updateCheck.listenForResume();
+  }
+
+  async onInstallDownload(): Promise<void> {
+    window.location.href = await this.#apkDownload.resolveLatestDownloadUrl();
+  }
+
+  async onUpdateDownload(): Promise<void> {
+    const release = this.latestRelease();
+    if (!release) {
+      return;
+    }
+    window.location.href = await this.#apkDownload.resolveDownloadUrl(release.id);
+  }
 
   protected readonly isSettingsGroup = (group: NavGroup): boolean =>
     group.label === SETTINGS_GROUP_LABEL;

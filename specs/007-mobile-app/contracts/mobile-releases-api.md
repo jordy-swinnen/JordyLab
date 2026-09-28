@@ -19,6 +19,7 @@ Response `200`:
 
 ```json
 {
+  "id": "…uuid…",
   "versionName": "1.3.0",
   "versionCode": 14,
   "releaseNotes": "Fixed artwork loading on slow connections.",
@@ -30,6 +31,9 @@ Response `200`:
   "updateRequired": false
 }
 ```
+
+`id` is required for the client to then call `POST /releases/{id}/download-link` — a gap in the original draft of
+this contract, closed during frontend implementation (see tasks.md T020 notes).
 
 - `updateAvailable`: `installedVersionCode < versionCode` (spec US3-1 — shows "Update available: vX.Y").
 - `updateRequired`: `installedVersionCode < minSupportedVersionCode` (spec US3-2 — mandatory-update screen). When
