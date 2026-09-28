@@ -15,6 +15,7 @@ import {
 import { PendingCountBadgeComponent } from '@jordylab-fe/settings/ui';
 import {
   ApkDownloadService,
+  AppLinkService,
   InstallPromptStore,
   PlatformService,
   UpdateCheckStore,
@@ -77,6 +78,7 @@ export class App {
   #router = inject(Router);
   #apkDownload = inject(ApkDownloadService);
   #updateCheck = inject(UpdateCheckStore);
+  #appLink = inject(AppLinkService);
   protected readonly platform = inject(PlatformService);
   protected readonly installPrompt = inject(InstallPromptStore);
 
@@ -91,6 +93,7 @@ export class App {
     this.installPrompt.suppressBrowserInstallPrompt();
     this.#updateCheck.checkForUpdate();
     this.#updateCheck.listenForResume();
+    this.#appLink.listen();
   }
 
   async onInstallDownload(): Promise<void> {

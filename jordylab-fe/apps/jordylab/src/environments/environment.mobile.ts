@@ -6,4 +6,5 @@ export const environment = {
   keycloakRealm: 'jordylab',
   keycloakClientId: 'jordylab-mobile',
   apiBaseUrl: 'https://PRODUCTION_DOMAIN_PLACEHOLDER',
+  mobileCallbackUri: 'https://PRODUCTION_DOMAIN_PLACEHOLDER/mobile/callback',
 };

@@ -189,27 +189,53 @@ broken images/failed calls (quickstart scenario 2)
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Write Vitest tests (red first) for the custom `KeycloakAdapter` and the App Link routing split
+- [X] T021 [P] [US2] Write Vitest tests (red first) for the custom `KeycloakAdapter` and the App Link routing split
   (`/mobile/callback` vs `/mobile/open?screen=`) in `jordylab-fe/libs/shared/auth/src/lib/` and
   `jordylab-fe/libs/shared/platform/api/src/lib/` — mocked `@capacitor/browser` and `@capacitor/app`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement the custom `KeycloakAdapter` in `jordylab-fe/libs/shared/auth/src/lib/capacitor-keycloak-adapter.ts`
+- [X] T022 [US2] Implement the custom `KeycloakAdapter` in `jordylab-fe/libs/shared/auth/src/lib/capacitor-keycloak-adapter.ts`
   per [research.md](research.md) D2 — `login()` opens `@capacitor/browser` with the Keycloak auth URL (PKCE S256,
   `offline_access` scope requested); wired into `AuthService`'s `Keycloak` init only when
   `Capacitor.isNativePlatform()` — web behavior (existing `keycloak-js` default adapter) is unchanged
-- [ ] T023 [US2] Implement the App-Link `appUrlOpen` listener in
+  - **Implementation-time discovery (significant deviation from D2's literal wording)**: read
+    `node_modules/keycloak-js/lib/keycloak.js` directly to confirm this — `keycloak-js`'s `KeycloakAdapter` interface
+    (`login`/`logout`/`register`/`accountManagement`/`redirectUri`) cannot actually complete a login by itself. The
+    code-exchange and token-setting logic (`#processCallback`/`#setToken`) are `#private` methods of the `Keycloak`
+    class, unreachable from an external adapter object passed to `keycloak.init({ adapter })`; the built-in
+    `cordova`/`cordova-native` adapters only work because they're defined *inside* the class and close over `this`.
+    There is no `capacitor-keycloak-adapter.ts` file — instead `AuthService` (`auth.service.ts`) itself branches on
+    `Capacitor.isNativePlatform()`: `login()`/`completeNativeLogin()` do the PKCE authorize-URL build, `@capacitor/browser`
+    open, and a manual `fetch` code exchange (mirroring what `keycloak-js` does internally); the result is applied by
+    directly assigning the resulting tokens onto the same `Keycloak` instance's public fields (`token`, `tokenParsed`,
+    `refreshToken`, `authenticated`, `subject`, `realmAccess`, `resourceAccess` — all plain mutable properties per
+    `keycloak.d.ts`, verified not `#private`), then reusing the existing `#applyToken()` to sync signals. This achieves
+    D2's actual goal — system-browser login via an App Link, reusing `AuthService`'s existing signal surface — without
+    literally satisfying `KeycloakAdapter`, which this keycloak-js version cannot support from outside the class. New
+    `libs/shared/auth/src/lib/pkce.ts` holds the PKCE/JWT-decode helpers (own spec, incl. an RFC 7636 test vector).
+- [X] T023 [US2] Implement the App-Link `appUrlOpen` listener in
   `jordylab-fe/libs/shared/platform/api/src/lib/app-link.service.ts` per
   [contracts/app-shell-contract.md](contracts/app-shell-contract.md) — routes `/mobile/callback` to the adapter's
   code-exchange completion, and `/mobile/open?screen=` to the in-app router per the routing table (screens wired in
   T023 for now as a no-op stub; US6 fills in the real notification-triggered screens)
-- [ ] T024 [US2] Set `jordylab.mobile.callback` intent-filter (`autoVerify="true"`, host = production-domain
+  - **Implementation-time discovery**: implemented the real `SCREEN_ROUTES` table (`settings-users` →
+    `/settings/users`, `fna-briefing` → `/fna/briefing`) directly here rather than stubbing then filling in T044 —
+    both tasks landed in the same implementation pass, so there was no reason to stub first. T044 below is
+    satisfied by this same file/test; see its note.
+- [X] T024 [US2] Set `jordylab.mobile.callback` intent-filter (`autoVerify="true"`, host = production-domain
   placeholder — D13) in the generated `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml`
-- [ ] T025 [US2] Point `environment.mobile.ts` (T005) at `keycloakClientId: 'jordylab-mobile'` and wire the mobile
+  - Already present from the native shell scaffold (T004) — a single `pathPrefix="/mobile"` `autoVerify` intent-filter
+    covers both `/mobile/callback` (login) and `/mobile/open` (notification taps), so no separate filter was needed.
+- [X] T025 [US2] Point `environment.mobile.ts` (T005) at `keycloakClientId: 'jordylab-mobile'` and wire the mobile
   build's `main.ts` bootstrap to provide the interceptor (T010) and the App-Link listener (T023); confirm role-aware
   routing (existing guards from spec 006) needs no changes — guest sees Game Catalog only, admin sees everything,
   pending sees awaiting-approval, all reusing existing route guards unmodified
+  - Implementation-time discovery: same shared-shell architecture as T020/T028 — there is no separate mobile
+    `main.ts`; `AppLinkService.listen()` is invoked from `App`'s constructor (`apps/jordylab/src/app/app.ts`), a
+    no-op on web via `PlatformService.isNative()`. `environment.mobile.ts` now also carries `mobileCallbackUri`
+    (`https://PRODUCTION_DOMAIN_PLACEHOLDER/mobile/callback`) for the native login flow (T022). Route guards
+    confirmed unmodified — no changes needed.
 
 **Checkpoint**: US2 independently functional on a real device (not automatable beyond T021's mocked adapter tests —
 quickstart scenario 2 is the real proof).
@@ -364,9 +390,11 @@ the right screen (quickstart scenario 6)
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/service/` — builds each event's App-Link click URL
   (`https://{PRODUCTION_DOMAIN}/mobile/open?screen=settings-users` / `.../open?screen=fna-briefing`) and calls
   `NtfyClient`; catches and logs any Ntfy failure without rethrowing; until T039 is green
-- [ ] T044 [US6] Wire the two real `screen` values into the App-Link routing table stubbed in T023
+- [X] T044 [US6] Wire the two real `screen` values into the App-Link routing table stubbed in T023
   (`jordylab-fe/libs/shared/platform/api/src/lib/app-link.service.ts`) — `settings-users` → `/settings/users`,
   `fna-briefing` → the existing briefing route; Vitest test asserting each `screen` value routes correctly
+  - Done as part of T023 (see its note) — `app-link.service.spec.ts` covers both `screen` values routing correctly
+    and an unknown value being a no-op.
 - [X] T045 Extend `ModularityTests` to confirm `settings`/`fna` have no direct dependency on `mobile` — only the new
   event types cross the boundary (research D9's whole point). **No change needed**: `ModularityTests.verify()` is
   already a blanket check with no per-module allowlist to extend — it already fails on any forbidden internal-package
