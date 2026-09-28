@@ -46,6 +46,20 @@ jordylab:
   ai:
     health-check-ttl-seconds: 30
     call-timeout-seconds: 120
+    gateway:
+      base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+    fallback:
+      provider: anthropic
+      model: claude-sonnet-5
+    features:
+      fna.briefing:
+        model: anthropic/claude-sonnet-5
+      gamecatalog.enrichment:
+        model: anthropic/claude-haiku-4.5
+      gamecatalog.chat.query:
+        model: anthropic/claude-haiku-4.5
+      gamecatalog.chat.answer:
+        model: anthropic/claude-haiku-4.5
     modules:
       fna:
         provider: anthropic
@@ -79,5 +93,21 @@ jordylab:
       stale-after-days: 14
       store-min-interval-ms: 1500
       call-timeout-ms: 10000
+  settings:
+    keycloak:
+      server-url: ${KEYCLOAK_URL:http://localhost:8180}
+      realm: jordylab
+      admin-client-id: jordylab-backend
+      admin-client-secret: ${KEYCLOAK_BACKEND_SECRET:}
+    guest-chat:
+      daily-limit: ${JORDYLAB_GUEST_CHAT_DAILY_LIMIT:20}
+      zone: Europe/Brussels
+    model-catalog:
+      cache-ttl-minutes: 60
+    notifications:
+      ntfy:
+        base-url: ${NTFY_BASE_URL:}
+        topic: ${NTFY_TOPIC:}
+        token: ${NTFY_TOKEN:}
   cors:
     allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400

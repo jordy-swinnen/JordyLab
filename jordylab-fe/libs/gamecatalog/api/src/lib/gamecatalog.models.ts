@@ -121,7 +121,8 @@ export interface ChatAnswer {
 
 export type ChatAskResponse =
   | { kind: 'answered'; answer: ChatAnswer }
-  | { kind: 'unavailable' };
+  | { kind: 'unavailable' }
+  | { kind: 'limitReached'; resetsAt: string };
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

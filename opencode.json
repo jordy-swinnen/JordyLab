@@ -35,8 +35,30 @@
     "build": {
       "model": "opencode-go/deepseek-v4.1-flash"
     },
+    "build-plus": {
+      "model": "opencode-go/kimi-k2.7-code"
+    },
     "plan": {
-      "model": "opencode-go/glm-5.2",
+      "model": "opencode-go/glm-5.3",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "specs/**": "allow",
+          ".specify/memory/**": "allow"
+        },
+        "bash": {
+          "*": "ask",
+          ".specify/scripts/bash/*": "allow",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git branch*": "allow",
+          "git rev-parse*": "allow"
+        }
+      }
+    },
+    "plan-plus": {
+      "model": "opencode-go/kimi-k3",
       "permission": {
         "edit": {
           "*": "deny",

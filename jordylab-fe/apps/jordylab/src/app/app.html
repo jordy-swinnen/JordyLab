@@ -1,5 +1,5 @@
 <div class="min-h-screen lg:flex">
-  @if (username()) {
+    @if (hasAppRole()) {
   <aside
     class="border-b border-border bg-rail lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-shrink-0 lg:flex-col lg:border-b-0 lg:border-r lg:px-4 lg:pb-6 lg:pt-7"
   >
@@ -27,10 +27,15 @@
       aria-label="Primary"
       class="flex gap-6 overflow-x-auto px-4 pb-3 lg:mt-9 lg:flex-col lg:gap-8 lg:overflow-visible lg:px-0 lg:pb-0"
     >
-      @for (group of groups; track group.label) {
+      @for (group of visibleGroups(); track group.label) {
       <div class="flex flex-shrink-0 gap-1 lg:flex-col">
-        <div class="mono-label hidden px-3 pb-2 text-[10.5px] lg:block">
+        <div
+          class="mono-label hidden items-center gap-2 px-3 pb-2 text-[10.5px] lg:flex"
+        >
           {{ group.label }}
+          @if (isSettingsGroup(group)) {
+          <lib-pending-count-badge />
+          }
         </div>
         @for (item of group.items; track item.path) {
         <a

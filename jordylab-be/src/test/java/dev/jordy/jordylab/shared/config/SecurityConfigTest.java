@@ -43,9 +43,10 @@ class SecurityConfigTest {
     void mapsRealmRolesToRolePrefixedAuthorities() {
         Jwt jwt = aJwtWithClaims(Map.of(
                 "sub", "jordy",
-                "realm_access", Map.of("roles", List.of("jordylab-user", "gamecatalog-scanner"))));
+                "realm_access", Map.of("roles", List.of("admin", "guest", "gamecatalog-scanner"))));
 
-        assertThat(realmRoleAuthorities(jwt)).containsExactlyInAnyOrder("ROLE_jordylab-user", "ROLE_gamecatalog-scanner");
+        assertThat(realmRoleAuthorities(jwt))
+                .containsExactlyInAnyOrder("ROLE_admin", "ROLE_guest", "ROLE_gamecatalog-scanner");
     }
 
     @Test
@@ -72,10 +73,10 @@ class SecurityConfigTest {
     @Test
     void ignoresNonStringEntriesInTheRolesList() {
         List<Object> rolesWithANonStringEntry = new java.util.ArrayList<>();
-        rolesWithANonStringEntry.add("jordylab-user");
+        rolesWithANonStringEntry.add("admin");
         rolesWithANonStringEntry.add(42);
         Jwt jwt = aJwtWithClaims(Map.of("sub", "jordy", "realm_access", Map.of("roles", rolesWithANonStringEntry)));
 
-        assertThat(realmRoleAuthorities(jwt)).containsExactly("ROLE_jordylab-user");
+        assertThat(realmRoleAuthorities(jwt)).containsExactly("ROLE_admin");
     }
 }

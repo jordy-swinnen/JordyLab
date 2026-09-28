@@ -125,6 +125,19 @@ describe('GameCatalogApiService', () => {
     request.flush({ answer: 'Yes.', games: [], noMatch: false });
   });
 
+  it('maps a 429 chat response to the limit-reached state with resetsAt', () => {
+    spectator.service.chat('anything').subscribe((response) => {
+      expect(response).toEqual({ kind: 'limitReached', resetsAt: '2026-09-28T00:00:00Z' });
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
+      .flush(
+        { reason: 'CHAT_LIMIT_REACHED', resetsAt: '2026-09-28T00:00:00Z' },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
+  });
+
   it('maps a 503 chat response to the unavailable state', () => {
     spectator.service.chat('anything').subscribe((response) => {
       expect(response).toEqual({ kind: 'unavailable' });
