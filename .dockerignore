@@ -1,0 +1,13 @@
+.git/
+.github/
+specs/
+docs/
+.claude/
+.specify/
+**/node_modules/
+**/dist/
+**/build/
+**/.gradle/
+**/.nx/
+**/*.log
+**/.env*

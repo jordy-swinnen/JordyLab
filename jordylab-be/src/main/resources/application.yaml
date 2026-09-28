@@ -2,7 +2,7 @@ spring:
   application:
     name: jordylab-be
   datasource:
-    url: jdbc:postgresql://localhost:5432/jordylab
+    url: ${POSTGRES_URL}
     username: ${POSTGRES_USER:jordylab}
     password: ${POSTGRES_PASSWORD:}
   jpa:
@@ -34,7 +34,7 @@ spring:
      oauth2:
        resourceserver:
          jwt:
-           issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab
+           issuer-uri: ${KEYCLOAK_URL}/realms/jordylab
 
 management:
   endpoints:
@@ -95,7 +95,7 @@ jordylab:
       call-timeout-ms: 10000
   settings:
     keycloak:
-      server-url: ${KEYCLOAK_URL:http://localhost:8180}
+      server-url: ${KEYCLOAK_URL}
       realm: jordylab
       admin-client-id: jordylab-backend
       admin-client-secret: ${KEYCLOAK_BACKEND_SECRET:}
@@ -123,4 +123,4 @@ jordylab:
         topic: ${NTFY_TOPIC:}
         token: ${NTFY_TOKEN:}
   cors:
-    allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400
+    allowed-origins: ${JORDYLAB_CORS_ALLOWED_ORIGINS}

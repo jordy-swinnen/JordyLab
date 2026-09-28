@@ -1,0 +1,112 @@
+{
+  "realm": "jordylab",
+  "enabled": true,
+  "loginTheme": "jordylab",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "passwordPolicy": "length(12) and notUsername and notEmail",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 1800,
+  "defaultDefaultClientScopes": [
+    "role_list",
+    "saml_organization",
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    "acr",
+    "basic"
+  ],
+  "defaultOptionalClientScopes": [
+    "offline_access",
+    "address",
+    "phone",
+    "microprofile-jwt",
+    "organization"
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Full access to JordyLab: FNA, Settings and Game Catalog administration"
+      },
+      {
+        "name": "guest",
+        "description": "Game Catalog read and chat access only"
+      },
+      {
+        "name": "gamecatalog-scanner",
+        "description": "Required for the scan client to POST /api/gamecatalog/ingest/scan and /check"
+      }
+    ]
+  },
+  "scopeMappings": [
+    {
+      "client": "gamecatalog-script",
+      "roles": ["gamecatalog-scanner"]
+    },
+    {
+      "clientScope": "offline_access",
+      "roles": ["offline_access"]
+    }
+  ],
+  "clientScopeMappings": {
+    "gamecatalog-script": [
+      {
+        "client": "gamecatalog-script",
+        "roles": ["gamecatalog-scanner"]
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "jordylab-host",
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "redirectUris": ["https://${env.PRODUCTION_DOMAIN}/*"],
+      "webOrigins": ["https://${env.PRODUCTION_DOMAIN}"],
+      "rootUrl": "https://${env.PRODUCTION_DOMAIN}",
+      "baseUrl": "https://${env.PRODUCTION_DOMAIN}",
+      "attributes": {
+        "post.logout.redirect.uris": "https://${env.PRODUCTION_DOMAIN}/*"
+      }
+    },
+    {
+      "clientId": "gamecatalog-script",
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": ["roles"],
+      "optionalClientScopes": ["offline_access"],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      }
+    },
+    {
+      "clientId": "jordylab-backend",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false,
+      "secret": "${env.KEYCLOAK_BACKEND_CLIENT_SECRET}"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-jordylab-backend",
+      "enabled": true,
+      "serviceAccountClientId": "jordylab-backend",
+      "clientRoles": {
+        "realm-management": ["view-users", "manage-users", "view-roles"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+# Production configuration. Only active under the "prod" Spring profile. Every value here is
+# either a literal that is safe to be identical in every prod deployment (no environment-specific
+# host, origin or credential — FR-002), or an environment variable with no default, so a missing
+# value fails the container's readiness probe rather than silently falling back to a dev-shaped
+# default.
+#
+# spring.datasource.url, spring.security.oauth2.resourceserver.jwt.issuer-uri, and
+# jordylab.cors.allowed-origins are already required env-var placeholders in application.yaml
+# (${POSTGRES_URL}, ${KEYCLOAK_URL}, ${JORDYLAB_CORS_ALLOWED_ORIGINS} — no defaults) — their real
+# values come from the prod ConfigMap/Secret (deploy/k8s/overlays/prod/), never from this file.
+server:
+  # Required behind Traefik so redirect-to-HTTPS, the client's real scheme, and the real remote
+  # address are honoured, instead of Spring seeing plain HTTP from the in-cluster proxy hop.
+  forward-headers-strategy: framework
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState, db
+        liveness:
+          include: livenessState
+  endpoints:
+    web:
+      exposure:
+        include: health, info

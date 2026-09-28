@@ -13,3 +13,16 @@ __pycache__/
 
 # Packaged skill export artifact (built from .claude/skills/dual-agent-config/)
 .claude/.skill
+
+# Kubernetes cluster access — never commit a real kubeconfig
+kubeconfig
+kubeconfig*.yaml
+*.kubeconfig
+.kube/
+
+# SOPS / age — never commit a decrypted secret or a private key
+key.txt
+*.agekey
+age-key.txt
+*.dec.yaml
+*.decrypted.yaml

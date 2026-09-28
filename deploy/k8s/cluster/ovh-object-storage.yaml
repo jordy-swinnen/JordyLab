@@ -1,0 +1,54 @@
+# The Barman Cloud Plugin's ObjectStore CRD, pointing at OVH's S3-compatible Object Storage
+# (research.md §6). Credentials come from contracts/secrets-schema.md's S3_ACCESS_KEY/S3_SECRET_KEY,
+# decrypted from secrets.sops.yaml at deploy time — never hardcoded here.
+#
+# endpointURL and the bucket name are placeholders until Jordy creates the bucket
+# (docs/runbook.md §8) — fill in before the first real deploy.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: ovh-object-storage
+spec:
+  configuration:
+    destinationPath: s3://__OBJECT_STORAGE_BUCKET__/cnpg-backups
+    endpointURL: https://__OBJECT_STORAGE_REGION__.io.cloud.ovh.net
+    s3Credentials:
+      accessKeyId:
+        name: jordylab-secrets
+        key: S3_ACCESS_KEY
+      secretAccessKey:
+        name: jordylab-secrets
+        key: S3_SECRET_KEY
+    wal:
+      compression: gzip
+  retentionPolicy: 30d # coarse Barman-side retention; the ScheduledBackup below governs the
+                       # 7 daily + 4 weekly rotation from /speckit-clarify (FR-014)
+---
+# Daily base backup, retaining the last 7 (FR-014, /speckit-clarify).
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: cnpg-daily-backup
+spec:
+  schedule: "0 3 * * *" # 03:00 daily
+  backupOwnerReference: self
+  cluster:
+    name: cnpg-cluster
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+---
+# Weekly base backup, retaining the last 4 — gives a month of recovery points overall alongside
+# the daily schedule above (FR-014, /speckit-clarify).
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: cnpg-weekly-backup
+spec:
+  schedule: "0 4 * * 0" # 04:00 every Sunday
+  backupOwnerReference: self
+  cluster:
+    name: cnpg-cluster
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io

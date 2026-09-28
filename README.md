@@ -95,3 +95,10 @@ bunx nx serve gamecatalog         # http://localhost:4400
 See `AGENTS.md` for the module breakdown, AI routing, and infrastructure notes. Sub-project
 conventions live in each subdirectory's own `AGENTS.md` (`jordylab-be`, `jordylab-fe`,
 `garmin-sync-service`).
+
+## Licence
+
+This repository is public so the code can be read, but it isn't open source: all rights are
+reserved. You're welcome to look around, but copying, modifying, or reusing any part of it
+requires my permission first. See [`LICENSE`](LICENSE) for the exact terms, and get in touch with
+me (Jordy Swinnen) if you'd like to use something here.

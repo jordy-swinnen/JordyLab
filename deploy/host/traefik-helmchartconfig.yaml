@@ -1,0 +1,23 @@
+# Customises k3s's BUNDLED Traefik (do not install a second Traefik — research.md §2).
+#
+# Deploy step (operator step, docs/runbook.md §3 "Install k3s"): copy this file to
+#   /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+# on the VPS. k3s watches that directory and applies it automatically; no `kubectl apply` needed.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    providers:
+      kubernetesGateway:
+        enabled: true
+    gateway:
+      enabled: true
+    ports:
+      web:
+        redirections:
+          entryPoint:
+            to: websecure
+            scheme: https

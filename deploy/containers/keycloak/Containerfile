@@ -1,0 +1,31 @@
+# Custom Keycloak image with the jordylab login theme baked in (research.md §9).
+# Built by CI for linux/amd64 only.
+#
+# Build context is the repo root, e.g.:
+#   docker build -f deploy/containers/keycloak/Containerfile -t jordylab-keycloak .
+
+# --- Build stage: `kc.sh build` bakes in feature flags, producing an optimized image ---
+FROM quay.io/keycloak/keycloak:26.7.4 AS builder
+COPY jordylab-be/compose/keycloak-theme/jordylab /opt/keycloak/themes/jordylab
+
+ENV KC_DB=postgres
+ENV KC_HEALTH_ENABLED=true
+ENV KC_METRICS_ENABLED=true
+
+RUN /opt/keycloak/bin/kc.sh build
+
+# --- Runtime stage ---
+FROM quay.io/keycloak/keycloak:26.7.4
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+
+# Runtime-only settings (--hostname, --http-relative-path, --proxy-headers) are supplied as
+# KC_* environment variables by the Deployment manifest (deploy/k8s/base/keycloak.yaml), never
+# baked into this image, so the same image works whatever the domain ends up being.
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
+CMD ["start", "--optimized"]
+
+LABEL org.opencontainers.image.title="jordylab-keycloak"
+LABEL org.opencontainers.image.source="https://github.com/jordy-swinnen/JordyLab"
+# This label covers the jordylab theme layer only — Keycloak's own Apache-2.0 licence is
+# unaffected and preserved (US7 acceptance scenario 5).
+LABEL org.opencontainers.image.licenses="LicenseRef-JordyLab-Proprietary"

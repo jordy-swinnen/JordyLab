@@ -1,0 +1,12 @@
+# SOPS configuration for JordyLab's production secrets.
+#
+# Only *values* under `data`/`stringData` in matching files are encrypted — keys stay readable
+# so `git diff` on an encrypted file is still meaningful. See docs/learn/06-config-and-secrets.md
+# and docs/runbook.md "Generate the age key" for how the public key below is produced.
+#
+# TODO(jordy): replace with your real age public key, generated via `age-keygen` (docs/runbook.md
+# §7). Never put the private key here or anywhere in git.
+creation_rules:
+  - path_regex: .*secrets\.sops\.ya?ml$
+    encrypted_regex: ^(data|stringData)$
+    age: age1REPLACE_WITH_YOUR_AGE_PUBLIC_KEY
