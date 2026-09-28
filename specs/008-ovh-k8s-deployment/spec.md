@@ -54,6 +54,8 @@ Podman, the feature also ships a learning guide and an operational runbook built
 
 - Q: How should CI reach the k3s API server to deploy? → A: Keep 6443 firewalled from the public internet; GitHub
   Actions joins a WireGuard/Tailscale network for the deploy step.
+- Q: Where should push notifications for the mobile app (spec 007) come from? → A: A self-hosted ntfy instance
+  running in this cluster, routed under the same domain.
 
 ---
 
@@ -318,8 +320,8 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 - **FR-011**: Prod secrets MUST be stored in git only as SOPS + age ciphertext and decrypted by the deploy pipeline.
   The age private key MUST exist only in the GitHub `production` environment and Jordy's offline store.
 - **FR-012**: CI MUST scan for committed secrets and fail on findings.
-- **FR-013**: Push notifications used by the mobile app (spec 007) MUST be delivered through [NEEDS CLARIFICATION:
-  a self-hosted ntfy instance running in this cluster, or the public ntfy.sh service].
+- **FR-013**: Push notifications used by the mobile app (spec 007) MUST be delivered through a self-hosted ntfy
+  instance running in this cluster, routed under the same domain, not the public ntfy.sh service.
 
 ### Functional: Data
 
@@ -349,7 +351,8 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 
 ### Key Entities *(include if feature involves data)*
 
-- **Container images**: backend, frontend, keycloak — built in CI, tagged by commit SHA, published to GHCR.
+- **Container images**: backend, frontend, keycloak — built in CI, tagged by commit SHA, published to GHCR. The
+  self-hosted ntfy instance runs from ntfy's own published image, not built by this repo's CI.
 - **K8s manifests**: base configuration plus one prod overlay (domain, image tags, ConfigMap values).
 - **Host + k3s configuration**: VPS firewall rules, k3s install, Traefik customisation.
 - **Cluster add-on configuration**: cert-manager (TLS issuance), CloudNativePG (database).
