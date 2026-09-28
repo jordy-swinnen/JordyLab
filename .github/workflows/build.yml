@@ -25,10 +25,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Fails if any MIT licence file or declaration has crept back in (SC-007, US7).
+      # Excludes this workflow file and specs/ (feature docs that discuss the check itself, or
+      # quote past decisions, are not licence declarations).
       - name: No MIT licence anywhere in the repo
         run: |
-          if grep -ril "mit license\|SPDX-License-Identifier: MIT" . \
-              --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build; then
+          if grep -ril "mit license" . \
+              --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build \
+              --exclude-dir=specs --exclude=build.yml; then
+            echo "::error::MIT licence text found — this repo is all-rights-reserved (see LICENSE)."
+            exit 1
+          fi
+          if grep -rl "SPDX-License-Identifier: MIT" . \
+              --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build \
+              --exclude-dir=specs --exclude=build.yml; then
             echo "::error::MIT licence text found — this repo is all-rights-reserved (see LICENSE)."
             exit 1
           fi

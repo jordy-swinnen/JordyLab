@@ -26,6 +26,6 @@ CMD ["start", "--optimized"]
 
 LABEL org.opencontainers.image.title="jordylab-keycloak"
 LABEL org.opencontainers.image.source="https://github.com/jordy-swinnen/JordyLab"
-# org.opencontainers.image.licenses is set once the licence text lands (see US7, T060) — for the
-# jordylab theme layer only; Keycloak's own Apache-2.0 licence is unaffected (US7 acceptance
-# scenario 5).
+# This label covers the jordylab theme layer only — Keycloak's own Apache-2.0 licence is
+# unaffected and preserved (US7 acceptance scenario 5).
+LABEL org.opencontainers.image.licenses="LicenseRef-JordyLab-Proprietary"

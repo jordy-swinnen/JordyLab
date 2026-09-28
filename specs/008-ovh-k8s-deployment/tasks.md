@@ -286,20 +286,26 @@ run per T041/T042.
 **Independent Test**: Search the repo for a licence and confirm exactly one root `LICENSE` exists with the correct
 terms; inspect a published image's OCI licence label.
 
-- [ ] T055 [US7] Draft the root `LICENSE` text (all rights reserved, source available for viewing only, copyright
-  Jordy Swinnen) and present it for approval **before committing** — do not finalize without Jordy's sign-off
-- [ ] T056 [US7] Remove the four MIT `LICENSE` files (`.claude/LICENSE`, `jordylab-be/LICENSE`,
+- [X] T055 [US7] Draft the root `LICENSE` text (all rights reserved, source available for viewing only, copyright
+  Jordy Swinnen) and present it for approval **before committing** — do not finalize without Jordy's sign-off —
+  approved by Jordy in chat before this file was created
+- [X] T056 [US7] Remove the four MIT `LICENSE` files (`.claude/LICENSE`, `jordylab-be/LICENSE`,
   `jordylab-fe/LICENSE`, `garmin-sync-service/LICENSE`) once T055 is approved
-- [ ] T057 [P] [US7] Update `jordylab-fe/package.json` (and any other `package.json`) `license` field to
+- [X] T057 [P] [US7] Update `jordylab-fe/package.json` (and any other `package.json`) `license` field to
   `"UNLICENSED"`
-- [ ] T058 [P] [US7] Update `jordylab-be`'s Gradle build metadata and `garmin-sync-service`'s `pyproject.toml`
-  licence declarations to match
-- [ ] T059 [P] [US7] Add a "Licence" section to the root README explaining the terms in plain language and that
+- [X] T058 [P] [US7] Update `jordylab-be`'s Gradle build metadata and `garmin-sync-service`'s `pyproject.toml`
+  licence declarations to match — neither currently declares a licence field (no Maven-publish/pom config in
+  `build.gradle.kts`; `garmin-sync-service` has no `pyproject.toml`, no code yet, per spec.md's own scope note) —
+  nothing to change beyond the LICENSE file removal in T056
+- [X] T059 [P] [US7] Add a "Licence" section to the root README explaining the terms in plain language and that
   permission requests go to Jordy
-- [ ] T060 [P] [US7] Add the `org.opencontainers.image.licenses` OCI label matching the new licence to all three
-  Containerfiles (T010–T012)
-- [ ] T061 [US7] Add a CI check to `.github/workflows/build.yml` that greps for MIT licence text/declarations and
-  fails the build if any is found (SC-007)
+- [X] T060 [P] [US7] Add the `org.opencontainers.image.licenses` OCI label matching the new licence to all three
+  Containerfiles (T010–T012) — `LicenseRef-JordyLab-Proprietary` (the OCI/SPDX convention for a custom,
+  non-SPDX-listed licence)
+- [X] T061 [US7] Add a CI check to `.github/workflows/build.yml` that greps for MIT licence text/declarations and
+  fails the build if any is found (SC-007) — added ahead of this phase in T032; fixed a self-matching bug found
+  while verifying it here (the check's own grep pattern matched its own workflow file, and `specs/` docs
+  discussing the check itself) by excluding `build.yml` and `specs/` from the scan
 
 **Checkpoint**: No MIT reference remains anywhere in the repo, manifests, or images; CI enforces it going forward.
 This MUST land before go-live (FR-020).

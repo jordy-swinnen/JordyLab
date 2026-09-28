@@ -1,7 +1,7 @@
 {
   "name": "@org/source",
   "version": "0.0.0",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "scripts": {
     "serve:host": "bunx nx serve jordylab",
     "serve:fna": "bunx nx serve fna",

@@ -23,4 +23,4 @@ EXPOSE 8080
 
 LABEL org.opencontainers.image.title="jordylab-frontend"
 LABEL org.opencontainers.image.source="https://github.com/jordy-swinnen/JordyLab"
-# org.opencontainers.image.licenses is set once the licence text lands (see US7, T060).
+LABEL org.opencontainers.image.licenses="LicenseRef-JordyLab-Proprietary"
