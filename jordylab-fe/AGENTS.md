@@ -51,6 +51,24 @@ Tag new libs with the right scope + type: `--tags="scope:<domain>,type:<ui|api>"
 - `scope:gamecatalog` → may depend on `scope:gamecatalog`, `scope:shared`
 - `scope:shared` → may depend on `scope:shared` only
 
+## Mobile app (`apps/jordylab-mobile`, feature 007)
+
+`apps/jordylab-mobile` is **not** a separate Angular app — it has no `src/`. Its `capacitor.config.ts`
+points `webDir` at `dist/apps/jordylab/browser`, so Capacitor packages the exact same web build the
+`mobile` configuration in `apps/jordylab/project.json` produces (`fileReplacements` swap in
+`environments/environment.mobile.ts`). The Android native project lives under
+`apps/jordylab-mobile/android/`. There is no separate mobile bootstrap: platform-conditional
+behavior (native login, install prompts, update checks, biometric unlock, share target) is wired
+into the *same* `apps/jordylab/src/app/app.ts` used on web, gated by `PlatformService.isNative()` —
+see `specs/007-mobile-app/tasks.md` for the reasoning behind that choice.
+
+`libs/shared/platform/{api,ui}` (tagged `scope:shared,type:api|ui` — **not** a new `scope:platform`
+tag) holds everything that only breaks inside a WebView: platform detection, the absolute-API-URL
+interceptor + `artworkUrl` pipe (native only prefixes `/api/**`), install-prompt/update-check
+signal stores, the App-Link (`appUrlOpen`) and share-target listeners, and the web app manifest.
+`libs/shared/auth` gained the native login flow (`AuthService`'s `Capacitor.isNativePlatform()`
+branch) and `BiometricUnlockService`.
+
 # Domain Routing
 
 `apps/jordylab` is the single deployable app. Each domain's routes live in its `ui` lib and
@@ -78,6 +96,9 @@ puts each domain (and each component within it) in its own chunk, fetched on fir
      `loadChildren: () => import('@jordylab-fe/<name>/ui').then((m) => m.<name>Routes)`
   4. Add a nav link to the host's `app.html`
   5. Optionally scaffold a dev harness app the same way `apps/fna` is set up (next free port)
+
+Mobile is not a new domain in this sense — see "Mobile app" above; it reuses `apps/jordylab`'s own
+routes and adds cross-cutting `scope:shared` libs, not a `scope:mobile` domain lib.
 
 This replaced a native-federation micro-frontend setup. Micro-frontends solve independent
 team/deploy-cadence problems this project doesn't have, and the custom build pipeline they

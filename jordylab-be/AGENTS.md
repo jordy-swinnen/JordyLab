@@ -285,7 +285,33 @@ class SomeObjectTestBuilder {
 - `finance` → jordylab-be
 - `gamecatalog` → jordylab-be
 - `garmin` → jordylab-be (NOT garmin-sync-service)
+- `mobile` → jordylab-be
 - `recipe` → jordylab-be
+
+# Mobile module (feature 007)
+
+- Owns `MobileRelease` (release metadata + APK signing-cert verification), signed download-link
+  issuance (HMAC-SHA256, short-lived, no DB row per link — see `specs/007-mobile-app/research.md`
+  D8), the `/.well-known/assetlinks.json` endpoint, and `NtfyClient` (the app's sole push-notification
+  sender — `jordylab.mobile.notifications.ntfy.*` config, moved here from `settings` since no
+  working code read those keys yet).
+- Signed APKs live on a filesystem volume (`jordylab.mobile.release.storage-dir`), mirroring
+  `gamecatalog`'s `artwork.dir` pattern — no object storage or DB blob.
+- **Cross-module wiring is event-only, never a direct call** (Spring Modulith application events —
+  the first real use of that infrastructure in this codebase): `settings`' `PendingSignupWatcherService`
+  publishes `UserSignUpPending`; `fna`'s `BriefingGeneratorService` publishes `BriefingReady` on
+  completion. `mobile.service.MobileNotificationListener` has one `@ApplicationModuleListener` per
+  event, building an Android App Link click-through URL
+  (`https://{PRODUCTION_DOMAIN}/mobile/open?screen=...`) and calling `NtfyClient`. A push failure is
+  logged and swallowed — it must never fail the sign-up or briefing flow that triggered it.
+- `settings.KeycloakUserAdministrationService.revoke()` also revokes the `jordylab-mobile` client's
+  offline consent (`DELETE .../consents/jordylab-mobile`) — a normal Keycloak logout does **not**
+  revoke `offline_access` grants, so without this a revoked user's biometric-unlock token on the
+  mobile app would keep refreshing indefinitely.
+- STOP-AND-REPORT gates (never apply without explicit sign-off, per the user's own instruction):
+  the `jordylab-mobile`/`mobile-release-ci` Keycloak clients and `mobile-release-publisher` realm
+  role (blocked on feature 008's production domain), the Android application id, and the release
+  signing keystore. See `specs/007-mobile-app/tasks.md` T007/T052.
 
 # pgvector
 

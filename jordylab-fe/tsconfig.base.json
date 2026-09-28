@@ -10,10 +10,7 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
@@ -34,11 +31,14 @@
       "@spartan-ng/ui-formfield-helm": [
         "libs/ui/helm/ui-formfield-helm/src/index.ts"
       ],
-      "@spartan-ng/ui-input-helm": ["libs/ui/helm/ui-input-helm/src/index.ts"]
+      "@spartan-ng/ui-input-helm": ["libs/ui/helm/ui-input-helm/src/index.ts"],
+      "@jordylab-fe/shared/platform/api": [
+        "libs/shared/platform/api/src/index.ts"
+      ],
+      "@jordylab-fe/shared/platform/ui": [
+        "libs/shared/platform/ui/src/index.ts"
+      ]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

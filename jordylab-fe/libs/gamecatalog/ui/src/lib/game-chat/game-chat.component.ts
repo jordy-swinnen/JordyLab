@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { GameChatStore } from '@jordylab-fe/gamecatalog/api';
@@ -20,6 +20,8 @@ export class GameChatComponent {
   readonly messages = this.#store.messages;
   readonly asking = this.#store.asking;
   readonly attachedGame = this.#store.attachedGame;
+  /** `?prefill=` (spec US5 — the share landing's "Ask the catalog" destination). */
+  readonly prefillQuestion = computed(() => this.#attachParam()?.get('prefill') ?? '');
 
   constructor() {
     effect(() => {

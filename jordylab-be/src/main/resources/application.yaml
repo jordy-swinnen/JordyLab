@@ -104,6 +104,19 @@ jordylab:
       zone: Europe/Brussels
     model-catalog:
       cache-ttl-minutes: 60
+  mobile:
+    release:
+      storage-dir: ${MOBILE_RELEASE_STORAGE_DIR:/var/jordylab/mobile-releases}
+      # Placeholder until the release keystore is generated (research D14, stop-and-report gate).
+      signing-cert-sha256: ${MOBILE_RELEASE_SIGNING_CERT_SHA256:}
+    download-link:
+      secret: ${MOBILE_DOWNLOAD_LINK_SECRET:}
+      ttl-minutes: 5
+    app:
+      # Placeholders — blocked on feature 008 (production HTTPS deployment) and the application-id
+      # decision (research D13/D14, stop-and-report gates).
+      package-name: ${MOBILE_APPLICATION_ID:}
+      production-domain: ${MOBILE_PRODUCTION_DOMAIN:}
     notifications:
       ntfy:
         base-url: ${NTFY_BASE_URL:}

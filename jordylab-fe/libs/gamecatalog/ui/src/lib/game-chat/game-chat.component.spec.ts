@@ -72,6 +72,14 @@ describe('GameChatComponent', () => {
     expect(spectator.element).toHaveText('Ask a question about your installed games.');
   });
 
+  it('pre-fills the question box from the prefill query param (spec US5 share landing)', () => {
+    queryParamMap.next(convertToParamMap({ prefill: 'https://example.com/shared-article' }));
+    spectator.detectChanges();
+
+    const input = spectator.query('input[type="text"]') as HTMLInputElement;
+    expect(input.value).toBe('https://example.com/shared-article');
+  });
+
   it('forwards the typed question to the store', () => {
     askQuestion('which games support local co-op?');
 

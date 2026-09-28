@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.fna.service;
 
+import dev.jordy.jordylab.fna.BriefingReady;
 import dev.jordy.jordylab.fna.domain.ArticleTestBuilder;
 import dev.jordy.jordylab.fna.domain.Briefing;
 import dev.jordy.jordylab.fna.domain.PortfolioPositionTestBuilder;
@@ -16,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
 
 import java.util.List;
@@ -24,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +52,9 @@ class BriefingGeneratorServiceTest {
     @Mock
     private BriefingRepository briefingRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private BriefingGeneratorService briefingGeneratorService;
 
     @BeforeEach
@@ -57,7 +63,8 @@ class BriefingGeneratorServiceTest {
                 aiService,
                 articleRepository,
                 positionRepository,
-                briefingRepository
+                briefingRepository,
+                eventPublisher
         );
         briefingGeneratorService.systemPromptResource = new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH);
         briefingGeneratorService.init();
@@ -79,14 +86,20 @@ class BriefingGeneratorServiceTest {
         ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
         when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
 
+        ArgumentCaptor<BriefingReady> eventCaptor = ArgumentCaptor.forClass(BriefingReady.class);
+
         Briefing result = briefingGeneratorService.generateBriefing();
 
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
         assertSoftly(softly -> {
             softly.assertThat(result.getContent()).isEqualTo(AiCallResultTestBuilder.DEFAULT_CONTENT);
             softly.assertThat(result.getModelUsed()).isEqualTo(AiCallResultTestBuilder.DEFAULT_MODEL);
             softly.assertThat(result.getGeneratedAt()).isNotNull();
             softly.assertThat(userPromptCaptor.getValue()).contains(ArticleTestBuilder.DEFAULT_TITLE);
             softly.assertThat(briefingCaptor.getValue()).isSameAs(result);
+            // spec 007 FR-016 / research D9: mobile's notification listener depends on this event.
+            softly.assertThat(eventCaptor.getValue().briefingId()).isEqualTo(result.getId());
+            softly.assertThat(eventCaptor.getValue().generatedAt()).isEqualTo(result.getGeneratedAt());
         });
     }
 
@@ -129,6 +142,7 @@ class BriefingGeneratorServiceTest {
 
         assertThat(userPromptCaptor.getValue()).contains(NO_ARTICLES_FALLBACK);
         verifyNoInteractions(briefingRepository);
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test

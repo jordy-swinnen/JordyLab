@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +38,13 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), admin))).isEqualTo(200);
+            // No release has been published in this test fixture — an authorized admin falls
+            // through to 404 (NO_RELEASES_PUBLISHED), never 403 (spec 007 FR-002).
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), admin))).isEqualTo(404);
+            // Admin does not hold mobile-release-publisher — publishing is CI-only (FR-004).
+            softly.assertThat(status(as(post("/api/mobile/releases"), admin))).isEqualTo(403);
+            // "Save to FNA" (spec 007 FR-017) reuses the existing /api/fna/** admin-only matcher.
+            softly.assertThat(status(as(manualArticleRequest(), admin))).isEqualTo(201);
         });
     }
 
@@ -54,6 +63,11 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), guest))).isEqualTo(403);
+            // Guests may check for updates and request a download link (spec 007 FR-002).
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), guest))).isEqualTo(404);
+            softly.assertThat(status(as(post("/api/mobile/releases"), guest))).isEqualTo(403);
+            // "Save to FNA" is admin-only (spec 007 FR-017) — a guest only ever sees "Ask the catalog".
+            softly.assertThat(status(as(manualArticleRequest(), guest))).isEqualTo(403);
         });
     }
 
@@ -67,6 +81,21 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(get("/api/gamecatalog/games"), pending))).isEqualTo(403);
             softly.assertThat(status(as(chatRequest(), pending))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), pending))).isEqualTo(403);
+            // spec 007 scenario 4: a pending user gets no dialog and a denied download-link request.
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), pending))).isEqualTo(403);
+            softly.assertThat(status(as(post("/api/mobile/releases/" + UUID.randomUUID() + "/download-link"), pending)))
+                    .isEqualTo(403);
+        });
+    }
+
+    @Test
+    void downloadAndAssetLinksEndpointsArePublic() {
+        assertSoftly(softly -> {
+            // No release published in this fixture, so an unauthenticated caller reaches the
+            // controller (proving permitAll) and gets refused by token validation, never 401/403
+            // from Spring Security itself (spec 007 research D8).
+            softly.assertThat(status(get("/api/mobile/download/not-a-real-token"))).isEqualTo(403);
+            softly.assertThat(status(get("/.well-known/assetlinks.json"))).isEqualTo(200);
         });
     }
 
@@ -105,6 +134,12 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
         return post("/api/gamecatalog/ingest/check")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}");
+    }
+
+    private MockHttpServletRequestBuilder manualArticleRequest() {
+        return post("/api/fna/articles/manual")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"https://example.invalid/article-" + UUID.randomUUID() + "\"}");
     }
 
     private MockHttpServletRequestBuilder ingestScanRequest() {

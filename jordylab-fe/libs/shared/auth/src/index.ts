@@ -6,3 +6,5 @@ export { authInterceptor } from './lib/auth.interceptor';
 export { LoginComponent } from './lib/login.component';
 export { AUTH_CONFIG } from './lib/auth-config';
 export type { AuthConfig } from './lib/auth-config';
+export { BiometricUnlockService } from './lib/biometric-unlock.service';
+export { BiometricUnlockToggleComponent } from './lib/biometric-unlock-toggle.component';

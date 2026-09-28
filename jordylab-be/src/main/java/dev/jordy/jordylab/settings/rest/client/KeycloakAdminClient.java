@@ -98,6 +98,17 @@ public class KeycloakAdminClient {
         call(HttpMethod.POST, "/users/" + userId + "/logout", null);
     }
 
+    /**
+     * Revokes a client's consent (and, with it, any {@code offline_access} grant that client
+     * holds) for a user — spec 007 FR-013, research D12. A plain session logout does not revoke
+     * offline tokens; this is the documented way to kill one. Throws
+     * {@link HttpClientErrorException.NotFound} when the user never granted that client consent
+     * — callers decide whether that is expected.
+     */
+    public void revokeConsent(String userId, String clientId) {
+        call(HttpMethod.DELETE, "/users/" + userId + "/consents/" + clientId, null);
+    }
+
     private String realmRole(String roleName) {
         return realmRoleCache.computeIfAbsent(roleName, name -> call(HttpMethod.GET, "/roles/" + name, null));
     }

@@ -26,6 +26,8 @@ export class GameChatViewComponent {
   messages = input.required<ChatMessage[]>();
   asking = input.required<boolean>();
   attachedGame = input.required<AttachedGame | null>();
+  /** Pre-fills the question box (spec US5 — a shared link arriving via "Ask the catalog"). */
+  prefillQuestion = input<string>('');
 
   ask = output<string>();
   removeAttachment = output<void>();

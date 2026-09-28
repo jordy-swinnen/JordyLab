@@ -1,4 +1,18 @@
+@if (latestRelease()?.updateRequired) {
+<lib-update-required
+  [latestVersionName]="latestRelease()!.versionName"
+  (download)="onUpdateDownload()"
+/>
+} @else {
 <div class="min-h-screen lg:flex">
+    <lib-install-prompt (download)="onInstallDownload()" />
+    @if (latestRelease()?.updateAvailable) {
+    <lib-update-available-banner
+      [versionName]="latestRelease()!.versionName"
+      [releaseNotes]="latestRelease()!.releaseNotes"
+      (download)="onUpdateDownload()"
+    />
+    }
     @if (hasAppRole()) {
   <aside
     class="border-b border-border bg-rail lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-shrink-0 lg:flex-col lg:border-b-0 lg:border-r lg:px-4 lg:pb-6 lg:pt-7"
@@ -100,6 +114,23 @@
       </svg>
     </button>
     }
+
+    @if (platform.platform() === 'native-android') {
+    <lib-biometric-unlock-toggle class="mt-3" />
+    }
+
+    @if (platform.platform() === 'web-desktop') {
+    <button
+      type="button"
+      class="mt-3 hidden w-full items-center gap-2 rounded-xl border border-border p-3 text-left text-sm text-secondary-foreground transition-colors hover:border-input lg:flex"
+      (click)="showQrEntry.set(!showQrEntry())"
+    >
+      Get the Android app
+    </button>
+    @if (showQrEntry()) {
+    <lib-android-app-qr-entry />
+    }
+    }
   </aside>
   }
 
@@ -107,3 +138,4 @@
     <router-outlet />
   </main>
 </div>
+}

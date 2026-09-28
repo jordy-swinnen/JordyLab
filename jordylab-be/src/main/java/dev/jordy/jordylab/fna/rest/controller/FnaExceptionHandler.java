@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.fna.rest.controller;
 
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingErrorDto;
+import dev.jordy.jordylab.fna.service.ArticleAlreadyQueuedException;
 import dev.jordy.jordylab.fna.service.BriefingGenerationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,5 +15,13 @@ public class FnaExceptionHandler {
     public ResponseEntity<BriefingErrorDto> handleBriefingGenerationFailure(BriefingGenerationException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new BriefingErrorDto(exception.getFailureReason().name()));
+    }
+
+    @ExceptionHandler(ArticleAlreadyQueuedException.class)
+    public ResponseEntity<ErrorBody> handleArticleAlreadyQueued(ArticleAlreadyQueuedException exception) {
+        return ResponseEntity.badRequest().body(new ErrorBody("ARTICLE_ALREADY_QUEUED"));
+    }
+
+    private record ErrorBody(String reason) {
     }
 }
