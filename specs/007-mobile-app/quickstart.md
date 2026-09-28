@@ -133,12 +133,13 @@ against the real, publicly reachable domain (research §4.3), not localhost.
 ```bash
 # backend (jordylab-be/, Podman socket per AGENTS.md)
 ./gradlew :test --tests "*ModularityTests*"     # module boundaries, incl. the new mobile module + event types
-./gradlew :test --tests "*MobileModuleTest*"    # release/download-link endpoints, role gating, token validation
+./gradlew :test --tests "*RoleMatrixTest*"      # release/download-link endpoints, role gating, token validation —
+                                                 # folded in here rather than a standalone MobileModuleTest (T009/T012/T034 deviation)
 ./gradlew test                                  # full suite
 
 # frontend (jordylab-fe/)
-bunx nx run-many -t test -p shared-platform      # interceptor, artwork pipe, platform detection, install-prompt store
-bunx nx affected -t test lint                    # app shell / auth / nav updates
+bunx nx run-many -t test -p platform-api platform-ui  # interceptor, artwork pipe, platform detection, install-prompt store
+bunx nx affected -t test lint                          # app shell / auth / nav updates
 ```
 
 Expected: all green. `ModularityTests` confirms `mobile` keeps to `mobile → shared` only, and that the new
