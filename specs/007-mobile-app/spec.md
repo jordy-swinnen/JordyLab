@@ -40,6 +40,8 @@ nudges each platform toward the right install path exactly once.
 - Q: Which channel should deliver push notifications to the admin (new sign-up pending, briefing ready)? → A: Ntfy +
   deep links — the backend publishes to the existing Ntfy server with a click-through link that opens the matching
   app screen.
+- Q: Should "Save to FNA" (the admin-only share destination) stay in this feature's scope? → A: Keep it, at P3 — it
+  needs a small new FNA endpoint to accept a manually shared article URL.
 
 ---
 
@@ -254,6 +256,8 @@ the home screen, and confirm it opens full-screen with no further prompt.
 - **FR-014**: The app MUST register as a share target for text and URLs, and MUST only offer the destinations the
   user's role allows.
 - **FR-015**: Notification taps MUST open the matching screen in the app.
+- **FR-017**: Confirming "Save to FNA" on a share MUST queue the shared link as an article candidate for the next
+  daily briefing. This destination MUST remain admin-only.
 - **FR-016**: The system MUST notify the admin when a new sign-up is pending and when the daily briefing is ready, via
   the existing Ntfy server with a click-through link that opens the matching app screen.
 
