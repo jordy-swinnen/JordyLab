@@ -22,6 +22,7 @@ import {
   AppLinkService,
   InstallPromptStore,
   PlatformService,
+  ShareTargetService,
   UpdateCheckStore,
 } from '@jordylab-fe/shared/platform/api';
 import {
@@ -84,6 +85,7 @@ export class App {
   #apkDownload = inject(ApkDownloadService);
   #updateCheck = inject(UpdateCheckStore);
   #appLink = inject(AppLinkService);
+  #shareTarget = inject(ShareTargetService);
   #biometricUnlock = inject(BiometricUnlockService);
   protected readonly platform = inject(PlatformService);
   protected readonly installPrompt = inject(InstallPromptStore);
@@ -100,6 +102,7 @@ export class App {
     this.#updateCheck.checkForUpdate();
     this.#updateCheck.listenForResume();
     this.#appLink.listen();
+    this.#shareTarget.listen();
   }
 
   async onInstallDownload(): Promise<void> {

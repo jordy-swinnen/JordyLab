@@ -8,3 +8,4 @@ export * from './lib/update-check.store';
 export * from './lib/latest-release.model';
 export * from './lib/apk-download.service';
 export * from './lib/app-link.service';
+export * from './lib/share-target.service';

@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
+import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
 
 export const appRoutes: Route[] = [
@@ -8,6 +9,14 @@ export const appRoutes: Route[] = [
     path: 'awaiting-approval',
     canActivate: [authGuard],
     component: AwaitingApprovalComponent,
+  },
+  {
+    // Spec US5 — ShareTargetService navigates here on a native shareReceived event.
+    // authGuard (not roleGuard) so a pending/logged-out share still runs login first (US5-4);
+    // the landing screen itself role-filters its destinations.
+    path: 'mobile/share',
+    canActivate: [authGuard],
+    component: ShareLandingComponent,
   },
   {
     path: 'fna',

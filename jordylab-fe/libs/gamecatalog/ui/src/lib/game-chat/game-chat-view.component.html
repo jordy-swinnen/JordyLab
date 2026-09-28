@@ -138,6 +138,7 @@
     placeholder="Ask about your games…"
     aria-label="Ask a question about your games"
     class="h-14 flex-1 rounded-2xl border-input bg-card px-[22px] text-base"
+    [value]="prefillQuestion()"
     [disabled]="asking()"
     (keydown.enter)="onSubmit(questionInput)"
   />

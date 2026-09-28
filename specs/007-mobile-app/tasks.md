@@ -356,15 +356,25 @@ to FNA"), confirm the article is queued (quickstart scenario 4)
   articles attach to one seeded, disabled "Manual Submissions" `Feed` row (`V20260928005` migration) rather than
   needing a schema change — `BriefingGeneratorService` selects by `publishedAt`, not `feed.enabled`, so these are
   still picked up for the next briefing
-- [ ] T036 [P] [US5] Install `@capgo/capacitor-share-target` (research D4) in `jordylab-fe/apps/jordylab-mobile/`;
+- [X] T036 [P] [US5] Install `@capgo/capacitor-share-target` (research D4) in `jordylab-fe/apps/jordylab-mobile/`;
   add the `ACTION_SEND` intent filter (text/URL mime types) to
   `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml`
-- [ ] T037 [US5] Build the share-landing screen in `jordylab-fe/libs/shared/platform/ui/src/lib/share-landing/` per
+  - Already present from the native shell scaffold (T004), same as T024's App Link filter — no change needed.
+- [X] T037 [US5] Build the share-landing screen in `jordylab-fe/libs/shared/platform/ui/src/lib/share-landing/` per
   [app-shell-contract.md](contracts/app-shell-contract.md) — listens for `shareReceived`, offers a role-filtered
   `ShareDestination` sheet ("Ask the catalog" → everyone, opens `gamecatalog`'s chat prefilled with the shared text;
   "Save to FNA" → admin only, calls T035's endpoint); if not logged in, holds the payload in memory and runs login
   first (spec US5-4), never persisting it across a restart
-- [ ] T038 [US5] Vitest tests for the share-landing destination filtering (guest sees one destination, admin sees
+  - New `ShareTargetService` (`libs/shared/platform/api`) owns the `shareReceived` listener (mirrors `AppLinkService`)
+    — holds the payload in an in-memory signal and navigates to a new `/mobile/share` route
+    (`apps/jordylab/src/app/app.routes.ts`), gated by `authGuard` only (not `roleGuard`) so login-first works exactly
+    as the contract describes without any special-cased code. "Ask the catalog" navigates to `/games/chat?prefill=`;
+    added `prefillQuestion` input support to `GameChatViewComponent`/`GameChatComponent` (query-param, matching the
+    existing `?attach=` pattern) to make the destination real rather than a stub. "Save to FNA" calls
+    `ShareTargetService.submitToFna()`, a direct `HttpClient.post('/api/fna/articles/manual', ...)` — not a new
+    `fna`-scoped service, since `libs/shared/platform` (`scope:shared`) cannot depend on `scope:fna` per the Nx
+    boundary rules; the plain URL string carries no import-graph dependency, so this stays lint-clean.
+- [X] T038 [US5] Vitest tests for the share-landing destination filtering (guest sees one destination, admin sees
   two) and the prefill/queue behavior (mocked HTTP + auth state)
 
 **Checkpoint**: US1–US5: sharing into JordyLab works end to end for both roles.
