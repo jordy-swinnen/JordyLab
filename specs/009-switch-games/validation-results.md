@@ -25,6 +25,6 @@
 | IGDB search add | Open add dialog → search IGDB title → select result → save | Game appears in grid with IGDB-linked metadata |
 | 007 regression | `GET /.well-known/assetlinks.json` returns 200; `GET /api/mobile/download/not-a-real-token` returns 403; `GET /api/mobile/releases/latest` requires auth | Pass |
 
-## Known Blockers
+## Build Gate
 
-- `./gradlew build` fails the JaCoCo coverage verification for `dev.jordy.jordylab.mobile.service` (0.4 vs required 0.8). This is unrelated to the Switch feature; it is a pre-existing coverage gap in the mobile module.
+- `./gradlew build --no-daemon` passes (tests + JaCoCo coverage verification).
