@@ -262,12 +262,11 @@ get 403 on API writes.
 
 **Purpose**: Quality gates, docs, and validation
 
-- [ ] T054 [P] Run backend gamecatalog tests and fix any regressions (`./gradlew :jordylab-be:test --tests 'dev.jordy.jordylab.gamecatalog.*'`)
-- [ ] T055 [P] Run frontend gamecatalog tests and fix any regressions (`bunx nx test gamecatalog-api`, `bunx nx test gamecatalog-ui`)
-- [ ] T056 Run `/modularity-check` — Spring Modulith boundary tests green (`./gradlew :jordylab-be:test --tests '*ModularityTests*'`)
-- [ ] T057 Verify 80% backend/frontend coverage gates pass
-- [ ] T058 Run quickstart.md validation scenarios against the local stack (or document any blockers in
-  `specs/009-switch-games/validation-results.md`)
+- [x] T054 [P] Run backend gamecatalog tests and fix any regressions (`./gradlew :jordylab-be:test --tests 'dev.jordy.jordylab.gamecatalog.*'`)
+- [x] T055 [P] Run frontend gamecatalog tests and fix any regressions (`bunx nx test gamecatalog-api`, `bunx nx test gamecatalog-ui`)
+- [x] T056 Run `/modularity-check` — Spring Modulith boundary tests green (`./gradlew :jordylab-be:test --tests '*ModularityTests*'`)
+- [ ] T057 Verify 80% backend/frontend coverage gates pass — blocked by pre-existing `mobile.service` JaCoCo gap (0.4 vs 0.8)
+- [x] T058 Run quickstart.md validation scenarios against the local stack (documented in `specs/009-switch-games/validation-results.md`)
 
 ---
 
