@@ -15,6 +15,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -55,6 +56,7 @@ class GuestChatLimitIntegrationTest extends KeycloakIntegrationTest {
     }
 
     @Test
+    @Transactional
     void guestAtTheDailyLimitGetsA429WithResetsAtAndNoAiCall() throws Exception {
         String guest = accessTokenFor("guest-user", "guest-password");
         String subject = subjectOf(guest);

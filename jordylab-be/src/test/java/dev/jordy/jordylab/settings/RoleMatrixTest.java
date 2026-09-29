@@ -32,8 +32,8 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
 
         assertSoftly(softly -> {
             softly.assertThat(status(as(get("/api/fna/articles"), admin))).isEqualTo(200);
-            // The settings API arrives with US2; an authorized admin falls through to 404, never 403.
-            softly.assertThat(status(as(get("/api/settings/users"), admin))).isEqualTo(404);
+            // The settings API is now implemented; an authorized admin reaches it (200), never 403.
+            softly.assertThat(status(as(get("/api/settings/users"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/games"), admin))).isEqualTo(200);
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), admin))).isEqualTo(200);

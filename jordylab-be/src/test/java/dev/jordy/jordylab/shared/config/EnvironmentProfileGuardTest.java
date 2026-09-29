@@ -8,7 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EnvironmentProfileGuardTest {
 
     private final ApplicationContextRunner contextRunner =
-            new ApplicationContextRunner().withUserConfiguration(EnvironmentProfileGuard.class);
+            new ApplicationContextRunner()
+                    .withSystemProperties("spring.profiles.active=")
+                    .withUserConfiguration(EnvironmentProfileGuard.class);
 
     @Test
     void refusesToStartWithNoActiveProfile() {
