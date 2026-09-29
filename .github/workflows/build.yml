@@ -74,6 +74,8 @@ jobs:
       contents: read
       packages: write
     strategy:
+      # One image failing shouldn't cancel the others (Build #14 lost backend/keycloak this way).
+      fail-fast: false
       matrix:
         image: [backend, frontend, keycloak]
     steps:

@@ -15,7 +15,8 @@ COPY jordylab-fe/ ./
 RUN bunx nx build jordylab --configuration=production
 
 # --- Runtime stage ---
-FROM nginx/docker-nginx-unprivileged:1.29-alpine AS runtime
+# nginxinc/nginx-unprivileged (Docker Hub) runs as non-root on :8080; 1.30 = nginx stable branch.
+FROM nginxinc/nginx-unprivileged:1.30-alpine AS runtime
 COPY --from=build /workspace/dist/apps/jordylab /usr/share/nginx/html
 COPY deploy/containers/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 

@@ -32,7 +32,7 @@ Keycloak `26.7.4`; `nginx/docker-nginx-unprivileged:1.29-alpine`; SOPS `v3.13.2`
 **Storage**: PostgreSQL 16 with pgvector (CNPG operand `ghcr.io/cloudnative-pg/postgresql:16.10-system-trixie` +
 the official pgvector ImageVolume extension), a single instance on the k3s `local-path` StorageClass; game
 artwork and mobile APK files on a `local-path` PVC; database backups (base backups + continuous WAL) to OVH
-Object Storage (S3-compatible) via the Barman Cloud Plugin, retaining 7 daily + 4 weekly snapshots.
+Object Storage (S3-compatible) via the Barman Cloud Plugin, with a 30-day point-in-time recovery window (daily + weekly base backups; see spec.md FR-014).
 
 **Testing**: Existing JUnit 5 / AssertJ / Testcontainers for the backend's new fail-fast-without-a-profile test;
 existing Vitest / `@ngneat/spectator/vitest` for any frontend environment-config tests; CI-level validation via

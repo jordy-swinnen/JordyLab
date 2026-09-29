@@ -88,7 +88,8 @@ extension added through CNPG's **ImageVolume extensions** mechanism (a separate 
 custom-built Postgres image. Backups to OVH Object Storage (S3-compatible) go through the separately installed
 **Barman Cloud Plugin** (`cloudnative-pg/plugin-barman-cloud`, a CNPG-I plugin), configured via an `ObjectStore`
 CRD, with base backups plus continuous WAL archiving and a retention policy of 7 daily + 4 weekly backups
-(per `/speckit-clarify`).
+(per `/speckit-clarify`). *Superseded 2026-09-30: count-based retention isn't expressible; a time-based
+`retentionPolicy: 30d` is used instead — see spec.md FR-014.*
 
 **Rationale**: CNPG's in-tree `spec.backup.barmanObjectStore` field is deprecated (since CNPG 1.26); the plugin is
 CNPG's current recommended path for all new deployments, so building on it now avoids a forced migration later. The

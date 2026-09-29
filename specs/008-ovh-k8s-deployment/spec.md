@@ -331,8 +331,11 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
 ### Functional: Data
 
 - **FR-014**: PostgreSQL with pgvector MUST run in the cluster on node-local storage, with continuous backups
-  (base backups + WAL) to OVH Object Storage and point-in-time restore, retaining 7 daily and 4 weekly backups
-  (about a month of recovery points) before pruning.
+  (base backups + WAL) to OVH Object Storage and point-in-time restore to any moment in the last 30 days
+  (time-based retention, `retentionPolicy: 30d`), with daily and weekly base backups. *Updated 2026-09-30 during the
+  first deploy: the clarified "7 daily + 4 weekly" count-based rotation can't be expressed in CloudNativePG/Barman —
+  `ScheduledBackup` has no per-schedule count — so the 30-day window, which covers the same month of recovery
+  points, is what's enforced.*
 - **FR-015**: A restore drill MUST be performed and documented before go-live, and repeated quarterly thereafter.
 - **FR-016**: Game artwork (and 007 APK files) MUST be stored on persistent storage (k3s local-path) that survives
   pod restarts and VPS reboots.
