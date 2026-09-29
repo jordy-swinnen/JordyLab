@@ -1,17 +1,19 @@
-# 009 Eufy Presence: SpecKit Prompts
+# 010 Eufy Presence: SpecKit Prompts
 
 Background is in `research.md`. `spec-draft.md` shows the expected spec, and `plan-draft.md` the expected plan shape.
 
-> **Numbering:** force 009. Check that the folder is `specs/009-eufy-presence`.
-> **Order:** depends on 007 (Android app) and 008 (production cluster). The **Phase 0 spike** can run earlier, locally with Podman, and decides whether the rest gets built at all.
-> **Try first, for free:** apply the OnePlus battery settings (research §1) to the *Eufy* app. If Eufy's own geofencing then works reliably, 009 may not be needed.
+> **Numbering:** force 010. Check that the folder is `specs/010-eufy-presence`.
+> **Order:** depends on 007 (Android app) and 008 (production cluster). The **Phase 0 spike** can run earlier, locally
+> with Podman, and decides whether the rest gets built at all.
+> **Try first, for free:** apply the OnePlus battery settings (research §1) to the *Eufy* app. If Eufy's own geofencing
+> then works reliably, 010 may not be needed.
 
 ---
 
 ## 1. `/speckit-specify`
 
 ```
-Use feature number 009 (short name: eufy-presence).
+Use feature number 010 (short name: eufy-presence).
 
 Make my Eufy home security (HomeBase 2 with cameras) arm and disarm reliably based on whether I'm home, using the JordyLab Android app (spec 007). Admin only (I live alone), mobile only — no web UI except revoking a lost phone in Settings.
 
@@ -31,6 +33,7 @@ Out of scope: other residents, camera streams/events in JordyLab, other Eufy dev
 ---
 
 ## 2. `/speckit-clarify`: expected questions and suggested answers
+
 1. Is the spike result binding? → Yes (≥ 95% over 7 days, otherwise stop).
 2. Geofence radius / debounce → 200 m / 3 minutes, adjustable in settings.
 3. If the gateway needs the home LAN → run it on JordyBox with Podman and connect it to the cluster over WireGuard.
@@ -44,7 +47,7 @@ Out of scope: other residents, camera streams/events in JordyLab, other Eufy dev
 ## 3. `/speckit-plan`
 
 ```
-Tech context for 009 (read AGENTS.md, the constitution, and specs/_drafts/009-eufy-presence/research.md + plan-draft.md first; carry their findings into this feature's research.md; verify every library, gateway endpoint, Android API and version against live docs and the real hardware — report instead of guessing):
+Tech context for 010 (read AGENTS.md, the constitution, and specs/_drafts/010-eufy-presence/research.md + plan-draft.md first; carry their findings into this feature's research.md; verify every library, gateway endpoint, Android API and version against live docs and the real hardware — report instead of guessing):
 
 - Phase 0 spike first and stop for my go/no-go: eufy-mega-security gateway (github.com/mscodemonkey/eufy-mega-security) run with Podman locally, then as a k3s Deployment; dedicated Eufy guest account; find and document the guard-mode read/write API for HomeBase 2 (T8010) and whether a guest member may change modes; document where it must run (cluster vs home LAN); a small script to switch Away↔Home for the 7-day trial. Do NOT use bropat/eufy-security-client (deprecated, legacy API being shut down).
 - Backend: new Modulith module `presence` (use /new-module, /entity, /flyway-migration, /test-builder; /modularity-check at the end). Entities RegisteredDevice, PresenceEvent, ModeChange, PresenceSettings. State machine with debounce. GuardModePort + EufyGatewayAdapter (RestClient, bearer token) + FakeGuardModeAdapter. Endpoints under /api/presence (admin role + registered device): register/revoke device, signed presence events (ARM key, ECDSA P-256), signed disarm (DISARM key, nonce + ≤60s timestamp, replay protection), status. Audit log + Micrometer counters. Notify outcomes via the 007 notification channel.
