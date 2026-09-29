@@ -143,15 +143,15 @@ question, run a scan, and verify Switch games survive.
 - [ ] T028 [P] [US4] Test that `ReconciliationService.hideMissingInstallations` and `purgeUninstalledGames` skip manual
   installations in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/ReconciliationServiceTest.java`
-- [ ] T029 [US4] Test that grounded chat includes Switch games in its corpus in
+- [ ] T029 [P] [US4] Test that grounded chat includes Switch games in its corpus in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/ChatServiceTest.java` (or equivalent)
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Confirm `GameRepository.findVisibleGames`/`findVisibleHosts` include the Switch host via the existing
+- [x] T030 [US4] Confirm `GameRepository.findVisibleGames`/`findVisibleHosts` include the Switch host via the existing
   installation predicate; adjust query if necessary in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/repository/GameRepository.java`
-- [ ] T031 [US4] Add explicit `manual = true` exclusion guards in `ReconciliationService.hideMissingInstallations` and
+- [x] T031 [US4] Add explicit `manual = true` exclusion guards in `ReconciliationService.hideMissingInstallations` and
   `purgeUninstalledGames` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/ReconciliationService.java`
 - [ ] T032 [US4] Add `hostFormats` to `GameDetailResponse` and populate Switch format in
@@ -175,18 +175,18 @@ scans.
 
 ### Tests for User Story 2
 
-- [ ] T035 [P] [US2] Unit test for `SwitchGameService` manual add: normalised-title duplicate prevention, placeholder
+- [x] T035 [P] [US2] Unit test for `SwitchGameService` manual add: normalised-title duplicate prevention, placeholder
   artwork, no metadata until linked in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameServiceTest.java`
-- [ ] T036 [US2] `@WebMvcTest` for manual add and relink endpoints in
+- [x] T036 [US2] `@WebMvcTest` for manual add and relink endpoints in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/SwitchGameControllerTest.java`
 
 ### Implementation for User Story 2
 
-- [ ] T037 [US2] Implement manual add path in `SwitchGameService` (normalise title, create `Game` without `igdbGameId`,
+- [x] T037 [US2] Implement manual add path in `SwitchGameService` (normalise title, create `Game` without `igdbGameId`,
   placeholder artwork, Switch installation + library entry) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameService.java`
-- [ ] T038 [US2] Implement link-later PATCH `/switch/games/{id}` (set `igdbGameId`, fill metadata/artwork/multiplayer,
+- [x] T038 [US2] Implement link-later PATCH `/switch/games/{id}` (set `igdbGameId`, fill metadata/artwork/multiplayer,
   do not regenerate AI description) in `SwitchGameController` + `SwitchGameService`
 - [ ] T039 [US2] Add manual-fallback UI to `switch-add-dialog` (no-match state + manual form) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/switch-add-dialog/`
@@ -206,23 +206,23 @@ scans.
 ### Tests for User Story 3
 
 - [ ] T041 [P] [US3] Unit test for `SwitchGameService.bulkPreview` (match / no-match / already-present / duplicate line
-  collapse) in `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameServiceTest.java`
-- [ ] T042 [US3] `@WebMvcTest` for `POST /switch/bulk/preview` and `POST /switch/bulk/confirm` in
-  `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/SwitchGameControllerTest.java`
+  collapse) in `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameServiceTest.java` — **deferred to follow-up**
+- [ ] T042 [P] [US3] `@WebMvcTest` for `POST /switch/bulk/preview` and `POST /switch/bulk/confirm` in
+  `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/SwitchGameControllerTest.java` — **deferred to follow-up**
 
 ### Implementation for User Story 3
 
 - [ ] T043 [US3] Implement bulk preview logic (line normalisation, per-line IGDB search, duplicate detection, status
-  classification) in `SwitchGameService`
+  classification) in `SwitchGameService` — **deferred to follow-up**
 - [ ] T044 [US3] Implement bulk confirm logic (add selected lines via US1/US2 flows, produce added/skipped/already-present
-  summary) in `SwitchGameService`
+  summary) in `SwitchGameService` — **deferred to follow-up**
 - [ ] T045 [US3] Add `POST /switch/bulk/preview` and `POST /switch/bulk/confirm` endpoints in
-  `SwitchGameController`
+  `SwitchGameController` — **deferred to follow-up**
 - [ ] T046 [US3] Create `switch-bulk-dialog` container + view components (paste textarea, review table with
   match/no-match/already-present, per-line/global format toggle, confirm) in
-  `jordylab-fe/libs/gamecatalog/ui/src/lib/switch-bulk-dialog/`
+  `jordylab-fe/libs/gamecatalog/ui/src/lib/switch-bulk-dialog/` — **deferred to follow-up**
 - [ ] T047 [US3] Wire the bulk dialog into the game grid (admin-only button) in
-  `jordylab-fe/libs/gamecatalog/ui/src/lib/game-grid/game-grid-view.component.*`
+  `jordylab-fe/libs/gamecatalog/ui/src/lib/game-grid/game-grid-view.component.*` — **deferred to follow-up**
 
 **Checkpoint**: All user stories 1–4 and bulk add are independently functional.
 
@@ -237,17 +237,17 @@ get 403 on API writes.
 
 ### Tests for User Story 5
 
-- [ ] T048 [P] [US5] Unit test for `SwitchGameService` edit: format change does not regenerate AI description; relink
+- [x] T048 [P] [US5] Unit test for `SwitchGameService` edit: format change does not regenerate AI description; relink
   refreshes metadata but not description in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameServiceTest.java`
-- [ ] T049 [US5] `@WebMvcTest` for `PATCH /switch/games/{id}`, `DELETE /switch/games/{id}`, and guest `403` in
+- [x] T049 [P] [US5] `@WebMvcTest` for `PATCH /switch/games/{id}`, `DELETE /switch/games/{id}`, and guest `403` in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/SwitchGameControllerTest.java`
 
 ### Implementation for User Story 5
 
-- [ ] T050 [US5] Implement format edit + relink in `SwitchGameService` (preserve `EnrichmentStatus`/`description`) in
+- [x] T050 [US5] Implement format edit + relink in `SwitchGameService` (preserve `EnrichmentStatus`/`description`) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameService.java`
-- [ ] T051 [US5] Implement `DELETE /switch/games/{id}` (delete Switch installation; conditionally delete library entry
+- [x] T051 [US5] Implement `DELETE /switch/games/{id}` (delete Switch installation; conditionally delete library entry
   and game) in `SwitchGameController` + `SwitchGameService`
 - [ ] T052 [US5] Add edit/remove controls on the detail page (admin-only; hidden for guests) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/game-detail/game-detail-view.component.*`

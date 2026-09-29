@@ -3,6 +3,7 @@ package dev.jordy.jordylab.gamecatalog.rest.controller;
 import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameUpdateRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchSearchResult;
 import dev.jordy.jordylab.gamecatalog.service.SwitchGameService;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,7 +53,8 @@ class SwitchGameControllerTest {
     @Test
     void addFromIgdbReturnsCreated() throws Exception {
         UUID gameId = UUID.fromString("1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f");
-        when(switchGameService.addFromIgdb(any(SwitchGameRequest.class)))
+        SwitchGameRequest expectedRequest = new SwitchGameRequest(111L, null, InstallationFormat.PHYSICAL);
+        when(switchGameService.addFromIgdb(eq(expectedRequest)))
                 .thenReturn(new SwitchGameResponse(gameId, "Mario Kart 8 Deluxe", "Nintendo Switch", "PHYSICAL"));
 
         mockMvc.perform(post("/api/gamecatalog/switch/games")
@@ -69,7 +71,8 @@ class SwitchGameControllerTest {
     @Test
     void addManualReturnsCreated() throws Exception {
         UUID gameId = UUID.fromString("1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f");
-        when(switchGameService.addManual(any(SwitchGameRequest.class)))
+        SwitchGameRequest expectedRequest = new SwitchGameRequest(null, "My Custom Game", InstallationFormat.DIGITAL);
+        when(switchGameService.addManual(eq(expectedRequest)))
                 .thenReturn(new SwitchGameResponse(gameId, "My Custom Game", "Nintendo Switch", "DIGITAL"));
 
         mockMvc.perform(post("/api/gamecatalog/switch/games")
@@ -95,7 +98,8 @@ class SwitchGameControllerTest {
     @Test
     void updateFormatReturnsOk() throws Exception {
         UUID gameId = UUID.fromString("1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f");
-        when(switchGameService.update(any(), any()))
+        SwitchGameUpdateRequest expectedRequest = new SwitchGameUpdateRequest(InstallationFormat.DIGITAL, null);
+        when(switchGameService.update(eq(gameId), eq(expectedRequest)))
                 .thenReturn(new SwitchGameResponse(gameId, "My Game", "Nintendo Switch", "DIGITAL"));
 
         mockMvc.perform(patch("/api/gamecatalog/switch/games/" + gameId)

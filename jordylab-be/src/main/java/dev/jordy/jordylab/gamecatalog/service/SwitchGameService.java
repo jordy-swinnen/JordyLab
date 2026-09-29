@@ -141,7 +141,7 @@ public class SwitchGameService {
 
         installationRepository.delete(installation);
 
-        long remainingInstallations = installationRepository.countByGameId(gameId) - 1;
+        long remainingInstallations = installationRepository.countByGameId(gameId);
         boolean heldInLibrary = libraryEntryRepository.existsByGameIdAndRemovedAtIsNull(gameId);
         if (remainingInstallations <= 0 && !heldInLibrary) {
             libraryEntryRepository.deleteAll(libraryEntryRepository.findAllByGameId(gameId));

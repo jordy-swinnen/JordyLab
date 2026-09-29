@@ -37,9 +37,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -100,10 +103,13 @@ class SwitchGameServiceTest {
         givenSwitchSource();
         when(igdbClient.fetchSwitchGameDetails(111L)).thenReturn(Optional.of(igdbDetails()));
         when(gameRepository.findByPlatformAndIgdbGameId("Nintendo Switch", "111")).thenReturn(Optional.empty());
-        when(gameRepository.save(any(Game.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(installationRepository.save(any(GameInstallation.class)))
+        when(gameRepository.save(argThat((Game game) -> "Mario Kart 8 Deluxe".equals(game.getTitle()))))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(libraryEntryRepository.findByGameIdAndLibrarySource(any(), any())).thenReturn(Optional.empty());
+        when(installationRepository.save(argThat((GameInstallation installation) ->
+                SOURCE_ID.equals(installation.getSource().getId()))))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(libraryEntryRepository.findByGameIdAndLibrarySource(argThat((UUID id) -> true), eq(LibrarySource.OWNED)))
+                .thenReturn(Optional.empty());
 
         SwitchGameResponse response = switchGameService.addFromIgdb(
                 new SwitchGameRequest(111L, null, InstallationFormat.PHYSICAL));
@@ -138,15 +144,17 @@ class SwitchGameServiceTest {
         when(igdbClient.fetchSwitchGameDetails(111L)).thenReturn(Optional.of(igdbDetails()));
         when(gameRepository.findByPlatformAndIgdbGameId("Nintendo Switch", "111"))
                 .thenReturn(Optional.of(existing));
-        when(installationRepository.save(any(GameInstallation.class)))
+        when(installationRepository.save(argThat((GameInstallation installation) ->
+                SOURCE_ID.equals(installation.getSource().getId()))))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(libraryEntryRepository.findByGameIdAndLibrarySource(GAME_ID, LibrarySource.OWNED))
                 .thenReturn(Optional.empty());
 
         switchGameService.addFromIgdb(new SwitchGameRequest(111L, null, InstallationFormat.DIGITAL));
 
-        verify(gameRepository, never()).save(any(Game.class));
-        verify(enrichmentService, never()).refresh(any(Game.class));
+        verify(gameRepository).findByPlatformAndIgdbGameId("Nintendo Switch", "111");
+        verifyNoMoreInteractions(gameRepository);
+        verifyNoInteractions(enrichmentService);
     }
 
     @Test
@@ -182,10 +190,13 @@ class SwitchGameServiceTest {
         givenSwitchSource();
         when(gameRepository.findByPlatformAndLowercaseTitle("Nintendo Switch", "My Custom Game",
                 PageRequest.of(0, 1))).thenReturn(List.of());
-        when(gameRepository.save(any(Game.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(installationRepository.save(any(GameInstallation.class)))
+        when(gameRepository.save(argThat((Game game) -> "My Custom Game".equals(game.getTitle()))))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(libraryEntryRepository.findByGameIdAndLibrarySource(any(), any())).thenReturn(Optional.empty());
+        when(installationRepository.save(argThat((GameInstallation installation) ->
+                installation.getExternalRef() != null)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(libraryEntryRepository.findByGameIdAndLibrarySource(argThat((UUID id) -> true), eq(LibrarySource.OWNED)))
+                .thenReturn(Optional.empty());
 
         SwitchGameResponse response = switchGameService.addManual(
                 new SwitchGameRequest(null, "My Custom Game", InstallationFormat.PHYSICAL));
@@ -197,7 +208,7 @@ class SwitchGameServiceTest {
         assertThat(savedGame.getIgdbGameId()).isNull();
         assertThat(savedGame.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
         assertThat(savedGame.getCoverStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
-        verify(enrichmentService, never()).refresh(any(Game.class));
+        verifyNoInteractions(enrichmentService);
     }
 
     @Test
@@ -217,7 +228,7 @@ class SwitchGameServiceTest {
 
         assertThat(response.format()).isEqualTo("DIGITAL");
         assertThat(installation.getFormat()).isEqualTo(InstallationFormat.DIGITAL);
-        verify(enrichmentService, never()).refresh(any(Game.class));
+        verifyNoInteractions(enrichmentService);
     }
 
     @Test
@@ -237,7 +248,7 @@ class SwitchGameServiceTest {
 
         assertThat(game.getIgdbGameId()).isEqualTo("111");
         assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-        verify(enrichmentService, never()).refresh(any(Game.class));
+        verifyNoInteractions(enrichmentService);
     }
 
     @Test
@@ -251,7 +262,7 @@ class SwitchGameServiceTest {
         when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
         when(installationRepository.findBySourceIdAndExternalRef(SOURCE_ID, GAME_ID.toString()))
                 .thenReturn(Optional.of(installation));
-        when(installationRepository.countByGameId(GAME_ID)).thenReturn(1L);
+        when(installationRepository.countByGameId(GAME_ID)).thenReturn(0L);
         when(libraryEntryRepository.existsByGameIdAndRemovedAtIsNull(GAME_ID)).thenReturn(false);
         when(libraryEntryRepository.findAllByGameId(GAME_ID)).thenReturn(List.of(
                 GameLibraryEntry.builder().game(game).librarySource(LibrarySource.OWNED)
@@ -260,8 +271,35 @@ class SwitchGameServiceTest {
         switchGameService.delete(GAME_ID);
 
         verify(installationRepository).delete(installation);
-        verify(libraryEntryRepository).deleteAll(any(List.class));
+        ArgumentCaptor<List<GameLibraryEntry>> entriesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(libraryEntryRepository).deleteAll(entriesCaptor.capture());
+        assertThat(entriesCaptor.getValue()).hasSize(1);
         verify(gameRepository).delete(game);
+    }
+
+    @Test
+    void deleteKeepsGameWhenAnotherInstallationRemains() {
+        givenSwitchSource();
+        Game game = Game.builder().id(GAME_ID).platform("Nintendo Switch").title("My Game")
+                .titleSource(TitleSource.MANUAL).build();
+        GameInstallation installation = GameInstallation.builder().game(game).source(switchSource())
+                .externalRef(GAME_ID.toString()).format(InstallationFormat.PHYSICAL)
+                .firstSeenAt(NOW).lastSeenAt(NOW).build();
+        when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
+        when(installationRepository.findBySourceIdAndExternalRef(SOURCE_ID, GAME_ID.toString()))
+                .thenReturn(Optional.of(installation));
+        when(installationRepository.countByGameId(GAME_ID)).thenReturn(1L);
+        when(libraryEntryRepository.existsByGameIdAndRemovedAtIsNull(GAME_ID)).thenReturn(false);
+
+        switchGameService.delete(GAME_ID);
+
+        verify(installationRepository).delete(installation);
+        verify(libraryEntryRepository, never()).deleteAll(entriesCaptorOrEmpty());
+        verify(gameRepository, never()).delete(game);
+    }
+
+    private List<GameLibraryEntry> entriesCaptorOrEmpty() {
+        return ArgumentCaptor.forClass(List.class).capture();
     }
 
     private IgdbClient.SwitchGameDetails igdbDetails() {

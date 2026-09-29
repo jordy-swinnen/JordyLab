@@ -104,84 +104,10 @@ entries remain.
 
 **Response** `403 Forbidden` for guests.
 
----
+## Future endpoints
 
-### `POST /api/gamecatalog/switch/bulk/preview`
-
-Preview a pasted list of titles before adding.
-
-**Request body**:
-
-```json
-{
-  "lines": ["mario kart", "zelda breath of the wild", "unknown game xyz"],
-  "defaultFormat": "PHYSICAL"
-}
-```
-
-**Response** `200 OK`:
-
-```json
-{
-  "lines": [
-    {
-      "line": "mario kart",
-      "status": "MATCH",
-      "proposedMatch": {
-        "igdbGameId": "196617",
-        "title": "Mario Kart 8 Deluxe",
-        "coverUrl": "...",
-        "releaseYear": 2017,
-        "platform": "Nintendo Switch"
-      },
-      "format": "PHYSICAL",
-      "include": true
-    },
-    {
-      "line": "unknown game xyz",
-      "status": "NO_MATCH",
-      "format": "PHYSICAL",
-      "include": false
-    }
-  ]
-}
-```
-
-Statuses: `MATCH`, `NO_MATCH`, `ALREADY_PRESENT`, `NEEDS_REVIEW`.
-
-**Behaviour**: no persistence; pure preview.
-
----
-
-### `POST /api/gamecatalog/switch/bulk/confirm`
-
-Confirm adding the selected lines from a preview.
-
-**Request body** (subset of preview response, only included lines):
-
-```json
-{
-  "lines": [
-    {
-      "line": "mario kart",
-      "status": "MATCH",
-      "proposedMatch": { "igdbGameId": "196617", ... },
-      "format": "PHYSICAL",
-      "include": true
-    }
-  ]
-}
-```
-
-**Response** `200 OK`:
-
-```json
-{
-  "added": 1,
-  "alreadyPresent": 0,
-  "skipped": 0
-}
-```
+Bulk paste preview/confirm (`POST /api/gamecatalog/switch/bulk/preview` and `POST /api/gamecatalog/switch/bulk/confirm`)
+is planned but not implemented in this PR; it will be added in a follow-up.
 
 ## Common error responses
 
@@ -189,10 +115,8 @@ Confirm adding the selected lines from a preview.
 - `403 Forbidden` — caller is not admin
 - `404 Not Found` — game not found (for edit/delete)
 - `409 Conflict` — duplicate game
-- `422 Unprocessable Entity` — inconsistent state (e.g. manual entry with both title and igdbGameId, or IGDB match not
-  found during confirm)
-- `503 Service Unavailable` — IGDB unavailable during a preview/confirm that requires it; the UI degrades to manual
-  add for affected lines
+- `422 Unprocessable Entity` — inconsistent state (e.g. IGDB match not found during a relink)
+- `503 Service Unavailable` — IGDB unavailable; the UI degrades to the manual-add path
 
 ## Security
 
