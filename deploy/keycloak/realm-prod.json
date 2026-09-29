@@ -69,12 +69,12 @@
       "publicClient": true,
       "directAccessGrantsEnabled": false,
       "standardFlowEnabled": true,
-      "redirectUris": ["https://${env.PRODUCTION_DOMAIN}/*"],
-      "webOrigins": ["https://${env.PRODUCTION_DOMAIN}"],
-      "rootUrl": "https://${env.PRODUCTION_DOMAIN}",
-      "baseUrl": "https://${env.PRODUCTION_DOMAIN}",
+      "redirectUris": ["https://${PRODUCTION_DOMAIN}/*"],
+      "webOrigins": ["https://${PRODUCTION_DOMAIN}"],
+      "rootUrl": "https://${PRODUCTION_DOMAIN}",
+      "baseUrl": "https://${PRODUCTION_DOMAIN}",
       "attributes": {
-        "post.logout.redirect.uris": "https://${env.PRODUCTION_DOMAIN}/*"
+        "post.logout.redirect.uris": "https://${PRODUCTION_DOMAIN}/*"
       }
     },
     {
@@ -96,7 +96,7 @@
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "fullScopeAllowed": false,
-      "secret": "${env.KEYCLOAK_BACKEND_CLIENT_SECRET}"
+      "secret": "${KEYCLOAK_BACKEND_CLIENT_SECRET}"
     }
   ],
   "users": [

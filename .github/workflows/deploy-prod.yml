@@ -12,13 +12,22 @@ on:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Only deploy Builds of pushes to main (PR builds also complete a Build run, but push no images).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     environment: production # required reviewer = Jordy (docs/runbook.md §9) — this is the manual approval gate (FR-006)
     env:
       SHA: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha }}
     steps:
+      # Check out the commit being deployed, so the manifests match the images (a workflow_run
+      # checkout would otherwise default to the latest main, which may be newer than SHA).
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
 
       - name: Join Tailscale
         uses: tailscale/github-action@v4
@@ -28,15 +37,18 @@ jobs:
           tags: tag:ci
 
       - name: Install sops, age, kustomize, kubectl
+        # Pinned versions. kubectl matches the cluster's minor (k3s v1.36.4) to stay inside the
+        # supported ±1 skew; bump it together with k3s.
         run: |
-          curl -sSLo /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.13.2/sops-v3.13.2.linux.amd64
-          chmod +x /usr/local/bin/sops
+          sudo curl -sSLo /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.13.3/sops-v3.13.3.linux.amd64
+          sudo chmod +x /usr/local/bin/sops
           curl -sSL https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz | tar -xz -C /tmp
-          sudo mv /tmp/age/age* /usr/local/bin/
-          curl -sSL "https://get.k8s.io/kustomize" | bash
-          sudo mv kustomize /usr/local/bin/
-          curl -LO "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl"
+          sudo mv /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          curl -sSL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.8.1/kustomize_v5.8.1_linux_amd64.tar.gz | tar -xz -C /tmp
+          sudo mv /tmp/kustomize /usr/local/bin/
+          curl -sSLO "https://dl.k8s.io/release/v1.36.4/bin/linux/amd64/kubectl"
           chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+          sops --version && age --version && kustomize version && kubectl version --client
 
       - name: Configure kubeconfig
         run: |

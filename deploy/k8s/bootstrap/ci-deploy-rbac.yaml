@@ -1,5 +1,6 @@
 # Namespace-scoped deploy credential for CI (FR-007). The token minted from this ServiceAccount
 # can only touch resources in the `jordylab` namespace — never the k3s admin kubeconfig.
+# Cluster-scoped, so it's part of bootstrap/ (applied once by Jordy); CI cannot change its own rights.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -12,7 +13,7 @@ metadata:
   name: ci-deploy
   namespace: jordylab
 rules:
-  - apiGroups: ["", "apps", "gateway.networking.k8s.io", "cert-manager.io", "postgresql.cnpg.io", "batch"]
+  - apiGroups: ["", "apps", "gateway.networking.k8s.io", "cert-manager.io", "postgresql.cnpg.io", "barmancloud.cnpg.io", "batch"]
     resources: ["*"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
@@ -29,3 +30,15 @@ roleRef:
   kind: Role
   name: ci-deploy
   apiGroup: rbac.authorization.k8s.io
+---
+# Long-lived token for the ci-deploy ServiceAccount; its value goes into the GitHub `production`
+# environment secret KUBE_TOKEN (docs/runbook.md §9). Rotate by deleting this Secret and re-applying
+# bootstrap/ — Kubernetes mints a new token and invalidates the old one.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ci-deploy-token
+  namespace: jordylab
+  annotations:
+    kubernetes.io/service-account.name: ci-deploy
+type: kubernetes.io/service-account-token

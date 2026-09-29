@@ -1,0 +1,9 @@
+# Namespaced platform resources for the app (database, backups, TLS certificate). Included by the
+# prod overlay, which sets `namespace: jordylab` and applies them through CI.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - cnpg-cluster.yaml
+  - ovh-object-storage.yaml
+  - certificate.yaml

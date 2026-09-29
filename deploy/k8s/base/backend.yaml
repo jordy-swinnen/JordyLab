@@ -25,6 +25,25 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
+            # DB login comes from the same basic-auth Secret CNPG uses to create the `jordylab` owner,
+            # so the password lives in exactly one place (secrets.sops.yaml → jordylab-db-app).
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-db-app
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-db-app
+                  key: password
+            # The backend reads KEYCLOAK_BACKEND_SECRET (application.yaml); the Secret key is named
+            # after the Keycloak client it belongs to, and is shared with Keycloak's realm import.
+            - name: KEYCLOAK_BACKEND_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: KEYCLOAK_BACKEND_CLIENT_SECRET
           envFrom:
             - configMapRef:
                 name: backend-config

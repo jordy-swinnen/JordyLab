@@ -4,9 +4,10 @@
 # so `git diff` on an encrypted file is still meaningful. See docs/learn/06-config-and-secrets.md
 # and docs/runbook.md "Generate the age key" for how the public key below is produced.
 #
-# TODO(jordy): replace with your real age public key, generated via `age-keygen` (docs/runbook.md
-# §7). Never put the private key here or anywhere in git.
+# Public key of Jordy's age key (generated 2026-09-29 with `age-keygen`). The private key lives only on
+# Jordy's Mac, in his password manager, and in the GitHub `production` environment secret SOPS_AGE_KEY.
+# Never put the private key here or anywhere in git.
 creation_rules:
   - path_regex: .*secrets\.sops\.ya?ml$
     encrypted_regex: ^(data|stringData)$
-    age: age1REPLACE_WITH_YOUR_AGE_PUBLIC_KEY
+    age: age1r7kr7wpup5m6nv5azt0vydqzde9qdhz98q2l7h5f67rrd44rmdestlmym6

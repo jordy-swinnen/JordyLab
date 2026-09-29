@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  keycloakUrl: 'https://jordylab.example.com/auth',
+  keycloakUrl: 'https://jordylab.be/auth',
   keycloakRealm: 'jordylab',
   keycloakClientId: 'jordylab-host',
 };

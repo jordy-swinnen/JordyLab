@@ -1,0 +1,11 @@
+# One-time, cluster-scoped setup that CI's namespace-scoped token is not allowed to apply.
+# Jordy applies this with the admin kubeconfig (docs/runbook.md §9):
+#   kubectl apply -k deploy/k8s/bootstrap
+# Re-apply only when one of these files changes.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - cert-manager-clusterissuer.yaml
+  - ci-deploy-rbac.yaml

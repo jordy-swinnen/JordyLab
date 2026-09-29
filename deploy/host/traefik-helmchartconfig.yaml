@@ -1,8 +1,11 @@
-# Customises k3s's BUNDLED Traefik (do not install a second Traefik — research.md §2).
+# Copied to /var/lib/rancher/k3s/server/manifests/traefik-config.yaml on the VPS; k3s re-applies it
+# to its bundled Traefik chart automatically.
 #
-# Deploy step (operator step, docs/runbook.md §3 "Install k3s"): copy this file to
-#   /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
-# on the VPS. k3s watches that directory and applies it automatically; no `kubectl apply` needed.
+# Enables Traefik's Gateway API provider. HTTP→HTTPS redirect is deliberately NOT done here at the
+# entryPoint level: that would redirect Let's Encrypt's HTTP-01 challenge requests before routing, so
+# cert-manager's challenge HTTPRoute (attached to the Gateway's `http` listener) would never be hit.
+# The redirect is an HTTPRoute instead (deploy/k8s/base/gateway.yaml, `http-to-https-redirect`); the
+# challenge route's exact-path match wins over its catch-all.
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
@@ -15,9 +18,3 @@ spec:
         enabled: true
     gateway:
       enabled: true
-    ports:
-      web:
-        redirections:
-          entryPoint:
-            to: websecure
-            scheme: https

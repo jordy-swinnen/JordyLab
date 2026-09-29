@@ -37,13 +37,20 @@ spec:
             - name: KC_DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: jordylab-secrets
-                  key: KEYCLOAK_DB_USERNAME
+                  name: jordylab-db-keycloak
+                  key: username
             - name: KC_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
+                  name: jordylab-db-keycloak
+                  key: password
+            # Substituted into realm-prod.json's ${KEYCLOAK_BACKEND_CLIENT_SECRET} placeholder on the
+            # first-boot realm import (the image starts with --import-realm; see deploy/keycloak/README.md).
+            - name: KEYCLOAK_BACKEND_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
                   name: jordylab-secrets
-                  key: KEYCLOAK_DB_PASSWORD
+                  key: KEYCLOAK_BACKEND_CLIENT_SECRET
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -54,7 +61,8 @@ spec:
                 secretKeyRef:
                   name: jordylab-secrets
                   key: KEYCLOAK_ADMIN_BOOTSTRAP_PASSWORD
-            # KC_HOSTNAME, KC_HTTP_RELATIVE_PATH, KC_PROXY_HEADERS, KC_PROXY_TRUSTED_ADDRESSES come
+            # KC_HOSTNAME, KC_HTTP_RELATIVE_PATH, KC_PROXY_HEADERS, KC_PROXY_TRUSTED_ADDRESSES and
+            # PRODUCTION_DOMAIN (used by realm-prod.json) come
             # from the `keycloak-config` ConfigMap above, populated with the real domain by the
             # prod overlay (deploy/k8s/overlays/prod/kustomization.yaml, T021) — the image itself
             # stays domain-agnostic (research.md §9).

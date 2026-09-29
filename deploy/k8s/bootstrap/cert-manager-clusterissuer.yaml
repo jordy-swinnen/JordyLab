@@ -1,0 +1,41 @@
+# Let's Encrypt ClusterIssuers (research.md §3). Cluster-scoped, so they live in bootstrap/ and are
+# applied once by Jordy with the admin kubeconfig — CI's namespace-scoped token cannot create them.
+# cert-manager v1.21.2 is installed with `--set config.enableGatewayAPI=true` so it can solve HTTP-01
+# challenges via an HTTPRoute on the Gateway's `http` listener instead of a legacy Ingress.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: jordy.swinnen@pm.me
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: jordylab-gateway
+                namespace: jordylab
+                sectionName: http
+---
+# Staging issuer for debugging (runbook §17): untrusted certificates, but much higher rate limits.
+# Point cluster/certificate.yaml's issuerRef here temporarily if issuance keeps failing.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: jordy.swinnen@pm.me
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: jordylab-gateway
+                namespace: jordylab
+                sectionName: http

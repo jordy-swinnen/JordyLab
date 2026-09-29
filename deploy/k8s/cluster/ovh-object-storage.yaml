@@ -2,16 +2,16 @@
 # (research.md §6). Credentials come from contracts/secrets-schema.md's S3_ACCESS_KEY/S3_SECRET_KEY,
 # decrypted from secrets.sops.yaml at deploy time — never hardcoded here.
 #
-# endpointURL and the bucket name are placeholders until Jordy creates the bucket
-# (docs/runbook.md §8) — fill in before the first real deploy.
+# Bucket `jordylab-cnpg-backups` in OVH Gravelines (GRA, 1-AZ Standard), deliberately a different
+# site than the London VPS so a datacenter loss doesn't take the backups with it (docs/runbook.md §8).
 apiVersion: barmancloud.cnpg.io/v1
 kind: ObjectStore
 metadata:
   name: ovh-object-storage
 spec:
   configuration:
-    destinationPath: s3://__OBJECT_STORAGE_BUCKET__/cnpg-backups
-    endpointURL: https://__OBJECT_STORAGE_REGION__.io.cloud.ovh.net
+    destinationPath: s3://jordylab-cnpg-backups/cnpg-backups
+    endpointURL: https://s3.gra.io.cloud.ovh.net
     s3Credentials:
       accessKeyId:
         name: jordylab-secrets
@@ -21,10 +21,12 @@ spec:
         key: S3_SECRET_KEY
     wal:
       compression: gzip
-  retentionPolicy: 30d # coarse Barman-side retention; the ScheduledBackup below governs the
-                       # 7 daily + 4 weekly rotation from /speckit-clarify (FR-014)
+  # The only retention that is actually enforced: base backups and WAL older than what's needed to
+  # restore to any point in the last 30 days are deleted. CNPG ScheduledBackups have no per-schedule
+  # "keep N" setting, so the daily/weekly schedules below only control how often a base backup is taken.
+  retentionPolicy: 30d
 ---
-# Daily base backup, retaining the last 7 (FR-014, /speckit-clarify).
+# Daily base backup (FR-014). Retention is the ObjectStore's 30d policy above, not a per-schedule count.
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:
@@ -38,8 +40,8 @@ spec:
   pluginConfiguration:
     name: barman-cloud.cloudnative-pg.io
 ---
-# Weekly base backup, retaining the last 4 — gives a month of recovery points overall alongside
-# the daily schedule above (FR-014, /speckit-clarify).
+# Weekly base backup (FR-014). Redundant with the daily one under a 30d policy; kept as an extra
+# restore anchor. Retention is the ObjectStore's 30d policy above.
 apiVersion: postgresql.cnpg.io/v1
 kind: ScheduledBackup
 metadata:
