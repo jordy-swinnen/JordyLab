@@ -1,19 +1,22 @@
 # CloudNativePG v1.30.1 (research.md §6): a single-instance PostgreSQL 16 Cluster on the k3s
-# `local-path` StorageClass, with pgvector added via the official ImageVolume extension (not a
-# custom-built image). Backs up to OVH Object Storage via the Barman Cloud Plugin
+# `local-path` StorageClass. Backs up to OVH Object Storage via the Barman Cloud Plugin
 # (ovh-object-storage.yaml) — never the deprecated in-tree `spec.backup.barmanObjectStore`.
+#
+# Image: the CNPG "standard" flavour, which already ships pgvector (plus pgaudit and failover slots).
+# The earlier plan used CNPG's ImageVolume `extensions` stanza for pgvector, but that needs
+# PostgreSQL 18+ (extension_control_path), so it cannot work on PostgreSQL 16. The "system" flavour
+# is deprecated (it only adds the in-tree Barman binaries we don't use).
+#
+# Credentials (all from secrets.sops.yaml, one place each):
+#   - jordylab-db-app      (kubernetes.io/basic-auth): owner of the `jordylab` database; used by the backend
+#   - jordylab-db-keycloak (kubernetes.io/basic-auth): the `keycloak` role; owns the `keycloak` schema
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: cnpg-cluster
 spec:
   instances: 1
-  imageName: ghcr.io/cloudnative-pg/postgresql:16.10-system-trixie
-
-  extensions:
-    - name: vector
-      image:
-        reference: ghcr.io/cloudnative-pg/pgvector-extension:16 # verify exact tag at implementation time
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.15-standard-trixie
 
   storage:
     storageClass: local-path
@@ -23,8 +26,23 @@ spec:
     initdb:
       database: jordylab
       owner: jordylab
+      secret:
+        name: jordylab-db-app
+      # postInitSQL runs in the `postgres` database: create the Keycloak role (cluster-wide object).
+      # Its password is set and kept in sync by `managed.roles` below.
       postInitSQL:
-        - CREATE SCHEMA IF NOT EXISTS keycloak;
+        - CREATE ROLE keycloak LOGIN;
+      # postInitApplicationSQL runs inside the `jordylab` database, where Keycloak expects its schema.
+      postInitApplicationSQL:
+        - CREATE SCHEMA IF NOT EXISTS keycloak AUTHORIZATION keycloak;
+
+  managed:
+    roles:
+      - name: keycloak
+        ensure: present
+        login: true
+        passwordSecret:
+          name: jordylab-db-keycloak
 
   resources:
     requests:

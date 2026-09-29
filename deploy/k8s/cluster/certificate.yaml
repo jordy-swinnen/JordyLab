@@ -1,0 +1,14 @@
+# The site's TLS certificate, issued by the `letsencrypt-prod` ClusterIssuer (bootstrap/). Lives in the
+# `jordylab` namespace (set by the prod overlay); the prod overlay patches dnsNames to the real domain.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: jordylab-tls
+  namespace: jordylab
+spec:
+  secretName: jordylab-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - placeholder.jordylab.invalid # replaced with the real domain by the prod overlay (T021)

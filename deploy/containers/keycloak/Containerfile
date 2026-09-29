@@ -17,12 +17,17 @@ RUN /opt/keycloak/bin/kc.sh build
 # --- Runtime stage ---
 FROM quay.io/keycloak/keycloak:26.7.4
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
+# Production realm, imported on startup by --import-realm. Keycloak skips the import when the realm
+# already exists, so later changes to this file are NOT applied to a running realm automatically
+# (see deploy/keycloak/README.md). ${PRODUCTION_DOMAIN}/${KEYCLOAK_BACKEND_CLIENT_SECRET} placeholders
+# are resolved from the container's environment at import time.
+COPY deploy/keycloak/realm-prod.json /opt/keycloak/data/import/realm-prod.json
 
 # Runtime-only settings (--hostname, --http-relative-path, --proxy-headers) are supplied as
 # KC_* environment variables by the Deployment manifest (deploy/k8s/base/keycloak.yaml), never
 # baked into this image, so the same image works whatever the domain ends up being.
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start", "--optimized"]
+CMD ["start", "--optimized", "--import-realm"]
 
 LABEL org.opencontainers.image.title="jordylab-keycloak"
 LABEL org.opencontainers.image.source="https://github.com/jordy-swinnen/JordyLab"

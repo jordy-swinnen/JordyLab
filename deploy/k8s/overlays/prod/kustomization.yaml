@@ -1,12 +1,14 @@
+# Production overlay, applied by CI (.github/workflows/deploy-prod.yml) with the namespace-scoped
+# ci-deploy token. Everything here is namespaced; cluster-scoped setup (Namespace, ClusterIssuers,
+# CI RBAC) lives in deploy/k8s/bootstrap and is applied once by Jordy (docs/runbook.md §9).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: jordylab
+
 resources:
-  - ../../k8s/base
-  - ../../k8s/cluster/cert-manager-clusterissuer.yaml
-  - ../../k8s/cluster/cnpg-cluster.yaml
-  - ../../k8s/cluster/ovh-object-storage.yaml
-  - ../../k8s/cluster/ci-deploy-rbac.yaml
+  - ../../base
+  - ../../cluster
   - secrets.sops.yaml
 
 images:
@@ -20,18 +22,21 @@ images:
 configMapGenerator:
   - name: backend-config
     literals:
-      - KEYCLOAK_URL=https://__DOMAIN__/auth
-      - JORDYLAB_CORS_ALLOWED_ORIGINS=https://__DOMAIN__,https://localhost
-      - MOBILE_PRODUCTION_DOMAIN=__DOMAIN__
-      - NTFY_BASE_URL=https://__DOMAIN__/ntfy
+      - POSTGRES_URL=jdbc:postgresql://cnpg-cluster-rw:5432/jordylab
+      - KEYCLOAK_URL=https://jordylab.be/auth
+      - JORDYLAB_CORS_ALLOWED_ORIGINS=https://jordylab.be,https://localhost
+      - MOBILE_PRODUCTION_DOMAIN=jordylab.be
+      - NTFY_BASE_URL=https://jordylab.be/ntfy
   - name: keycloak-config
     literals:
-      - KC_HOSTNAME=https://__DOMAIN__/auth
+      - KC_HOSTNAME=https://jordylab.be/auth
       - KC_HTTP_RELATIVE_PATH=/auth
       - KC_PROXY_HEADERS=xforwarded
-      # Restrict to the in-cluster Traefik Service CIDR — fill in at implementation time from
-      # `kubectl get svc -n kube-system traefik -o jsonpath='{.spec.clusterIP}'` or the pod CIDR.
-      - KC_PROXY_TRUSTED_ADDRESSES=__TRAEFIK_CIDR__
+      # Only trust X-Forwarded-* headers from inside the cluster: k3s's default pod CIDR, where the
+      # Traefik pod lives (its IP changes on restart, so a single IP would break).
+      - KC_PROXY_TRUSTED_ADDRESSES=10.42.0.0/16
+      # Used by realm-prod.json's ${PRODUCTION_DOMAIN} placeholders on the first-boot import.
+      - PRODUCTION_DOMAIN=jordylab.be
 
 patches:
   - target:
@@ -40,8 +45,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/dnsNames/0
-        value: __DOMAIN__
-
-# NOTE: __DOMAIN__ and __TRAEFIK_CIDR__ are placeholders until the domain is bought (spec.md
-# Assumptions) and the cluster exists (US8 bootstrap). Replace with the real values here, or via
-# `kustomize edit set` / a sed step in deploy-prod.yml, before the first real deploy.
+        value: jordylab.be

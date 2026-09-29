@@ -1,6 +1,11 @@
 # Gateway API resources for the public routing table (contracts/http-routing.md).
 # Traefik (k3s's bundled ingress) is the Gateway implementation — see
 # deploy/host/traefik-helmchartconfig.yaml for enabling its Gateway API provider.
+#
+# Listener ports are Traefik's *internal* entryPoint ports (k3s: web=:8000, websecure=:8443), not the
+# public 80/443 — Traefik's Gateway provider matches listeners to entryPoints by that port, and the
+# traefik Service maps public 80/443 onto them. Using 80/443 here gives
+# "Cannot find entryPoint for Gateway: no matching entryPoint for port 80".
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -10,13 +15,13 @@ spec:
   listeners:
     - name: http
       protocol: HTTP
-      port: 80
+      port: 8000
       allowedRoutes:
         namespaces:
           from: Same
     - name: https
       protocol: HTTPS
-      port: 443
+      port: 8443
       tls:
         mode: Terminate
         certificateRefs:
