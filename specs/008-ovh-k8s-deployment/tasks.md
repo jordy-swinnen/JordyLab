@@ -75,7 +75,7 @@ feature's own phase-order note, this and Setup are the only phases that need no 
 - [X] T010 [P] Create `deploy/containers/backend/Containerfile`: multi-stage Java 25/Gradle build producing a
   `linux/amd64` runtime image
 - [X] T011 [P] Create `deploy/containers/frontend/Containerfile`: multi-stage Bun build running
-  `nx build jordylab --configuration=production`, final stage on `nginx/docker-nginx-unprivileged:1.29-alpine`
+  `nx build jordylab --configuration=production`, final stage on `nginxinc/nginx-unprivileged:1.30-alpine`
   (`research.md` §10) with SPA fallback and security headers
 - [X] T012 [P] Create `deploy/containers/keycloak/Containerfile`: based on `quay.io/keycloak/keycloak:26.7.4`
   (`research.md` §9), running `kc.sh build` with the `jordylab` login theme baked in
@@ -100,7 +100,7 @@ confirm the certificate is valid (once the cluster from Phase 10/US8 is bootstra
 - [X] T015 [US1] Create `deploy/host/traefik-helmchartconfig.yaml` (a `HelmChartConfig` enabling
   `providers.kubernetesGateway.enabled` and `gateway.enabled`, per `research.md` §2) — this file is authored here;
   dropping it onto the live VPS is the **(operator step)** documented in T064
-- [X] T016 [US1] Create `deploy/k8s/cluster/cert-manager-clusterissuer.yaml`: a Let's Encrypt `ClusterIssuer` using
+- [X] T016 [US1] Create `deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml` (moved from `cluster/` 2026-09-30 — cluster-scoped, applied once by Jordy): a Let's Encrypt `ClusterIssuer` using
   the `gatewayHTTPRoute` HTTP-01 solver (`research.md` §3)
 - [X] T017 [US1] Configure the Keycloak container's start command (in the Containerfile or an entrypoint script)
   with `--hostname=https://<domain>/auth`, `--http-relative-path=/auth`, `--proxy-headers=xforwarded`
@@ -193,7 +193,7 @@ confirm the previous version returns.
 - [X] T032 [US4] Implement `.github/workflows/build.yml`: run tests, then (after T028's gitleaks step passes)
   build and push the three images to `ghcr.io/jordy-swinnen/jordylab-*` tagged by commit SHA, using
   `docker/login-action@v4`, `docker/build-push-action@v7`, `docker/metadata-action@v6` (`research.md` §11)
-- [X] T033 [P] [US4] Create `deploy/k8s/cluster/ci-deploy-rbac.yaml`: a namespace-scoped `ServiceAccount` + `Role`
+- [X] T033 [P] [US4] Create `deploy/k8s/bootstrap/ci-deploy-rbac.yaml` (moved from `cluster/` 2026-09-30; now also holds the CI token Secret): a namespace-scoped `ServiceAccount` + `Role`
   + `RoleBinding` limited to the `jordylab` namespace (FR-007) — manifest only; minting and storing the resulting
   token is the **(operator step)** in T035
 - [X] T034 [US4] Implement `.github/workflows/deploy-prod.yml`: require the `production` GitHub Environment's
@@ -220,16 +220,19 @@ and, per T065 below, the VPS must already be joined to the same Tailscale networ
 database, and confirm the app works against it.
 
 - [X] T037 [P] [US5] Create `deploy/k8s/cluster/cnpg-cluster.yaml`: a single-instance PostgreSQL 16 `Cluster` on
-  the `local-path` `StorageClass`, with the pgvector `ImageVolume` extension (`research.md` §6), including the
+  the `local-path` `StorageClass`, with pgvector from the CNPG standard image (`research.md` §6), including the
   `keycloak` schema, with readiness/liveness probes and resource requests/limits configured (FR-010) — CNPG
-  manages its own probes; explicit `resources` requests/limits added
+  manages its own probes; explicit `resources` requests/limits added. *Changed 2026-09-30: ImageVolume extensions need
+  PostgreSQL 18+, so pgvector now comes from the CNPG `16.15-standard-trixie` image; DB logins come from the
+  `jordylab-db-app` / `jordylab-db-keycloak` basic-auth Secrets.*
 - [X] T038 [P] [US5] Create `deploy/k8s/cluster/barman-cloud-plugin-values.yaml` (Helm values for the Barman Cloud
   Plugin, `research.md` §6) and `deploy/k8s/cluster/ovh-object-storage.yaml` (an `ObjectStore` CRD referencing the
   S3 keys from `contracts/secrets-schema.md`)
 - [X] T039 [US5] Configure the backup/`ScheduledBackup` retention policy for 7 daily + 4 weekly snapshots (per
   `/speckit-clarify`, FR-014; depends on T038's `ObjectStore` existing) — approximated via two `ScheduledBackup`
   schedules (daily/weekly) plus a coarse time-based `retentionPolicy`; flagged in-file for a closer look at
-  Barman's count-based retention options during a real deploy
+  Barman's count-based retention options during a real deploy. *Resolved 2026-09-30: count-based retention isn't
+  supported; FR-014 now specifies the 30-day time-based policy that `ovh-object-storage.yaml` enforces.*
 - [X] T040 [P] [US5] Create PVC manifests for game artwork and 007's APK storage on the `local-path`
   `StorageClass` in `deploy/k8s/base/` (FR-016)
 - [X] T041 [P] [US5] Write `docs/runbook.md`'s "OVH Object Storage bucket" section — **(operator step)**: Jordy
@@ -266,7 +269,7 @@ run per T041/T042.
   `.sops.yaml` and `secrets.sops.yaml` from T004/T027, and the realm secret placeholders from T018)
 - [X] T050 [P] [US6] Write `docs/learn/07-storage.md` (PVC/StorageClass/local-path — links to T040's PVCs)
 - [X] T051 [P] [US6] Write `docs/learn/08-operators-and-crds.md` (the CloudNativePG operator, the Barman Cloud
-  Plugin, ImageVolume extensions — links to T037/T038)
+  Plugin — links to T037/T038; ImageVolume extensions dropped 2026-09-30, see `research.md` §6)
 - [X] T052 [P] [US6] Write `docs/learn/09-probes-resources-rbac.md` (readiness/liveness probes, resource limits,
   the `ci-deploy-rbac.yaml` from T033)
 - [X] T053 [P] [US6] Write `docs/learn/10-cicd.md` (the `build.yml`/`deploy-prod.yml` workflows from T032/T034)

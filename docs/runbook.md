@@ -28,6 +28,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 17. [Certificate troubleshooting](#17-certificate-troubleshooting)
 18. [Disk cleanup](#18-disk-cleanup)
 19. [k3s / OS upgrades](#19-k3s--os-upgrades)
+20. [Release a version (one tag → GitHub Release → deploy)](#20-release-a-version-one-tag--github-release--deploy)
 
 ---
 
@@ -261,7 +262,7 @@ If the private key is gone from **both** the password manager and the GitHub env
 
 Mandatory once before go-live, then quarterly (FR-015, `/speckit-clarify`):
 
-1. Pick a recovery point in time within the retention window (7 daily + 4 weekly backups).
+1. Pick a recovery point in time within the retention window (the last 30 days; spec.md FR-014).
 2. Create a new CNPG `Cluster` with a `bootstrap.recovery` section pointing at the same `ObjectStore`
    and the chosen `recoveryTarget.targetTime`.
 3. Wait for the recovered cluster to report `Ready`, then point a throwaway backend pod at it
@@ -316,3 +317,58 @@ df -h /var/lib/rancher/k3s
    ```
    Check `research.md` and the k3s release notes for the current stable tag before bumping the pin.
 3. After either, verify: `kubectl get nodes`, `kubectl -n jordylab get pods`, then the `quickstart.md` checks.
+
+## 20. Release a version (one tag → GitHub Release → deploy)
+
+**Status: planned. The workflows below are not implemented yet.** Until they are, use §10 (push to `main`,
+approve `deploy-prod.yml`) for deploys and §11 for rollbacks. This section is the target flow, agreed 2026-09-29:
+releasing must be one action on GitHub, and it covers the web app and the Android APK together.
+
+### The flow
+
+1. Merge to `main` as usual. `build.yml` tests, scans, and publishes the three images tagged `sha-<full-sha>`.
+   A push to `main` **no longer deploys by itself**; production only changes on a release.
+2. Release by pushing a semver tag on a commit that is on `main` and has a green Build:
+   ```
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+   (or use GitHub → Releases → *Draft a new release* → create the tag there).
+3. `release.yml` runs on `v*` tags and:
+   - checks the tag's commit is on `main` and that its Build succeeded (it fails otherwise);
+   - **retags** the already-tested images (`sha-<sha>` → `v0.1.0`) instead of rebuilding, so what shipped is
+     exactly what was tested;
+   - builds and signs the APK, versioned from the tag, and attaches it to the release (reusing the steps in
+     `android-release.yml`);
+   - creates the GitHub Release with generated notes (`gh release create --generate-notes`).
+4. The deploy job (same file or a called `deploy-prod.yml`) uses the `production` environment, so it waits for
+   your approval (§9). Approve it in the Actions run; it deploys `ghcr.io/jordy-swinnen/jordylab-*:v0.1.0`.
+5. Verify with the `quickstart.md` US1 checks.
+
+### Deploy or roll back to any version
+
+GitHub → Actions → *Deploy to Production* → *Run workflow* → enter the release tag (for example `v0.0.9`).
+`workflow_dispatch` takes a `version` input, replacing today's `sha` input. Approve, and the cluster is set to
+that version's images. This is the preferred rollback; `kubectl rollout undo` (§11) stays as the emergency path.
+
+### Changes to make when implementing
+
+| File | Change |
+|---|---|
+| `.github/workflows/release.yml` | New: `on: push: tags: ['v*']`, jobs as above. |
+| `.github/workflows/deploy-prod.yml` | Remove the `workflow_run` trigger; `workflow_dispatch` input becomes `version`; image tags use `${VERSION}` instead of `sha-${SHA}`; pin the tools it downloads (see below). |
+| `.github/workflows/android-release.yml` | Retire the `mobile-v*` trigger; its build steps move into `release.yml`. **The keystore/realm gate (tasks.md T052) still applies:** the APK job stays disabled until `ANDROID_KEYSTORE_BASE64` and the realm client exist. |
+| GitHub settings | Tag ruleset: only you can create `v*` tags. Branch ruleset on `main`: require PRs and the Build checks. |
+
+### Fix while you are in `deploy-prod.yml`
+
+- It downloads `kubectl` `v1.37.0`, the same unverified version as the old k3s pin. Use the version that matches
+  the k3s you install (kubectl may differ from the server by one minor version).
+- It installs `kustomize` through `https://get.k8s.io/kustomize`, which is unpinned. Pin a release URL.
+- After the tag flow exists, delete the `sha-` deploy path and this note.
+
+### Order of work
+
+1. Get the first deploy working with §10 (needs the cluster, secrets and CI access from §1-9).
+2. Then implement this section on a branch, test it with a `v0.0.1-rc1` tag, and roll back once with the
+   *Run workflow* button to prove it.
