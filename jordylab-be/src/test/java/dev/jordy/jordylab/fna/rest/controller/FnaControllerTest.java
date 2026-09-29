@@ -7,6 +7,8 @@ import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import dev.jordy.jordylab.shared.config.TestSecurityConfig;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Import(TestSecurityConfig.class)
 @WebMvcTest(FnaController.class)
 class FnaControllerTest {
 
@@ -35,6 +38,9 @@ class FnaControllerTest {
 
     @MockitoBean
     private FnaService fnaService;
+
+    @MockitoBean
+    private dev.jordy.jordylab.fna.service.ManualArticleSubmissionService manualArticleSubmissionService;
 
     @Test
     void getArticlesReturnsArticleList() throws Exception {

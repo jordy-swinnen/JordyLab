@@ -50,6 +50,12 @@ class GameTest {
     }
 
     @Test
+    void buildWithTooLongIgdbGameId() {
+        assertThatThrownBy(() -> GameTestBuilder.aGame().igdbGameId("x".repeat(33)).build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void buildWithTooLongGenres() {
         assertThatThrownBy(() -> GameTestBuilder.aGame().genres("x".repeat(201)).build())
                 .isInstanceOf(IllegalArgumentException.class);
@@ -223,6 +229,17 @@ class GameTest {
         game.updateCatalogInfo("New Library Name", "Steam", TitleSource.LIBRARY);
 
         assertThat(game.getTitle()).isEqualTo("New Library Name");
+    }
+
+    @Test
+    void manualTitleSourceOutranksLibrary() {
+        Game game = Game.builder().platform("Nintendo Switch").title("Library Name")
+                .titleSource(TitleSource.LIBRARY).build();
+
+        game.updateCatalogInfo("Handheld Name", "Nintendo Switch", TitleSource.MANUAL);
+
+        assertThat(game.getTitle()).isEqualTo("Handheld Name");
+        assertThat(game.getTitleSource()).isEqualTo(TitleSource.MANUAL);
     }
 
     @Test

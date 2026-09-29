@@ -13,6 +13,12 @@ public enum SourceType {
         public String platform() {
             return "EmuDeck";
         }
+    },
+    SWITCH {
+        @Override
+        public String platform() {
+            return "Nintendo Switch";
+        }
     };
 
     /**

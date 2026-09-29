@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
@@ -49,6 +50,12 @@ public class GameInstallation extends BaseEntity<GameInstallation> {
     @Enumerated(EnumType.STRING)
     private Presence presence;
 
+    private boolean manual;
+
+    @Enumerated(EnumType.STRING)
+    @Setter
+    private InstallationFormat format;
+
     private Instant firstSeenAt;
 
     private Instant lastSeenAt;
@@ -70,6 +77,23 @@ public class GameInstallation extends BaseEntity<GameInstallation> {
         this.uninstalledAt = uninstalledAt;
     }
 
+    /**
+     * Creates a manually tracked installation for a non-scannable source such as the virtual
+     * Nintendo Switch source. Manual installations are always installed and carry a format.
+     */
+    public static GameInstallation createManual(Game game, ScanSource source, String externalRef,
+            InstallationFormat format, Instant seenAt) {
+        return GameInstallation.builder()
+                .game(game)
+                .source(source)
+                .externalRef(externalRef)
+                .format(format)
+                .manual(true)
+                .firstSeenAt(seenAt)
+                .lastSeenAt(seenAt)
+                .build();
+    }
+
     public static class GameInstallationBuilder {
         public GameInstallation build() {
             Preconditions.checkArgument(game != null, "game is required");
@@ -79,6 +103,8 @@ public class GameInstallation extends BaseEntity<GameInstallation> {
                     "externalRef must not exceed 500 characters");
             Preconditions.checkArgument(firstSeenAt != null, "firstSeenAt is required");
             Preconditions.checkArgument(lastSeenAt != null, "lastSeenAt is required");
+            Preconditions.checkArgument(!manual || format != null,
+                    "format is required for manual installations");
             if (id == null) {
                 id = UUID.randomUUID();
             }
@@ -86,8 +112,8 @@ public class GameInstallation extends BaseEntity<GameInstallation> {
                 presence = Presence.INSTALLED;
             }
 
-            return new GameInstallation(id, game, source, externalRef, presence, firstSeenAt, lastSeenAt,
-                    uninstalledAt);
+            return new GameInstallation(id, game, source, externalRef, presence, manual, format, firstSeenAt,
+                    lastSeenAt, uninstalledAt);
         }
     }
 }

@@ -18,6 +18,8 @@ public interface GameInstallationRepository extends JpaRepository<GameInstallati
 
     List<GameInstallation> findAllBySourceId(UUID sourceId);
 
+    List<GameInstallation> findAllBySourceIdAndManualFalse(UUID sourceId);
+
     List<GameInstallation> findAllByGameId(UUID gameId);
 
     List<GameInstallation> findAllByGameIdIn(Collection<UUID> gameIds);

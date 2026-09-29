@@ -44,11 +44,12 @@ describe('gamecatalogRoutes', () => {
   const child = (path: string) =>
     shell().children?.find((route) => route.path === path);
 
-  it('lists grid, chat, sources and detail under the shell route', () => {
+  it('lists grid, chat, sources, switch and detail under the shell route', () => {
     expect(shell().children?.map((route) => route.path)).toEqual([
       'grid',
       'chat',
       'sources',
+      'switch',
       ':id',
       '',
     ]);
@@ -78,6 +79,20 @@ describe('gamecatalogRoutes', () => {
     roles.set(['admin']);
 
     await expect(runGuard(child('sources')?.canActivate)).resolves.toBe(true);
+  });
+
+  it('guards the switch child to admin only', async () => {
+    roles.set(['guest']);
+
+    await expect(runGuard(child('switch')?.canActivate)).resolves.toBe(
+      'parsed:/games/grid',
+    );
+  });
+
+  it('lets an admin reach switch', async () => {
+    roles.set(['admin']);
+
+    await expect(runGuard(child('switch')?.canActivate)).resolves.toBe(true);
   });
 
   it('leaves grid, chat and detail open to whatever the shell already let through', () => {

@@ -49,7 +49,7 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "fullScopeAllowed": false
+      "fullScopeAllowed": true
     }
   ],
   "users": [
