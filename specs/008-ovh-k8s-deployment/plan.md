@@ -24,13 +24,13 @@ per Jordy's own shell.
 
 **Primary Dependencies**: k3s `v1.37.0+k3s1` (bundled Traefik `3.7.13`, Gateway API v1.6.1 support); cert-manager
 `v1.21.2`; CloudNativePG operator `v1.30.1` + the Barman Cloud Plugin (`cloudnative-pg/plugin-barman-cloud`);
-Keycloak `26.7.4`; `nginx/docker-nginx-unprivileged:1.29-alpine`; SOPS `v3.13.2` + age `v1.3.2`; a self-hosted
+Keycloak `26.7.4`; `nginxinc/nginx-unprivileged:1.30-alpine`; SOPS `v3.13.2` + age `v1.3.2`; a self-hosted
 `ntfy` instance (upstream image, not built by this repo's CI); GitHub Actions with `docker/login-action@v4`,
 `docker/build-push-action@v7`, `docker/metadata-action@v6`, `gitleaks/gitleaks-action@v3`,
 `tailscale/github-action@v4`. Full rationale and source links in `research.md`.
 
-**Storage**: PostgreSQL 16 with pgvector (CNPG operand `ghcr.io/cloudnative-pg/postgresql:16.10-system-trixie` +
-the official pgvector ImageVolume extension), a single instance on the k3s `local-path` StorageClass; game
+**Storage**: PostgreSQL 16 with pgvector (CNPG operand `ghcr.io/cloudnative-pg/postgresql:16.15-standard-trixie`,
+which ships pgvector), a single instance on the k3s `local-path` StorageClass; game
 artwork and mobile APK files on a `local-path` PVC; database backups (base backups + continuous WAL) to OVH
 Object Storage (S3-compatible) via the Barman Cloud Plugin, with a 30-day point-in-time recovery window (daily + weekly base backups; see spec.md FR-014).
 

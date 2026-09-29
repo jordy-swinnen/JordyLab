@@ -91,6 +91,13 @@ CRD, with base backups plus continuous WAL archiving and a retention policy of 7
 (per `/speckit-clarify`). *Superseded 2026-09-30: count-based retention isn't expressible; a time-based
 `retentionPolicy: 30d` is used instead — see spec.md FR-014.*
 
+*Also superseded 2026-09-30 (first deploy): CNPG's ImageVolume extensions require PostgreSQL 18+
+(`extension_control_path`) and cannot work on PostgreSQL 16. The operand is now
+`ghcr.io/cloudnative-pg/postgresql:16.15-standard-trixie`, CNPG's "standard" flavour, which already includes
+pgvector (the "system" flavour is deprecated). Upgrading to PostgreSQL 18 would make the ImageVolume route
+available again. Source: https://cloudnative-pg.io/docs/1.30/imagevolume_extensions/,
+https://github.com/cloudnative-pg/postgres-containers (checked 2026-09-30).*
+
 **Rationale**: CNPG's in-tree `spec.backup.barmanObjectStore` field is deprecated (since CNPG 1.26); the plugin is
 CNPG's current recommended path for all new deployments, so building on it now avoids a forced migration later. The
 ImageVolume extensions mechanism avoids maintaining a custom Postgres+pgvector image and its own rebuild/patch
@@ -178,14 +185,16 @@ keycloak.org search-cache (checked 2026-09-28).
 
 ## 10. Frontend image: nginx-unprivileged
 
-**Decision**: `nginx/docker-nginx-unprivileged` (Docker Hub image `nginxinc/nginx-unprivileged`), tag family
-`1.29-alpine`, as the final stage after a multi-stage Bun + `nx build jordylab --configuration=production` build.
+**Decision**: Docker Hub image `nginxinc/nginx-unprivileged` (source repo `nginx/docker-nginx-unprivileged`), tag family
+`1.30-alpine` (nginx stable branch), as the final stage after a multi-stage Bun + `nx build jordylab --configuration=production` build.
 
 **Rationale**: Actively maintained, runs as a non-root UID by default (needed since the container never runs as
 root anywhere in this deployment), small Alpine base.
 
 **Source**: https://hub.docker.com/r/nginxinc/nginx-unprivileged,
-https://github.com/nginx/docker-nginx-unprivileged (checked 2026-09-28).
+https://github.com/nginx/docker-nginx-unprivileged (checked 2026-09-28). *Corrected 2026-09-30: the Containerfile
+had used the GitHub repo path `nginx/docker-nginx-unprivileged` as the image name, which doesn't exist on Docker Hub
+and failed Build #14.*
 
 ## 11. CI tooling versions
 

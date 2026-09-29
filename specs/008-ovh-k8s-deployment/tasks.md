@@ -75,7 +75,7 @@ feature's own phase-order note, this and Setup are the only phases that need no 
 - [X] T010 [P] Create `deploy/containers/backend/Containerfile`: multi-stage Java 25/Gradle build producing a
   `linux/amd64` runtime image
 - [X] T011 [P] Create `deploy/containers/frontend/Containerfile`: multi-stage Bun build running
-  `nx build jordylab --configuration=production`, final stage on `nginx/docker-nginx-unprivileged:1.29-alpine`
+  `nx build jordylab --configuration=production`, final stage on `nginxinc/nginx-unprivileged:1.30-alpine`
   (`research.md` §10) with SPA fallback and security headers
 - [X] T012 [P] Create `deploy/containers/keycloak/Containerfile`: based on `quay.io/keycloak/keycloak:26.7.4`
   (`research.md` §9), running `kc.sh build` with the `jordylab` login theme baked in
@@ -220,7 +220,7 @@ and, per T065 below, the VPS must already be joined to the same Tailscale networ
 database, and confirm the app works against it.
 
 - [X] T037 [P] [US5] Create `deploy/k8s/cluster/cnpg-cluster.yaml`: a single-instance PostgreSQL 16 `Cluster` on
-  the `local-path` `StorageClass`, with the pgvector `ImageVolume` extension (`research.md` §6), including the
+  the `local-path` `StorageClass`, with pgvector from the CNPG standard image (`research.md` §6), including the
   `keycloak` schema, with readiness/liveness probes and resource requests/limits configured (FR-010) — CNPG
   manages its own probes; explicit `resources` requests/limits added. *Changed 2026-09-30: ImageVolume extensions need
   PostgreSQL 18+, so pgvector now comes from the CNPG `16.15-standard-trixie` image; DB logins come from the
@@ -269,7 +269,7 @@ run per T041/T042.
   `.sops.yaml` and `secrets.sops.yaml` from T004/T027, and the realm secret placeholders from T018)
 - [X] T050 [P] [US6] Write `docs/learn/07-storage.md` (PVC/StorageClass/local-path — links to T040's PVCs)
 - [X] T051 [P] [US6] Write `docs/learn/08-operators-and-crds.md` (the CloudNativePG operator, the Barman Cloud
-  Plugin, ImageVolume extensions — links to T037/T038)
+  Plugin — links to T037/T038; ImageVolume extensions dropped 2026-09-30, see `research.md` §6)
 - [X] T052 [P] [US6] Write `docs/learn/09-probes-resources-rbac.md` (readiness/liveness probes, resource limits,
   the `ci-deploy-rbac.yaml` from T033)
 - [X] T053 [P] [US6] Write `docs/learn/10-cicd.md` (the `build.yml`/`deploy-prod.yml` workflows from T032/T034)
