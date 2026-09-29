@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
-import { ChatAnswer, ChatAskResponse, GameDetail, GamesPage, InstallStatus, LibrarySource, LibraryStatus, LibrarySyncRun, RefreshAll, ScanLibraryType, ScanSource } from './gamecatalog.models';
+import { ChatAnswer, ChatAskResponse, GameDetail, GamesPage, InstallStatus, LibrarySource, LibraryStatus, LibrarySyncRun, RefreshAll, ScanLibraryType, ScanSource, SwitchGameFormat, SwitchGameResponse, SwitchSearchResult } from './gamecatalog.models';
 
 export interface GamesQuery {
   search?: string;
@@ -121,6 +121,18 @@ export class GameCatalogApiService {
         throw error;
       })
     );
+  }
+
+  searchSwitchGames(query: string): Observable<SwitchSearchResult[]> {
+    const params = new HttpParams().set('query', query);
+
+    return this.#http.get<SwitchSearchResult[]>('/api/gamecatalog/switch/search', { params });
+  }
+
+  addSwitchGame(igdbGameId: number | null, title: string | null, format: SwitchGameFormat): Observable<SwitchGameResponse> {
+    const body = igdbGameId != null ? { igdbGameId, format } : { title, format };
+
+    return this.#http.post<SwitchGameResponse>('/api/gamecatalog/switch/games', body);
   }
 }
 

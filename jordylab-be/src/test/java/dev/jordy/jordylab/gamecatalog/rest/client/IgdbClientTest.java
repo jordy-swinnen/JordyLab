@@ -147,6 +147,82 @@ class IgdbClientTest {
         assertThat(igdbClient.findGameIdsByTitle("Portal 2")).isEmpty();
     }
 
+    @Test
+    void searchSwitchGamesReturnsSwitchMatchesWithImageUrls() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [
+                  {
+                    "id": 1111,
+                    "name": "Mario Kart 8 Deluxe",
+                    "first_release_date": 1492819200,
+                    "genres": [{"name": "Racing"}],
+                    "involved_companies": [{"company": {"name": "Nintendo EPD"}}],
+                    "cover": {"image_id": "cover123"},
+                    "artworks": [{"image_id": "art123"}]
+                  }
+                ]
+                """)));
+
+        List<IgdbClient.SwitchSearchResult> results = igdbClient.searchSwitchGames("mario kart");
+
+        assertThat(results).hasSize(1);
+        IgdbClient.SwitchSearchResult result = results.get(0);
+        assertSoftly(softly -> {
+            softly.assertThat(result.igdbGameId()).isEqualTo(1111L);
+            softly.assertThat(result.title()).isEqualTo("Mario Kart 8 Deluxe");
+            softly.assertThat(result.releaseYear()).isEqualTo(2017);
+            softly.assertThat(result.genres()).containsExactly("Racing");
+            softly.assertThat(result.developer()).isEqualTo("Nintendo EPD");
+            softly.assertThat(result.coverUrl()).contains("cover123");
+            softly.assertThat(result.bannerUrl()).contains("art123");
+        });
+        verify(postRequestedFor(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("platforms = (130)")));
+    }
+
+    @Test
+    void searchSwitchGamesEmptyWhenUnconfigured() {
+        igdbClient.clientId = "";
+
+        assertThat(igdbClient.searchSwitchGames("mario kart")).isEmpty();
+    }
+
+    @Test
+    void fetchSwitchGameDetailsReturnsMetadataAndMultiplayer() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [
+                  {
+                    "id": 1111,
+                    "name": "Mario Kart 8 Deluxe",
+                    "first_release_date": 1492819200,
+                    "genres": [{"name": "Racing"}],
+                    "involved_companies": [{"company": {"name": "Nintendo EPD"}}],
+                    "cover": {"image_id": "cover123"}
+                  }
+                ]
+                """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("""
+                [ {"game": 1111, "platform": 130, "offlinecoop": true, "offlinecoopmax": 4, "splitscreen": true} ]
+                """)));
+
+        Optional<IgdbClient.SwitchGameDetails> details = igdbClient.fetchSwitchGameDetails(1111L);
+
+        assertThat(details).isPresent();
+        assertSoftly(softly -> {
+            softly.assertThat(details.get().title()).isEqualTo("Mario Kart 8 Deluxe");
+            softly.assertThat(details.get().multiplayerMode()).isNotNull();
+            softly.assertThat(details.get().multiplayerMode().localMultiplayer()).isTrue();
+            softly.assertThat(details.get().multiplayerMode().maxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(details.get().multiplayerMode().splitScreen()).isTrue();
+        });
+    }
+
+    @Test
+    void buildImageUrlReturnsNullForBlankImageId() {
+        assertThat(igdbClient.buildImageUrl("", IgdbClient.ImageSize.COVER_BIG)).isNull();
+        assertThat(igdbClient.buildImageUrl(null, IgdbClient.ImageSize.COVER_BIG)).isNull();
+    }
+
     private void stubToken() {
         stubFor(post(urlPathEqualTo("/oauth2/token")).willReturn(json("""
                 {"access_token": "test-token", "expires_in": 3600, "token_type": "bearer"}

@@ -5,6 +5,8 @@ import nl.jqno.equalsverifier.Warning;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -71,6 +73,45 @@ class GameInstallationTest {
     void buildWithoutLastSeenAt() {
         assertThatThrownBy(() -> GameInstallationTestBuilder.aGameInstallation().lastSeenAt(null).build())
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createManualInstallationSetsFormatAndManualFlag() {
+        Instant seenAt = GameInstallationTestBuilder.DEFAULT_FIRST_SEEN;
+
+        GameInstallation installation = GameInstallation.createManual(
+                GameTestBuilder.aDefaultGame(),
+                ScanSourceTestBuilder.aDefaultScanSource(),
+                GameInstallationTestBuilder.DEFAULT_EXTERNAL_REF,
+                InstallationFormat.PHYSICAL,
+                seenAt);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(installation.isManual()).isTrue();
+            softly.assertThat(installation.getFormat()).isEqualTo(InstallationFormat.PHYSICAL);
+            softly.assertThat(installation.isInstalled()).isTrue();
+            softly.assertThat(installation.getFirstSeenAt()).isEqualTo(seenAt);
+            softly.assertThat(installation.getLastSeenAt()).isEqualTo(seenAt);
+        });
+    }
+
+    @Test
+    void buildManualInstallationWithoutFormatFails() {
+        assertThatThrownBy(() -> GameInstallationTestBuilder.aGameInstallation()
+                .manual(true)
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("format is required");
+    }
+
+    @Test
+    void buildNonManualInstallationAllowsNullFormat() {
+        GameInstallation installation = GameInstallationTestBuilder.aGameInstallation()
+                .manual(false)
+                .format(null)
+                .build();
+
+        assertThat(installation.getFormat()).isNull();
     }
 
     @Test

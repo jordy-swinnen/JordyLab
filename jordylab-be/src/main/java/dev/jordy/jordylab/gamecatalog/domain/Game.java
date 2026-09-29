@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.util.StringUtils;
 
 import java.util.UUID;
@@ -30,6 +31,7 @@ import java.util.UUID;
 public class Game extends BaseEntity<Game> {
 
     private static final int MAX_STEAM_APP_ID_LENGTH = 32;
+    private static final int MAX_IGDB_GAME_ID_LENGTH = 32;
     private static final int MAX_GENRES_LENGTH = 200;
     private static final int MAX_NAME_LENGTH = 100;
     private static final int MIN_RELEASE_YEAR = 1950;
@@ -41,6 +43,9 @@ public class Game extends BaseEntity<Game> {
     private String platform;
 
     private String steamAppId;
+
+    @Setter
+    private String igdbGameId;
 
     private String title;
 
@@ -228,6 +233,8 @@ public class Game extends BaseEntity<Game> {
             Preconditions.checkArgument(StringUtils.hasText(title), "title is required");
             Preconditions.checkArgument(steamAppId == null || steamAppId.length() <= MAX_STEAM_APP_ID_LENGTH,
                     "steamAppId must not exceed 32 characters");
+            Preconditions.checkArgument(igdbGameId == null || igdbGameId.length() <= MAX_IGDB_GAME_ID_LENGTH,
+                    "igdbGameId must not exceed 32 characters");
             Preconditions.checkArgument(genres == null || genres.length() <= MAX_GENRES_LENGTH,
                     "genres must not exceed 200 characters");
             Preconditions.checkArgument(developer == null || developer.length() <= MAX_NAME_LENGTH,
@@ -258,9 +265,9 @@ public class Game extends BaseEntity<Game> {
                 multiplayerSource = MultiplayerSource.UNKNOWN;
             }
 
-            return new Game(id, platform, steamAppId, title, titleSource, genre, genres, developer, publisher,
-                    releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer, splitScreen,
-                    multiplayerSource, multiplayerAttempts, description, enrichmentStatus,
+            return new Game(id, platform, steamAppId, igdbGameId, title, titleSource, genre, genres, developer,
+                    publisher, releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer,
+                    splitScreen, multiplayerSource, multiplayerAttempts, description, enrichmentStatus,
                     enrichmentAttempts, metadataStatus, metadataAttempts, coverStatus, coverRef, bannerStatus,
                     bannerRef, artworkFallbackRequests);
         }

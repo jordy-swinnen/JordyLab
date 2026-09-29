@@ -32,6 +32,12 @@ export const gamecatalogRoutes: Route[] = [
           ),
       },
       {
+        path: 'switch',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () =>
+          import('./switch-game/switch-game.component').then((m) => m.SwitchGameComponent),
+      },
+      {
         path: ':id',
         loadComponent: () =>
           import('./game-detail/game-detail.component').then(

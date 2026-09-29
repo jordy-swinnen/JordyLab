@@ -46,6 +46,7 @@ public class ReconciliationService {
         Map<String, GamePayload> entriesByRef = deduplicateByExternalRef(validEntries);
         Map<String, GameInstallation> existingByRef = gameInstallationRepository
                 .findAllBySourceId(source.getId()).stream()
+                .filter(installation -> !installation.isManual())
                 .collect(Collectors.toMap(GameInstallation::getExternalRef, Function.identity()));
 
         int added = 0;
@@ -99,7 +100,9 @@ public class ReconciliationService {
     public void purgeUninstalledGames() {
         Instant cutoff = Instant.now().minus(properties.gracePeriodDays(), ChronoUnit.DAYS);
         List<GameInstallation> expired = gameInstallationRepository
-                .findByPresenceAndUninstalledAtBefore(Presence.UNINSTALLED, cutoff);
+                .findByPresenceAndUninstalledAtBefore(Presence.UNINSTALLED, cutoff).stream()
+                .filter(installation -> !installation.isManual())
+                .toList();
         if (expired.isEmpty()) {
             return;
         }
@@ -180,6 +183,9 @@ public class ReconciliationService {
             Map<String, GamePayload> entriesByRef, Instant snapshotTime) {
         int removed = 0;
         for (GameInstallation existing : existingByRef.values()) {
+            if (existing.isManual()) {
+                continue;
+            }
             if (existing.isInstalled() && !entriesByRef.containsKey(existing.getExternalRef())) {
                 existing.markUninstalled(snapshotTime);
                 removed++;

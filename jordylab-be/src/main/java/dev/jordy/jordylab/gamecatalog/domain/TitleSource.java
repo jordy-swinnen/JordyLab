@@ -8,7 +8,8 @@ package dev.jordy.jordylab.gamecatalog.domain;
 public enum TitleSource {
     ROM(1),
     MANIFEST(1),
-    LIBRARY(2);
+    LIBRARY(2),
+    MANUAL(3);
 
     private final int authority;
 

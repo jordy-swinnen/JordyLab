@@ -57,6 +57,8 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
 
     Optional<Game> findBySteamAppId(String steamAppId);
 
+    Optional<Game> findByPlatformAndIgdbGameId(String platform, String igdbGameId);
+
     List<Game> findAllBySteamAppIdIn(Collection<String> steamAppIds);
 
     /**

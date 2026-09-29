@@ -4,6 +4,7 @@ export { GameChatStore } from './lib/game-chat.store';
 export { GameDetailStore } from './lib/game-detail.store';
 export { GAME_LIBRARY_PAGE_SIZE, GameLibraryStore } from './lib/game-library.store';
 export { ScanSourceStore } from './lib/scan-source.store';
+export { SwitchGameStore } from './lib/switch-game.store';
 export type {
   ArtworkStatus,
   EnrichmentStatus,
@@ -29,6 +30,9 @@ export type {
   ChatGameRef,
   ChatAskResponse,
   ChatMessage,
+  SwitchGameFormat,
+  SwitchSearchResult,
+  SwitchGameResponse,
 } from './lib/gamecatalog.models';
 export { aAttachedGameMock } from './lib/mocks/attached-game.model.mock';
 export { aChatAnswerMock } from './lib/mocks/chat-answer.model.mock';

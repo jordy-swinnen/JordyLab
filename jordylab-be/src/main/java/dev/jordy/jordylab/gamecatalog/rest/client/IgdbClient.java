@@ -37,8 +37,10 @@ public class IgdbClient {
 
     private static final String DEFAULT_API_BASE_URL = "https://api.igdb.com/v4";
     private static final String DEFAULT_TOKEN_URL = "https://id.twitch.tv/oauth2/token";
+    private static final String IMAGE_CDN_BASE_URL = "https://images.igdb.com/igdb/image/upload";
     private static final int MAX_SEARCH_RESULTS = 10;
     private static final int MAX_MODE_ROWS = 500;
+    private static final long NINTENDO_SWITCH_PLATFORM_ID = 130L;
 
     @Value("${IGDB_CLIENT_ID:}")
     String clientId;
@@ -93,6 +95,131 @@ public class IgdbClient {
         }
 
         return ids;
+    }
+
+    /**
+     * Searches IGDB for Nintendo Switch titles matching the query. Returns the first
+     * {@value #MAX_SEARCH_RESULTS} matches with metadata and cover/banner URLs; empty if the
+     * client is unconfigured or the call fails.
+     */
+    public List<SwitchSearchResult> searchSwitchGames(String query) {
+        if (!isConfigured() || !StringUtils.hasText(query)) {
+            return List.of();
+        }
+        String apicalypse = "search \"" + escapeQuery(query) + "\"; "
+                + "fields name,first_release_date,genres.name,involved_companies.company.name,"
+                + "cover.image_id,artworks.image_id; "
+                + "where platforms = (" + NINTENDO_SWITCH_PLATFORM_ID + ") & version_parent = null & game_type = 0; "
+                + "limit " + MAX_SEARCH_RESULTS + ";";
+        JsonNode response = post("/games", apicalypse);
+        if (response == null || !response.isArray()) {
+            return List.of();
+        }
+
+        List<SwitchSearchResult> results = new ArrayList<>();
+        for (JsonNode game : response) {
+            SwitchSearchResult result = parseSwitchGame(game);
+            if (result != null) {
+                results.add(result);
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Fetches full Switch details for an IGDB game id, including aggregated multiplayer modes
+     * and cover/banner URLs.
+     */
+    public Optional<SwitchGameDetails> fetchSwitchGameDetails(long igdbGameId) {
+        if (!isConfigured()) {
+            return Optional.empty();
+        }
+        String apicalypse = "fields name,first_release_date,genres.name,involved_companies.company.name,"
+                + "cover.image_id,artworks.image_id; where id = " + igdbGameId + ";";
+        JsonNode response = post("/games", apicalypse);
+        if (response == null || !response.isArray() || response.isEmpty()) {
+            return Optional.empty();
+        }
+
+        SwitchSearchResult base = parseSwitchGame(response.get(0));
+        if (base == null) {
+            return Optional.empty();
+        }
+        Map<Long, MultiplayerMode> modes = fetchMultiplayerModes(List.of(igdbGameId));
+        MultiplayerMode multiplayerMode = modes.get(igdbGameId);
+
+        return Optional.of(new SwitchGameDetails(base.igdbGameId(), base.title(), base.releaseYear(),
+                base.genres(), base.developer(), base.coverUrl(), base.bannerUrl(), multiplayerMode));
+    }
+
+    /**
+     * Builds an IGDB image CDN URL for the given image id and size suffix.
+     */
+    public String buildImageUrl(String imageId, ImageSize size) {
+        if (!StringUtils.hasText(imageId)) {
+            return null;
+        }
+
+        return IMAGE_CDN_BASE_URL + "/t_" + size.suffix + "/" + imageId + ".jpg";
+    }
+
+    private SwitchSearchResult parseSwitchGame(JsonNode game) {
+        long igdbGameId = game.path("id").asLong(-1);
+        String title = game.path("name").asText(null);
+        if (igdbGameId < 0 || !StringUtils.hasText(title)) {
+            return null;
+        }
+
+        Integer releaseYear = parseReleaseYear(game.path("first_release_date"));
+        List<String> genres = parseNames(game.path("genres"));
+        String developer = parseFirstCompanyName(game.path("involved_companies"));
+        String coverImageId = game.path("cover").path("image_id").asText(null);
+        String bannerImageId = firstArtworkImageId(game.path("artworks"));
+
+        return new SwitchSearchResult(igdbGameId, title, releaseYear, genres, developer,
+                buildImageUrl(coverImageId, ImageSize.COVER_BIG),
+                buildImageUrl(bannerImageId, ImageSize.SCREENSHOT_BIG));
+    }
+
+    private Integer parseReleaseYear(JsonNode timestampNode) {
+        long timestamp = timestampNode.asLong(0);
+        if (timestamp == 0) {
+            return null;
+        }
+
+        return java.time.Instant.ofEpochSecond(timestamp).atZone(java.time.ZoneOffset.UTC).getYear();
+    }
+
+    private List<String> parseNames(JsonNode array) {
+        if (array == null || !array.isArray()) {
+            return List.of();
+        }
+        List<String> names = new ArrayList<>();
+        for (JsonNode element : array) {
+            String name = element.path("name").asText(null);
+            if (StringUtils.hasText(name)) {
+                names.add(name);
+            }
+        }
+
+        return names;
+    }
+
+    private String parseFirstCompanyName(JsonNode array) {
+        if (array == null || !array.isArray() || array.isEmpty()) {
+            return null;
+        }
+
+        return array.get(0).path("company").path("name").asText(null);
+    }
+
+    private String firstArtworkImageId(JsonNode array) {
+        if (array == null || !array.isArray() || array.isEmpty()) {
+            return null;
+        }
+
+        return array.get(0).path("image_id").asText(null);
     }
 
     /**
@@ -269,6 +396,28 @@ public class IgdbClient {
         int max = Math.max(first, second);
 
         return max > 0 ? max : null;
+    }
+
+    /** Search result for a Nintendo Switch game on IGDB. */
+    public record SwitchSearchResult(long igdbGameId, String title, Integer releaseYear, List<String> genres,
+            String developer, String coverUrl, String bannerUrl) {
+    }
+
+    /** Full details for a Switch game, including aggregated multiplayer facts. */
+    public record SwitchGameDetails(long igdbGameId, String title, Integer releaseYear, List<String> genres,
+            String developer, String coverUrl, String bannerUrl, MultiplayerMode multiplayerMode) {
+    }
+
+    /** IGDB image CDN size suffixes. */
+    public enum ImageSize {
+        COVER_BIG("cover_big"),
+        SCREENSHOT_BIG("screenshot_big");
+
+        private final String suffix;
+
+        ImageSize(String suffix) {
+            this.suffix = suffix;
+        }
     }
 
     /** Aggregated multiplayer facts for one IGDB game (across its platform rows). */

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestClient;
 import org.testcontainers.containers.GenericContainer;
@@ -35,6 +36,7 @@ import java.time.Duration;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@TestPropertySource(properties = "spring.profiles.active=local")
 @Import(KeycloakIntegrationTest.PostgresConfiguration.class)
 abstract class KeycloakIntegrationTest {
 
@@ -59,6 +61,9 @@ abstract class KeycloakIntegrationTest {
     static void keycloakProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
                 () -> authServerUrl() + "/realms/jordylab-test");
+        registry.add("jordylab.settings.keycloak.server-url", KeycloakIntegrationTest::authServerUrl);
+        registry.add("jordylab.settings.keycloak.realm", () -> "jordylab-test");
+        registry.add("jordylab.settings.keycloak.admin-client-secret", () -> "test-backend-secret");
     }
 
     @TestConfiguration(proxyBeanMethods = false)

@@ -7,7 +7,26 @@ export type ArtworkStatus =
 
 export type EnrichmentStatus = 'PENDING' | 'ENRICHED' | 'FAILED';
 
-export type SourceType = 'STEAM' | 'EMUDECK';
+export type SourceType = 'STEAM' | 'EMUDECK' | 'SWITCH';
+
+export type SwitchGameFormat = 'PHYSICAL' | 'DIGITAL';
+
+export interface SwitchSearchResult {
+  igdbGameId: number;
+  title: string;
+  releaseYear: number | null;
+  genres: string[];
+  developer: string | null;
+  coverUrl: string | null;
+  bannerUrl: string | null;
+}
+
+export interface SwitchGameResponse {
+  gameId: string;
+  title: string;
+  platform: string;
+  format: SwitchGameFormat;
+}
 
 export type SyncOutcome =
   | 'APPLIED'
