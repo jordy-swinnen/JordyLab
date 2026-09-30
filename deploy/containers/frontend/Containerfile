@@ -20,6 +20,7 @@ FROM nginxinc/nginx-unprivileged:1.30-alpine AS runtime
 # @angular/build:application writes the static site to <outputPath>/browser
 COPY --from=build /workspace/dist/apps/jordylab/browser /usr/share/nginx/html
 COPY deploy/containers/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY deploy/containers/frontend/security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 EXPOSE 8080
 
