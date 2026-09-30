@@ -141,6 +141,7 @@ jobs:
     defaults:
       run:
         working-directory: jordylab-fe
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -202,9 +203,15 @@ jobs:
           VERSION_CODE: ${{ needs.verify.outputs.version_code }}
           VERSION_NAME: ${{ needs.verify.outputs.version_name }}
         run: |
-          token="$(curl -sS -f -X POST "$KEYCLOAK_URL/realms/jordylab/protocol/openid-connect/token" \
-            -d grant_type=client_credentials -d client_id=mobile-release-ci \
-            --data-urlencode "client_secret=$CLIENT_SECRET" | jq -r '.access_token')"
+          set -o pipefail
+          if ! token_response="$(curl -sS -f -X POST "$KEYCLOAK_URL/realms/jordylab/protocol/openid-connect/token" \
+              -d grant_type=client_credentials -d client_id=mobile-release-ci \
+              --data-urlencode "client_secret=$CLIENT_SECRET")"; then
+            echo "::error::Keycloak refused the mobile-release-ci credentials. The GitHub secret MOBILE_RELEASE_CI_CLIENT_SECRET must equal jordylab-secrets/MOBILE_RELEASE_CI_CLIENT_SECRET (docs/runbook.md §20)."
+            exit 1
+          fi
+          token="$(jq -r '.access_token // empty' <<<"$token_response")"
+          [ -n "$token" ] || { echo "::error::token response contained no access_token"; exit 1; }
           echo "::add-mask::$token"
           # From a file: curl -F would treat notes starting with @ or < as a file reference.
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body | head -c 4000 > "$RUNNER_TEMP/release-notes.txt"
