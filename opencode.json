@@ -35,35 +35,18 @@
     "build": {
       "model": "opencode-go/deepseek-v4.1-flash"
     },
-    "build-plus": {
-      "model": "opencode-go/kimi-k2.7-code"
-    },
     "plan": {
-      "model": "opencode-go/glm-5.3",
-      "permission": {
-        "edit": {
-          "*": "deny",
-          "specs/**": "allow",
-          ".specify/memory/**": "allow"
-        },
-        "bash": {
-          "*": "ask",
-          ".specify/scripts/bash/*": "allow",
-          "git status*": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git branch*": "allow",
-          "git rev-parse*": "allow"
-        }
-      }
+      "model": "opencode-go/glm-5.2"
     },
-    "plan-plus": {
-      "model": "opencode-go/kimi-k3",
+    "speckit": {
+      "description": "Spec-Driven Development agent: runs the /speckit-* skills (specify, clarify, plan, tasks, analyze, checklist, converge, constitution). Writes only specs/** and .specify/**.",
+      "mode": "primary",
+      "model": "opencode-go/mimo-v2.6-pro",
       "permission": {
         "edit": {
           "*": "deny",
           "specs/**": "allow",
-          ".specify/memory/**": "allow"
+          ".specify/**": "allow"
         },
         "bash": {
           "*": "ask",
@@ -72,7 +55,8 @@
           "git diff*": "allow",
           "git log*": "allow",
           "git branch*": "allow",
-          "git rev-parse*": "allow"
+          "git rev-parse*": "allow",
+          "git config --get*": "allow"
         }
       }
     }
