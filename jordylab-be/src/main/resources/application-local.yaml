@@ -15,6 +15,8 @@ jordylab:
   settings:
     keycloak:
       server-url: http://localhost:8180
+  script:
+    keycloak-url: http://localhost:8180
   cors:
     # One origin per per-domain dev server (Angular's jordylab/fna/gamecatalog apps on nx serve).
     allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400
