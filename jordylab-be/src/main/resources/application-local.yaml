@@ -15,6 +15,9 @@ jordylab:
   settings:
     keycloak:
       server-url: http://localhost:8180
+      # Dev-only, matches the jordylab-backend client in compose/keycloak-realm-export.json (BUG-029).
+      # Prod reads KEYCLOAK_BACKEND_SECRET from jordylab-secrets instead.
+      admin-client-secret: local-dev-backend-secret-not-for-prod
   script:
     keycloak-url: http://localhost:8180
   cors:

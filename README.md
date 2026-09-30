@@ -104,17 +104,21 @@ podman compose up -d
 
 This starts `pgvector/pgvector:pg16` on `localhost:5432` and Keycloak
 (`quay.io/keycloak/keycloak`) on `localhost:8180`, with the `jordylab` realm auto-imported from
-`compose/keycloak-realm-export.json`. A `jordy` dev user is seeded with the `jordylab-user` and
-`gamecatalog-scanner` roles.
+`compose/keycloak-realm-export.json`. A `jordy` dev user is seeded with the `admin` role (which includes
+`guest` and `gamecatalog-scanner`); its password is in that file. The backend's `jordylab-backend` service
+client uses the dev-only secret `local-dev-backend-secret-not-for-prod`, already set in
+`application-local.yaml`, so Settings → Users works locally without extra configuration.
 
 ### 3. Start the backend
 
 ```bash
 cd jordylab-be
-./gradlew bootRun
+set -a && source .env && set +a
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 
-Runs on `http://localhost:8080`, validating requests against the Keycloak realm from step 2.
+Runs on `http://localhost:8080`, validating requests against the Keycloak realm from step 2. The `local`
+profile is required: without it the backend stops immediately with *"No valid Spring profile is active"*.
 
 ### 3b. Run the backend tests
 
@@ -125,6 +129,10 @@ export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.P
 export TESTCONTAINERS_RYUK_DISABLED=true   # ryuk needs privileges the Podman socket may not grant
 cd jordylab-be && ./gradlew build
 ```
+
+Give the Podman machine at least 6 GiB of memory (`podman machine stop && podman machine set --memory 6144 &&
+podman machine start`): with the default 2 GiB, the later test classes that start their own Keycloak and
+Postgres containers fail with `localhost:2375 failed to respond`.
 
 ### 4. Start the frontend
 
@@ -140,6 +148,28 @@ Keycloak realm — see `jordylab-fe/AGENTS.md`'s "Auth via Keycloak" section):
 ```bash
 bunx nx serve fna                 # http://localhost:4300
 bunx nx serve gamecatalog         # http://localhost:4400
+```
+
+### 5. Your own local admin account
+
+Register at http://localhost:4200 (Keycloak's *Register* link). New accounts have no role and land on
+"awaiting approval". Make yours admin — `admin` includes `guest` and `gamecatalog-scanner`, so the scan client
+works too — with `kcadm` inside the Keycloak container (it reads the bootstrap admin from the container's env):
+
+```bash
+podman exec jordylab-be-keycloak-1 sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh add-roles -r jordylab --uusername you@example.com --rolename admin --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'
+```
+
+Log out and in again to get the role in your token. Forgot the local password? Keycloak admin console at
+http://localhost:8180/admin (user/password = `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` from `.env`) → realm
+**jordylab** → Users → your account → **Credentials** → **Reset password** (switch *Temporary* off). Local and
+production are separate Keycloaks with separate passwords.
+
+A Keycloak that imported the realm **before** the fixed dev backend secret existed keeps its old random one.
+Align it once (the import never re-runs on an existing realm):
+
+```bash
+podman exec jordylab-be-keycloak-1 sh -c 'K=/opt/keycloak/bin/kcadm.sh; C="--config /tmp/kc.cfg"; $K config credentials --server http://localhost:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" $C && ID=$($K get clients -r jordylab -q clientId=jordylab-backend --fields id $C | sed -n "s/.*\"id\" : \"\(.*\)\".*/\1/p") && $K update clients/$ID -r jordylab -s secret=local-dev-backend-secret-not-for-prod $C; rm -f /tmp/kc.cfg'
 ```
 
 ### Ports at a glance

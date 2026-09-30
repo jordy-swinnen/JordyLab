@@ -1,42 +1,54 @@
 package dev.jordy.jordylab.shared.config;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.mock.env.MockEnvironment;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * The guard runs as an {@code EnvironmentPostProcessor}, i.e. before any bean exists, so a missing
+ * profile fails with its own message instead of a datasource error from an unresolved
+ * {@code ${POSTGRES_URL}} (008 FR-002, spec 011 BUG-024).
+ */
 class EnvironmentProfileGuardTest {
 
-    private final ApplicationContextRunner contextRunner =
-            new ApplicationContextRunner()
-                    .withSystemProperties("spring.profiles.active=")
-                    .withUserConfiguration(EnvironmentProfileGuard.class);
+    private final EnvironmentProfileGuard guard = new EnvironmentProfileGuard();
+    private final SpringApplication application = new SpringApplication();
 
     @Test
     void refusesToStartWithNoActiveProfile() {
-        // The Gradle `test` task sets spring.profiles.active=local as a JVM system property (so
-        // every context-loading test satisfies this guard by default) — ApplicationContextRunner
-        // inherits system properties, so this override is needed to actually simulate "no
-        // profile active" here.
-        contextRunner.withSystemProperties("spring.profiles.active=")
-                .run(context -> assertThat(context).hasFailed());
+        MockEnvironment environment = new MockEnvironment();
+
+        assertThatThrownBy(() -> guard.postProcessEnvironment(environment, application))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SPRING_PROFILES_ACTIVE");
     }
 
     @Test
     void refusesToStartWithAnUnrecognisedProfile() {
-        contextRunner.withPropertyValues("spring.profiles.active=staging")
-                .run(context -> assertThat(context).hasFailed());
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("staging");
+
+        assertThatThrownBy(() -> guard.postProcessEnvironment(environment, application))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("staging");
     }
 
     @Test
     void startsCleanlyWithTheLocalProfileActive() {
-        contextRunner.withPropertyValues("spring.profiles.active=local")
-                .run(context -> assertThat(context).hasNotFailed());
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("local");
+
+        assertThatCode(() -> guard.postProcessEnvironment(environment, application)).doesNotThrowAnyException();
     }
 
     @Test
     void startsCleanlyWithTheProdProfileActive() {
-        contextRunner.withPropertyValues("spring.profiles.active=prod")
-                .run(context -> assertThat(context).hasNotFailed());
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("prod");
+
+        assertThatCode(() -> guard.postProcessEnvironment(environment, application)).doesNotThrowAnyException();
     }
 }

@@ -133,7 +133,8 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "fullScopeAllowed": false
+      "fullScopeAllowed": false,
+      "secret": "local-dev-backend-secret-not-for-prod"
     },
     {
       "clientId": "jordylab-mobile",
