@@ -2,14 +2,19 @@ package dev.jordy.jordylab.settings;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.io.FileSystemResource;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
 /**
@@ -103,6 +108,22 @@ class RealmConfigurationTest {
             softly.assertThat(ciClient.path("serviceAccountsEnabled").asBoolean()).isTrue();
             softly.assertThat(ciClient.path("publicClient").asBoolean(true)).isFalse();
         });
+    }
+
+    /**
+     * The dev realm's backend secret and the local profile must match, or Settings → Users fails
+     * locally with a 401 from the token endpoint (BUG-029).
+     */
+    @Test
+    void localProfileUsesTheDevRealmBackendSecret() throws IOException {
+        JsonNode devBackend = backendClient(objectMapper.readTree(Path.of(DEV_REALM).toFile()));
+        String localSecret = new YamlPropertySourceLoader()
+                .load("application-local.yaml", new FileSystemResource("src/main/resources/application-local.yaml"))
+                .getFirst()
+                .getProperty("jordylab.settings.keycloak.admin-client-secret")
+                .toString();
+
+        assertThat(devBackend.path("secret").asText()).isEqualTo(localSecret);
     }
 
     private JsonNode backendClient(JsonNode realm) {
