@@ -85,7 +85,7 @@
     "realm-management": [
       {
         "client": "jordylab-backend",
-        "roles": ["view-users", "manage-users", "view-roles"]
+        "roles": ["view-users", "manage-users", "view-realm"]
       }
     ]
   },
@@ -190,7 +190,7 @@
         "realm-management": [
           "view-users",
           "manage-users",
-          "view-roles"
+          "view-realm"
         ]
       }
     },

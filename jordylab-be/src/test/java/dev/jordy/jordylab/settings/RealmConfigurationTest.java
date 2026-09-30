@@ -60,7 +60,7 @@ class RealmConfigurationTest {
 
         assertSoftly(softly -> {
             softly.assertThat(backendClient(realm).path("fullScopeAllowed").asBoolean(true)).isFalse();
-            softly.assertThat(mappedRoles).containsExactlyInAnyOrder("view-users", "manage-users", "view-roles");
+            softly.assertThat(mappedRoles).containsExactlyInAnyOrder("view-users", "manage-users", "view-realm");
         });
     }
 

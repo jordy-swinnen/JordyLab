@@ -124,7 +124,7 @@ Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app
   (`http://keycloak:8080/auth`, `backend-config`), while browsers and the downloaded scan client use the public
   `KEYCLOAK_URL`. A public `/auth/admin/…` URL answers with the SPA's `index.html` (HTTP 200, HTML).
 - **`jordylab-backend` has `fullScopeAllowed=false`**: its service-account token only carries the
-  `realm-management` roles that are scope-mapped (`view-users`, `manage-users`, `view-roles`). A missing mapping
+  `realm-management` roles that are scope-mapped (`view-users`, `manage-users`, `view-realm`). A missing mapping
   shows up as a 403 from the Admin REST API.
 - **`admin` is a composite of `guest` + `gamecatalog-scanner`**; `mobile-release-publisher` is CI-only.
 - **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll` in `SecurityConfig`.
