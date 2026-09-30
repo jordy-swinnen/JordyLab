@@ -126,6 +126,14 @@ class RealmConfigurationTest {
         assertThat(devBackend.path("secret").asText()).isEqualTo(localSecret);
     }
 
+    /** The committed dev-only backend secret must never reach the production realm (review on #43). */
+    @Test
+    void prodRealmTakesTheBackendSecretFromTheEnvironment() throws IOException {
+        JsonNode prodBackend = backendClient(objectMapper.readTree(Path.of(PROD_REALM).toFile()));
+
+        assertThat(prodBackend.path("secret").asText()).isEqualTo("${KEYCLOAK_BACKEND_CLIENT_SECRET}");
+    }
+
     private JsonNode backendClient(JsonNode realm) {
         return client(realm, "jordylab-backend");
     }
