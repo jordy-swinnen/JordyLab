@@ -41,6 +41,32 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 - After implementing a feature or fix, immediately run relevant tests to verify only the changed code works — no full test suite runs unless explicitly requested.
 - After completing a plan or task, always test the end-to-end flow of the features built or changed. Test only the scope that was touched — avoid full-suite integration tests unless the change warrants it.
 
+## Commits
+
+Every commit says which SpecKit artefact it serves, as a `Refs:` git trailer in the message's last paragraph
+(next to `Co-Authored-By:`). Subjects stay conventional commits (`fix(settings): …`).
+
+```
+fix(keycloak): backend needs view-realm to approve users
+
+Why the change was needed and how it was verified.
+
+Refs: 011 BUG-033
+Co-Authored-By: …
+```
+
+| Token | Meaning | Checked |
+|-------|---------|---------|
+| `NNN` | spec number, e.g. `011` | `specs/NNN-*` exists |
+| `NNN/T###` | a task of that spec, e.g. `009/T039` | spec exists |
+| `BUG-###` | campaign bug | already logged in `docs/testing/bug-log.md` (log first, then fix) |
+| `HANDOFF-##`, `DEPLOY-##`, `Q-##` | campaign handoff / deployment / question (`docs/testing/e2e-test-plan.md`) | format |
+| `NO-CODE` | config, tooling or docs work with no SpecKit artefact — must stand alone | — |
+
+Combine tokens freely (`Refs: 011 BUG-020 BUG-026`). Merge, `fixup!`/`squash!` and `git revert` commits are exempt.
+Enforced by `.githooks/commit-msg` locally (enable once per clone: `git config core.hooksPath .githooks`) and by
+the `Commit References` workflow on every pull-request commit. Never bypass it with `--no-verify`.
+
 ## Validation Data
 
 - **Never hand-seed the database.** Do not `INSERT`/`COPY`/seed rows directly into the running database (`gamecatalog` schema or any other) to validate a feature, populate a demo, or check a UI/E2E flow. This is forbidden.
