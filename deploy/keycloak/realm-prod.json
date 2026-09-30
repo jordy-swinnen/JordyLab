@@ -46,6 +46,10 @@
       {
         "name": "gamecatalog-scanner",
         "description": "Required for the scan client to POST /api/gamecatalog/ingest/scan and /check"
+      },
+      {
+        "name": "mobile-release-publisher",
+        "description": "Publish Android releases via POST /api/mobile/releases — CI identity only (spec 007 FR-004)"
       }
     ]
   },
@@ -57,6 +61,10 @@
     {
       "clientScope": "offline_access",
       "roles": ["offline_access"]
+    },
+    {
+      "client": "mobile-release-ci",
+      "roles": ["mobile-release-publisher"]
     }
   ],
   "clientScopeMappings": {
@@ -107,6 +115,28 @@
       "directAccessGrantsEnabled": false,
       "fullScopeAllowed": false,
       "secret": "${KEYCLOAK_BACKEND_CLIENT_SECRET}"
+    },
+    {
+      "clientId": "jordylab-mobile",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["https://${PRODUCTION_DOMAIN}/mobile/callback"],
+      "webOrigins": ["https://localhost"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://${PRODUCTION_DOMAIN}/mobile/*"
+      }
+    },
+    {
+      "clientId": "mobile-release-ci",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "fullScopeAllowed": false,
+      "secret": "${MOBILE_RELEASE_CI_CLIENT_SECRET}",
+      "description": "CI-only service account that publishes Android releases (spec 007 D13)"
     }
   ],
   "users": [
@@ -117,6 +147,12 @@
       "clientRoles": {
         "realm-management": ["view-users", "manage-users", "view-roles"]
       }
+    },
+    {
+      "username": "service-account-mobile-release-ci",
+      "enabled": true,
+      "serviceAccountClientId": "mobile-release-ci",
+      "realmRoles": ["mobile-release-publisher"]
     }
   ]
 }

@@ -51,6 +51,13 @@ spec:
                 secretKeyRef:
                   name: jordylab-secrets
                   key: KEYCLOAK_BACKEND_CLIENT_SECRET
+            # realm-prod.json's ${MOBILE_RELEASE_CI_CLIENT_SECRET} (CI publisher, spec 007 D13); same value as the
+            # GitHub Actions secret of that name.
+            - name: MOBILE_RELEASE_CI_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: MOBILE_RELEASE_CI_CLIENT_SECRET
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               valueFrom:
                 secretKeyRef:

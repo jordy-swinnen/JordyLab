@@ -35,6 +35,7 @@ kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh co
 |---|---|---|
 | 2026-09-30 | `admin` becomes a composite of `guest` + `gamecatalog-scanner` | The owner holds every JordyLab role and can run the scanner without a hand-assigned role (spec 011 BUG-028). `mobile-release-publisher` stays CI-only (007 FR-004). |
 | 2026-09-30 | `jordylab-backend` gets a client scope mapping for `realm-management` → `view-users`, `manage-users`, `view-roles` | The client has `fullScopeAllowed=false`, so without the mapping its service-account token carried none of these roles and the Admin REST API answered 403 (Settings → Users, spec 011 BUG-031). |
+| 2026-09-30 | New role `mobile-release-publisher`; clients `jordylab-mobile` and `mobile-release-ci`; the CI service account gets the role (scope-mapped) | Android release pipeline and native login (spec 007 D13). Needs the `MOBILE_RELEASE_CI_CLIENT_SECRET` env var in the Keycloak pod (from `jordylab-secrets`), so run it after the deploy that wires it. |
 
 For the local Podman Keycloak use `podman exec jordylab-be-keycloak-1 …` with `--server http://localhost:8080`
 (no `/auth` path locally).
@@ -48,6 +49,18 @@ ROLES=$(for r in view-users manage-users view-roles; do kcadm.sh get clients/$RM
 kcadm.sh create clients/$ID/scope-mappings/clients/$RM -r jordylab -b "[$ROLES]" --config /tmp/kc.cfg
 ```
 
-The `jordylab-mobile` and `mobile-release-ci` clients (spec 007) are **not** in this file — they
-are their own stop-and-report gate per `jordylab-be/AGENTS.md`, requiring Jordy's sign-off on the
-Android application id before they're added.
+The `jordylab-mobile` (public, PKCE, App Link callback) and `mobile-release-ci` (CI publisher,
+`${MOBILE_RELEASE_CI_CLIENT_SECRET}`) clients and the `mobile-release-publisher` role were added on
+2026-09-30 after Jordy signed off on the Android application id `be.jordylab.app` (spec 007 D13/D14,
+spec 011 Q-06).
+
+The mobile clients (same session; `$MOBILE_RELEASE_CI_CLIENT_SECRET` is already in the pod's environment):
+
+```bash
+kcadm.sh create roles -r jordylab -s name=mobile-release-publisher -s 'description=Publish Android releases — CI identity only' --config /tmp/kc.cfg
+kcadm.sh create clients -r jordylab --config /tmp/kc.cfg -s clientId=jordylab-mobile -s publicClient=true -s standardFlowEnabled=true -s directAccessGrantsEnabled=false -s 'redirectUris=["https://jordylab.be/mobile/callback"]' -s 'webOrigins=["https://localhost"]' -s 'attributes."pkce.code.challenge.method"=S256' -s 'attributes."post.logout.redirect.uris"=https://jordylab.be/mobile/*'
+kcadm.sh create clients -r jordylab --config /tmp/kc.cfg -s clientId=mobile-release-ci -s publicClient=false -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=false -s fullScopeAllowed=false -s "secret=$MOBILE_RELEASE_CI_CLIENT_SECRET"
+kcadm.sh add-roles -r jordylab --uusername service-account-mobile-release-ci --rolename mobile-release-publisher --config /tmp/kc.cfg
+CI=$(kcadm.sh get clients -r jordylab -q clientId=mobile-release-ci --fields id --config /tmp/kc.cfg | sed -n 's/.*"id" : "\(.*\)".*/\1/p')
+kcadm.sh create clients/$CI/scope-mappings/realm -r jordylab -b "[$(kcadm.sh get roles/mobile-release-publisher -r jordylab --fields id,name --config /tmp/kc.cfg)]" --config /tmp/kc.cfg
+```

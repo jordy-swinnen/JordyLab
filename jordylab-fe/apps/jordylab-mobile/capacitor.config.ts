@@ -1,10 +1,9 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// STOP-AND-REPORT GATE (research D14): `appId` is a placeholder. It must be a reverse-DNS id on
-// the real production domain (feature 008) and, once the first release ships, can never change.
-// Do not use this placeholder for a real release build.
+// Android application id: reverse-DNS of the production domain jordylab.be (research D14, decided
+// 2026-09-30, spec 011 Q-06). It can never change once the first release ships.
 const config: CapacitorConfig = {
-  appId: 'dev.jordylab.mobile.placeholder',
+  appId: 'be.jordylab.app',
   appName: 'JordyLab',
   webDir: '../../dist/apps/jordylab/browser',
   server: {

@@ -7,7 +7,7 @@ import { UpdateCheckStore } from './update-check.store';
 
 vi.mock('@capacitor/app', () => ({
   App: {
-    getInfo: vi.fn().mockResolvedValue({ name: 'JordyLab', id: 'dev.jordylab.mobile.placeholder', build: '12', version: '1.2.0' }),
+    getInfo: vi.fn().mockResolvedValue({ name: 'JordyLab', id: 'be.jordylab.app', build: '12', version: '1.2.0' }),
     addListener: vi.fn(),
   },
 }));

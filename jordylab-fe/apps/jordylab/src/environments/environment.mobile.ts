@@ -1,10 +1,9 @@
-// STOP-AND-REPORT GATE (research D13): keycloakUrl/apiBaseUrl are placeholders blocked on
-// feature 008 (production HTTPS deployment) — do not use these values for a real release build.
+// Native app build: absolute URLs to production (the WebView origin is https://localhost).
 export const environment = {
   production: true,
-  keycloakUrl: 'https://PRODUCTION_DOMAIN_PLACEHOLDER/auth',
+  keycloakUrl: 'https://jordylab.be/auth',
   keycloakRealm: 'jordylab',
   keycloakClientId: 'jordylab-mobile',
-  apiBaseUrl: 'https://PRODUCTION_DOMAIN_PLACEHOLDER',
-  mobileCallbackUri: 'https://PRODUCTION_DOMAIN_PLACEHOLDER/mobile/callback',
+  apiBaseUrl: 'https://jordylab.be',
+  mobileCallbackUri: 'https://jordylab.be/mobile/callback',
 };

@@ -40,6 +40,9 @@ frontend = `jordylab-fe/…` (libs, apps), native shell = `jordylab-fe/apps/jord
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/` — follow `/new-module` (package layout from
   `jordylab-be/AGENTS.md`, no new sub-packages beyond `domain/`, `rest/{client,controller}`, `service/`, `util/`); run
   `ModularityTests` green
+  **Placeholders resolved 2026-09-30 (spec 011 Q-06, PR #34)**: `app.package-name` = `be.jordylab.app`,
+  `app.production-domain` = `jordylab.be`, `release.signing-cert-sha256` = the release certificate (prod
+  `backend-config`).
 - [X] T002 [P] Add `jordylab.mobile.*` config keys with dev defaults in
   `jordylab-be/src/main/resources/application.yaml`; remove the now-unused `jordylab.settings.notifications.ntfy.*`
   scaffold from `SettingsProperties.java` (research D10 — nothing reads it today)
@@ -58,9 +61,13 @@ frontend = `jordylab-fe/…` (libs, apps), native shell = `jordylab-fe/apps/jord
   **PR review finding (confirmed, fixed)**: the generated `sync`/`open-android` Nx targets in
   `apps/jordylab-mobile/project.json` shelled out via `npx cap ...` — this repo requires `bun`/`bunx`, never
   `npx`/`npm`/`yarn`. Changed both to `bunx cap ...`.
+  **Placeholder resolved 2026-09-30 (PR #34)**: `appId`/`applicationId`/namespace = `be.jordylab.app`, App Link host
+  `jordylab.be`, `MainActivity` moved to package `be.jordylab.app`.
 - [X] T005 [P] Add a `mobile` build configuration to `jordylab-fe/apps/jordylab/project.json` (new
   `environment.mobile.ts`: absolute `apiBaseUrl` placeholder — D13 domain pending — `keycloakClientId:
   'jordylab-mobile'`); set `apps/jordylab-mobile`'s `webDir` to that configuration's build output
+  **Placeholder resolved 2026-09-30 (PR #34)**: `environment.mobile.ts` points at `https://jordylab.be` (+ `/auth`,
+  `/mobile/callback`).
 - [X] T006 [P] Scaffold `jordylab-fe/libs/shared/platform/{api,ui}` via `bunx nx g @nx/angular:library` (tags
   `scope:platform,type:api|ui`), add `@jordylab-fe/shared/platform/api|ui` paths to
   `jordylab-fe/tsconfig.base.json`, add `scope:platform` to the `type:app` constraint in
@@ -79,13 +86,19 @@ primitives (base-URL interceptor, platform detection) that everything native dep
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): propose the realm export
+- [X] T007 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): propose the realm export
   changes in `jordylab-be/compose/keycloak-realm-export.json` per [research.md](research.md) D13 —  new public client
   `jordylab-mobile` (PKCE S256, redirect URI `https://{PRODUCTION_DOMAIN}/mobile/callback`, `offline_access` allowed,
   `standardFlowEnabled=true`, `directAccessGrantsEnabled=false`), new confidential client `mobile-release-ci`
   (`serviceAccountsEnabled=true`), new realm role `mobile-release-publisher` (granted only to that service account);
   **do not apply until the user confirms** — the production domain (feature 008) and application id (D14) are still
   placeholders
+  **Outcome 2026-09-30 (spec 011 Q-06, PR #34)**: Jordy confirmed and delegated the application id → `be.jordylab.app`.
+  Added to `realm-prod.json` **and** the dev export: role `mobile-release-publisher`; public PKCE client
+  `jordylab-mobile` (redirect `https://${PRODUCTION_DOMAIN}/mobile/callback`, dev `http://localhost:4200/mobile/callback`,
+  web origin `https://localhost`); confidential `mobile-release-ci` (service account, `fullScopeAllowed=false`,
+  scope-mapped to the publisher role, secret `${MOBILE_RELEASE_CI_CLIENT_SECRET}`). Live realm: `kcadm` block in
+  `deploy/keycloak/README.md`. Guarded by `RealmConfigurationTest`.
 - [X] T008 [P] Create `MobileRelease` entity + repository per [data-model.md](data-model.md) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/domain/` — canonical entity structure via `/entity` (UUID id,
   unique `version_code`, builder guards in `build()`, `BaseEntity`); entity test + TestBuilder via `/test-builder` in
@@ -540,10 +553,16 @@ into JordyLab.
     exist; JDK 21 chosen for AGP 8.13 (untested against the real Android Gradle build in this sandbox). The tag
     format `mobile-v<versionName>-<versionCode>` is this workflow's own invention (not specified elsewhere) —
     confirm it before using this as the real release process.
-- [ ] T052 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): generate the release signing
+- [X] T052 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): generate the release signing
   keystore, record its cert SHA-256 into `jordylab.mobile.release.signing-cert-sha256` (T001/T002) and the realm's
   App Link config, store the keystore as a base64 GitHub Actions secret plus an offline backup (research D14) — do
   not run T051's pipeline for a real release before this is confirmed
+  **Outcome 2026-09-30 (spec 011 Q-06)**: Jordy generated `~/jordylab-release.keystore` himself (RSA 4096, alias
+  `jordylab-release`, validity 100 years), kept the keystore + passwords in his password manager as the offline
+  backup, and set the GitHub Actions secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+  `ANDROID_KEY_PASSWORD` (plus `KEYCLOAK_URL`, `JORDYLAB_API_BASE_URL`, `MOBILE_RELEASE_CI_CLIENT_SECRET`) — confirmed
+  present with `gh secret list` (names only). Certificate SHA-256 `1B0213…77E8` is in prod `backend-config`
+  (`MOBILE_RELEASE_SIGNING_CERT_SHA256`). The agent never handled the keystore or its passwords.
 - [X] T053 [P] Update docs: root `AGENTS.md` (add `mobile` to the schema-per-module list; note the Capacitor
   distribution model under Architecture Principles if relevant), `jordylab-be/AGENTS.md` (new "Mobile module (feature
   007)" section, `mobile` schema ownership, the `settings`/`fna` event touch-points from D9), `jordylab-fe/AGENTS.md`
