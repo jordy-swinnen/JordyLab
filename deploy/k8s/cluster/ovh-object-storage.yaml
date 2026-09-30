@@ -32,7 +32,8 @@ kind: ScheduledBackup
 metadata:
   name: cnpg-daily-backup
 spec:
-  schedule: "0 3 * * *" # 03:00 daily
+  # CNPG uses 6-field cron with SECONDS first (sec min hour dom month dow), evaluated in UTC.
+  schedule: "0 0 3 * * *" # 03:00 UTC daily
   backupOwnerReference: self
   cluster:
     name: cnpg-cluster
@@ -47,7 +48,7 @@ kind: ScheduledBackup
 metadata:
   name: cnpg-weekly-backup
 spec:
-  schedule: "0 4 * * 0" # 04:00 every Sunday
+  schedule: "0 0 4 * * 0" # 04:00 UTC every Sunday (6-field cron, seconds first)
   backupOwnerReference: self
   cluster:
     name: cnpg-cluster
