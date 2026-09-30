@@ -80,12 +80,15 @@ spec:
     - name: jordylab-gateway
       sectionName: https
   rules:
-    # Only Keycloak's public endpoints — never /auth/admin or the management port (FR-009,
-    # contracts/http-routing.md). Deliberately no catch-all /auth prefix rule.
+    # Only Keycloak's public endpoints — never /auth/admin, the management port or the `master` realm
+    # (FR-009, contracts/http-routing.md, spec 011 BUG-022). Deliberately no catch-all /auth prefix rule.
+    # PathPrefix matches whole segments: /auth/realms/jordylab covers /auth/realms/jordylab/** only, so
+    # /auth/realms/master (the Keycloak admin's login + token endpoint) falls through to the SPA.
+    # Administer Keycloak via `kubectl port-forward` or kcadm inside the pod (docs/runbook.md).
     - matches:
         - path:
             type: PathPrefix
-            value: /auth/realms
+            value: /auth/realms/jordylab
       backendRefs:
         - name: keycloak
           port: 8080

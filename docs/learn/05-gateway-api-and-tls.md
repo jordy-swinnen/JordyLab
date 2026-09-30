@@ -21,7 +21,8 @@ default.
 Each `HTTPRoute` in `gateway.yaml` attaches to the Gateway (`parentRefs`) and matches on a path
 prefix, forwarding to a backend Service (Chapter 4): `frontend-route` → `/` → the frontend Service,
 `backend-route` → `/api` → the backend Service, `keycloak-route` → three narrow prefixes
-(`/auth/realms`, `/auth/resources`, `/auth/.well-known`) → the Keycloak Service. Notice there is
+(`/auth/realms/jordylab`, `/auth/resources`, `/auth/.well-known`) → the Keycloak Service — only the app's own realm, so the
+`master` realm (where the Keycloak admin logs in) is not reachable from the internet. Notice there is
 **no** `/auth` catch-all route — `/auth/admin` and Keycloak's management port are simply never
 referenced by any HTTPRoute, so they're unreachable from outside the cluster no matter what
 firewall rules exist (`contracts/http-routing.md`). A separate `http-to-https-redirect` HTTPRoute

@@ -95,7 +95,7 @@ endpoints), and supports the mobile app and JordyBox scanner (spec.md US1).
 confirm the certificate is valid (once the cluster from Phase 10/US8 is bootstrapped at least once).
 
 - [X] T014 [P] [US1] Create `Gateway` + `HTTPRoute` manifests in `deploy/k8s/base/` for the public routes table in
-  `contracts/http-routing.md` (`/`, `/api/**`, `/auth/realms|resources|.well-known`,
+  `contracts/http-routing.md` (`/`, `/api/**`, `/auth/realms/jordylab|resources|.well-known` — narrowed from `/auth/realms` by spec 011 BUG-022,
   `/.well-known/assetlinks.json`)
 - [X] T015 [US1] Create `deploy/host/traefik-helmchartconfig.yaml` (a `HelmChartConfig` enabling
   `providers.kubernetesGateway.enabled` and `gateway.enabled`, per `research.md` §2) — this file is authored here;

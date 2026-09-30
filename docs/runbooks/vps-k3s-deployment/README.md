@@ -424,7 +424,7 @@ spec:
 > onto them.
 
 One `HTTPRoute` per service, attached to the `https` listener, by path prefix:
-`/` → frontend, `/api` → backend, `/auth/realms`, `/auth/resources`, `/auth/.well-known` → Keycloak
+`/` → frontend, `/api` → backend, `/auth/realms/jordylab`, `/auth/resources`, `/auth/.well-known` → Keycloak (the `master` realm is not public)
 (deliberately **not** `/auth/admin`), `/ntfy` → ntfy (with a prefix-strip rewrite).
 
 Plus one route on the `http` listener that redirects everything to HTTPS:
