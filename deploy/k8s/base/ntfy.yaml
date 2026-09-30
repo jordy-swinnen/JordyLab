@@ -19,17 +19,15 @@ spec:
     spec:
       containers:
         - name: ntfy
-          image: binwiederhier/ntfy:latest # pin an exact tag at implementation time, never `latest` in prod
+          image: binwiederhier/ntfy:v2.28.0
           args: ["serve"]
+          # No NTFY_BASE_URL here on purpose: ntfy refuses a base-url with a path ("/ntfy"), because
+          # hosting on a sub-path isn't supported. Publish/subscribe still work through the Gateway's
+          # /ntfy prefix rewrite; features that need base-url (attachments, web-push, iOS) would need
+          # a dedicated subdomain such as ntfy.jordylab.be.
           ports:
             - name: http
               containerPort: 80
-          env:
-            - name: NTFY_BASE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: backend-config
-                  key: NTFY_BASE_URL
           readinessProbe:
             httpGet:
               path: /v1/health

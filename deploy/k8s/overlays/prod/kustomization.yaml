@@ -30,7 +30,10 @@ configMapGenerator:
   - name: keycloak-config
     literals:
       - KC_HOSTNAME=https://jordylab.be/auth
-      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_HTTP_RELATIVE_PATH=/auth # must match the value baked into the image (Containerfile)
+      # Keep health/metrics on the management port (9000) at /health/*, where the probes look.
+      # Without this it inherits http-relative-path and moves to /auth/health/*.
+      - KC_HTTP_MANAGEMENT_RELATIVE_PATH=/
       - KC_PROXY_HEADERS=xforwarded
       # Only trust X-Forwarded-* headers from inside the cluster: k3s's default pod CIDR, where the
       # Traefik pod lives (its IP changes on restart, so a single IP would break).
