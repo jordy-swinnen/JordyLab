@@ -6,7 +6,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "cd jordylab-be && set -a && source .env && set +a && ./gradlew bootRun"
+        "cd jordylab-be && set -a && source .env && set +a && SPRING_PROFILES_ACTIVE=local ./gradlew bootRun"
       ],
       "port": 8080
     },
