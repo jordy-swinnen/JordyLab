@@ -49,7 +49,7 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                     .requestMatchers("/actuator/metrics/**").hasRole("admin")
                 .requestMatchers("/h2-console/**").permitAll()
                     .requestMatchers("/.well-known/assetlinks.json").permitAll()

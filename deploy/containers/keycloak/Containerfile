@@ -11,6 +11,9 @@ COPY jordylab-be/compose/keycloak-theme/jordylab /opt/keycloak/themes/jordylab
 ENV KC_DB=postgres
 ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=true
+# Build-time option: must be baked in here, or `start --optimized` refuses to start when the
+# runtime value (/auth, from the keycloak-config ConfigMap) differs from what was built.
+ENV KC_HTTP_RELATIVE_PATH=/auth
 
 RUN /opt/keycloak/bin/kc.sh build
 
