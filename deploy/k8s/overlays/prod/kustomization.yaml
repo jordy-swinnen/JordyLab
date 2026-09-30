@@ -24,6 +24,8 @@ configMapGenerator:
     literals:
       - POSTGRES_URL=jdbc:postgresql://cnpg-cluster-rw:5432/jordylab
       - KEYCLOAK_URL=https://jordylab.be/auth
+      # In-cluster Service for the backend's Keycloak Admin REST calls (/auth/admin is not public).
+      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/auth
       - JORDYLAB_CORS_ALLOWED_ORIGINS=https://jordylab.be,https://localhost
       - MOBILE_PRODUCTION_DOMAIN=jordylab.be
       - NTFY_BASE_URL=https://jordylab.be/ntfy
