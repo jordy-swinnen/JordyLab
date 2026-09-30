@@ -237,8 +237,9 @@ kubectl -n cnpg-system logs -l cnpg.io/cluster=jordylab-db -f
 
 ## 13. Rotate a secret
 
-1. `sops deploy/k8s/overlays/prod/secrets.sops.yaml` — opens your `$EDITOR` on the decrypted content in a
-   temp file; edit the value, save, and `sops` re-encrypts on write.
+1. `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml` (from the repo root) — opens the
+   decrypted content in a temp file in IntelliJ; edit the value, save, close the tab, and `sops` re-encrypts on
+   exit. Without `SOPS_EDITOR`, sops falls back to `$EDITOR`.
 2. Commit and push the updated ciphertext.
 3. Deploy as usual (§10) — the new value reaches the cluster as an updated `Secret`.
 4. Restart the pods that read it so they pick it up:
