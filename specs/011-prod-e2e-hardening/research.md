@@ -164,7 +164,8 @@ when implementing":
 - `deploy-prod.yml`: drop the `workflow_run` trigger, `workflow_dispatch` input `sha` → `version`, image tags from
   `${VERSION}`, pin `kubectl` to the k3s server minor version and `kustomize` to a release URL;
 - `android-release.yml`: retire the `mobile-v*` trigger, move its steps into `release.yml`; the APK job stays
-  **disabled** while the 007 T052 keystore/realm gate is open;
+  **disabled** while the 007 T052 keystore/realm gate is open — **cleared 2026-09-30** (keystore secrets set by Jordy,
+  realm clients live, PR #34), so the APK job runs on every release;
 - runbook §10/§11/§20 and the devops agent (both `.claude/` and `.opencode/` copies) updated to the new flow.
 
 **Consequences for the campaign**:

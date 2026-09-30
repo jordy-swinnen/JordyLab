@@ -167,7 +167,7 @@ jordylab-fe/
 │                                              #   endpoint
 └── eslint.config.mjs / tsconfig.base.json      # + scope:platform, @jordylab-fe/shared/platform/* paths
 
-.github/workflows/android-release.yml           # NEW — first build/release workflow in the repo (no existing one to
+.github/workflows/android-release.yml           # (retired 2026-10-01 → release.yml, spec 011 BUG-008) NEW — first build/release workflow in the repo (no existing one to
                                               #   mirror beyond naming/permissions style); triggers on tag `mobile-v*`
 ```
 

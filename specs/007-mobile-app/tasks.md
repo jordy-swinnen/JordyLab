@@ -553,6 +553,9 @@ into JordyLab.
     exist; JDK 21 chosen for AGP 8.13 (untested against the real Android Gradle build in this sandbox). The tag
     format `mobile-v<versionName>-<versionCode>` is this workflow's own invention (not specified elsewhere) —
     confirm it before using this as the real release process.
+  **Superseded 2026-10-01 (spec 011 BUG-008, PR #39)**: the APK steps moved into `.github/workflows/release.yml`
+  (one `v*` tag releases web + APK; versionCode derived from the tag); `android-release.yml` and `mobile-v*` tags
+  are retired.
 - [X] T052 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): generate the release signing
   keystore, record its cert SHA-256 into `jordylab.mobile.release.signing-cert-sha256` (T001/T002) and the realm's
   App Link config, store the keystore as a base64 GitHub Actions secret plus an offline backup (research D14) — do

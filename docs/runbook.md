@@ -346,9 +346,11 @@ and the Android APK together.
    - **verify** — the tag's commit is on `main` and a Build of a push to `main` succeeded for it (else it fails);
    - **retag** — the tested images `sha-<sha>` get the tag `vX.Y.Z` (`docker buildx imagetools create`), nothing is
      rebuilt, so what ships is exactly what was tested;
-   - **release** — `gh release create --generate-notes` (prerelease for `-rcN`);
+   - **release** — a *draft* GitHub Release with generated notes (prerelease for `-rcN`);
    - **deploy** — calls `deploy-prod.yml` with the tag; it waits for your `production` approval (§9) and deploys
      `ghcr.io/jordy-swinnen/jordylab-*:vX.Y.Z`;
+   - **publish** — the draft becomes public only once the deploy succeeded (a rejected or failed deploy leaves
+     only a draft, which you can delete);
    - **apk** — builds and signs the Android APK with `versionName` X.Y.Z and
      `versionCode` = MAJOR·1000000 + MINOR·10000 + PATCH·100 + (rcN, or 99 for a final release), so every tag
      installs as an update; publishes it to `POST /api/mobile/releases` as the `mobile-release-ci` service

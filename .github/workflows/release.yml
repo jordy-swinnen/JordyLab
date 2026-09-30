@@ -5,9 +5,10 @@ name: Release
 #   git tag v0.1.0 && git push origin v0.1.0        (or GitHub → Releases → Draft a new release)
 # 1. verify  — the tag's commit is on main and its Build (push to main) succeeded
 # 2. retag   — the tested images sha-<sha> get the release tag; nothing is rebuilt
-# 3. release — GitHub Release with generated notes (vX.Y.Z-rcN → prerelease)
+# 3. release — *draft* GitHub Release with generated notes (vX.Y.Z-rcN → prerelease)
 # 4. deploy  — deploy-prod.yml with the release tag, behind the `production` approval
-# 5. apk     — signed Android APK, versioned from the tag, published to /api/mobile/releases
+# 5. publish — the draft becomes public only after the deploy succeeded
+# 6. apk     — signed Android APK, versioned from the tag, published to /api/mobile/releases
 
 on:
   push:
@@ -102,13 +103,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Create the GitHub Release
+      # A draft until deploy succeeds, so a rejected or failed deploy never leaves a public Release.
+      - name: Create the draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           PRERELEASE: ${{ needs.verify.outputs.prerelease }}
         run: |
-          flags=(--repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$TAG")
+          flags=(--repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$TAG" --draft)
           [ "$PRERELEASE" = "true" ] && flags+=(--prerelease)
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$TAG" "${flags[@]}"
 
@@ -118,6 +120,18 @@ jobs:
     with:
       version: ${{ github.ref_name }}
     secrets: inherit
+
+  publish:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the Release now that production runs it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
 
   apk:
     needs: [verify, deploy]
