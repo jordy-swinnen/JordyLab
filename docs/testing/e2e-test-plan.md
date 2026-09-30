@@ -1,0 +1,825 @@
+# JordyLab E2E Test Plan
+
+Campaign spec: [specs/011-prod-e2e-hardening](../../specs/011-prod-e2e-hardening/spec.md) · Bug log: [bug-log.md](bug-log.md)
+
+## 1. Summary
+
+- **Date**: 2026-09-30 · **Branch**: `011-prod-e2e-hardening` · **`main` tested**: `e167de8`
+- **Environments**: `local` (Podman Compose + `bootRun` + `nx serve`) and `prod` (https://jordylab.be, k3s on OVH VPS-2).
+- **Production version**: `e167de8` (Jordy approved run 36749972728 after recon; backend/frontend/keycloak run
+  `sha-e167de8834a1…`).
+- **Channels**: `gh` ✅ (GitHub MCP down: "Authorization header is badly formatted"), Tailscale ✅, read-only
+  `kubectl` ✅ (5 pods Running: backend, frontend, keycloak, ntfy, cnpg-cluster-1), `gitleaks` 8.30.1 ✅,
+  built-in browser ✅. Listing prod Secret key names was refused by the permission classifier → secret presence is
+  asked in HANDOFF-05 instead.
+- **Approval status**: **approved 2026-09-30** (T017; answers in §11).
+
+**Coverage matrix at recon** (534 rows = stories + acceptance scenarios + FR + SC of specs 001–010):
+
+| Status | Rows |
+|--------|------|
+| TODO | 416 |
+| FAIL (known, bug logged) | 55 |
+| NOT TESTABLE | 63 (010 Eufy: 45 · 007 native Android stories US2–US5: 18) |
+
+**Bugs at recon**: 20 — S1: 0 · S2: 9 · S3: 6 · S4: 5. **After section A (20:15)**: 25 — S1: 0 · S2: 10 · S3: 8 · S4: 7 (see [bug-log.md](bug-log.md)).
+
+## 2. Contradictions (brief vs repo)
+
+1. **Eufy presence (spec 010) is not implemented** — 68/68 tasks open; no code. → NOT BUILT, not a bug (Jordy, 2026-09-30).
+2. **Settings (006) US4–US7 and Switch (009) US2–US5 are incomplete** — brief assumes model selection "persists and is
+   actually used"; it does not exist. → Logged as bugs BUG-010…BUG-017 (Jordy, 2026-09-30).
+3. **OpenRouter** — brief §C/§D mentions it; no OpenRouter code exists (arrives with BUG-010/BUG-012).
+4. **`garmin-sync-service`** holds only `AGENTS.md`, `CLAUDE.md`, `.gitignore` — no code, no tests. There is no
+   `garmin`, `recipe` or `trading` backend module either. → NOT BUILT.
+5. **Ollama** — not gone: still a build dependency, test container and compose remnant. → BUG-009 (removal approved).
+6. **Release flow (runbook §20)** not implemented → BUG-008 (Jordy: it's a bug). Part of §20's "fix while you are in
+   deploy-prod.yml" is already done (pinned kubectl v1.36.4 / kustomize v5.8.1) → BUG-006.
+7. **Deploy approval**: `.claude/agents/jordylab-devops.md` requires Jordy's explicit yes for approving a deploy; the
+   brief delegates it for the campaign's own merged, green commits. → Q-01.
+8. **No `browser-test` agent / `agent-browser`** exists; the built-in browser pane is used.
+9. **Backend health is not public** — the Gateway routes only `/api` and `/.well-known/assetlinks.json` to the backend,
+   so `/actuator/health` is checked in-cluster (by design, not a bug).
+10. **Scanner Python**: brief/AGENTS say Python 3.12; the client targets `>=3.9` (macOS system Python 3.9.6 here). Not a
+    contradiction in behavior; noted for handoffs.
+11. **Deploy pending right now**: `e167de8` (Eufy WIP + DevOps docs) is waiting for approval in `production`. → Q-02.
+
+## 3. Baseline suites
+
+| Suite | Command | Result | Bugs |
+|-------|---------|--------|------|
+| Backend | `./gradlew build` (Podman socket, Ryuk off) | ❌ 561 tests, **7 failed** (twice, Podman VM 2 GiB) → ✅ **BUILD SUCCESSFUL, 561/561** after raising the VM to 6 GiB. CI Build for `e167de8` ✅ | BUG-018 (fixed locally) |
+| Backend coverage | `jacocoTestCoverageVerification` | ✅ passes (≥ 80 % per package) once the suite is green; **not run in CI** | BUG-004 |
+| Module boundaries | `ModularityTests` (inside the backend suite) | ✅ passed | — |
+| Frontend tests | `bunx nx run-many -t test` | ✅ 349 tests passed (13 projects) | — |
+| Frontend lint | `bunx nx run-many -t lint` | ❌ `jordylab:lint` (module boundary), `gamecatalog-ui:lint` (5 a11y errors); **lint not run in CI** | BUG-001, BUG-002, BUG-003 |
+| Scanner | `pytest --cov=src` (Python 3.9.6) | ✅ 129 passed, 85 % coverage (≥ 80 %) | — |
+| Frozen client | `tools/build_client.py` + `git diff --exit-code` | ✅ template in sync | — |
+| garmin sidecar | — | NOT BUILT | — |
+| Secret scan | `gitleaks detect --redact` (137 commits) | ✅ no leaks in git. Working-tree scan: 13 hits, all in gitignored files (`jordylab-be/.env`, `.nx/cache` import-map hashes = false positives) | — |
+| TODO/FIXME | grep over `jordylab-be/src`, `jordylab-fe/{apps,libs}`, scanner, `deploy`, `.github` | ✅ none | — |
+
+## 4. High-risk areas (test order)
+
+1. **Scanner against prod** — BUG-020 (client embeds `localhost:8180`) blocks the whole real-data path on prod.
+2. **Auth & roles on prod** (006, 008) — `realm-prod.json` vs dev export, issuer under `/auth`, CORS, guest vs admin;
+   also the `''` route redirecting everyone to `/fna` (admin-only) — check what a guest sees after login.
+3. **Prod smoke & routing** (008 US1) — TLS, redirects, deep links, headers, `/auth` paths.
+4. **Specs 005, 007, 009 web flows** — no validation results (005, 007) or open tasks (009).
+5. **Local ≠ prod config** — three `environment.prod.ts` files changed recently; PVC artwork/APK storage; nginx caching.
+6. **CI/CD** — BUG-005/BUG-008 affect every later deploy; fix BUG-008 early (plan Phase 2).
+7. Lower risk: 002–004 catalog flows (validation results exist), FNA (tasks closed, no validation results).
+
+## 5. Coverage matrix
+
+Status vocabulary: `TODO` → `PASS` | `FAIL` (+BUG) → `FAIL-FIXED` | `BLOCKED` | `NOT TESTABLE`. Scenario rows (`-ASn`)
+inherit location/risk (`↑`) from their story row. Row IDs follow `<spec>-US<n>[-AS<n>]` / `<spec>-FR-<n>` / `<spec>-SC-<n>`
+(001 has one "primary user story" → `001-US0`).
+
+### 001 — FNA MVP1 completion
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 001-US0 | Primary user story | `/fna/briefing`; `POST /api/fna/briefing/trigger`; shared/ai | both | tasks closed | high (no validation) | TODO |  |
+| 001-US0-AS1 | Given the cloud provider is reachable, when the daily briefing job runs, then a briefing is produced and metrics at… | ↑ | both |  | ↑ | TODO |  |
+| 001-US0-AS2 | Given the cloud provider is unreachable, when the daily briefing job runs, then the job records an explicit, named… | ↑ | both |  | ↑ | TODO |  |
+| 001-US0-AS3 | Given a cloud call fails mid-request, when the briefing job handles it, then the system records the failure with a… | ↑ | both |  | ↑ | TODO |  |
+| 001-US0-AS4 | Given a provider recently failed and its unhealthy status is still within the cached TTL, when another AI call is a… | ↑ | both |  | ↑ | TODO |  |
+| 001-US0-AS5 | Given a developer writes an import that violates the documented library boundaries, when lint runs, then it fails a… | ↑ | both |  | ↑ | TODO |  |
+| 001-US0-AS6 | Given the frontend test suite runs, when any of the three views or the API service is exercised, then rendering, po… | ↑ | both |  | ↑ | TODO |  |
+| 001-FR-001 | The system MUST route all AI calls through a single resilient service that selects the provider based on per-… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-002 | The system MUST cache provider health status for a configurable TTL so that a | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-003 | The system MUST treat a mid-request failure of the provider as an explicit, named error, not a silent missing… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-004 | The system MUST refresh cached health status when a runtime failure is observed. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-005 | The system MUST fail with an explicit named error when the configured provider is unavailable, rather than si… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-006 | The system MUST record, per AI call, which provider served it and which module originated it. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-007 | The system MUST record provider failure events with the provider name and a normalized reason drawn from a fi… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-008 | Reading cached provider health status MUST be a fast, in-memory, non-blocking | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-008a | The real AI generation call MUST be bounded by its own configured timeout | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-009 | All AI calls in the system MUST route through the resilient service. No module may call a chat model directly. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-010 | Provider selection MUST be configurable per module without a code change. Each module declares its provider i… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-011 | Lint MUST fail when a library tagged `type:api` imports from a library tagged `type:ui`. Enforcement is via t… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-001 |
+| 001-FR-012 | Lint MUST fail when a library imports across domain scopes, except when importing from the shared scope. Enfo… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-001 |
+| 001-FR-013 | Boundary enforcement MUST run in CI, not only locally. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-003 |
+| 001-FR-014 | Every routed view MUST have tests covering render, populated state, empty state, and error state. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-015 | The API service MUST have tests covering success and HTTP error paths. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-016 | The frontend test suite MUST run in CI and MUST fail the build on failure. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-016a | Frontend test coverage MUST meet a minimum 80% threshold enforced in CI; the build MUST fail when any library… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-004 |
+| 001-FR-016b | Backend test coverage MUST meet a minimum 80% threshold enforced in CI; the build MUST fail when any module d… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-004 |
+| 001-FR-016c | Coverage thresholds MUST be measured per module (backend) and per library (frontend), not only as a workspace… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-004 |
+| 001-FR-017 | Unused test infrastructure MUST be removed so the test configuration reflects what is actually used. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-FR-018 | The project MUST make a recorded decision on its use of pre-release upstream dependencies — either an explici… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-SC-001 | A full ingest-and-briefing cycle completes successfully with the cloud provider reachable. Metrics attribute… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-SC-002 | Metrics show provider attribution for every AI call, and provider failures are individually countable with a… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-SC-003 | A deliberately introduced boundary violation fails lint in CI. | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-003 |
+| 001-SC-004 | Every frontend component and service has a corresponding spec file, the suite passes in CI, and both frontend… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | TODO |  |
+| 001-SC-005 | `AGENTS.md` and `jordylab-infrastructure-guide.md` describe no behaviour that the code does not implement. Th… | `/fna/*`; `/api/fna/**`; CI | both |  | high (no validation, open tasks) | FAIL | BUG-009 |
+
+### 002 — Game catalog
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 002-US1 | Automatic catalog synchronization from JordyBox (Priority: P1) | scanner → `POST /api/gamecatalog/ingest/check\|scan` | both (handoff) | validation-results | normal | TODO |  |
+| 002-US1-AS1 | Given a configured and enabled scan source on JordyBox, When a scheduled sync runs, Then the server receives the sn… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US1-AS2 | Given a game that was present in the previous snapshot, When a new complete snapshot for that source no longer cont… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US1-AS3 | Given JordyBox has been offline for several days, When no sync runs, Then the catalog retains the last known state… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US1-AS4 | Given a submission containing malformed, oversized, or script-injected field values, When the server processes it,… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US1-AS5 | Given an unauthenticated or incorrectly authenticated submission, When it reaches the server, Then it is rejected i… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US1-AS6 | Given the scanner cannot read a source (e.g., library drive unmounted), When the sync runs, Then the agent reports… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US1-AS7 | Given an identical snapshot submitted twice, When the server processes the duplicate, Then the catalog is unchanged… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 002-US2 | Browse the catalog as a card grid (Priority: P2) | `/games/grid`; `GET /api/gamecatalog/games`, `/platforms` | both | validation-results | normal | TODO |  |
+| 002-US2-AS1 | Given a synced catalog with games from Steam and two emulated systems, When the user opens the catalog view, Then e… | ↑ | both |  | ↑ | TODO |  |
+| 002-US2-AS2 | Given a catalog of many games, When the user types a partial title into search, Then only matching games remain vis… | ↑ | both |  | ↑ | TODO |  |
+| 002-US2-AS3 | Given a catalog of many games, When the user filters by one platform, Then only games of that platform are shown. | ↑ | both |  | ↑ | TODO |  |
+| 002-US2-AS4 | Given a game with no available thumbnail, When the grid renders, Then a neutral placeholder is shown instead of a b… | ↑ | both |  | ↑ | TODO |  |
+| 002-US2-AS5 | Given the catalog is empty (no sources synced yet), When the user opens the catalog view, Then an explicit empty st… | ↑ | both |  | ↑ | TODO |  |
+| 002-US3 | Game detail with AI-generated description (Priority: P3) | `/games/:id`; `GET /api/gamecatalog/games/{id}`; enrichment | both | validation-results | normal | TODO |  |
+| 002-US3-AS1 | Given a discovered game with no enrichment yet, When enrichment runs, Then structured multiplayer facts (genre, max… | ↑ | both |  | ↑ | TODO |  |
+| 002-US3-AS2 | Given a generated description, When the user reopens the detail view, Then the persisted description is shown witho… | ↑ | both |  | ↑ | TODO |  |
+| 002-US3-AS3 | Given the AI provider is unavailable when enrichment is attempted, When the user opens the detail view, Then the ga… | ↑ | both |  | ↑ | TODO |  |
+| 002-US3-AS4 | Given enrichment is pending or has failed for some games, When the user browses the grid, Then browsing and searchi… | ↑ | both |  | ↑ | TODO |  |
+| 002-US4 | Natural-language questions across the catalog (Priority: P4) | `/games/chat`; `POST /api/gamecatalog/chat` (SSE) | both | validation-results | normal | TODO |  |
+| 002-US4-AS1 | Given an enriched catalog, When the user asks "which games support 4+ player local co-op?", Then the answer names o… | ↑ | both |  | ↑ | TODO |  |
+| 002-US4-AS2 | Given a question about a game or genre not represented in the catalog, When the chat answers, Then it explicitly st… | ↑ | both |  | ↑ | TODO |  |
+| 002-US4-AS3 | Given a chat answer listing games, When the user follows a listed game, Then they reach that game's detail view (or… | ↑ | both |  | ↑ | TODO |  |
+| 002-US4-AS4 | Given the AI provider is unavailable, When the user opens chat, Then an explicit unavailable state is shown while t… | ↑ | both |  | ↑ | TODO |  |
+| 002-US5 | View and manage scan sources (Priority: P5) | `/games/sources`; `GET/PUT /api/gamecatalog/sources` | both | validation-results | normal | TODO |  |
+| 002-US5-AS1 | Given configured sources, When the user opens the sources view, Then each source shows its path, type, enabled stat… | ↑ | both |  | ↑ | TODO |  |
+| 002-US5-AS2 | Given an enabled source with games in the catalog, When the user disables it, Then no further submissions from it a… | ↑ | both |  | ↑ | TODO |  |
+| 002-US5-AS3 | Given a disabled source, When the user re-enables it and the next sync completes, Then its games reappear in the ca… | ↑ | both |  | ↑ | TODO |  |
+| 002-US5-AS4 | Given a new path added to the agent's local configuration file, When the next sync runs, Then the new source appear… | ↑ | both |  | ↑ | TODO |  |
+| 002-FR-001 | All catalog data transfer MUST be initiated by JordyBox via outbound requests on a configurable schedule. The… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-002 | The server MUST authenticate every submission and MUST reject unauthenticated or incorrectly authenticated su… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-003 | The server MUST validate and sanitize every field of every submitted entry before any persistence: type, leng… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-004 | Invalid entries within an otherwise valid submission MUST be rejected with explicit, countable errors while v… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-005 | Each successful submission MUST be treated as the authoritative, complete snapshot for its source as of that… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-006 | Ingestion MUST be idempotent: re-processing an identical snapshot produces no catalog changes. Out-of-order s… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-007 | A scan failure on JordyBox (source unreadable, unmounted, or path missing) MUST be reported as an explicit fa… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-008 | The system MUST record per-source sync metadata: last successful sync time, last attempt time, outcome, and c… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-009 | Steam games MUST be identified by their stable Steam application ID. ROM games MUST be identified by source,… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-010 | Users MUST be able to view all currently installed games as a card grid showing title, thumbnail, and a platf… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-011 | Platform badges MUST distinguish Steam from each specific emulated system by name (e.g., "Steam", "SNES", "Pl… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-012 | Users MUST be able to search the grid by title (partial match) and filter by platform. | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-013 | Games without an available thumbnail MUST render a neutral placeholder. Artwork sourcing is hybrid: the serve… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-014 | An empty catalog MUST render an explicit empty state explaining that no games have been discovered yet. | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-015 | Users MUST be able to open a detail view per game showing at minimum: title, platform, source it was discover… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-016 | AI enrichment MUST produce both (a) structured, queryable multiplayer facts — genre, maximum local co-op play… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-017 | Descriptions MUST be generated after discovery, persisted, and reused — not regenerated on every view. | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-018 | When the AI provider is unavailable, enrichment MUST fail explicitly (named error, retryable later), the deta… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-019 | Users MUST be able to ask natural-language questions about the catalog in a chat interface. | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-020 | Chat answers MUST be grounded exclusively in catalog data (including structured multiplayer facts and enriche… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-021 | Chat answers that reference games MUST identify the specific catalog entries they are based on, in a way the… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-022 | When the AI provider is unavailable, chat MUST show an explicit unavailable state and MUST NOT answer from ca… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-023 | Users MUST be able to view all configured scan sources with: path, source type (Steam library or a specific e… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-024 | Source paths are defined in the agent's local configuration file on JordyBox and announced to the server on s… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-FR-025 | Enabled-state changes made in the web app MUST take effect at the agent's next scheduled check-in (the agent… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-001 | A game installed on JordyBox appears in the web catalog within one sync interval (default: 1 hour) with zero… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-002 | A game uninstalled from JordyBox is no longer presented as installed in the catalog within one sync interval… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-003 | 100% of unauthenticated submissions and 100% of malformed submissions are rejected with zero catalog writes;… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-004 | The feature operates end-to-end with JordyBox's firewall denying all inbound connections — every data flow is… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-005 | 100% of games named in chat answers can be verified as present in the catalog at answer time; questions about… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-006 | With a library of 5,000 games, the catalog grid's initial view loads and becomes interactive in under 2 secon… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-007 | AI descriptions are successfully generated for at least 95% of discovered games within 24 hours of first disc… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+| 002-SC-008 | A scan failure on JordyBox (e.g., unmounted library drive) results in zero unintended game removals from the… | `/games/*`; `/api/gamecatalog/**` | both |  | high (open tasks) | TODO |  |
+
+Open tasks without a story label: T046.
+
+### 003 — Python scanner
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 003-US1 | Automatic scanning at machine start (Priority: P1) | scanner install + autostart (macOS/Linux) | both (handoff) | validation-results | normal | TODO |  |
+| 003-US1-AS1 | Given an installed client with a valid session, When the machine starts, Then a scan runs automatically and the cat… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US1-AS2 | Given a first-time install on a new machine, When the client runs, Then it presents a one-time login the owner comp… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US1-AS3 | Given an installed client, When the owner requests an on-demand scan, Then a scan runs immediately using the same l… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US1-AS4 | Given an installed client, When the owner runs status, Then they see whether automatic startup is configured, when… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US1-AS5 | Given an installed client, When the owner uninstalls, Then the automatic startup entry and cached credentials are r… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US2 | Upload only when something changed (Priority: P1) | `POST /api/gamecatalog/ingest/check` → `/scan` | both (handoff) | validation-results | normal | TODO |  |
+| 003-US2-AS1 | Given a library unchanged since the last successful scan, When the client runs, Then it uploads no listing and the… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US2-AS2 | Given a library with one added, removed, or modified file, When the client runs, Then the change is uploaded and re… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US2-AS3 | Given the server's ingestion logic has changed since the last successful scan for a source, When the client next as… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US2-AS4 | Given the owner wants to force a refresh, When they scan with force, Then the upload happens despite an unchanged f… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US3 | The catalog stays the same catalog (Priority: P1) | scanner identity/title parity; reconciliation | both (handoff) | validation-results | normal | TODO |  |
+| 003-US3-AS1 | Given a catalog populated by the previous mechanism, When the new client scans the same unchanged library, Then eve… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US3-AS2 | Given a multi-disc set (playlist or disc-numbered files), When the client scans, Then it produces one entry whose i… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US3-AS3 | Given a configured library root that is missing or unreadable (e.g., drive not mounted), When the client runs, Then… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US3-AS4 | Given a scan that would empty a source or remove most of its games, When it is not forced, Then the server refuses… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US3-AS5 | Given the same directory reached through different paths or symlinks, When the client scans, Then no duplicate entr… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US4 | Clean cutover from the shell script (Priority: P2) | shell-script cutover on install | both (handoff) | validation-results | normal | TODO |  |
+| 003-US4-AS1 | Given an old shell-script schedule on the machine, When the owner installs the new client, Then the old schedule is… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-US4-AS2 | Given a pre-cutover submission arrives after the new client has been registered, When the server processes it, Then… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 003-FR-001 | The catalog scan MUST be performed by a resident client downloaded from the web app, replacing the per-librar… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-002 | The client MUST authenticate via a one-time interactive login on first use and MUST run unattended thereafter… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | FAIL | BUG-020 (suspected) |
+| 003-FR-003 | The client's credential MUST carry only the role required to submit scans, and no other roles belonging to th… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-004 | The client MUST install itself to start automatically when the machine starts (Linux and macOS), and MUST sup… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-005 | The client MUST identify its machine by a stable identifier that does not change when the network name change… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-006 | The client MUST run on the interpreter present on the target machines (the macOS system Python floor) and MUS… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-007 | The client MUST decide "did anything change?" from file metadata only — path, size, and modification time — w… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-008 | Every run MUST ask the server whether a scan is needed before uploading anything; the server MUST record the… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-009 | The need for a scan MUST be decided by the server: fingerprint mismatch, an advance of the server's ingest-lo… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-010 | The client MUST support forcing a scan that bypasses change detection. | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-011 | If a configured library root is missing, unreadable, or yields no recognizable game files, the client MUST NO… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-012 | The server MUST refuse a scan that would leave a source with no installed games, or that would remove a large… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-013 | Only explicitly configured or previously registered library roots MAY cause a partial result; auto-detected d… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-014 | For single-file games, the client MUST produce the same game identity, title, and platform as the previous me… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-015 | The client MUST collapse multi-file games into a single entry, using `.m3u` playlists and disc-numbered file… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-016 | File names and titles MUST be normalized consistently on the client and the server so that one file is one ga… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-017 | The client MUST follow symlinked library directories without looping indefinitely, and MUST not double-count… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-018 | For Steam, the client MUST discover all configured library folders, not only the default installation, and MU… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-019 | Within 003 scope, the client MUST group `.m3u` playlists, `.cue`/`.gdi` disc images (including referenced `.b… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-020 | Installing the client MUST detect and remove any pre-existing shell-script schedule for the library, reportin… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-FR-021 | A submission received without a client fingerprint for a source that has one MUST be flagged as pre-cutover a… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-001 | On a Linux and on a macOS machine, after a single browser login, a machine restart results in an updated cata… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-002 | When a library is unchanged, an automatic run uploads zero listing bytes and completes within 60 seconds for… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-003 | 100% of missing-root, unmounted-drive, and empty-result scans cause zero unintended game removals. | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-004 | For a fixed fixture library, the new client produces identical identities, titles, and platforms to the previ… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-005 | The scanner credential contains only the scanner role, verified by inspecting a freshly issued token. | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-006 | Installing, running, and uninstalling the client require no administrator/root privileges on either supported… | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+| 003-SC-007 | The downloadable client contains no secret material, verified by inspection. | scanner client; `/api/gamecatalog/ingest/*` | both (handoff) |  | high (open tasks) | TODO |  |
+
+Open tasks without a story label: T048.
+
+### 004 — Game catalog refinements
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 004-US1 | Card-fitted covers and a wide detail banner (Priority: P1) | `/games/grid` cards; `/games/:id` banner; `/games/{id}/artwork` | both | tasks closed | high (no validation) | TODO |  |
+| 004-US1-AS1 | Given a Steam game with published Steam library art, When its card renders, Then the portrait library image (600×90… | ↑ | both |  | ↑ | TODO |  |
+| 004-US1-AS2 | Given a ROM game with available box art, When its card renders, Then the box art fills the portrait card. | ↑ | both |  | ↑ | TODO |  |
+| 004-US1-AS3 | Given a game's detail page, When it renders, Then a wide banner image is shown at the top — Steam games use Steam's… | ↑ | both |  | ↑ | TODO |  |
+| 004-US1-AS4 | Given no wide banner exists for a game, When the detail page renders, Then a styled placeholder plate is shown inst… | ↑ | both |  | ↑ | TODO |  |
+| 004-US1-AS5 | Given no cover exists for a game, When the grid renders, Then the existing neutral placeholder plate is shown (unch… | ↑ | both |  | ↑ | TODO |  |
+| 004-US2 | One game, many hosts (Priority: P2) | multi-host reconciliation; detail hosts | both (handoff) | tasks closed | high (no validation) | TODO |  |
+| 004-US2-AS1 | Given a game already installed on host A, When host B's snapshot contains the same game (same Steam appid, or same… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 004-US2-AS2 | Given the same game installed on hosts A and B, When I browse the grid, Then the game appears as one card. | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 004-US2-AS3 | Given the same game installed on hosts A and B, When host B's next successful snapshot no longer contains it, Then… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 004-US2-AS4 | Given a game's last installed host link passes the 30-day grace period, When the purge job runs, Then the game and… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 004-US2-AS5 | Given host A's source is disabled, When the game is also installed on enabled host B, Then the game remains visible… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 004-US2-AS6 | Given a game rediscovered on a host within the 30-day grace period, When reconciliation runs, Then that host link i… | ↑ | both (handoff) |  | ↑ | TODO |  |
+| 004-US3 | Filter the overview by host (Priority: P3) | host filter; `GET /api/gamecatalog/hosts` | both | tasks closed | high (no validation) | TODO |  |
+| 004-US3-AS1 | Given games installed on two hosts, When I select one host in the host filter, Then only games installed on that ho… | ↑ | both |  | ↑ | TODO |  |
+| 004-US3-AS2 | Given combined filters, When search, platform, and host are all set, Then all three apply together (AND semantics). | ↑ | both |  | ↑ | TODO |  |
+| 004-US3-AS3 | Given no host selected, When the grid renders, Then all visible games show regardless of host. | ↑ | both |  | ↑ | TODO |  |
+| 004-US4 | Richer deterministic detail data (Priority: P4) | detail deterministic fields; `/metadata/refresh` | both | tasks closed | high (no validation) | TODO |  |
+| 004-US4-AS1 | Given a Steam game, When its metadata is fetched, Then genres, developer, publisher, and release year are persisted… | ↑ | both |  | ↑ | TODO |  |
+| 004-US4-AS2 | Given a ROM game, When enrichment runs, Then the same fields are produced and validated with the same bounds as any… | ↑ | both |  | ↑ | TODO |  |
+| 004-US4-AS3 | Given a detail page, When it renders, Then the spec sheet shows genres, developer, publisher, release year, hosts,… | ↑ | both |  | ↑ | TODO |  |
+| 004-US4-AS4 | Given Steam store data is temporarily unavailable, When the metadata fetch fails, Then the attempt is recorded and… | ↑ | both |  | ↑ | TODO |  |
+| 004-US4-AS5 | Given the new fields are persisted, When chat translates a question over genres / developer / release-year range /… | ↑ | both |  | ↑ | TODO |  |
+| 004-US5 | "Ask the catalog" with the game attached (Priority: P5) | detail "Ask the catalog" → chat with attached game | both | tasks closed | high (no validation) | TODO |  |
+| 004-US5-AS1 | Given a game's detail page, When I view the "Ask the catalog" button, Then it shows the spark icon. | ↑ | both |  | ↑ | TODO |  |
+| 004-US5-AS2 | Given the button is clicked, When chat opens, Then the game is attached and shown as a removable attachment chip. | ↑ | both |  | ↑ | TODO |  |
+| 004-US5-AS3 | Given an attached game, When I send a prompt, Then the request carries the game id and the backend injects the atta… | ↑ | both |  | ↑ | TODO |  |
+| 004-US5-AS4 | Given an attached game, When the answer composes, Then it is grounded in catalog data (including the attached row)… | ↑ | both |  | ↑ | TODO |  |
+| 004-US5-AS5 | Given the attachment is removed, When I ask a question, Then the request behaves exactly like plain catalog-wide ch… | ↑ | both |  | ↑ | TODO |  |
+| 004-FR-001 | The overview grid MUST render each card with portrait artwork fitted to the card's aspect ratio (no wide head… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-002 | The detail page MUST render a wide banner slot (hero-ratio) at the top, distinct from the card cover: Steam g… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-003 | Existing resolved external cover URLs MUST be re-evaluated when the URL format changes (Steam covers move fro… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-004 | A game MUST be a single catalog entry independent of how many hosts have it installed. Per-host presence (ins… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-005 | During reconciliation of a host's snapshot, a submitted game matching an existing visible-or-retained game MU… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-006 | Snapshot authority remains per-host: a game absent from a host's successful snapshot is uninstalled on that h… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-007 | The scan payload hash / digest / shrink-guard semantics per source MUST be unchanged; the shrink guard counts… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-008 | The grid query MUST support a `host` filter (exact hostname) alongside `search`, `platform`, and pagination,… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-009 | A hosts endpoint MUST return the distinct hostnames of visible games (sorted) to drive the host filter chips. | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-010 | The game record MUST carry structured, queryable deterministic fields: genres, developer, publisher, release… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-011 | For Steam games, the deterministic fields MUST be sourced from Steam's public store appdetails endpoint (keyl… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-012 | The detail response MUST include the new fields plus the game's installed hosts; the detail page MUST render… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-013 | The chat request MUST accept an optional bounded list of attached game ids (validated: visible games only, ma… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-014 | When games are attached, the composition context MUST include their full catalog rows (title, platform, hosts… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-015 | The detail page's "Ask the catalog" button MUST show the spark icon (the same four-pointed star used for the… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-FR-016 | Chat answers MUST remain grounded exclusively in catalog data; the expanded deterministic fields (genres, dev… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-SC-001 | 100% of Steam games that have published Steam portrait library art render portrait-fitted cards; zero cards r… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-SC-002 | With the same game synced from two hosts: exactly 1 catalog entry, 2 host links, 0 enrichment resets, 0 artwo… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-SC-003 | Host filter narrows the grid to games installed on that host in combination with search and platform, with re… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-SC-004 | Deterministic metadata present for ≥ 95% of Steam games (Steam store uptime permitting) within 24 h of discov… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+| 004-SC-005 | With a game attached, 100% of answers cite the attached game and every game named in the answer exists in the… | `/games/grid`, `/games/:id`, chat | both |  | high (no validation) | TODO |  |
+
+### 005 — Steam library sync
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 005-US1 | A game reported by a second source is linked, not rebuilt (Priority: P1) | reconciliation across host scan + library sync | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US1-AS1 | Given an enriched game exists, When a new host reports it, Then exactly one new installation is linked to the exist… | ↑ | both |  | ↑ | TODO |  |
+| 005-US1-AS2 | Given an enriched game exists, When the library sync reports it, Then exactly one library entry is linked to the ex… | ↑ | both |  | ↑ | TODO |  |
+| 005-US1-AS3 | Given a game that is not yet in the catalog, When two sources report it at nearly the same time (e.g. a scan and a… | ↑ | both |  | ↑ | TODO |  |
+| 005-US1-AS4 | Given a library sync or scan whose content is identical to the previous one, When it is received, Then it is record… | ↑ | both |  | ↑ | TODO |  |
+| 005-US1-AS5 | Given a game already exists, When a source reports it with a slightly different title, Then the title follows a sin… | ↑ | both |  | ↑ | TODO |  |
+| 005-US1-AS6 | Given any game, When it is enriched, Then the AI is asked only for facts that no deterministic source has already p… | ↑ | both |  | ↑ | TODO |  |
+| 005-US2 | See my whole owned Steam library (Priority: P1) | `POST /api/gamecatalog/library/steam/sync` | both (credentials) | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US2-AS1 | Given an owned game that is not installed anywhere, When a library sync completes, Then it appears with status "Not… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US2-AS2 | Given an owned game installed on JordyBox, When the scan and the library sync have both run, Then it appears once,… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US2-AS3 | Given an owned game whose last installation passed the grace period, When the purge runs, Then the installation is… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US2-AS4 | Given the library sync runs before any host scan, When I open the catalog, Then all owned games are listed as "Not… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US3 | Filter by installation status and library source (Priority: P1) | grid status/source filters | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US3-AS1 | Given a mixed catalog, When I choose "Installed", Then only games with an installed installation on an enabled sour… | ↑ | both |  | ↑ | TODO |  |
+| 005-US3-AS2 | Given a host is selected, When the status is "Not installed", Then the host filter is hidden while "Not installed"… | ↑ | both |  | ↑ | TODO |  |
+| 005-US3-AS3 | Given the default view, When I open the catalog for the first time after this feature, Then the status filter defau… | ↑ | both |  | ↑ | TODO |  |
+| 005-US3-AS4 | Given filters are set, When I reload or share the URL, Then they behave the same way the host filter does. | ↑ | both |  | ↑ | TODO |  |
+| 005-US3-AS5 | Given the chat, When I ask "which games I own but haven't installed support 4 local players?", Then the chat can fi… | ↑ | both |  | ↑ | TODO |  |
+| 005-US4 | See games from my Steam Family library (Priority: P2) | `POST /api/gamecatalog/library/steam-family/sync` | both (credentials) | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US4-AS1 | Given a game owned only by another family member, When a family sync completes, Then it appears with source "Family… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US4-AS2 | Given a game I own that is also in the family library, When both syncs complete, Then it shows source "Owned" (Owne… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US4-AS3 | Given a family title that Steam excludes from sharing, When a family sync completes, Then it is omitted from the ca… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US4-AS4 | Given a family game installed on JordyBox, When scan and family sync complete, Then it is "Installed" on JordyBox w… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US5 | Refresh the family library without the server holding my Steam login (Priority: P2) | family sync token handling (no stored login) | both (credentials) | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US5-AS1 | Given a valid token, When I trigger a family sync, Then it completes and settings show the time of the last success… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US5-AS2 | Given an expired or invalid token, When a family sync runs, Then it fails clearly and no catalog data changes. | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US5-AS3 | Given family data older than a configurable number of days, When I open the catalog, Then I see an unobtrusive "fam… | ↑ | both (credentials) |  | ↑ | TODO |  |
+| 005-US6 | Big first sync without a big bill (Priority: P2) | first-sync batching; AI/Steam call counts in logs | local | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US6-AS1 | Given a first library sync adds many new games, When it completes, Then the games are visible immediately with titl… | ↑ | local |  | ↑ | TODO |  |
+| 005-US6-AS2 | Given a backlog of games waiting for metadata, When batches are processed, Then installed games are processed befor… | ↑ | local |  | ↑ | TODO |  |
+| 005-US6-AS3 | Given a library game that is not installed anywhere, When backlog processing runs, Then it receives only determinis… | ↑ | local |  | ↑ | TODO |  |
+| 005-US6-AS4 | Given Steam's store rate limit is hit, When metadata batches run, Then processing pauses and resumes later without… | ↑ | local |  | ↑ | TODO |  |
+| 005-US7 | Local multiplayer is a fact, never a guess (Priority: P2) | local-multiplayer facts on detail/filters | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 005-US7-AS1 | Given a Steam game whose store page lists a split-screen or local co-op category, When | ↑ | both |  | ↑ | TODO |  |
+| 005-US7-AS2 | Given a Steam game whose store page has no category data, or a ROM with no `steam_app_id`, | ↑ | both |  | ↑ | TODO |  |
+| 005-US7-AS3 | Given neither Steam nor IGDB has data for a game (or IGDB is not configured), When the | ↑ | both |  | ↑ | TODO |  |
+| 005-US7-AS4 | Given a game with no local-multiplayer data at all, When it is AI-enriched, Then | ↑ | both |  | ↑ | TODO |  |
+| 005-US7-AS5 | Given the catalog, When I filter to "Local multiplayer only" (grid) or ask chat which | ↑ | both |  | ↑ | TODO |  |
+| 005-US7-AS6 | Given Steam's store rate limit is hit while resolving the backlog, When the batch is | ↑ | both |  | ↑ | TODO |  |
+| 005-FR-001 | A Steam game MUST have exactly one catalog entry per Steam app ID. This MUST be guaranteed by the data store,… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-002 | Every source (host scan, owned-library sync, family sync) MUST resolve an existing game before creating one,… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-003 | Adding, updating or removing a link MUST NOT reset or re-run a game's metadata lookup, artwork resolution or… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-004 | A sync whose content is identical to the previous one from the same source MUST short-circuit as "no change",… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-005 | Before enrichment, deterministic data available for a game (Steam store metadata, including genres and multip… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-006 | New games MUST become visible immediately. Metadata and enrichment for them MUST run in bounded batches, inst… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-007 | The number of AI calls and Steam store calls per sync run MUST be recorded, so the cost of a sync is visible. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-008 | The system MUST retrieve the owned Steam library for one configured account, independent of any host being on… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-009 | The owned-library sync MUST be triggerable manually and MUST also run automatically at most once per configur… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-010 | The system MUST retrieve the Steam Family shared library when a valid short-lived user access token is suppli… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-011 | The system MUST NOT store a Steam password, Steam login cookie, or any credential with general account access… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-012 | For Steam games, the title authority MUST be the Steam library name when one is known, otherwise the app mani… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-013 | Non-game Steam apps (tools, runtimes, redistributables) MUST be excluded from the catalog for both scans and… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-014 | A game MUST be purged only when it has no installed installation, no installation within the grace period, an… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-015 | Library entries that disappear from a successful sync MUST be soft-removed with a timestamp and purged after… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-016 | A failed, suspicious or partial sync MUST NOT remove or modify any library entry. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-017 | Installation status MUST be derived: `INSTALLED` if the game has at least one installed installation on an en… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-018 | Library source MUST be derived with precedence `OWNED` > `FAMILY` > `LOCAL`, where `LOCAL` means known only f… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-019 | Game list, detail, platform list, host list and chat queries MUST treat a game as visible if it is installed… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-020 | The status filter MUST default to "Installed" so the default view is unchanged from today. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-021 | Cards and the detail view MUST show installation status and library source. For family games, the detail view… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-022 | Library games that are not installed on any host MUST NOT be AI-enriched; they receive deterministic metadata… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-023 | While the status filter is "Not installed", the host filter MUST NOT be offered or combined; "Not installed"… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-024 | `localMultiplayer`, `splitScreen` and `maxLocalPlayers` MUST be deterministic only — derived from Steam store… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-025 | When a Steam game's metadata fetch (FR-005) has category data, local-multiplayer facts MUST be derived from i… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-026 | When a Steam game has no category data, or the game has no `steamAppId` (a ROM), the system MUST fall back to… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-027 | An unresolved local-multiplayer lookup MUST be retried a bounded number of times and then left "Unknown" unti… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-FR-028 | Game list, detail and chat queries MUST support filtering to games with confirmed `localMultiplayer=true`, an… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-001 | Reporting an existing game from a new host or library source causes 0 AI calls and 0 Steam store metadata cal… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-002 | Running the same library sync twice in a row causes 0 per-game writes and 0 external calls on the second run. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-003 | After the first full library sync, the number of AI calls equals at most the number of games that had no enri… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-004 | No duplicate games exist for any Steam app ID after concurrent scan + library sync runs (checked by a databas… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-005 | An owned but uninstalled game keeps its description through any number of uninstall/reinstall cycles and grac… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-006 | The default catalog view shows exactly the same games as before this feature. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-007 | No Steam credential or token appears in logs, API responses, the frontend bundle or the repository. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-008 | A failed, empty or expired-token sync removes or changes 0 catalog rows. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-009 | A first library sync of N not-installed games causes 0 AI calls; deterministic metadata and artwork only. | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 005-SC-010 | No game's shown local-multiplayer status is AI-derived, verified by test — every `localMultiplayer`/`splitScr… | `/api/gamecatalog/library/*`; grid filters | both |  | high (005–010, no validation, open tasks) | TODO |  |
+
+Open tasks without a story label: T026 T035.
+
+### 006 — Settings module
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 006-US1 | Only approved people get in (Priority: P1) | Keycloak registration; `/awaiting-approval` | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 006-US1-AS1 | Given a visitor who isn't logged in, When they open any app URL, Then they are sent to the Keycloak login | ↑ | both |  | ↑ | TODO |  |
+| 006-US1-AS2 | Given the registration form, When a visitor submits email, first name, last name and a password that meets | ↑ | both |  | ↑ | TODO |  |
+| 006-US1-AS3 | Given a pending user who logs in, When they open any route, Then they see only the "awaiting approval" | ↑ | both |  | ↑ | TODO |  |
+| 006-US1-AS4 | Given any user, When the admin looks at them in Settings → Users or in the Keycloak admin console, Then | ↑ | both |  | ↑ | TODO |  |
+| 006-US2 | Admin approves, rejects and revokes (Priority: P1) | `/settings/users`; `/api/settings/users/*` | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 006-US2-AS1 | Given pending sign-ups, When I open Settings → Users, Then I see them listed with name, email and sign-up | ↑ | both |  | ↑ | TODO |  |
+| 006-US2-AS2 | Given a pending user, When I click Approve, Then they get the `guest` role. | ↑ | both |  | ↑ | TODO |  |
+| 006-US2-AS3 | Given a pending user, When I click Reject, Then their account is disabled — it stays listed as rejected, | ↑ | both |  | ↑ | TODO |  |
+| 006-US2-AS4 | Given an approved guest, When I click Revoke, Then the `guest` role is removed and their active sessions | ↑ | both |  | ↑ | TODO |  |
+| 006-US2-AS5 | Given any user, When I click Reset password, Then a temporary password is set that has to be changed at | ↑ | both |  | ↑ | TODO |  |
+| 006-US3 | Guests see only the Game Catalog (Priority: P1) | guest role: `/games/*` only; guest chat limit | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 006-US3-AS1 | Given a guest, When the app shell renders, Then only the Game Catalog tab is visible, with the grid, | ↑ | both |  | ↑ | TODO |  |
+| 006-US3-AS2 | Given a guest, When they call FNA, Settings or any Game Catalog write — sources, refresh, artwork upload or | ↑ | both |  | ↑ | TODO |  |
+| 006-US3-AS3 | Given a guest who has reached the daily chat limit, When they send a chat message, Then they see a | ↑ | both |  | ↑ | TODO |  |
+| 006-US4 | Resilient AI calls (Priority: P1) | shared/ai `ResilientAiService` OpenRouter → Anthropic | both | open: T024 T026 T027 T028 T029 T030 | high (005–010, no validation, open tasks) | FAIL | BUG-010 (story missing/partial) |
+| 006-US4-AS1 | Given the gateway is unreachable, times out, rate-limits, rejects the key or doesn't know the model, When a | ↑ | both |  | ↑ | FAIL | BUG-010 (story missing/partial) |
+| 006-US4-AS2 | Given a saved model no longer appears in the gateway's list, When the AI Models page loads, Then that row | ↑ | both |  | ↑ | FAIL | BUG-010 (story missing/partial) |
+| 006-US4-AS3 | Given both providers fail, When a feature calls AI, Then it gets an explicit failure, with no silent | ↑ | both |  | ↑ | FAIL | BUG-010 (story missing/partial) |
+| 006-US5 | Everyone manages their own login details (Priority: P2) | user menu; Keycloak account actions | both | open: T031 T032 T033 | high (005–010, no validation, open tasks) | FAIL | BUG-011 (story missing/partial) |
+| 006-US5-AS1 | Given a logged-in user (admin or guest), When they choose My account → Change password, Then they | ↑ | both |  | ↑ | FAIL | BUG-011 (story missing/partial) |
+| 006-US5-AS2 | Given a logged-in user, When they choose My account → Edit profile, Then they can change their first | ↑ | both |  | ↑ | FAIL | BUG-011 (story missing/partial) |
+| 006-US6 | Choose a model per AI feature (Priority: P2) | Settings → AI Models page | both | open: T034 T035 T036 T037 T038 T039 T040 | high (005–010, no validation, open tasks) | FAIL | BUG-012 (story missing/partial) |
+| 006-US6-AS1 | Given Settings → AI Models, When it loads, Then every registered AI feature is listed with its current | ↑ | both |  | ↑ | FAIL | BUG-012 (story missing/partial) |
+| 006-US6-AS2 | Given a feature row, When I open the model picker, Then I see the gateway's current models with vendor, | ↑ | both |  | ↑ | FAIL | BUG-012 (story missing/partial) |
+| 006-US6-AS3 | Given I pick and save a new model, When the feature next runs, Then it uses that model. | ↑ | both |  | ↑ | FAIL | BUG-012 (story missing/partial) |
+| 006-US6-AS4 | Given a new AI feature added in code, When the app starts, Then it shows up in the list with its | ↑ | both |  | ↑ | FAIL | BUG-012 (story missing/partial) |
+| 006-US7 | Know when someone signs up (Priority: P3) | Ntfy push on sign-up | prod | open: T041 T042 | high (005–010, no validation, open tasks) | FAIL | BUG-013 (story missing/partial) |
+| 006-FR-001 | The system MUST have two app roles, `admin` and `guest`. Self-registered users MUST get neither role until | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-002 | The backend MUST deny by default. FNA and Settings functionality MUST require `admin`. Game Catalog reads | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-003 | The frontend MUST show tabs and routes based on role, and MUST show an "awaiting approval" page to | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-004 | Registration MUST collect email (used as the login name), first name, last name and password, and MUST | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-005 | Passwords MUST never be stored, logged or shown by JordyLab. Credentials live only in Keycloak; the admin | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-006 | The admin MUST be able to list users by status (pending / approved / revoked) with name, email and sign-up | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-007 | There MUST always be at least one admin; removing the last one MUST be blocked. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-008 | Every user MUST be able to change their own password, name and email without admin help. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-011 |
+| 006-FR-009 | Each guest MUST have a daily limit of 20 chat messages, resetting each calendar day at midnight. The count | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-010 | Admin-only service credentials used to manage users MUST never reach the browser. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-FR-018 | On a new sign-up, the admin MUST be notified by Ntfy push, showing the pending user's name and email. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-013 |
+| 006-FR-011 | The primary AI provider MUST be OpenRouter, reached through its OpenAI-compatible API and configured by | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-010 |
+| 006-FR-012 | The fallback provider MUST be Anthropic direct with Claude Sonnet 5. When the primary fails (unreachable, | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-010 |
+| 006-FR-013 | AI configuration MUST be per feature, not per module. The current features are: the FNA daily briefing, | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-010 |
+| 006-FR-014 | AI features MUST be registered in code with a default model. Saved choices MUST override the default. A | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-010 |
+| 006-FR-015 | The model picker MUST be filled live from the gateway's model list (cached), showing each model's vendor, | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-012 |
+| 006-FR-016 | Every AI call MUST record the feature, the provider and model that actually answered, whether the fallback | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-010 |
+| 006-FR-017 | All local-LLM (Ollama) support MUST be removed from the product — code, configuration, build and | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-009 |
+| 006-SC-001 | A pending or guest user is denied on 100% of admin-only functionality, verified by automated tests for | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-SC-002 | Approving a user takes no more than 2 clicks from the Settings tab, and they have access on their next | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | TODO |  |
+| 006-SC-003 | Changing a feature's model applies on the next AI call, with 0 restarts. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-012 |
+| 006-SC-004 | When the gateway is down, 100% of AI features still produce output through the fallback, verified by | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-010 |
+| 006-SC-005 | No reference to Ollama is left in code, build or configuration; documentation mentions it only as history. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-009 |
+| 006-SC-006 | The AI Models page loads in under 2 s using the cached model list. | `/settings/users`, `/awaiting-approval`; `/api/settings/**`; Keycloak | both |  | high (005–010, no validation, open tasks) | FAIL | BUG-012 |
+
+Open tasks without a story label: T025 T043 T044 T045 T046 T047.
+
+### 007 — Mobile app
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 007-US1 | Install the Android app from the website (Priority: P1) | install dialog; `/api/mobile/releases/latest`, `/download-link`, `/download/{token}` | both / neither (APK install) | tasks closed | high (005–010, no validation) | TODO |  |
+| 007-US1-AS1 | Given an approved user on an Android browser (not in the app), When the website loads for the first time, | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US1-AS2 | Given the dialog, When the user taps Download, Then a short-lived link downloads the latest signed APK. | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US1-AS3 | Given the dialog, When the user taps "Not now", Then it doesn't appear again on that device for 30 | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US1-AS4 | Given a pending user or a logged-out visitor, When they visit, Then no dialog is shown, and requesting | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US1-AS5 | Given an expired or tampered download link, When it's opened, Then the download is refused. | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US1-AS6 | Given a desktop browser, When the admin or a guest opens the user menu, Then "Get the Android app" | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US1-AS7 | Given Android Chrome, When the site is eligible for the browser's own "install web app" prompt, Then | ↑ | both / neither (APK install) |  | ↑ | TODO |  |
+| 007-US2 | Log in and use the app like the website (Priority: P1) | native app login | neither | tasks closed | high (005–010, no validation) | NOT TESTABLE | hardware (Android phone) |
+| 007-US2-AS1 | Given a fresh install, When the user taps Log in, Then the Keycloak login opens in the phone's browser | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US2-AS2 | Given a logged-in guest, When the app renders, Then they see only the Game Catalog, the same as on the | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US2-AS3 | Given a pending user, When they log in, Then they see the "awaiting approval" screen. | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US2-AS4 | Given the app, When it loads artwork and calls the API, Then everything works the same as on the | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US3 | Update prompt (Priority: P1) | native update prompt | neither | tasks closed | high (005–010, no validation) | NOT TESTABLE | hardware (Android phone) |
+| 007-US3-AS1 | Given a newer release is published, When the app starts or comes back to the foreground, Then it | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US3-AS2 | Given the installed version is below the minimum supported version, When the app starts, Then a | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US3-AS3 | Given CI builds a tagged release, When it finishes, Then the release shows up in JordyLab with | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US4 | Biometric unlock (Priority: P2) | native biometric unlock | neither | tasks closed | high (005–010, no validation) | NOT TESTABLE | hardware (Android phone) |
+| 007-US4-AS1 | Given a first successful login, When the user enables "Unlock with fingerprint", Then later app opens | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US4-AS2 | Given biometric unlock is on, When the biometric check fails, is cancelled, or the phone's enrolled | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US4-AS3 | Given the user logs out, turns biometrics off, or the admin revokes them, When the app is next opened, | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US5 | Share to JordyLab (Priority: P3) | `/mobile/share` + native share target | neither | tasks closed | high (005–010, no validation) | NOT TESTABLE | hardware (Android phone) |
+| 007-US5-AS1 | Given any Android app's share menu, When a user shares a link or text, Then JordyLab appears as a | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US5-AS2 | Given a guest shares something, When JordyLab opens, Then only "Ask the catalog" is offered, and it | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US5-AS3 | Given the admin shares a link, When JordyLab opens, Then "Save to FNA" is offered as well, and | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US5-AS4 | Given the user isn't logged in, When they share, Then they log in first and then continue with the | ↑ | neither |  | ↑ | NOT TESTABLE | hardware (Android phone) |
+| 007-US6 | Notifications (Priority: P3) | Ntfy dispatch (web side) + native tap | prod / neither | tasks closed | high (005–010, no validation) | TODO |  |
+| 007-US6-AS1 | Given a new sign-up is pending, When it's created, Then the admin gets a notification, and tapping it | ↑ | prod / neither |  | ↑ | TODO |  |
+| 007-US6-AS2 | Given the daily FNA briefing is generated, When it's ready, Then the admin gets a notification, and | ↑ | prod / neither |  | ↑ | TODO |  |
+| 007-US6-AS3 | Given either event, When the backend publishes it, Then delivery goes through the existing Ntfy server | ↑ | prod / neither |  | ↑ | TODO |  |
+| 007-US7 | iPhone home-screen web app (Priority: P3) | iOS home-screen manifest | prod | tasks closed | high (005–010, no validation) | TODO |  |
+| 007-US7-AS1 | Given an approved user on iPhone/iPad Safari, When the website loads for the first time, Then a | ↑ | prod |  | ↑ | TODO |  |
+| 007-US7-AS2 | Given the site is added to the home screen, When it's opened, Then it runs full-screen with the | ↑ | prod |  | ↑ | TODO |  |
+| 007-US7-AS3 | Given the site is already running as a home-screen app, When it loads, Then no install sheet is | ↑ | prod |  | ↑ | TODO |  |
+| 007-FR-001 | The system MUST publish signed Android releases with version name, version code, release notes, | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-002 | Only approved users (admin, guest) MAY obtain a download link. Links MUST expire within minutes and | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-003 | All releases MUST be signed with the same key, created once and never rotated. The release pipeline | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-004 | Publishing a release MUST be restricted to the CI/build identity — never available to end users. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-005 | The website MUST tell Android browsers, iOS/iPadOS Safari, desktop and the native app apart, and MUST | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-006 | Dismissal of the install prompt MUST be remembered per device for 30 days. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-007 | The browser's own web-app install prompt MUST be suppressed on Android. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-008 | The website MUST be installable as a home-screen web app on iOS (name, icon, standalone display). | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-009 | The app MUST bundle the web UI and apply the same role rules as the website. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-010 | Login MUST use the platform browser and return to the app. Credentials MUST never pass through app | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-011 | The app MUST check for updates on start and resume, and MUST block versions below the minimum | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-012 | Biometric unlock MUST be opt-in. Its stored session MUST be held in hardware-backed secure storage and | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-013 | Revoking a user (spec 006) MUST also invalidate their mobile long-lived sessions. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-014 | The app MUST register as a share target for text and URLs, and MUST only offer the destinations the | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-015 | Notification taps MUST open the matching screen in the app. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-017 | Confirming "Save to FNA" on a share MUST queue the shared link as an article candidate for the next | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-018 | The app MUST support Android 10 (API 29) and newer. Installation is not supported on older Android | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-FR-016 | The system MUST notify the admin when a new sign-up is pending and when the daily briefing is ready, via | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | FAIL | BUG-013 |
+| 007-SC-001 | A guest on a fresh Android 10+ phone goes from opening the website to a logged-in app in under 3 | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-SC-002 | 100% of API calls and artwork images load correctly in the app (no relative-URL failures), verified by | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-SC-003 | With biometric unlock on, reopening the app after 7 days needs no password. | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-SC-004 | A new tagged release reaches the "Update available" prompt on an installed device with no manual steps | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+| 007-SC-005 | Pending users, logged-out visitors and expired links are denied on 100% of download attempts, verified | `/api/mobile/**`; install dialog; native app | both / neither (native) |  | high (005–010, no validation, open tasks) | TODO |  |
+
+Open tasks without a story label: T007 T052 T054 T055.
+
+### 008 — OVH k8s deployment
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 008-US1 | JordyLab is live on a public HTTPS domain (Priority: P1) | https://jordylab.be `/`, `/api`, `/auth` | prod | open: T023 | high (005–010, no validation, open tasks) | TODO |  |
+| 008-US1-AS1 | Given the cluster is deployed, When a browser opens `https://<domain>`, Then the Angular app loads | ↑ | prod |  | ↑ | TODO |  |
+| 008-US1-AS2 | Given the app, When it calls `/api/`, Then the backend answers on the same origin, with no CORS | ↑ | prod |  | ↑ | TODO |  |
+| 008-US1-AS3 | Given the login flow, When a user logs in, Then Keycloak is served under `https://<domain>/auth` and | ↑ | prod |  | ↑ | TODO |  |
+| 008-US1-AS4 | Given anyone on the internet, When they request `/auth/admin`, Keycloak metrics/health, or any internal | ↑ | prod |  | ↑ | TODO |  |
+| 008-US1-AS5 | Given the JordyBox scanner, When it pushes a scan to the prod URL, Then ingestion works exactly as it | ↑ | prod |  | ↑ | TODO |  |
+| 008-US1-AS6 | Given the 007 mobile app, When it calls the API, logs in, verifies App Links, downloads the APK, or | ↑ | prod |  | ↑ | TODO |  |
+| 008-US2 | Two clearly separated environments (Priority: P1) | profiles; `docs/environments.md` | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US2-AS1 | Given the backend, When it starts without an active profile, Then it refuses to start with a clear | ↑ | both |  | ↑ | TODO |  |
+| 008-US2-AS2 | Given the shared config, When I look at it, Then it holds no localhost URLs, dev CORS origins or | ↑ | both |  | ↑ | TODO |  |
+| 008-US2-AS3 | Given local development, When I run the documented commands, Then Postgres and Keycloak run in | ↑ | both |  | ↑ | TODO |  |
+| 008-US2-AS4 | Given prod, When the app runs, Then Keycloak runs in production mode with a prod realm (no dev user, | ↑ | both |  | ↑ | TODO |  |
+| 008-US2-AS5 | Given the repo, When anyone reads the environment docs, Then one table lists every setting that | ↑ | both |  | ↑ | TODO |  |
+| 008-US3 | Secrets are injected, never committed (Priority: P1) | SOPS secrets; CI secret scan | prod | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US3-AS1 | Given a secret (API keys, DB and Keycloak credentials, client secrets, backup keys), When prod runs, | ↑ | prod |  | ↑ | TODO |  |
+| 008-US3-AS2 | Given a secret is rotated (edited with `sops`, committed, deployed), When the pod restarts, Then the | ↑ | prod |  | ↑ | TODO |  |
+| 008-US3-AS3 | Given the encrypted secrets file in the public repo, When someone without the age private key reads it, | ↑ | prod |  | ↑ | TODO |  |
+| 008-US3-AS4 | Given git history, the published container images and the ConfigMaps, When they're scanned, Then no | ↑ | prod |  | ↑ | TODO |  |
+| 008-US3-AS5 | Given local development, When I run the app, Then secrets come from the gitignored `.env`, as today. | ↑ | prod |  | ↑ | TODO |  |
+| 008-US4 | One-click, approved deployments with rollback (Priority: P1) | `deploy-prod.yml` approval + rollback | prod | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US4-AS1 | Given a push to `main`, When CI runs, Then it builds and tests the backend, frontend and Keycloak | ↑ | prod |  | ↑ | TODO |  |
+| 008-US4-AS2 | Given built images, When I approve the production deployment in GitHub, Then the cluster is updated | ↑ | prod |  | ↑ | TODO |  |
+| 008-US4-AS3 | Given a bad release, When I trigger a rollback, Then the previous version is running again within 5 | ↑ | prod |  | ↑ | TODO |  |
+| 008-US4-AS4 | Given the deploy credentials, When they're used, Then they can only change resources in the JordyLab | ↑ | prod |  | ↑ | TODO |  |
+| 008-US5 | Data is durable and restorable (Priority: P1) | CNPG backups; restore drill | prod (cluster) | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US5-AS1 | Given the production database, When a day passes, Then a backup exists in OVH Object Storage, | ↑ | prod (cluster) |  | ↑ | TODO |  |
+| 008-US5-AS2 | Given a backup, When I follow the restore runbook, Then I can restore the database to a point in | ↑ | prod (cluster) |  | ↑ | TODO |  |
+| 008-US5-AS3 | Given a pod restart or a VPS reboot, When it comes back, Then uploaded game artwork and database data | ↑ | prod (cluster) |  | ↑ | TODO |  |
+| 008-US5-AS4 | Given the VPS is lost entirely, When I follow the runbook, Then a fresh VPS can be rebuilt from git + | ↑ | prod (cluster) |  | ↑ | TODO |  |
+| 008-US6 | Learn Kubernetes and Podman on my own project (Priority: P2) | `docs/learn/` | neither (docs) | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US6-AS1 | Given the learning guide, When I read it, Then each concept (container image, Pod, Deployment, | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US6-AS2 | Given the k3s chapter, When I read it, Then I understand what k3s bundles (containerd, Traefik, | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US6-AS3 | Given the Podman chapter, When I follow it, Then I understand Podman's actual role: my local dev | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US6-AS4 | Given the secrets chapter, When I follow it, Then I can create an age key, encrypt and edit a secret | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US6-AS5 | Given hands-on exercises, When I do them, Then I have built an image locally, sandboxed a manifest | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US6-AS6 | Given the runbook, When something happens (deploy, rollback, logs, DB restore, secret rotation, | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US7 | The public code is readable but not reusable (Priority: P1) | LICENSE; licence check | both | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US7-AS1 | Given the repo, When anyone looks for a licence, Then there is exactly one root `LICENSE` stating the | ↑ | both |  | ↑ | TODO |  |
+| 008-US7-AS2 | Given package manifests (`package.json`, Gradle/`pyproject.toml` metadata, etc.), When they declare a | ↑ | both |  | ↑ | TODO |  |
+| 008-US7-AS3 | Given the README, When someone reads it, Then a short "Licence" section explains the terms in plain | ↑ | both |  | ↑ | TODO |  |
+| 008-US7-AS4 | Given the published container images, When they're inspected, Then their | ↑ | both |  | ↑ | TODO |  |
+| 008-US7-AS5 | Given third-party code in the repo (e.g. copied snippets or vendored files), When it keeps its own | ↑ | both |  | ↑ | TODO |  |
+| 008-US8 | First-time setup from zero (Priority: P2) | runbook bootstrap §1–§9 | neither (docs) | tasks closed | high (005–010, no validation) | TODO |  |
+| 008-US8-AS1 | Given an empty OVH account, When I follow the bootstrap guide, Then I end with: a domain + DNS, a | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-US8-AS2 | Given the bootstrap, When it creates the age key, Then the guide explains where the private key lives | ↑ | neither (docs) |  | ↑ | TODO |  |
+| 008-FR-001 | There MUST be exactly two runtime environments, `local` and `prod`, expressed as Spring profiles, | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-002 | Shared configuration MUST contain no environment-specific hosts, origins or credentials. Starting | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-003 | A single document MUST list every setting that differs between the environments and where its value | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-004 | The backend, frontend and Keycloak (including the jordylab theme) MUST each be packaged as a container | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-005 | Images MUST be tagged with the commit SHA. Prod MUST only run SHA-tagged images, never `latest`. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-006 | CI MUST build and test the backend, frontend and Keycloak images on every push to `main`. Deployment | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-007 | CI deploy credentials MUST be limited to the JordyLab namespace. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-008 | One public domain with automatic TLS MUST serve `/` (web), `/api` (backend), `/auth` (Keycloak public | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-009 | The Keycloak admin console, metrics, health and management ports MUST NOT be publicly reachable. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-010 | Every workload MUST declare readiness/liveness probes and resource requests/limits. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-011 | Prod secrets MUST be stored in git only as SOPS + age ciphertext and decrypted by the deploy pipeline. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-012 | CI MUST scan for committed secrets and fail on findings. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-013 | Push notifications used by the mobile app (spec 007) MUST be delivered through a self-hosted ntfy | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-014 | PostgreSQL with pgvector MUST run in the cluster on node-local storage, with continuous backups | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-015 | A restore drill MUST be performed and documented before go-live, and repeated quarterly thereafter. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-016 | Game artwork (and 007 APK files) MUST be stored on persistent storage (k3s local-path) that survives | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-017 | A learning guide MUST explain Kubernetes and Podman concepts using JordyLab's own files, with | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-018 | A runbook MUST cover bootstrap (VPS hardening + k3s install), deploy, rollback, logs, DB | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-019 | The VPS MUST be hardened: SSH key-only access, no root password login, automatic security updates, | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-020 | The repository MUST carry a single root `LICENSE` with "all rights reserved, source available for | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-021 | AGENTS.md MUST be updated: Hetzner/Compose/Watchtower/Ollama prod references replaced with the | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | FAIL | BUG-009 |
+| 008-SC-001 | A friend on mobile data can open `https://<domain>`, log in and use the Game Catalog. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-002 | From an approved deploy to a healthy new version takes under 10 minutes; a rollback takes under 5 | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-003 | Zero secret values in git, images or ConfigMaps (CI secret scan green; manual image inspection in the | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-004 | A database restore to a point in time succeeds in a drill, in under 30 minutes by following the | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-005 | Monthly infrastructure cost stays at or under about €13 excl. VAT (VPS-2 + Object Storage + domain), | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-006 | Jordy can explain and do every runbook procedure alone after working through the learning guide. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-007 | No MIT licence file or MIT licence declaration remains in the repo (excluding third-party files), and | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-008 | A public port scan of the VPS shows only 80, 443 and (restricted) SSH — 6443 is never publicly | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+
+Open tasks without a story label: T073 T074.
+
+### 009 — Switch games
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 009-US1 | Add a Switch game by searching (Priority: P1) | `/games/switch` add dialog; `GET /switch/search`, `POST /switch/games` | both | validation-results | high (005–010) | TODO |  |
+| 009-US1-AS1 | Given the admin opens "Add Switch game", When they type at least 3 characters, Then matching Nintendo | ↑ | both |  | ↑ | TODO |  |
+| 009-US1-AS2 | Given a result is picked, When the admin chooses physical or digital and saves, Then the game is added as | ↑ | both |  | ↑ | TODO |  |
+| 009-US1-AS3 | Given the game is new to the catalog, When it's added, Then an AI description is generated once, as for | ↑ | both |  | ↑ | TODO |  |
+| 009-US1-AS4 | Given the game is already in the catalog (same Switch game), When the admin tries to add it again, Then | ↑ | both |  | ↑ | TODO |  |
+| 009-US2 | Add a game the search can't find (Priority: P2) | manual add + relink | both | open: T039 T040 | high (005–010, open tasks) | FAIL | BUG-015 (story missing/partial) |
+| 009-US2-AS1 | Given no search result fits, When the admin chooses "Add manually", Then they can enter title, platform | ↑ | both |  | ↑ | FAIL | BUG-015 (story missing/partial) |
+| 009-US2-AS2 | Given a manually entered game, When the admin later searches and links it to a match, Then metadata and | ↑ | both |  | ↑ | FAIL | BUG-015 (story missing/partial) |
+| 009-US3 | Add many games at once (Priority: P2) | bulk paste (`/switch/bulk/*`) | both | open: T041 T042 T043 T044 T045 T046 T047 | high (005–010, open tasks) | FAIL | BUG-016 (story missing/partial) |
+| 009-US3-AS1 | Given a pasted list (one title per line), When submitted, Then each line shows its best match (with | ↑ | both |  | ↑ | FAIL | BUG-016 (story missing/partial) |
+| 009-US3-AS2 | Given the review list, When the admin fixes wrong matches, unticks lines and sets physical/digital (per line | ↑ | both |  | ↑ | FAIL | BUG-016 (story missing/partial) |
+| 009-US4 | Switch games behave like any other game (Priority: P1) | Switch in grid/filters/detail/chat | both | open: T027 T028 T029 T032 T033 T034 | high (005–010, open tasks) | FAIL | BUG-014 (story missing/partial) |
+| 009-US4-AS1 | Given Switch games in the catalog, When anyone (admin or guest) browses, Then they appear in the grid and | ↑ | both |  | ↑ | FAIL | BUG-014 (story missing/partial) |
+| 009-US4-AS2 | Given a Switch game, When someone uses "Ask the catalog" (e.g. "which Switch games support 4-player local | ↑ | both |  | ↑ | FAIL | BUG-014 (story missing/partial) |
+| 009-US4-AS3 | Given the host filter, When the admin picks the "Nintendo Switch" host, Then Switch games are listed; no | ↑ | both |  | ↑ | FAIL | BUG-014 (story missing/partial) |
+| 009-US4-AS4 | Given a scan or library sync runs, When it finishes, Then Switch games are never removed or renamed by | ↑ | both |  | ↑ | FAIL | BUG-014 (story missing/partial) |
+| 009-US5 | Edit and remove (Priority: P2) | detail edit/remove; `PATCH/DELETE /switch/games/{id}` | both | open: T052 T053 | high (005–010, open tasks) | FAIL | BUG-017 (story missing/partial) |
+| 009-US5-AS1 | Given a Switch game, When the admin changes physical/digital or relinks it to a different search match, | ↑ | both |  | ↑ | FAIL | BUG-017 (story missing/partial) |
+| 009-US5-AS2 | Given a Switch game, When the admin removes it (with confirmation), Then it disappears from the catalog. | ↑ | both |  | ↑ | FAIL | BUG-017 (story missing/partial) |
+| 009-US5-AS3 | Given a guest, When they view a Switch game, Then there are no add, edit or remove controls, and the API | ↑ | both |  | ↑ | FAIL | BUG-017 (story missing/partial) |
+| 009-FR-001 | The admin MUST be able to search Nintendo Switch games by title and add one as owned, choosing physical | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-002 | Adding a searched game MUST fill title, platform, cover, banner, genres, developer, publisher, release | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-003 | A Switch game MUST be uniquely identified (per platform and search-source ID, or by platform + normalised | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-004 | The admin MUST be able to add a game manually when search has no match, and link it to a match later. | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | FAIL | BUG-015 |
+| 009-FR-005 | The admin MUST be able to paste a list of titles, review the proposed matches, and add the confirmed ones | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | FAIL | BUG-016 |
+| 009-FR-006 | Switch games MUST appear in all catalog views, filters and chat like other games, and MUST be filterable | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-007 | Manually added titles MUST NOT be renamed or removed by scans, library syncs or grace-period purges. Only | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-008 | The AI description MUST be generated once per new game and MUST NOT be regenerated for edits to personal | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-009 | Add, edit and remove MUST be admin-only (006 roles). Guests have read and chat access only. | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-FR-010 | No Nintendo account, login or credential is used or stored. | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-SC-001 | Adding one Switch game via search takes under 30 seconds. | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-SC-002 | A pasted list of 40 titles is reviewed and added in under 5 minutes, with ≥ 90% correct first matches for | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | FAIL | BUG-016 |
+| 009-SC-003 | 100% of added Switch games show a cover (or the placeholder when none exists), and appear under the | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-SC-004 | Re-adding or re-pasting an existing game never creates a duplicate (automated test). | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+| 009-SC-005 | No scan, sync or purge ever changes or removes a manually added game (automated test). | `/games/switch`, `/games/:id`; `/api/gamecatalog/switch/**` | both |  | high (005–010, open tasks) | TODO |  |
+
+### 010 — Eufy presence
+
+| Row | Expected | Location | Env | Evidence | Risk | Status | Reason / BUG |
+|-----|----------|----------|-----|----------|------|--------|--------------|
+| 010-US0 | Prove it can work (go/no-go spike) (Priority: P0, blocks everything else) | — | neither | open: T007 T008 T009 T010 T011 T012 T013 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US0-AS1 | Given a separate Eufy guest account shared with my home, When the gateway runs in the production cluster, * | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US0-AS2 | Given a first 7-day trial with at least 2 switches per day, When it ends below 95% success, Then one | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US0-AS3 | Given the spike result, When it's recorded, Then research notes state the firmware version, the gateway | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US1 | Leaving home arms Eufy automatically (Priority: P1) | — | neither | open: T034 T035 T036 T037 T038 T039 T040 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US1-AS1 | Given I'm home and the system is in "home" mode, When I leave the home zone (default radius 535 m) and stay | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US1-AS2 | Given I step out briefly (letterbox) and come back within the debounce time, When that happens, Then | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US1-AS3 | Given the JordyLab app was closed or swiped away, When I leave, Then arming still happens (the OS-managed | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US1-AS4 | Given arming fails (gateway or Eufy error), When it fails, Then I get a notification within 1 minute with | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US2 | Arriving home asks me to disarm (Priority: P1) | — | neither | open: T041 T042 T043 T044 T045 T046 T047 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US2-AS1 | Given Eufy is Away, When I enter the home zone or connect to home Wi-Fi (whichever comes first), Then my | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US2-AS2 | Given that notification, When I tap it and pass the fingerprint check, Then Eufy switches to "home" | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US2-AS3 | Given the fingerprint check fails or I dismiss the notification, When that happens, Then nothing is | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US2-AS4 | Given anyone who has my JordyLab login but not my phone and fingerprint, When they try to disarm through the | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US3 | Manual control and status at a glance (Priority: P2) | — | neither | open: T053 T054 T055 T056 T057 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US3-AS1 | Given the app or an Android Quick Settings tile, When I tap "Arm (Away)", Then Eufy arms without a | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US3-AS2 | Given the app's Eufy screen, When I open it, Then I see the current Eufy mode (read from Eufy, not | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US4 | Only the admin, only the phone (Priority: P1) | — | neither | open: T028 T029 T030 T031 T032 T033 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US4-AS1 | Given a guest user (spec 006) or the website, When they look for this feature, Then it doesn't exist for | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US4-AS2 | Given my phone is registered once from inside the app, When events arrive from any other device, Then | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US4-AS3 | Given I lose my phone, When I revoke the device from the website's Settings, Then its credentials stop | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US5 | The Eufy bridge is locked down (Priority: P1) | — | neither | open: T048 T049 T050 T051 T052 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US5-AS1 | Given the gateway, When anything other than the JordyLab backend tries to reach it, Then it isn't | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US5-AS2 | Given the Eufy account used by the gateway, When it's set up, Then it's a separate guest account with | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US5-AS3 | Given every mode change, When it happens, Then it's audit-logged with who/what triggered it, and the | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US6 | Keep the phone from killing it (Priority: P2) | — | neither | open: T058 T059 T060 T061 T062 | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US6-AS1 | Given the first time I enable the feature, When the app checks my phone, Then it walks me through | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US6-AS2 | Given an OxygenOS update resets a setting, When the app next opens, Then it warns me. | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-US6-AS3 | Given the checklist, When I read it, Then it also explains how to apply the same fixes to the Eufy app ( | ↑ | neither |  | ↑ | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-001 | Feature work MUST NOT start before the go/no-go spike (Story 0) passes. The spike is binding with exactly | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-002 | The system MUST detect leaving and arriving using OS-managed geofences plus home Wi-Fi, and MUST work with | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-003 | Leaving MUST arm Eufy (Away) after a configurable debounce (default 3 minutes). Arriving MUST only prompt. | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-004 | Presence/arm events MUST use a device-bound credential that can only request arming. Disarm MUST use a | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-005 | Every mode change attempt MUST produce a phone notification with the outcome. Failures MUST offer Retry | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-006 | The system MUST read the real Eufy mode before and after each change and display it. | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-007 | The feature MUST be available only to the admin, only in the Android app, only on registered devices, and | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-008 | The Eufy gateway MUST be internal-only, authenticated with its own secret, use a dedicated Eufy guest | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-009 | Location MUST be stored only as enter/exit events with timestamps, never as continuous tracks. The home | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-010 | The app MUST provide a phone-settings checklist that detects reverted settings. The primary reference | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-FR-011 | The Eufy integration MUST be isolated so the community gateway can be replaced without touching the | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-SC-001 | Over 2 weeks of normal life, ≥ 95% of departures arm Eufy within 5 minutes of leaving, with no manual | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-SC-002 | ≥ 95% of arrivals show the disarm prompt before I reach the door (the Wi-Fi or geofence trigger). | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-SC-003 | 0 disarms without a fingerprint on the registered phone (verified by tests and the audit log). | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-SC-004 | 100% of failed mode changes result in a notification within 1 minute. | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+| 010-SC-005 | The feature adds no public endpoint beyond the admin-only API, and the gateway is unreachable from outside | — | neither |  | high (005–010, no validation, open tasks) | NOT TESTABLE | NOT BUILT (010: 68/68 tasks open) |
+
+Open tasks without a story label: T001 T002 T003 T004 T005 T006 T014 T015 T016 T017 T018 T019 T020 T021 T022 T023 T024 T025 T026 T027 T063 T064 T065 T066 T067 T068.
+
+## 6. Area results (A–G)
+
+Filled during Phase 1. Per area: happy path · error paths · empty states · authz · refresh/deep link.
+
+### A. Production infrastructure and smoke
+
+Run 2026-09-30 ~20:05 CEST against `e167de8`.
+
+| # | Check | Result | Evidence |
+|---|-------|--------|----------|
+| A1 | DNS | PASS | `jordylab.be A 57.129.163.110`; no AAAA |
+| A2 | TLS | PASS | Let's Encrypt `YR1`, CN/SAN `jordylab.be`, TLS 1.3, verify 0, expires **2026-12-29** (auto-renew by cert-manager) |
+| A3 | HTTP → HTTPS | PASS | `http://jordylab.be/` and deep path → `301` to https with path kept |
+| A4 | Security headers | FAIL | nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy present on `/`; **no HSTS, no CSP, `server: nginx/1.30.5`** → BUG-021 |
+| A5 | Deep links on reload | PASS | `/`, `/games/grid`, `/fna/articles`, `/settings/users`, `/games/12345` → 200 app shell (unknown paths too, by SPA design) |
+| A6 | Compression / caching | FAIL | hashed JS `immutable` 1 y ✅; **no gzip/br**, `index.html` without Cache-Control, headers dropped on assets → BUG-021 |
+| A7 | favicon / manifest | PARTIAL | `favicon.svg` linked ✅ (`/favicon.ico` 404, harmless); `manifest.webmanifest` 200 but `application/octet-stream` → BUG-021 |
+| A8 | OIDC issuer | PASS | issuer `https://jordylab.be/auth/realms/jordylab`, device endpoint present; admin console/health/metrics not routed (SPA fallback). **master realm public** → BUG-022 |
+| A9 | Unauthenticated API | PASS | `/api/gamecatalog/games`, `/api/fna/articles`, `/api/settings/users`, `/api/mobile/releases/latest`, unknown `/api/*` → 401, empty body; actuator not public |
+| A10 | CORS | PASS | preflight `evil.example`/`null`/`http://localhost:4200` → 403; `https://localhost` → allowed w/ credentials; Keycloak token POST from `evil.example` → 403, from `jordylab.be` → ACAO set |
+| A11 | Pods / probes | PASS | 5/5 Running, 0 restarts; every Deployment has readiness+liveness and requests/limits (008 FR-010) |
+| A13 | Running images | PASS | backend/frontend/keycloak `sha-e167de8834a1…` = latest green Build |
+| — | CNPG / backups | FAIL | cluster healthy, WAL archiving OK; **no base backup yet, no restore drill** → BUG-023 |
+| — | `assetlinks.json` | NOTE | `package_name: ""`, fingerprint `""` — Android App Links can't verify until 007 T052 (keystore) is done → Q-06 |
+| A12 | Browser console per route | TODO | needs HANDOFF-01 (admin session) |
+
+### B. Auth, roles and Settings
+_Not started._
+
+### C. Game Catalog
+_Not started._
+
+### D. FNA
+_Not started._
+
+### E. Mobile (web side)
+_Not started._
+
+### F. Eufy presence
+NOT BUILT — only check that no presence endpoint is exposed (`/api/**` falls through to `denyAll`).
+
+### G. Cross-cutting
+_Not started._
+
+## 7. Handoff log
+
+| ID | Goal | Machine | Env | Sent | Reported | Agent verification | Duration | Outcome |
+|----|------|---------|-----|------|----------|--------------------|----------|---------|
+| HANDOFF-01 | Sign in to prod as admin in the browser pane | browser pane | prod | 2026-09-30 20:15 | 20:40 done | agent loaded `/settings/users` as admin (found BUG-026) | ~2 min | ✅ verified |
+| HANDOFF-02 | Create + approve the guest test account | browser (2nd profile) | prod | 2026-09-30 20:15 | 20:40 blocked | Users page 503 → BUG-026 | | ⏸ blocked on PR #30 |
+| HANDOFF-03 | Scanner on the MacBook: local, then prod client check | MacBook | local + prod | 2026-09-30 20:15 | 20:37 partial | prod client header read by agent: BUG-020 confirmed | | prod part done; local: Jordy registered `jordy.swinnen@pm.me`; agent granted `admin` + `gamecatalog-scanner` via kcadm (BUG-027/028). 21:11 `scan` → `/ingest/check` authorised as scanner, "unchanged, nothing uploaded" ✅ (FR-008 server check confirmed in backend log) |
+| HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | |
+| HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
+
+### Batch 1 (sent with the approval request)
+
+#### HANDOFF-01: Sign in to production as admin in the Claude browser pane
+- Machine: the browser pane in this Claude app
+- Target env: prod
+- Why you: I must never type your password; admin-level UI and API checks need your session.
+- Steps:
+  1. When I open https://jordylab.be in the pane, log in with your admin account (password manager).
+- You should see: the JordyLab shell with FNA / Games / Settings tabs.
+- Send back: "done" — never paste the password.
+
+#### HANDOFF-02: Create and approve the guest test account
+- Machine: any browser, second profile or private window
+- Target env: prod
+- Why you: self-registration needs a mailbox you control, and approval uses your admin session.
+- Steps:
+  1. Open https://jordylab.be in a private window → Register → use a test address you own (for example a `+jordylab-guest` alias) and a new password in your password manager.
+  2. After registering, confirm the private window shows the "awaiting approval" page, then close it.
+  3. In your admin session: Settings → Users → approve that user **as guest**.
+  4. Register a **second** test address the same way and leave it **pending** (don't approve).
+- You should see: user 1 approved as guest; user 2 pending.
+- Send back: the two test email addresses (no passwords). Later you'll log the guest in in the pane for me (same as HANDOFF-01).
+
+#### HANDOFF-03: Scanner on the MacBook — local run, then check the prod client
+- Machine: MacBook (zsh)
+- Target env: local first, then prod (check only)
+- Why you: device-code login happens in your browser, and the scan reads your real Steam library.
+- Steps (local — backend and frontend will be running from this session when I send "go"):
+  1. Open http://localhost:4200 → Games → Sources → download the **Steam** client → saves `jordylab-scan-steam.py`.
+  2. `cd ~/Downloads`
+  3. `python3 jordylab-scan-steam.py login` → approve the device code in the browser tab that opens.
+  4. `python3 jordylab-scan-steam.py scan`
+  5. `python3 jordylab-scan-steam.py scan` (again — should report "no scan needed")
+  6. `python3 jordylab-scan-steam.py status`
+- Steps (prod check — **don't** log in or scan against prod yet):
+  7. On https://jordylab.be → Games → Sources → download the Steam client → rename it to `jordylab-scan-steam-prod.py`.
+  8. `grep -E '^(KEYCLOAK_URL|BACKEND_URL)' ~/Downloads/jordylab-scan-steam-prod.py`
+- You should see: steps 3–6 succeed; step 5 says no upload was needed. Step 8 shows `BACKEND_URL = "https://jordylab.be"` and, if BUG-020 is real, `KEYCLOAK_URL = "http://localhost:8180"`.
+- Send back: the output of steps 4–6 and 8 (the file has no secrets; the token lives in `~/.config/jordylab/scan/token.json` — never send that).
+
+#### HANDOFF-05: Two yes/no answers about prod secrets
+- Machine: none
+- Target env: prod
+- Why you: I'm not allowed to read secret names or values from the cluster.
+- Questions: (a) is `STEAM_WEB_API_KEY` set in `secrets.sops.yaml`? (b) is an OpenRouter API key set? Answer yes/no only.
+
+## 8. AI call tally
+
+Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
+
+| # | Feature | Env | Purpose | Outcome |
+|---|---------|-----|---------|---------|
+
+**Total so far: 0**
+
+## 9. Deployments
+
+#### DEPLOY-01
+- PR: https://github.com/jordy-swinnen/JordyLab/pull/30 | Branch: fix/e2e-prod-keycloak-urls
+- Deploy path: sha
+- Merged SHA: 14fb86bb4953383fc456042d31517092d01d306d | Previous good: sha-e167de8834a1acb6ea8e67e7e8849fd7ec25ea0f
+- Bugs: BUG-026, BUG-020
+- Build run: green (push, 14fb86b)
+- Contains Flyway migration: no · Keycloak realm change: no · secret/config change: **yes** (ConfigMap + prod profile)
+- Decision: approved by Jordy in chat ("Yes") before merge
+- Approval: 2026-09-30 21:38 CEST via GitHub API by the agent (run 36766284760) — self-approval accepted
+- Rollout: backend/frontend/keycloak rolled out; running tags `sha-14fb86b…`
+- Prod re-verification: backend now reaches Keycloak's JSON Admin API (no more SPA HTML) → exposes BUG-031 (403); scanner client re-download pending admin login
+- Outcome: deployed, partially verified; no regression (login/5xx/rollout OK)
+
+## 10. NOT TESTABLE
+
+- **NOT BUILT**: all 010 rows (Eufy presence); `garmin-sync-service` (no code).
+- **Hardware (Android phone)**: 007 US2–US5 native behavior (app login via platform browser, update prompt, biometric
+  unlock, share target); native side of 007 US6 (notification taps) — see the manual runbook at close-out (FR-027).
+- **Credentials**: 005 US2/US4/US5 depend on HANDOFF-05 (a).
+- Rows move here from TODO during Phase 1 with a concrete reason.
+
+## 11. Questions for Jordy
+
+- **Q-01 — Deploy approval delegation.** ANSWERED 2026-09-30: delegation stands — the agent may approve deploys
+  and release its own merged, green batches (sensitive-change pauses still apply).
+- **Q-02 — Pending deploy of `e167de8`.** ANSWERED: Jordy approved it; prod is tested as `e167de8`.
+- **Q-03 — Who pushes `v*` release tags.** ANSWERED: Jordy and the agent.
+- **Q-04 — Severity of BUG-013.** Jordy unsure → agent set **S3** (spec priority P3; adds an alert, no broken flow).
+  Jordy can raise it again.
+- **Q-06 — Android release prerequisites.** 007 T007 (mobile realm client) and T052 (release keystore) are still
+  stop-and-report gates; prod `assetlinks.json` is empty and `realm-prod.json` has no mobile redirect/`mobile-release-ci`
+  client. Do you want these done in this campaign (they need you: keystore creation + realm change), or treated as
+  NOT TESTABLE and put in the manual runbook?
+- **Q-07 — Scanner role (BUG-028).** ANSWERED: "admin should include all jordylab related roles" → `admin` becomes a
+  composite of `guest` + `gamecatalog-scanner`. `mobile-release-publisher` stays CI-only (007 FR-004).
+- **Q-06 answer:** implement now; application id chosen by agent: `be.jordylab.app` (Jordy: "pick whatever seems
+  appropriate").
+- **Q-05 — Podman VM memory.** ANSWERED: agent raised it from 2048 to 6144 MiB (host has 16 GiB); containers restarted.
