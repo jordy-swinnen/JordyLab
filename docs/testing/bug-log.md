@@ -14,7 +14,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 ---
 
 ### BUG-001: Frontend lint fails — `app.ts` statically imports lazy-loaded `settings-ui`
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #42, `06c645c`) — badge moved to new `settings-nav` lib; lint green; ships with the next release
 - Severity: S3
 - Area/spec: frontend shell / 001, 006
 - Env found: local (baseline `bunx nx run-many -t test,lint`)
@@ -29,7 +29,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-002: Frontend lint fails — 5 accessibility errors in the Switch add dialog
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #42, `06c645c`) — lint green; ships with the next release
 - Severity: S3
 - Area/spec: gamecatalog-ui / 009
 - Env found: local (baseline)
@@ -44,7 +44,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-003: CI never runs frontend lint, so boundary and a11y violations reach `main`
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #42, `06c645c`) — Build runs lint for all projects; first enforced on #42's own CI (green)
 - Severity: S3
 - Area/spec: CI / 001
 - Env found: both (`.github/workflows/build.yml`)
@@ -60,7 +60,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-004: CI does not enforce coverage gates (backend JaCoCo, frontend thresholds)
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #42, `06c645c`) — Build runs `./gradlew check` (JaCoCo) + `nx test --coverage`; enforced from #42 on
 - Severity: S3
 - Area/spec: CI / 001
 - Env found: both
@@ -77,7 +77,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-005: Manual `deploy-prod.yml` run without `sha` deploys image tag `sha-` (empty)
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #39, `6f1e1f9`) — deploy input is a required, validated release tag
 - Severity: S3
 - Area/spec: CI/CD / 008
 - Env found: prod pipeline (code reading)
@@ -125,7 +125,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-008: One-tag release flow (runbook §20) is not implemented
-- Status: OPEN
+- Status: DEPLOYED — first release `v0.0.1-rc1` went through verify → retag → draft release → approved deploy → publish (DEPLOY-05); only the APK publish failed (401 from Keycloak for mobile-release-ci, fix PR #46 + secret sync by Jordy)
 - Severity: S2
 - Area/spec: CI/CD / 008 (runbook §20, agreed 2026-09-29)
 - Env found: both
@@ -276,7 +276,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-018: Full backend suite fails 7 tests on this Mac (Podman) — `RoleMatrixTest`, `GuestChatLimitIntegrationTest`
-- Status: FIXED-LOCAL (environment only — no code change)
+- Status: FIXED-LOCAL (environment; README documents Podman ≥ 6 GiB, PR #43)
 - Severity: S4
 - Area/spec: backend test infra / 006
 - Env found: local only (CI Build for `e167de8` is green)
@@ -324,7 +324,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-021: Frontend nginx — no compression, no HSTS, version leak, `index.html` cacheable, headers lost on assets, wrong manifest MIME
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #40, `e5989e1`) — verified on the runtime image locally; prod check after the next release; CSP still open
 - Severity: S3
 - Area/spec: frontend container / 008, 007
 - Env found: prod
@@ -341,7 +341,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-022: Keycloak `master` realm is publicly reachable (login, account console, token endpoint)
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #41, `7d68ff8`) — prod check after the next release
 - Severity: S3
 - Area/spec: gateway / 008
 - Env found: prod
@@ -357,7 +357,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-023: No base backup exists yet and the restore drill was never performed
-- Status: OPEN
+- Status: FIXING — first base backup `manual-backup-20261001` completed 2026-10-01 (on-demand, approved by Jordy); restore drill still to do
 - Severity: S2
 - Area/spec: database / 008
 - Env found: prod
@@ -373,7 +373,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-024: `EnvironmentProfileGuard` does not fail first — missing profile surfaces as a datasource error
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #43, `b7bc402`) — verified: bootRun without profile stops with the guard's message
 - Severity: S4
 - Area/spec: shared config / 008
 - Env found: local
@@ -418,7 +418,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-027: No documented way to give a local user the admin role
-- Status: OPEN
+- Status: FIXED-LOCAL (PR #43) — README "Your own local admin account"
 - Severity: S4
 - Area/spec: docs / 006
 - Env found: local (reported by Jordy during HANDOFF-03)
@@ -449,7 +449,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-029: Local Settings → Users can't work — the dev realm has no fixed `jordylab-backend` secret
-- Status: OPEN (local workaround applied)
+- Status: FIXED-LOCAL (PR #43, guard test #44) — fixed dev secret; Jordy's local Keycloak aligned with the README command
 - Severity: S3
 - Area/spec: settings / 006, 008
 - Env found: local
@@ -511,7 +511,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-033: Approving a user fails on prod (503) — backend service account lacks `view-realm`
-- Status: DEPLOYED (DEPLOY-04, `c4e4788`, PR #35) — prod UI check (Approve) pending Jordy's login
+- Status: VERIFIED-PROD
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: prod (Jordy, HANDOFF-02: "Keycloak is unavailable right now — try again shortly")
@@ -523,7 +523,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the realm files granted `realm-management` → `view-roles`, which is not a built-in role (on prod it has no `${role_…}` description — the import created an empty custom role). Reading a realm role needs `view-realm`. The existing `KeycloakIntegrationTest` uses a separate test realm with roles granted in code, so it never exercised the real permissions. The 503 handler also logged nothing.
 - Fix (PR / commit / tag): PR #35 — `view-realm` in both realm files + scope mapping; `SettingsUsersController` logs the failing Admin REST call. Live realm: `view-realm` granted to `service-account-jordylab-backend` and added to its scope mapping via kcadm; backend restarted by DEPLOY-03 → 0 Keycloak admin errors since.
 - Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClientRealmExportIntegrationTest.java`
-- Verified on prod:
+- Verified on prod: 2026-10-01 — Jordy approved a test account in Settings → Users on https://jordylab.be; kcadm (read-only) shows `jordylab.frown533@…` enabled with `guest`
 
 ### BUG-034: The admin's own account is listed as a pending sign-up
 - Status: DEPLOYED (DEPLOY-04, `c4e4788`, PR #35) — prod UI check pending Jordy's login

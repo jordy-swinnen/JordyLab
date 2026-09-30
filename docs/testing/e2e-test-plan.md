@@ -835,6 +835,16 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Prod re-verification: 0 Keycloak admin errors; UI check of Approve and of the admin no longer listed as pending waits on Jordy's login (session expired after the 30-minute idle timeout)
 - Outcome: deployed; no regression
 
+#### DEPLOY-05 — first release through the tag flow
+- Release: `v0.0.1-rc1` on `3768788` (runtime code = `c4e4788` + docs/CI) — https://github.com/jordy-swinnen/JordyLab/releases/tag/v0.0.1-rc1
+- Deploy path: **version** (release.yml → deploy-prod.yml), run 36786369195
+- First attempt refused before approval: the `production` environment only allowed branch `main` → Jordy added a `v*` tag rule; failed jobs re-run
+- Jobs: verify ✅ · retag ×3 ✅ · release (draft) ✅ · deploy ✅ (approved, standing approval) · publish ✅ (prerelease public) · apk ❌ (built + signed; publish got 401 from Keycloak for `mobile-release-ci`)
+- Contains Flyway migration: no · realm change: no · secret/config change: no
+- Running images: backend/frontend/keycloak `:v0.0.1-rc1`
+- Prod re-verification: `/`, deep link, API 401, OIDC config, assetlinks OK; 5/5 pods, 0 restarts, 0 backend errors
+- Outcome: deployed; no regression
+
 ## 10. NOT TESTABLE
 
 - **NOT BUILT**: all 010 rows (Eufy presence); `garmin-sync-service` (no code).
