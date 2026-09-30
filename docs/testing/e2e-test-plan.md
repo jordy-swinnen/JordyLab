@@ -798,6 +798,20 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Prod re-verification: backend now reaches Keycloak's JSON Admin API (no more SPA HTML) → exposes BUG-031 (403); scanner client re-download pending admin login
 - Outcome: deployed, partially verified; no regression (login/5xx/rollout OK)
 
+#### DEPLOY-02
+- PR: https://github.com/jordy-swinnen/JordyLab/pull/31 | Branch: fix/e2e-admin-composite-role
+- Deploy path: sha
+- Merged SHA: 1b907f2f7c80d5c7fdcfb3e5671f7de08f754cdd | Previous good: sha-14fb86bb4953383fc456042d31517092d01d306d
+- Bugs: BUG-028, BUG-031
+- Build run: green (push, 1b907f2)
+- Contains Flyway migration: no · Keycloak realm change: **yes** · secret/config change: no
+- Decision: approved by Jordy in chat ("yes") — deploy + live-realm kcadm
+- Live realm: kcadm applied 22:24 CEST — admin composites `guest`, `gamecatalog-scanner`; `jordylab-backend` scope mappings `view-users`, `manage-users`, `view-roles`
+- Approval: 2026-09-30 ~22:27 CEST via GitHub API (run 36772593018); head SHA checked against the merge commit first
+- Rollout: backend/frontend/keycloak ready on `sha-1b907f2…` (one transient Tailscale timeout while checking)
+- Prod re-verification: backend started 20:28:26Z with 0 `KeycloakUnavailableException` (every earlier start failed within 2 s); Users page check pending admin login
+- Outcome: deployed; no regression
+
 ## 10. NOT TESTABLE
 
 - **NOT BUILT**: all 010 rows (Eufy presence); `garmin-sync-service` (no code).
@@ -822,4 +836,6 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
   composite of `guest` + `gamecatalog-scanner`. `mobile-release-publisher` stays CI-only (007 FR-004).
 - **Q-06 answer:** implement now; application id chosen by agent: `be.jordylab.app` (Jordy: "pick whatever seems
   appropriate").
+- **Q-08 — OpenCode models (BUG-032).** architect, code-reviewer and test-writer in `.opencode/agents/` use a model
+  that doesn't exist. Which OpenCode Go model should each use (devops now uses `opencode-go/kimi-k2.7-code`)?
 - **Q-05 — Podman VM memory.** ANSWERED: agent raised it from 2048 to 6144 MiB (host has 16 GiB); containers restarted.

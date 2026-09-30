@@ -433,7 +433,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-028: Nothing grants the `gamecatalog-scanner` role — only the seeded dev user can scan
-- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/31) (prod impact to verify after PR #30: does Jordy's prod account have the role?)
+- Status: DEPLOYED (DEPLOY-02, `1b907f2`) + live realm patched — prod UI check pending admin login
 - Severity: S2 (provisional)
 - Area/spec: auth / 003, 006
 - Env found: local (HANDOFF-03)
@@ -465,7 +465,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-030: Prod has no download-link signing secret — APK download links can't be issued
-- Status: OPEN (part of the Android release setup, Q-06)
+- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/34 — secret added by Jordy via sops)
 - Severity: S3
 - Area/spec: mobile / 007
 - Env found: prod
@@ -480,7 +480,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-031: Backend service-account token carries no realm-management roles — Admin REST API 403
-- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/31, commit `d499ff8`)
+- Status: DEPLOYED (DEPLOY-02, `1b907f2`) + live realm patched — prod UI check pending admin login
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: both (surfaced on prod after DEPLOY-01; reproduced locally)
@@ -494,3 +494,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): PR #31 — `clientScopeMappings.realm-management` for `jordylab-backend` (least privilege) + kcadm for the live realm. Local Keycloak already patched via kcadm. (Agent's local token re-check after the patch was blocked by the permission classifier; verification will come from the prod Users page after deploy.)
 - Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/settings/RealmConfigurationTest.java`
 - Verified on prod:
+
+### BUG-032: OpenCode agents point at a model that doesn't exist — none of them can start
+- Status: FIXING (devops agent fixed in PR https://github.com/jordy-swinnen/JordyLab/pull/33; architect, code-reviewer, test-writer open → Q-08)
+- Severity: S4
+- Area/spec: dev tooling / —
+- Env found: local (OpenCode 1.18.32)
+- Coverage rows: G cross-cutting
+- Steps to reproduce:
+  1. `opencode run "Delegate to the jordylab-devops subagent …"`.
+- Expected (cite spec/story): `.opencode/agents/*` mirror `.claude/agents/*` and work (dual-agent-config).
+- Actual (logs/screenshot, secrets redacted): `Error: Model not found: anthropic/claude-sonnet-4-6`; all 4 files in `.opencode/agents/` use that model. `opencode/claude-sonnet-5-5` exists but returns "Insufficient account funds" (OpenCode Zen); the configured OpenCode Go models work.
+- Root cause: model id copied from Claude naming without checking `opencode models`.
+- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33, verified: subagent runs and loads the `jordylab-ops` skill). Others pending Jordy's routing choice.
+- Regression test added: none because agent config (verified with `opencode run` / `claude -p`)
+- Verified on prod: n/a
