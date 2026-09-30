@@ -1,0 +1,35 @@
+name: Commit References
+
+# Every commit in a pull request must name the SpecKit artefact it serves (`Refs: 011 BUG-033`,
+# `Refs: 009/T039`) or say it has none (`Refs: NO-CODE`) — AGENTS.md → "Commits". Runs the same
+# .githooks/commit-msg script as the local hook, so clones without the hook installed are caught too.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  refs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check every non-merge commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          failed=0
+          for commit in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            git log -1 --format=%B "$commit" > /tmp/commit-message
+            if ! sh .githooks/commit-msg /tmp/commit-message; then
+              echo "::error::$(git log -1 --format='%h %s' "$commit") — missing or invalid Refs: trailer"
+              failed=1
+            fi
+          done
+          exit "$failed"

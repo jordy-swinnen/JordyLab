@@ -1,0 +1,64 @@
+#!/bin/sh
+# commit-msg — every commit names the SpecKit artefact it serves, or says it has none.
+#
+# Rule (AGENTS.md → "Commits"): the message's trailer block carries a `Refs:` line.
+#   Refs: 011 BUG-033          spec number and/or campaign IDs
+#   Refs: 009/T039             a task of a spec
+#   Refs: NO-CODE              config/tooling/docs work with no SpecKit artefact (must stand alone)
+#
+# Accepted tokens (space- or comma-separated):
+#   NNN            spec number; specs/NNN-* must exist
+#   NNN/T###       task T### of spec NNN
+#   BUG-###        must already be logged in docs/testing/bug-log.md
+#   HANDOFF-##  DEPLOY-##  Q-##   campaign IDs from docs/testing/e2e-test-plan.md
+#   NO-CODE
+#
+# Installed per clone with: git config core.hooksPath .githooks
+# Also run by CI on every pull-request commit (.github/workflows/commit-refs.yml).
+
+message_file="$1"
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+subject="$(grep -v '^#' "$message_file" | sed -n '/./{p;q;}')"
+case "$subject" in
+  "Merge "*|"fixup! "*|"squash! "*|"amend! "*|"Revert \""*) exit 0 ;;
+esac
+
+fail() {
+  echo "commit-msg: $1" >&2
+  echo "  Add a trailer to the last paragraph of the message (next to Co-Authored-By), e.g." >&2
+  echo "    Refs: 011 BUG-033      or      Refs: 009/T039      or      Refs: NO-CODE" >&2
+  echo "  See AGENTS.md → Commits." >&2
+  exit 1
+}
+
+refs="$(git interpret-trailers --parse "$message_file" | sed -n 's/^Refs: *//p' | tr ',' ' ')"
+[ -n "$(printf '%s' "$refs" | tr -d ' ')" ] || fail "no 'Refs:' trailer."
+
+token_count=0
+has_no_code=0
+for token in $refs; do
+  token_count=$((token_count + 1))
+  case "$token" in
+    NO-CODE)
+      has_no_code=1 ;;
+    [0-9][0-9][0-9])
+      ls -d "$repo_root"/specs/"$token"-* >/dev/null 2>&1 || fail "spec $token does not exist under specs/." ;;
+    [0-9][0-9][0-9]/T[0-9][0-9][0-9])
+      spec="${token%%/*}"
+      ls -d "$repo_root"/specs/"$spec"-* >/dev/null 2>&1 || fail "spec $spec (in $token) does not exist under specs/." ;;
+    BUG-[0-9][0-9][0-9])
+      grep -q "^### $token:" "$repo_root/docs/testing/bug-log.md" 2>/dev/null \
+        || fail "$token is not logged in docs/testing/bug-log.md — log the bug before referencing it." ;;
+    HANDOFF-[0-9][0-9]|DEPLOY-[0-9][0-9]|Q-[0-9][0-9])
+      ;;
+    *)
+      fail "unknown reference '$token'." ;;
+  esac
+done
+
+if [ "$has_no_code" -eq 1 ] && [ "$token_count" -gt 1 ]; then
+  fail "NO-CODE must stand alone — either the commit serves a SpecKit artefact or it doesn't."
+fi
+
+exit 0
