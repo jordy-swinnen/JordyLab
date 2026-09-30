@@ -65,6 +65,12 @@
         "client": "gamecatalog-script",
         "roles": ["gamecatalog-scanner"]
       }
+    ],
+    "realm-management": [
+      {
+        "client": "jordylab-backend",
+        "roles": ["view-users", "manage-users", "view-roles"]
+      }
     ]
   },
   "clients": [
