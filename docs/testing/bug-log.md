@@ -511,7 +511,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-033: Approving a user fails on prod (503) — backend service account lacks `view-realm`
-- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/35); live realm patched 2026-09-30 23:30 CEST
+- Status: DEPLOYED (DEPLOY-04, `c4e4788`, PR #35) — prod UI check (Approve) pending Jordy's login
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: prod (Jordy, HANDOFF-02: "Keycloak is unavailable right now — try again shortly")
@@ -526,7 +526,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-034: The admin's own account is listed as a pending sign-up
-- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/35)
+- Status: DEPLOYED (DEPLOY-04, `c4e4788`, PR #35) — prod UI check pending Jordy's login
 - Severity: S3
 - Area/spec: settings / 006
 - Env found: prod (Jordy, screenshot of Settings → Users)

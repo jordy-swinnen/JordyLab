@@ -823,6 +823,18 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Prod re-verification: `/.well-known/assetlinks.json` → `package_name: be.jordylab.app`, fingerprint `1B:02:13:85:…`; backend 0 Keycloak admin errors
 - Outcome: deployed; no regression
 
+#### DEPLOY-04
+- PR: https://github.com/jordy-swinnen/JordyLab/pull/35 | Branch: fix/e2e-backend-view-realm
+- Deploy path: sha via `workflow_dispatch` (`sha=c4e4788f3aff1eee6e472ab836047b538379c48d`); the automatic run was rejected (ambiguous triggering SHA, see DEPLOY-03)
+- Bugs: BUG-033, BUG-034
+- Build run: green (push, c4e4788), including the new Keycloak 26.7.4 realm-export integration test
+- Contains Flyway migration: no · realm change: yes (file; live realm already patched) · secret/config change: no
+- Decision: standing approval from Jordy
+- Approval: run 36781785212
+- Rollout: backend/frontend/keycloak ready on `sha-c4e4788…`
+- Prod re-verification: 0 Keycloak admin errors; UI check of Approve and of the admin no longer listed as pending waits on Jordy's login (session expired after the 30-minute idle timeout)
+- Outcome: deployed; no regression
+
 ## 10. NOT TESTABLE
 
 - **NOT BUILT**: all 010 rows (Eufy presence); `garmin-sync-service` (no code).
@@ -847,8 +859,8 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
   composite of `guest` + `gamecatalog-scanner`. `mobile-release-publisher` stays CI-only (007 FR-004).
 - **Q-06 answer:** implement now; application id chosen by agent: `be.jordylab.app` (Jordy: "pick whatever seems
   appropriate").
-- **Q-08 — OpenCode models (BUG-032).** ANSWERED: Jordy re-routed the OpenCode agents himself (removed the plus agents,
-  changed plan, added a speckit agent).
-- **Q-08 (original):** architect, code-reviewer and test-writer in `.opencode/agents/` use a model
+- **Q-08 — OpenCode models (BUG-032) — question:** architect, code-reviewer and test-writer in `.opencode/agents/` use a model
   that doesn't exist. Which OpenCode Go model should each use (devops now uses `opencode-go/kimi-k2.7-code`)?
+  ANSWERED: Jordy re-routed the OpenCode agents himself (removed the plus agents, changed `plan`, added a `speckit`
+  agent; PR #37). `.opencode/agents/{architect,code-reviewer,test-writer}.md` still use the missing model (BUG-032).
 - **Q-05 — Podman VM memory.** ANSWERED: agent raised it from 2048 to 6144 MiB (host has 16 GiB); containers restarted.
