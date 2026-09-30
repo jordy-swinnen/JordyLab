@@ -28,6 +28,10 @@ configMapGenerator:
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/auth
       - JORDYLAB_CORS_ALLOWED_ORIGINS=https://jordylab.be,https://localhost
       - MOBILE_PRODUCTION_DOMAIN=jordylab.be
+      # Android app id (permanent once released) and the release certificate's SHA-256 as plain hex — both
+      # public; served in /.well-known/assetlinks.json and checked against every published APK (spec 007).
+      - MOBILE_APPLICATION_ID=be.jordylab.app
+      - MOBILE_RELEASE_SIGNING_CERT_SHA256=1B0213851EAAA2D4069080AB548524EE08B038F545F91891A51C929D47DD77E8
       - NTFY_BASE_URL=https://jordylab.be/ntfy
   - name: keycloak-config
     literals:

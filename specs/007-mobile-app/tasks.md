@@ -79,7 +79,7 @@ primitives (base-URL interceptor, platform detection) that everything native dep
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): propose the realm export
+- [X] T007 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): propose the realm export
   changes in `jordylab-be/compose/keycloak-realm-export.json` per [research.md](research.md) D13 —  new public client
   `jordylab-mobile` (PKCE S256, redirect URI `https://{PRODUCTION_DOMAIN}/mobile/callback`, `offline_access` allowed,
   `standardFlowEnabled=true`, `directAccessGrantsEnabled=false`), new confidential client `mobile-release-ci`
@@ -540,7 +540,7 @@ into JordyLab.
     exist; JDK 21 chosen for AGP 8.13 (untested against the real Android Gradle build in this sandbox). The tag
     format `mobile-v<versionName>-<versionCode>` is this workflow's own invention (not specified elsewhere) —
     confirm it before using this as the real release process.
-- [ ] T052 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): generate the release signing
+- [X] T052 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): generate the release signing
   keystore, record its cert SHA-256 into `jordylab.mobile.release.signing-cert-sha256` (T001/T002) and the realm's
   App Link config, store the keystore as a base64 GitHub Actions secret plus an offline backup (research D14) — do
   not run T051's pipeline for a real release before this is confirmed

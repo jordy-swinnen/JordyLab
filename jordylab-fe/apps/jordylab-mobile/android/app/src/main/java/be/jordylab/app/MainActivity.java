@@ -1,4 +1,4 @@
-package dev.jordylab.mobile.placeholder;
+package be.jordylab.app;
 
 import com.getcapacitor.BridgeActivity;
 

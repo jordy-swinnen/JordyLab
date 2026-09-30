@@ -23,17 +23,15 @@
             </intent-filter>
 
             <!-- App Link callback (login return) and notification tap-through (research D2/D9).
-                 STOP-AND-REPORT GATE (D13): host is a placeholder until feature 008's production
-                 domain exists — /.well-known/assetlinks.json must also be live there first, or
-                 autoVerify fails and this degrades to a disambiguation dialog instead of opening
-                 the app directly. -->
+                 /.well-known/assetlinks.json on jordylab.be must list this app id and the release
+                 certificate, or autoVerify fails and this degrades to a disambiguation dialog. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="PRODUCTION_DOMAIN_PLACEHOLDER"
+                    android:host="jordylab.be"
                     android:pathPrefix="/mobile" />
             </intent-filter>
 

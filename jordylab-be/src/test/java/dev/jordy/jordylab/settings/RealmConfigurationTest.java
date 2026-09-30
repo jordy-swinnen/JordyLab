@@ -64,13 +64,58 @@ class RealmConfigurationTest {
         });
     }
 
+    /**
+     * The native app logs in through the system browser with PKCE and returns via the App Link
+     * callback (spec 007 D2/D13); it never gets the password grant.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {DEV_REALM, PROD_REALM})
+    void mobileClientIsAPublicPkceClientReturningToTheMobileCallback(String realmFile) throws IOException {
+        JsonNode mobileClient = client(objectMapper.readTree(Path.of(realmFile).toFile()), "jordylab-mobile");
+        List<String> redirectUris = new ArrayList<>();
+        mobileClient.path("redirectUris").forEach(uri -> redirectUris.add(uri.asText()));
+
+        assertSoftly(softly -> {
+            softly.assertThat(mobileClient.path("publicClient").asBoolean()).isTrue();
+            softly.assertThat(mobileClient.path("directAccessGrantsEnabled").asBoolean(true)).isFalse();
+            softly.assertThat(mobileClient.path("attributes").path("pkce.code.challenge.method").asText()).isEqualTo("S256");
+            softly.assertThat(redirectUris).singleElement().asString().endsWith("/mobile/callback");
+        });
+    }
+
+    /** Only the CI service account may publish Android releases (spec 007 FR-004). */
+    @ParameterizedTest
+    @ValueSource(strings = {DEV_REALM, PROD_REALM})
+    void onlyTheCiServiceAccountHoldsTheReleasePublisherRole(String realmFile) throws IOException {
+        JsonNode realm = objectMapper.readTree(Path.of(realmFile).toFile());
+        List<String> holders = new ArrayList<>();
+        for (JsonNode user : realm.path("users")) {
+            user.path("realmRoles").forEach(role -> {
+                if ("mobile-release-publisher".equals(role.asText())) {
+                    holders.add(user.path("username").asText());
+                }
+            });
+        }
+        JsonNode ciClient = client(realm, "mobile-release-ci");
+
+        assertSoftly(softly -> {
+            softly.assertThat(holders).containsExactly("service-account-mobile-release-ci");
+            softly.assertThat(ciClient.path("serviceAccountsEnabled").asBoolean()).isTrue();
+            softly.assertThat(ciClient.path("publicClient").asBoolean(true)).isFalse();
+        });
+    }
+
     private JsonNode backendClient(JsonNode realm) {
+        return client(realm, "jordylab-backend");
+    }
+
+    private JsonNode client(JsonNode realm, String clientId) {
         for (JsonNode client : realm.path("clients")) {
-            if ("jordylab-backend".equals(client.path("clientId").asText())) {
+            if (clientId.equals(client.path("clientId").asText())) {
                 return client;
             }
         }
-        throw new IllegalStateException("Client jordylab-backend missing");
+        throw new IllegalStateException("Client " + clientId + " missing");
     }
 
     private JsonNode realmRole(String realmFile, String roleName) throws IOException {

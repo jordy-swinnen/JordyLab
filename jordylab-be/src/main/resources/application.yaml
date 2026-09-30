@@ -107,14 +107,13 @@ jordylab:
   mobile:
     release:
       storage-dir: ${MOBILE_RELEASE_STORAGE_DIR:/var/jordylab/mobile-releases}
-      # Placeholder until the release keystore is generated (research D14, stop-and-report gate).
+      # Release certificate SHA-256 as plain hex (prod: backend-config MOBILE_RELEASE_SIGNING_CERT_SHA256).
       signing-cert-sha256: ${MOBILE_RELEASE_SIGNING_CERT_SHA256:}
     download-link:
       secret: ${MOBILE_DOWNLOAD_LINK_SECRET:}
       ttl-minutes: 5
     app:
-      # Placeholders — blocked on feature 008 (production HTTPS deployment) and the application-id
-      # decision (research D13/D14, stop-and-report gates).
+      # Prod: backend-config (MOBILE_APPLICATION_ID=be.jordylab.app, MOBILE_PRODUCTION_DOMAIN=jordylab.be).
       package-name: ${MOBILE_APPLICATION_ID:}
       production-domain: ${MOBILE_PRODUCTION_DOMAIN:}
     notifications:
