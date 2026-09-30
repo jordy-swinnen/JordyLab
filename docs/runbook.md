@@ -206,24 +206,31 @@ kubectl apply -f deploy/k8s/cluster/cert-manager-clusterissuer.yaml
 
 ## 10. Deploy
 
-1. Push to `main` — `build.yml` tests, scans, builds, and publishes the three images tagged by commit SHA.
-2. Open the resulting `deploy-prod.yml` run in GitHub Actions and approve it (you're the required reviewer,
-   §9).
-3. Watch the job: it joins Tailscale, decrypts secrets, applies the prod overlay, and waits on
-   `kubectl rollout status`. A failed rollout fails the job loudly — it does not silently leave a half-applied
-   state.
+Production changes only on a **release** (§20): merging to `main` builds and tests the images but deploys
+nothing.
+
+1. Merge to `main`; `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`.
+2. When `main` is green, tag it: `git tag v0.1.0 && git push origin v0.1.0` (or GitHub → Releases → *Draft a new
+   release*). `release.yml` verifies, retags, creates the Release and calls `deploy-prod.yml`.
+3. Approve the `production` deployment in that run (required reviewer, §9). The job joins Tailscale, decrypts
+   secrets, applies the prod overlay with the release's images, and waits on `kubectl rollout status` — a failed
+   rollout fails the job loudly.
 4. Confirm: `kubectl -n jordylab get pods`, then the `quickstart.md` US1 checks.
 
 ## 11. Rollback
 
-Either:
+Preferred: GitHub → Actions → *Deploy to Production* → *Run workflow* → enter the previous release tag (e.g.
+`v0.0.9`) → approve. Or from a terminal:
+```
+gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f version=v0.0.9
+```
+Emergency path (no pipeline):
 ```
 kubectl -n jordylab rollout undo deploy/backend
 kubectl -n jordylab rollout undo deploy/frontend
 kubectl -n jordylab rollout undo deploy/keycloak
 ```
-or re-run `deploy-prod.yml` for the previous commit SHA via `workflow_dispatch`. Both should restore a
-healthy previous version within 5 minutes (SC-002).
+Both should restore a healthy previous version within 5 minutes (SC-002).
 
 ## 12. Logs
 
@@ -321,55 +328,40 @@ df -h /var/lib/rancher/k3s
 
 ## 20. Release a version (one tag → GitHub Release → deploy)
 
-**Status: planned. The workflows below are not implemented yet.** Until they are, use §10 (push to `main`,
-approve `deploy-prod.yml`) for deploys and §11 for rollbacks. This section is the target flow, agreed 2026-09-29:
-releasing must be one action on GitHub, and it covers the web app and the Android APK together.
+**Status: implemented 2026-09-30** (spec 011 BUG-008). Releasing is one action on GitHub, covering the web app
+and the Android APK together.
 
 ### The flow
 
 1. Merge to `main` as usual. `build.yml` tests, scans, and publishes the three images tagged `sha-<full-sha>`.
-   A push to `main` **no longer deploys by itself**; production only changes on a release.
-2. Release by pushing a semver tag on a commit that is on `main` and has a green Build:
+   A push to `main` **does not deploy**; production only changes on a release.
+2. Release by pushing a tag on a commit that is on `main` and has a green Build:
    ```
    git tag v0.1.0
    git push origin v0.1.0
    ```
-   (or use GitHub → Releases → *Draft a new release* → create the tag there).
-3. `release.yml` runs on `v*` tags and:
-   - checks the tag's commit is on `main` and that its Build succeeded (it fails otherwise);
-   - **retags** the already-tested images (`sha-<sha>` → `v0.1.0`) instead of rebuilding, so what shipped is
-     exactly what was tested;
-   - builds and signs the APK, versioned from the tag, and attaches it to the release (reusing the steps in
-     `android-release.yml`);
-   - creates the GitHub Release with generated notes (`gh release create --generate-notes`).
-4. The deploy job (same file or a called `deploy-prod.yml`) uses the `production` environment, so it waits for
-   your approval (§9). Approve it in the Actions run; it deploys `ghcr.io/jordy-swinnen/jordylab-*:v0.1.0`.
-5. Verify with the `quickstart.md` US1 checks.
+   (or GitHub → Releases → *Draft a new release* → create the tag there). Tags are `vX.Y.Z` or `vX.Y.Z-rcN`
+   (release candidate → GitHub prerelease). Minor/patch ≤ 99, rc ≤ 98.
+3. `.github/workflows/release.yml` runs on `v*` tags:
+   - **verify** — the tag's commit is on `main` and a Build of a push to `main` succeeded for it (else it fails);
+   - **retag** — the tested images `sha-<sha>` get the tag `vX.Y.Z` (`docker buildx imagetools create`), nothing is
+     rebuilt, so what ships is exactly what was tested;
+   - **release** — `gh release create --generate-notes` (prerelease for `-rcN`);
+   - **deploy** — calls `deploy-prod.yml` with the tag; it waits for your `production` approval (§9) and deploys
+     `ghcr.io/jordy-swinnen/jordylab-*:vX.Y.Z`;
+   - **apk** — builds and signs the Android APK with `versionName` X.Y.Z and
+     `versionCode` = MAJOR·1000000 + MINOR·10000 + PATCH·100 + (rcN, or 99 for a final release), so every tag
+     installs as an update; publishes it to `POST /api/mobile/releases` as the `mobile-release-ci` service
+     account. The APK is **not** attached to the GitHub Release: the repo is public and spec 007 FR-002 allows
+     downloads only for approved users (signed, short-lived links).
+4. Verify with the `quickstart.md` US1 checks.
 
 ### Deploy or roll back to any version
 
-GitHub → Actions → *Deploy to Production* → *Run workflow* → enter the release tag (for example `v0.0.9`).
-`workflow_dispatch` takes a `version` input, replacing today's `sha` input. Approve, and the cluster is set to
-that version's images. This is the preferred rollback; `kubectl rollout undo` (§11) stays as the emergency path.
+See §11: *Deploy to Production* → *Run workflow* with the release tag. `deploy-prod.yml` accepts only
+`vX.Y.Z[-rcN]` and deploys that tag's images and manifests.
 
-### Changes to make when implementing
+### GitHub settings (owner only)
 
-| File | Change |
-|---|---|
-| `.github/workflows/release.yml` | New: `on: push: tags: ['v*']`, jobs as above. |
-| `.github/workflows/deploy-prod.yml` | Remove the `workflow_run` trigger; `workflow_dispatch` input becomes `version`; image tags use `${VERSION}` instead of `sha-${SHA}`; pin the tools it downloads (see below). |
-| `.github/workflows/android-release.yml` | Retire the `mobile-v*` trigger; its build steps move into `release.yml`. **The keystore/realm gate (tasks.md T052) still applies:** the APK job stays disabled until `ANDROID_KEYSTORE_BASE64` and the realm client exist. |
-| GitHub settings | Tag ruleset: only you can create `v*` tags. Branch ruleset on `main`: require PRs and the Build checks. |
-
-### Fix while you are in `deploy-prod.yml`
-
-- It downloads `kubectl` `v1.37.0`, the same unverified version as the old k3s pin. Use the version that matches
-  the k3s you install (kubectl may differ from the server by one minor version).
-- It installs `kustomize` through `https://get.k8s.io/kustomize`, which is unpinned. Pin a release URL.
-- After the tag flow exists, delete the `sha-` deploy path and this note.
-
-### Order of work
-
-1. Get the first deploy working with §10 (needs the cluster, secrets and CI access from §1-9).
-2. Then implement this section on a branch, test it with a `v0.0.1-rc1` tag, and roll back once with the
-   *Run workflow* button to prove it.
+Tag ruleset: only Jordy (and the agent acting for him) create `v*` tags. Branch ruleset on `main`: require PRs and
+the Build checks.

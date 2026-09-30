@@ -1,0 +1,202 @@
+name: Release
+
+# One action releases everything (docs/runbook.md §20): push a semver tag on a commit that is on
+# main and has a green Build.
+#   git tag v0.1.0 && git push origin v0.1.0        (or GitHub → Releases → Draft a new release)
+# 1. verify  — the tag's commit is on main and its Build (push to main) succeeded
+# 2. retag   — the tested images sha-<sha> get the release tag; nothing is rebuilt
+# 3. release — GitHub Release with generated notes (vX.Y.Z-rcN → prerelease)
+# 4. deploy  — deploy-prod.yml with the release tag, behind the `production` approval
+# 5. apk     — signed Android APK, versioned from the tag, published to /api/mobile/releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/jordy-swinnen/jordylab
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+      version_name: ${{ steps.check.outputs.version_name }}
+      version_code: ${{ steps.check.outputs.version_code }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify the tag and derive the Android version
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
+            echo "::error::'$TAG' is not vX.Y.Z or vX.Y.Z-rcN"; exit 1
+          fi
+          major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}" rc="${BASH_REMATCH[5]}"
+          (( minor <= 99 && patch <= 99 && ${rc:-0} <= 98 )) || { echo "::error::minor/patch ≤ 99 and rc ≤ 98 keep the version code monotonic"; exit 1; }
+
+          sha="$(git rev-list -n 1 "$TAG")"
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$TAG ($sha) is not on main"; exit 1; }
+
+          builds="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?head_sha=$sha&event=push&status=success" --jq '.total_count')"
+          [ "$builds" -gt 0 ] || { echo "::error::no successful Build (push to main) for $sha — its images don't exist"; exit 1; }
+
+          # Android needs a strictly increasing integer: MAJOR·1000000 + MINOR·10000 + PATCH·100 + (rcN or 99 for final),
+          # so v0.1.0-rc1 < v0.1.0-rc2 < v0.1.0 < v0.1.1-rc1.
+          version_code=$(( major * 1000000 + minor * 10000 + patch * 100 + ${rc:-99} ))
+          {
+            echo "sha=$sha"
+            echo "version_name=${TAG#v}"
+            echo "version_code=$version_code"
+            echo "prerelease=$([ -n "$rc" ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release $TAG → commit $sha, Android versionCode $version_code"
+
+  retag:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        image: [backend, frontend, keycloak]
+    steps:
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Tag the tested image with the release version (no rebuild)
+        env:
+          SOURCE: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:sha-${{ needs.verify.outputs.sha }}
+          TARGET: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}:${{ github.ref_name }}
+        run: |
+          docker buildx imagetools create --tag "$TARGET" "$SOURCE"
+          docker buildx imagetools inspect "$TARGET" --format '{{json .Manifest.Digest}}'
+
+  release:
+    needs: [verify, retag]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          flags=(--repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$TAG")
+          [ "$PRERELEASE" = "true" ] && flags+=(--prerelease)
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create "$TAG" "${flags[@]}"
+
+  deploy:
+    needs: [verify, release]
+    uses: ./.github/workflows/deploy-prod.yml
+    with:
+      version: ${{ github.ref_name }}
+    secrets: inherit
+
+  apk:
+    needs: [verify, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: jordylab-fe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build the mobile web bundle
+        run: bunx nx build jordylab --configuration=mobile
+
+      - name: Sync the native Android project
+        working-directory: jordylab-fe/apps/jordylab-mobile
+        run: bunx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Decode the release keystore
+        working-directory: jordylab-fe/apps/jordylab-mobile/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.keystore
+
+      - name: Assemble the signed release APK
+        working-directory: jordylab-fe/apps/jordylab-mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ needs.verify.outputs.version_code }}
+          VERSION_NAME: ${{ needs.verify.outputs.version_name }}
+        run: |
+          ./gradlew assembleRelease \
+            -PjordylabVersionCode="$VERSION_CODE" \
+            -PjordylabVersionName="$VERSION_NAME" \
+            -Pandroid.injected.signing.store.file="$(pwd)/release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      - name: Remove the decoded keystore
+        if: always()
+        working-directory: jordylab-fe/apps/jordylab-mobile/android
+        run: rm -f release.keystore
+
+      - name: Publish the release
+        working-directory: jordylab-fe/apps/jordylab-mobile/android
+        env:
+          KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL }}
+          API_BASE_URL: ${{ secrets.JORDYLAB_API_BASE_URL }}
+          CLIENT_SECRET: ${{ secrets.MOBILE_RELEASE_CI_CLIENT_SECRET }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION_CODE: ${{ needs.verify.outputs.version_code }}
+          VERSION_NAME: ${{ needs.verify.outputs.version_name }}
+        run: |
+          token="$(curl -sS -f -X POST "$KEYCLOAK_URL/realms/jordylab/protocol/openid-connect/token" \
+            -d grant_type=client_credentials -d client_id=mobile-release-ci \
+            --data-urlencode "client_secret=$CLIENT_SECRET" | jq -r '.access_token')"
+          echo "::add-mask::$token"
+          # From a file: curl -F would treat notes starting with @ or < as a file reference.
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body | head -c 4000 > "$RUNNER_TEMP/release-notes.txt"
+          curl -sS -f -X POST "$API_BASE_URL/api/mobile/releases" \
+            -H "Authorization: Bearer $token" \
+            -F "versionName=$VERSION_NAME" \
+            -F "versionCode=$VERSION_CODE" \
+            -F "releaseNotes=<$RUNNER_TEMP/release-notes.txt" \
+            -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive"

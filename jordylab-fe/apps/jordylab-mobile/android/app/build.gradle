@@ -7,8 +7,10 @@ android {
         applicationId "be.jordylab.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Set by release.yml from the release tag (e.g. v0.1.0 → 10099 / "0.1.0"); Android refuses updates
+        // whose versionCode doesn't increase. Local builds fall back to 1 / "0.0.0-dev".
+        versionCode((project.findProperty("jordylabVersionCode") ?: "1") as Integer)
+        versionName((project.findProperty("jordylabVersionName") ?: "0.0.0-dev") as String)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
