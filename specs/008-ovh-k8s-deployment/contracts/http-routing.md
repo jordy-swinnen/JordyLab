@@ -13,7 +13,7 @@ changing a path here is a breaking change for them.
 |---|---|---|---|
 | `/` | frontend (Angular SPA via nginx-unprivileged) | Browsers, 007 mobile app (bundled WebView) | HTTP → HTTPS redirect at the Gateway |
 | `/api/**` | backend (Spring Boot) | Frontend, 007 mobile app, JordyBox scanner | Same origin as `/` — no CORS needed for the web app (US1 scenario 2) |
-| `/auth/realms/**`, `/auth/resources/**`, `/auth/.well-known/**` | Keycloak | Frontend login flow, 007 mobile app login | Public Keycloak endpoints only |
+| `/auth/realms/jordylab/**`, `/auth/resources/**`, `/auth/.well-known/**` | Keycloak | Frontend login flow, 007 mobile app login, scan client device login | Public Keycloak endpoints of the `jordylab` realm only — `master` is not routed (spec 011 BUG-022, 2026-10-01) |
 | `/.well-known/assetlinks.json` | backend | Android (App Links verification, spec 007) | Static/generated file |
 | `/ntfy` (or subpath, exact prefix decided in `/speckit-implement`) | self-hosted ntfy | 007 mobile app | Resolves the `/speckit-clarify` ntfy decision (FR-013) |
 
