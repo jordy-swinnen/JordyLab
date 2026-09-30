@@ -11,6 +11,8 @@ neither `local` nor `prod` active fails fast (`EnvironmentProfileGuard`).
 | Backend config file | `application-local.yaml` | `application-prod.yaml` | `jordylab-be/src/main/resources/` |
 | Database URL | `jdbc:postgresql://localhost:5432/jordylab` (literal, Podman) | `${POSTGRES_URL}` (CNPG's `cnpg-cluster-rw` service) | `application-local.yaml` / `backend-config` ConfigMap |
 | Keycloak URL | `http://localhost:8180` (literal, Podman) | `${KEYCLOAK_URL}` = `https://<domain>/auth` | `application-local.yaml` / `backend-config` ConfigMap |
+| Keycloak Admin REST URL (backend → Keycloak, Settings → Users) | `http://localhost:8180` (literal) | `${KEYCLOAK_INTERNAL_URL}` = `http://keycloak:8080/auth` (in-cluster; `/auth/admin` is not publicly routed) | `application-local.yaml` / `application-prod.yaml` + `backend-config` ConfigMap |
+| Scan-client Keycloak URL (embedded in the downloaded scanner) | `http://localhost:8180` (literal) | `${KEYCLOAK_URL}` (public) | `application-local.yaml` / `application-prod.yaml` |
 | CORS allowed origins | `http://localhost:4200,4300,4400` (per-app dev servers) | `https://<domain>,https://localhost` (web + Capacitor mobile app origin) | `application-local.yaml` / `backend-config` ConfigMap |
 | Secrets (API keys, DB/Keycloak credentials) | gitignored `jordylab-be/.env` (Podman compose reads it) | SOPS+age ciphertext in `deploy/k8s/overlays/prod/secrets.sops.yaml`, decrypted by CI at deploy time | `.env` / `secrets.sops.yaml` |
 | Keycloak startup mode | `start-dev --import-realm` (compose.yaml) | `start --optimized` with `KC_HOSTNAME`/`KC_HTTP_RELATIVE_PATH`/`KC_PROXY_HEADERS` | `compose.yaml` / `keycloak-config` ConfigMap |
