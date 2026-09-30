@@ -200,7 +200,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-013: 006 US7 missing — no Ntfy push when someone signs up
-- Status: OPEN — likely INVALID: re-verify after BUG-026
+- Status: OPEN
 - Severity: S3 (lowered from S2 on 2026-09-30 — Jordy unsure, spec priority P3; see test plan Q-04)
 - Area/spec: settings / 006, 007
 - Env found: both
@@ -209,7 +209,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   1. 006 tasks T041–T042 open; no `NtfyClient` / `PendingSignupNotifierService` in `jordylab-be/src/main`.
 - Expected (cite spec/story): 006 FR-018 — admin notified by Ntfy with the pending user's name and email.
 - Actual (logs/screenshot, secrets redacted): feature absent.
-- Correction (2026-09-30 20:45): the behaviour *is* implemented via spec 007 — `settings/service/PendingSignupWatcherService` polls Keycloak every 5 min and publishes `UserSignUpPending`, and `mobile` sends the Ntfy push (007 FR-016, research D9). Only 006 T041/T042 were never ticked. On prod it currently fails because of BUG-026. Close as invalid once a sign-up push is observed after PR #30.
+- Correction (2026-09-30 20:45) — likely invalid, re-verify after BUG-026/BUG-031: the behaviour *is* implemented via spec 007 — `settings/service/PendingSignupWatcherService` polls Keycloak every 5 min and publishes `UserSignUpPending`, and `mobile` sends the Ntfy push (007 FR-016, research D9). Only 006 T041/T042 were never ticked. On prod it currently fails because of BUG-026. Close as invalid once a sign-up push is observed after PR #30.
 - Root cause: story not implemented (superseded — see correction).
 - Fix (PR / commit / tag): planned batch `fix/e2e-settings-signup-notify` (T046).
 - Regression test added:
