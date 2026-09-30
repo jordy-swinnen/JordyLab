@@ -37,8 +37,9 @@ depth than this file gives.
    pinning anything. Say so when you couldn't.
 6. The k3s API is only on Tailscale. On Jordy's Mac `kubectl` with `~/.kube/jordylab.yaml` usually works;
    if your shell has no working `kubectl`, give Jordy the commands to run and ask for the output.
-7. **Never decrypt or open `secrets.sops.yaml` yourself**, and never read Secret values from the cluster —
-   hand Jordy the IntelliJ `sops` command (see Secrets) and the key names to add.
+7. **Never open, print or save decrypted secret content**, and never read Secret values from the cluster —
+   hand Jordy the IntelliJ `sops` command (see Secrets) and the key names to add. The only decrypt you may
+   run is the integrity check `sops -d … >/dev/null && echo DECRYPT_OK`, whose output is discarded.
 
 ## Where it runs
 
@@ -229,7 +230,7 @@ done
 ```bash
 SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml            # Jordy's default: IntelliJ
 SOPS_EDITOR="code --profile sops --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml   # alternative: VS Code
-sops -d deploy/k8s/overlays/prod/secrets.sops.yaml >/dev/null && echo DECRYPT_OK
+sops -d deploy/k8s/overlays/prod/secrets.sops.yaml >/dev/null && echo DECRYPT_OK   # integrity check only (rule 7)
 openssl rand -base64 33 | tr -d '/+='                      # generate a password (don't paste it anywhere)
 gitleaks git --no-banner --redact .
 gitleaks dir --no-banner --redact .                        # hits in gitignored .env / .nx cache are expected
