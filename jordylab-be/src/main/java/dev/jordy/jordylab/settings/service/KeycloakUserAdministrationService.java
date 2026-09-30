@@ -128,6 +128,10 @@ public class KeycloakUserAdministrationService {
             return UserStatus.REJECTED;
         }
 
-        return user.realmRoles().contains(GUEST_ROLE) ? UserStatus.APPROVED : UserStatus.PENDING;
+        // Direct role mappings only: an admin holds `admin` (a composite that includes guest, spec 011 Q-07)
+        // but not `guest` itself, and must never be listed as a pending sign-up (BUG-034).
+        boolean approved = user.realmRoles().contains(GUEST_ROLE) || user.realmRoles().contains(ADMIN_ROLE);
+
+        return approved ? UserStatus.APPROVED : UserStatus.PENDING;
     }
 }
