@@ -16,7 +16,7 @@ import {
   BrandMarkComponent,
   WordmarkComponent,
 } from '@jordylab-fe/shared/brand';
-import { PendingCountBadgeComponent } from '@jordylab-fe/settings/ui';
+import { PendingCountBadgeComponent } from '@jordylab-fe/settings/nav';
 import {
   ApkDownloadService,
   AppLinkService,
