@@ -34,6 +34,8 @@ configMapGenerator:
       # KC_HTTP_MANAGEMENT_RELATIVE_PATH=/ is baked into the image (Containerfile); setting it here
       # differently would stop `start --optimized`.
       - KC_PROXY_HEADERS=xforwarded
+      # TLS is terminated at Traefik; Keycloak itself serves plain HTTP inside the cluster.
+      - KC_HTTP_ENABLED=true
       # Only trust X-Forwarded-* headers from inside the cluster: k3s's default pod CIDR, where the
       # Traefik pod lives (its IP changes on restart, so a single IP would break).
       - KC_PROXY_TRUSTED_ADDRESSES=10.42.0.0/16
