@@ -14,6 +14,10 @@ ENV KC_METRICS_ENABLED=true
 # Build-time option: must be baked in here, or `start --optimized` refuses to start when the
 # runtime value (/auth, from the keycloak-config ConfigMap) differs from what was built.
 ENV KC_HTTP_RELATIVE_PATH=/auth
+# Also build-time in practice (Keycloak 26.7 refuses a differing runtime value under --optimized):
+# keep health/metrics on the management port (9000) at /health/*, where the k8s probes look,
+# instead of inheriting /auth from http-relative-path.
+ENV KC_HTTP_MANAGEMENT_RELATIVE_PATH=/
 
 RUN /opt/keycloak/bin/kc.sh build
 
