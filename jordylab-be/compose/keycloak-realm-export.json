@@ -33,7 +33,11 @@
     "realm": [
       {
         "name": "admin",
-        "description": "Full access to JordyLab: FNA, Settings and Game Catalog administration"
+        "description": "Full access to JordyLab: FNA, Settings and Game Catalog administration. Includes every JordyLab role except the CI-only mobile-release-publisher",
+        "composite": true,
+        "composites": {
+          "realm": ["guest", "gamecatalog-scanner"]
+        }
       },
       {
         "name": "guest",

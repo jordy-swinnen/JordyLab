@@ -22,6 +22,22 @@ How it's wired: the Keycloak image copies this file to `/opt/keycloak/data/impor
 **Import runs once.** If the `jordylab` realm already exists, Keycloak skips the import on startup, so
 edits to this file after the first deploy must be applied through the admin console or `kcadm.sh`.
 
+## Changes applied to the live realm after the first import
+
+Each entry is idempotent and runs inside the Keycloak pod with the admin credentials already in its
+environment (nothing is typed or printed):
+
+```bash
+kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh add-roles -r jordylab --rname admin --rolename guest --rolename gamecatalog-scanner --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'
+```
+
+| Date | Change | Why |
+|---|---|---|
+| 2026-09-30 | `admin` becomes a composite of `guest` + `gamecatalog-scanner` | The owner holds every JordyLab role and can run the scanner without a hand-assigned role (spec 011 BUG-028). `mobile-release-publisher` stays CI-only (007 FR-004). |
+
+For the local Podman Keycloak use `podman exec jordylab-be-keycloak-1 …` with `--server http://localhost:8080`
+(no `/auth` path locally).
+
 The `jordylab-mobile` and `mobile-release-ci` clients (spec 007) are **not** in this file — they
 are their own stop-and-report gate per `jordylab-be/AGENTS.md`, requiring Jordy's sign-off on the
 Android application id before they're added.
