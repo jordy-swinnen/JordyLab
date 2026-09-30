@@ -53,8 +53,8 @@ depth than this file gives.
 | Kubeconfig (Mac) | `~/.kube/jordylab.yaml` → `export KUBECONFIG=~/.kube/jordylab.yaml`                                                   |
 | App namespace    | `jordylab`                                                                                                            |
 | Backups          | OVH Object Storage, bucket `jordylab-cnpg-backups`, Gravelines (GRA), `https://s3.gra.io.cloud.ovh.net`               |
-| Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:sha-<full-commit-sha>` (public)                           |
-| CI/CD            | GitHub Actions `Build` → `Deploy to Production` (environment `production`, reviewer Jordy, `main` only)               |
+| Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:sha-<full-commit-sha>` (Build) + `:vX.Y.Z` (release retag) |
+| CI/CD            | `Build` on every push; **`v*` tag** → `Release` → `Deploy to Production` (environment `production`, reviewer Jordy)   |
 | TLS              | cert-manager + Let's Encrypt (`letsencrypt-prod`, account e-mail jordy.swinnen@pm.me)                                 |
 | Secrets          | SOPS + age; private key at `~/Library/Application Support/sops/age/keys.txt` (+ password manager + GitHub env secret) |
 
@@ -130,7 +130,7 @@ Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app
 - **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll` in `SecurityConfig`.
 - **Frontend image** copies `dist/apps/jordylab/browser` (Angular application builder output) into nginx.
 - **ntfy has no `NTFY_BASE_URL`** (sub-path hosting unsupported); a subdomain is needed for attachments/web push.
-- **Deploy workflow**: only for `Build` runs from pushes to `main`; checks out the deployed SHA; pinned
+- **Deploy workflow**: only via `release.yml` (a `v*` tag) or *Run workflow* with a release tag; checks out the tag; pinned
   sops 3.13.3 / age 1.3.2 / kustomize 5.8.1 / kubectl 1.36.4 (keep kubectl within ±1 minor of k3s).
 - **Build workflow**: images only on push to `main`; image matrix `fail-fast: false`.
 
@@ -206,8 +206,10 @@ gh run list --repo jordy-swinnen/JordyLab --branch main --limit 5
 gh run view <run-id> --repo jordy-swinnen/JordyLab --json status,headSha,event
 gh run view <run-id> --repo jordy-swinnen/JordyLab --log-failed | tail -40
 gh run rerun <run-id> --repo jordy-swinnen/JordyLab --failed
-# Rollback / redeploy a specific commit (then approve in Actions). Always pass sha — an empty sha deploys tag `sha-`:
-gh workflow run "Deploy to Production" --repo jordy-swinnen/JordyLab -f sha=<full-commit-sha>
+# Release (the only way production changes): tag a green main commit — release.yml verifies, retags, releases, deploys, ships the APK
+git tag v0.1.0 <sha-on-main> && git push origin v0.1.0
+# Rollback / redeploy an earlier release (then approve in Actions); only vX.Y.Z[-rcN] is accepted:
+gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f version=<previous-tag>
 # Approve a pending deploy via the API (only when delegated, see safety rule 2):
 ENV=$(gh api repos/jordy-swinnen/JordyLab/actions/runs/<run-id>/pending_deployments --jq '.[0].environment.id')
 gh api -X POST repos/jordy-swinnen/JordyLab/actions/runs/<run-id>/pending_deployments -F "environment_ids[]=$ENV" -f state=approved -f comment="<why>"
@@ -368,5 +370,4 @@ nmap -Pn 57.129.163.110                           # only 22, 80, 443 open
 - Replace Keycloak's temporary bootstrap admin with a permanent admin.
 - Restrict the OVH Object Storage user to the single bucket (currently project-wide operator role).
 - ntfy subdomain if attachments / web push are needed.
-- Planned release flow (`v*` tag → GitHub Release → approved deploy): `docs/runbook.md` §20.
 - Turn on VPS auto-renewal at OVH; watch domain renewal.

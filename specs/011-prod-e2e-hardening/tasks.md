@@ -204,8 +204,8 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
   `gh release create --generate-notes`, deploy via `production` environment); change
   `.github/workflows/deploy-prod.yml` (drop `workflow_run`, input `sha` → `version`, tags from `${VERSION}`, pin
   `kubectl` to the k3s minor and `kustomize` to a release URL); retire the `mobile-v*` trigger in
-  `.github/workflows/android-release.yml` and move its steps into `release.yml` behind a disabled APK job (007 T052
-  gate); update `docs/runbook.md` §10/§11/§20, `.claude/agents/jordylab-devops.md`,
+  `.github/workflows/android-release.yml` and move its steps into `release.yml` behind an APK job gated on 007 T052
+  (gate cleared 2026-09-30 — keystore secrets + realm clients live, PR #34); update `docs/runbook.md` §10/§11/§20, `.claude/agents/jordylab-devops.md`,
   `.opencode/agents/jordylab-devops.md`, and research R8 in this spec. Validate with `actionlint` if available.
   ⚠️ **GATE**: CI/config change — deploy pauses for Jordy; the first `v0.0.1-rc1` tag push and the GitHub rulesets
   (tag + `main` branch) are HANDOFF items, never changed by the agent

@@ -1,33 +1,45 @@
 name: Deploy to Production
 
+# Deploys one released version (a `v*` tag) to production — docs/runbook.md §20.
+# - Called by release.yml after a tag is verified and its images are retagged.
+# - Run by hand (Actions → Deploy to Production → Run workflow) to redeploy or roll back to any
+#   earlier release: enter its tag, e.g. v0.1.0.
+# A push to main no longer deploys by itself (spec 011 BUG-008); an empty input can no longer
+# deploy an image tagged `sha-` (BUG-005).
+
 on:
-  workflow_run:
-    workflows: [Build]
-    types: [completed]
+  workflow_call:
+    inputs:
+      version:
+        description: "Release tag to deploy, e.g. v0.1.0"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
-      sha:
-        description: "Commit SHA to deploy (defaults to the latest successful Build run)"
-        required: false
+      version:
+        description: "Release tag to deploy or roll back to, e.g. v0.1.0"
+        required: true
+        type: string
 
 jobs:
   deploy:
-    # Only deploy Builds of pushes to main (PR builds also complete a Build run, but push no images).
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main')
+    # One production deploy at a time, whether called by release.yml or run by hand.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: production # required reviewer = Jordy (docs/runbook.md §9) — this is the manual approval gate (FR-006)
     env:
-      SHA: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha }}
+      VERSION: ${{ inputs.version }}
     steps:
-      # Check out the commit being deployed, so the manifests match the images (a workflow_run
-      # checkout would otherwise default to the latest main, which may be newer than SHA).
+      - name: Reject anything that isn't a release tag
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]] || { echo "::error::'$VERSION' is not a release tag (vX.Y.Z or vX.Y.Z-rcN)"; exit 1; }
+
+      # Check out the released commit, so the manifests match the images.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.SHA }}
+          ref: ${{ env.VERSION }}
 
       - name: Join Tailscale
         uses: tailscale/github-action@v4
@@ -69,9 +81,9 @@ jobs:
           # filename, so `kustomize build` below picks up the now-plaintext Secret.
           sops --output secrets.sops.yaml -d secrets.sops.yaml
           kustomize edit set image \
-            ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:sha-${SHA}" \
-            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:sha-${SHA}" \
-            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:sha-${SHA}"
+            ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${VERSION}" \
+            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${VERSION}" \
+            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${VERSION}"
           kustomize build . | kubectl apply -f -
 
       - name: Wait for a healthy rollout
