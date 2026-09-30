@@ -4,6 +4,69 @@ Personal platform for financial intelligence, health/fitness tracking, game cata
 recipe management — a modular monolith with a separate frontend and Python sidecar. See
 `AGENTS.md` for the full architecture and module overview.
 
+## Architecture
+
+Production runs on a single OVH VPS with k3s at **https://jordylab.be**. Local development runs the same
+pieces with Podman Compose (see below). How production was built: [
+`docs/runbooks/vps-k3s-deployment`](docs/runbooks/vps-k3s-deployment/README.md);
+day-to-day operations: the `jordylab-devops` agent (`.claude/agents/`, `.opencode/agents/`).
+
+```mermaid
+flowchart TB
+    user(["Browser / Android app"])
+    dev(["Jordy's Mac<br/>kubectl · helm · sops"])
+
+    subgraph gh["GitHub"]
+        repo["Repo + PR"] --> build["Build workflow<br/>tests → images"]
+        build --> ghcr[("GHCR<br/>backend · frontend · keycloak<br/>tag sha-&lt;commit&gt;")]
+        build --> deploy["Deploy workflow<br/>env: production<br/>(manual approval)"]
+    end
+
+    subgraph ts["Tailscale (private admin network)"]
+        tsnote["only port 6443 for CI"]
+    end
+
+    subgraph vps["OVH VPS · Ubuntu LTS · ufw: 22/80/443 only"]
+        subgraph k3s["k3s (single-node Kubernetes)"]
+            api["k3s API :6443"]
+            subgraph ks["kube-system / add-ons"]
+                traefik["Traefik<br/>Gateway API"]
+                certm["cert-manager<br/>Let's Encrypt"]
+                cnpgop["CloudNativePG operator<br/>+ Barman Cloud plugin"]
+            end
+            subgraph ns["namespace jordylab"]
+                fe["frontend<br/>nginx · Angular"]
+                be["backend<br/>Spring Boot"]
+                kc["Keycloak<br/>/auth"]
+                ntfy["ntfy<br/>/ntfy"]
+                pg[("PostgreSQL 16<br/>app DB + keycloak schema")]
+                pvc[("PVCs<br/>artwork · APKs")]
+            end
+        end
+    end
+
+    s3[("OVH Object Storage<br/>Gravelines · backups")]
+
+    user -- "HTTPS jordylab.be" --> traefik
+    traefik -- "/" --> fe
+    traefik -- "/api" --> be
+    traefik -- "/auth/realms …" --> kc
+    traefik -- "/ntfy" --> ntfy
+    certm -. "TLS cert" .-> traefik
+    be --> pg
+    be --> pvc
+    be -- "token validation" --> kc
+    be -- "publish" --> ntfy
+    kc --> pg
+    cnpgop -. "manages" .-> pg
+    pg -- "WAL + daily/weekly base backups" --> s3
+
+    deploy -- "joins as tag:ci" --> ts
+    dev --> ts
+    ts --> api
+    ghcr -. "image pull" .-> k3s
+```
+
 ## Running locally
 
 Three pieces run together: Postgres + Keycloak (via Podman Compose), the Spring Boot backend,

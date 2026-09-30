@@ -18,6 +18,8 @@ Agents (run automatically by Claude):
 - `code-reviewer` — reviews against all JordyLab conventions; reports issues by severity
 - `test-writer` — generates tests matching existing patterns
 - `architect` — read-only codebase exploration for architecture questions
+- `jordylab-devops` — production operations: OVH VPS + k3s, Tailscale access, deploys/rollbacks, SOPS secrets, Keycloak
+  admin, CNPG backups (mirrored in `.opencode/agents/`)
 
 MCP servers:
 - `nx-mcp` — configured in `.mcp.json` (repo root; also defines the `github` MCP server)
