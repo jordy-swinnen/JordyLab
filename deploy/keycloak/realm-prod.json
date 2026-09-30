@@ -61,8 +61,7 @@
     {
       "clientScope": "offline_access",
       "roles": ["offline_access"]
-    }
-,
+    },
     {
       "client": "mobile-release-ci",
       "roles": ["mobile-release-publisher"]
