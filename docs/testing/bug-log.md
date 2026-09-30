@@ -465,7 +465,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-030: Prod has no download-link signing secret — APK download links can't be issued
-- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/34 — secret added by Jordy via sops)
+- Status: DEPLOYED (DEPLOY-03, `19b6e2d`) — `MOBILE_DOWNLOAD_LINK_SECRET` in `jordylab-secrets`; download-link issuance to be exercised with the first APK
 - Severity: S3
 - Area/spec: mobile / 007
 - Env found: prod
@@ -496,7 +496,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-032: OpenCode agents point at a model that doesn't exist — none of them can start
-- Status: FIXING (devops agent fixed in PR https://github.com/jordy-swinnen/JordyLab/pull/33; architect, code-reviewer, test-writer open → Q-08)
+- Status: FIXING — devops agent fixed (PR #33, merged); Jordy re-routed the remaining OpenCode agents himself (Q-08); verify they start
 - Severity: S4
 - Area/spec: dev tooling / —
 - Env found: local (OpenCode 1.18.32)
@@ -509,3 +509,33 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33, verified: subagent runs and loads the `jordylab-ops` skill). Others pending Jordy's routing choice.
 - Regression test added: none because agent config (verified with `opencode run` / `claude -p`)
 - Verified on prod: n/a
+
+### BUG-033: Approving a user fails on prod (503) — backend service account lacks `view-realm`
+- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/35); live realm patched 2026-09-30 23:30 CEST
+- Severity: S2
+- Area/spec: settings / 006
+- Env found: prod (Jordy, HANDOFF-02: "Keycloak is unavailable right now — try again shortly")
+- Coverage rows: 006-US2 (+AS1–AS5), 006-FR-006, 006-SC-002
+- Steps to reproduce:
+  1. As admin on https://jordylab.be → Settings → Users → Approve on a pending user.
+- Expected (cite spec/story): 006 US2 — admin approves a sign-up into `guest`.
+- Actual (logs/screenshot, secrets redacted): `POST /api/settings/users/{id}/approve → 503`, nothing in the backend log. Reproduced with `KeycloakAdminClientRealmExportIntegrationTest` (Keycloak 26.7.4 + real dev export): `KeycloakUnavailableException: Keycloak admin GET /roles/guest failed … 403 Forbidden`.
+- Root cause: the realm files granted `realm-management` → `view-roles`, which is not a built-in role (on prod it has no `${role_…}` description — the import created an empty custom role). Reading a realm role needs `view-realm`. The existing `KeycloakIntegrationTest` uses a separate test realm with roles granted in code, so it never exercised the real permissions. The 503 handler also logged nothing.
+- Fix (PR / commit / tag): PR #35 — `view-realm` in both realm files + scope mapping; `SettingsUsersController` logs the failing Admin REST call. Live realm: `view-realm` granted to `service-account-jordylab-backend` and added to its scope mapping via kcadm; backend restarted by DEPLOY-03 → 0 Keycloak admin errors since.
+- Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/client/KeycloakAdminClientRealmExportIntegrationTest.java`
+- Verified on prod:
+
+### BUG-034: The admin's own account is listed as a pending sign-up
+- Status: FIXING (PR https://github.com/jordy-swinnen/JordyLab/pull/35)
+- Severity: S3
+- Area/spec: settings / 006
+- Env found: prod (Jordy, screenshot of Settings → Users)
+- Coverage rows: 006-US2, 006-FR-006
+- Steps to reproduce:
+  1. As admin → Settings → Users: `jordy.swinnen@pm.me` appears under Pending with Approve/Reject.
+- Expected (cite spec/story): 006 FR-006 — users listed by status; an admin is not a pending sign-up.
+- Actual (logs/screenshot, secrets redacted): Pending (3) includes the admin account.
+- Root cause: `deriveStatus` returned APPROVED only for a direct `guest` mapping; admins hold `admin` (composite incl. guest, Q-07) but not `guest` directly.
+- Fix (PR / commit / tag): PR #35 (`7decf8d`) — `guest` or `admin` → APPROVED.
+- Regression test added: `KeycloakUserAdministrationServiceTest.anAdminWithoutADirectGuestRoleIsApprovedNotPending`
+- Verified on prod:

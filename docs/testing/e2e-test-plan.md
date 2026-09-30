@@ -812,6 +812,17 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Prod re-verification: backend started 20:28:26Z with 0 `KeycloakUnavailableException` (every earlier start failed within 2 s); Users page check pending admin login
 - Outcome: deployed; no regression
 
+#### DEPLOY-03
+- PRs: #32 (campaign docs), #33 (jordylab-ops skill), #34 (Android release setup) — all review comments resolved first (fixed or rebutted with evidence)
+- Deploy path: sha, via `workflow_dispatch` (`sha=19b6e2deb01f918a494f0e2820729e902fd422e9`)
+- Why dispatch: the three `workflow_run` deploys all reported head `19b6e2d`, but each deploys its *triggering* Build's SHA (b02afce / 5e9ff8d / 19b6e2d) and they could not be told apart → all three rejected, one explicit dispatch approved (run 36780023157)
+- Contains Flyway migration: no · realm change: yes (file only; live realm via kcadm) · secret/config change: yes (Android config + 2 secrets)
+- Decision: standing approval from Jordy (2026-09-30); mobile kcadm block approved by Jordy ("go ahead")
+- Rollout: backend/frontend/keycloak ready on `sha-19b6e2d…`
+- Live realm after deploy: role `mobile-release-publisher`, clients `jordylab-mobile` + `mobile-release-ci` created, CI service account granted + scope-mapped; secret taken from the pod env (length 64, never printed)
+- Prod re-verification: `/.well-known/assetlinks.json` → `package_name: be.jordylab.app`, fingerprint `1B:02:13:85:…`; backend 0 Keycloak admin errors
+- Outcome: deployed; no regression
+
 ## 10. NOT TESTABLE
 
 - **NOT BUILT**: all 010 rows (Eufy presence); `garmin-sync-service` (no code).
@@ -836,6 +847,8 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
   composite of `guest` + `gamecatalog-scanner`. `mobile-release-publisher` stays CI-only (007 FR-004).
 - **Q-06 answer:** implement now; application id chosen by agent: `be.jordylab.app` (Jordy: "pick whatever seems
   appropriate").
-- **Q-08 — OpenCode models (BUG-032).** architect, code-reviewer and test-writer in `.opencode/agents/` use a model
+- **Q-08 — OpenCode models (BUG-032).** ANSWERED: Jordy re-routed the OpenCode agents himself (removed the plus agents,
+  changed plan, added a speckit agent).
+- **Q-08 (original):** architect, code-reviewer and test-writer in `.opencode/agents/` use a model
   that doesn't exist. Which OpenCode Go model should each use (devops now uses `opencode-go/kimi-k2.7-code`)?
 - **Q-05 — Podman VM memory.** ANSWERED: agent raised it from 2048 to 6144 MiB (host has 16 GiB); containers restarted.
