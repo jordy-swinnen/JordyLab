@@ -75,6 +75,20 @@ class KeycloakUserAdministrationServiceTest {
     }
 
     @Test
+    void anAdminWithoutADirectGuestRoleIsApprovedNotPending() {
+        KeycloakAdminClient.KeycloakUser admin = keycloakUser(SOLE_ADMIN_ID, true, List.of("admin"));
+        when(keycloakAdminClient.listUsers()).thenReturn(List.of(admin));
+
+        List<AppUser> pending = service.listUsers(UserStatus.PENDING);
+        List<AppUser> approved = service.listUsers(UserStatus.APPROVED);
+
+        assertSoftly(softly -> {
+            softly.assertThat(pending).isEmpty();
+            softly.assertThat(approved).extracting(AppUser::status).containsExactly(UserStatus.APPROVED);
+        });
+    }
+
+    @Test
     void pendingCountCountsOnlyPendingUsers() {
         KeycloakAdminClient.KeycloakUser pending = keycloakUser(PENDING_ID, true, List.of());
         KeycloakAdminClient.KeycloakUser guest = keycloakUser(GUEST_ID, true, List.of("guest"));

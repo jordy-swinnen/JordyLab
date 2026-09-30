@@ -11,6 +11,7 @@ import dev.jordy.jordylab.settings.service.UserNotApprovedException;
 import dev.jordy.jordylab.settings.service.UserNotFoundException;
 import dev.jordy.jordylab.settings.service.UserStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -30,6 +31,7 @@ import java.util.UUID;
  * (contracts/settings-users-api.md, spec FR-001–FR-010). {@code /api/settings/**} already
  * requires {@code admin} in {@code SecurityConfig} — no method-level checks needed here.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/settings/users")
 @RequiredArgsConstructor
@@ -94,6 +96,9 @@ public class SettingsUsersController {
 
     @ExceptionHandler(KeycloakUnavailableException.class)
     public ResponseEntity<ErrorBody> handleKeycloakUnavailable(KeycloakUnavailableException exception) {
+        // The message names only the Admin REST method and path (never tokens or secrets); without it a
+        // permission gap like BUG-033 surfaced as a bare 503 with nothing in the log.
+        log.warn("Keycloak admin call failed: {}", exception.getMessage(), exception);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorBody("KEYCLOAK_UNAVAILABLE"));
     }
 
