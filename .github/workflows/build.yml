@@ -50,9 +50,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-      - name: Run backend tests
+      # `check` = tests + ModularityTests + the JaCoCo ≥ 80 % per-package gate (001 FR-016b; spec 011 BUG-004).
+      - name: Run backend tests and coverage gate
         working-directory: jordylab-be
-        run: ./gradlew test --no-daemon
+        run: ./gradlew check --no-daemon
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -62,9 +63,15 @@ jobs:
       - name: Install dependencies
         working-directory: jordylab-fe
         run: bun install --frozen-lockfile
-      - name: Run frontend tests
+      # Module boundaries and template accessibility are lint rules (001 FR-011–FR-013; spec 011 BUG-003).
+      - name: Lint
         working-directory: jordylab-fe
-        run: bunx nx run-many --target=test --all
+        run: bunx nx run-many --target=lint --all
+
+      # --coverage activates each project's `thresholds: { lines: 80 }` (001 FR-016a/c; spec 011 BUG-004).
+      - name: Run frontend tests with coverage gate
+        working-directory: jordylab-fe
+        run: bunx nx run-many --target=test --all --coverage
 
   build-and-push:
     needs: [secret-scan, licence-check, test-backend, test-frontend]

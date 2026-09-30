@@ -1,5 +1,5 @@
 import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
-import { of, Subject, throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
 import { aSwitchSearchResultMock } from './mocks/switch-search-result.model.mock';
 import { SwitchGameStore } from './switch-game.store';

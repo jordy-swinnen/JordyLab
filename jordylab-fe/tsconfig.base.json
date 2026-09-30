@@ -37,7 +37,8 @@
       ],
       "@jordylab-fe/shared/platform/ui": [
         "libs/shared/platform/ui/src/index.ts"
-      ]
+      ],
+      "@jordylab-fe/settings/nav": ["libs/settings/nav/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
