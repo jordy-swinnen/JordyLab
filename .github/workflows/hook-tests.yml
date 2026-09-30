@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.claude/hooks/**'
+      - '.githooks/**'
 
 jobs:
   guard-cases:
@@ -19,3 +20,6 @@ jobs:
 
       - name: Run pre-bash-guard.sh fixtures
         run: bash .claude/hooks/tests/guard-cases.sh
+
+      - name: Run commit-msg fixtures
+        run: bash .githooks/tests/commit-msg-cases.sh
