@@ -39,7 +39,11 @@ public class ApkSigningCertificateReader {
 
         List<X509Certificate> signerCertificates = result.getSignerCertificates();
         if (!result.isVerified() || signerCertificates.isEmpty()) {
-            throw new InvalidApkException("APK is not signed: no verifiable signing certificate found");
+            throw new InvalidApkException("APK is not signed, or its signature does not verify");
+        }
+        // Release builds have exactly one signer; with several, "the" certificate to pin is ambiguous.
+        if (signerCertificates.size() != 1) {
+            throw new InvalidApkException("APK has " + signerCertificates.size() + " signers; expected exactly one");
         }
 
         try {

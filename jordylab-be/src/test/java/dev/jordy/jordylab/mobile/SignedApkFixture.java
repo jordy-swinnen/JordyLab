@@ -18,14 +18,18 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
 /**
- * Test helper that creates a minimal, signed APK (JAR) using the JDK's {@code keytool} and
- * {@code jarsigner} tools. The generated keystore and signed JAR live in a temporary directory.
+ * Test helper that creates minimal signed APKs: v1 (JAR) with the JDK's {@code keytool} and {@code jarsigner},
+ * v2/v3 with Google's apksig {@code ApkSigner}. The generated keystore and signed JAR live in a temporary directory.
  */
 public final class SignedApkFixture {
 
     private static final String STORE_PASS = "changeit";
     private static final String KEY_PASS = "changeit";
     private static final String ALIAS = "test";
+    private static final String SECOND_ALIAS = "second";
+    private static final int LOCAL_HEADER_LENGTH = 30;
+    private static final int NAME_LENGTH_OFFSET = 26;
+    private static final int EXTRA_LENGTH_OFFSET = 28;
 
     private final Path tempDir;
     private final Path keystore;
@@ -37,7 +41,7 @@ public final class SignedApkFixture {
         this.keystore = tempDir.resolve("test.keystore");
         this.signedApk = tempDir.resolve("test-signed.apk");
         try {
-            createKeystore();
+            createKey(ALIAS, "CN=Test");
             createJar(signedApk);
             signJar();
             this.sha256Fingerprint = readFingerprint();
@@ -55,30 +59,39 @@ public final class SignedApkFixture {
      * JAR signature, using Google's apksig ApkSigner with this fixture's key.
      */
     public Path v2v3SignedApk() {
+        Path signed = tempDir.resolve("test-v2v3-signed.apk");
+        signWithApksig(List.of(signerConfig(ALIAS)), signed, true);
+
+        return signed;
+    }
+
+    /** Signed v2-only by two different keys (v3 allows a single signer), which a release APK never is. */
+    public Path twoSignerApk() {
         try {
-            Path unsigned = tempDir.resolve("unsigned-for-v2.apk");
-            Path signed = tempDir.resolve("test-v2v3-signed.apk");
-            createJar(unsigned);
-            KeyStore keyStore = KeyStore.getInstance("PKCS12");
-            try (InputStream in = Files.newInputStream(keystore)) {
-                keyStore.load(in, STORE_PASS.toCharArray());
-            }
-            PrivateKey privateKey = (PrivateKey) keyStore.getKey(ALIAS, KEY_PASS.toCharArray());
-            X509Certificate certificate = (X509Certificate) keyStore.getCertificate(ALIAS);
-            ApkSigner.SignerConfig signer = new ApkSigner.SignerConfig.Builder(ALIAS, privateKey, List.of(certificate))
-                    .build();
-            new ApkSigner.Builder(List.of(signer))
-                    .setInputApk(unsigned.toFile())
-                    .setOutputApk(signed.toFile())
-                    .setMinSdkVersion(29)
-                    .setV1SigningEnabled(false)
-                    .setV2SigningEnabled(true)
-                    .setV3SigningEnabled(true)
-                    .build()
-                    .sign();
-            return signed;
+            createKey(SECOND_ALIAS, "CN=Second");
         } catch (Exception exception) {
-            throw new IllegalStateException("Unable to create v2/v3-signed APK fixture", exception);
+            throw new IllegalStateException("Unable to create second signing key", exception);
+        }
+        Path signed = tempDir.resolve("test-two-signers.apk");
+        signWithApksig(List.of(signerConfig(ALIAS), signerConfig(SECOND_ALIAS)), signed, false);
+
+        return signed;
+    }
+
+    /** A v2/v3-signed APK with one byte of its first entry's data changed after signing. */
+    public Path tamperedApk() {
+        try {
+            Path tampered = tempDir.resolve("test-tampered.apk");
+            byte[] bytes = Files.readAllBytes(v2v3SignedApk());
+            ByteBuffer header = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+            int firstEntryData = LOCAL_HEADER_LENGTH + header.getShort(NAME_LENGTH_OFFSET)
+                    + header.getShort(EXTRA_LENGTH_OFFSET);
+            bytes[firstEntryData] ^= 0x01;
+            Files.write(tampered, bytes);
+
+            return tampered;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to create tampered APK fixture", exception);
         }
     }
 
@@ -86,18 +99,18 @@ public final class SignedApkFixture {
         return sha256Fingerprint;
     }
 
-    private void createKeystore() throws IOException, InterruptedException {
+    private void createKey(String alias, String dname) throws IOException, InterruptedException {
         run(new ProcessBuilder(
                 "keytool",
                 "-genkeypair",
-                "-alias", ALIAS,
+                "-alias", alias,
                 "-keyalg", "RSA",
                 "-keysize", "2048",
                 "-validity", "1",
                 "-keystore", keystore.toString(),
                 "-storepass", STORE_PASS,
                 "-keypass", KEY_PASS,
-                "-dname", "CN=Test"));
+                "-dname", dname));
     }
 
     private void createJar(Path jar) throws IOException {
@@ -128,6 +141,7 @@ public final class SignedApkFixture {
                 "keytool",
                 "-list",
                 "-v",
+                "-alias", ALIAS,
                 "-keystore", keystore.toString(),
                 "-storepass", STORE_PASS));
         for (String line : output.split("\n")) {
@@ -137,6 +151,39 @@ public final class SignedApkFixture {
             }
         }
         throw new IllegalStateException("Could not read SHA-256 fingerprint from generated keystore");
+    }
+
+    private ApkSigner.SignerConfig signerConfig(String alias) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            try (InputStream in = Files.newInputStream(keystore)) {
+                keyStore.load(in, STORE_PASS.toCharArray());
+            }
+            PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias, KEY_PASS.toCharArray());
+            X509Certificate certificate = (X509Certificate) keyStore.getCertificate(alias);
+
+            return new ApkSigner.SignerConfig.Builder(alias, privateKey, List.of(certificate)).build();
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to load signing key " + alias, exception);
+        }
+    }
+
+    private void signWithApksig(List<ApkSigner.SignerConfig> signers, Path signed, boolean v3) {
+        try {
+            Path unsigned = tempDir.resolve("unsigned-" + signed.getFileName());
+            createJar(unsigned);
+            new ApkSigner.Builder(signers)
+                    .setInputApk(unsigned.toFile())
+                    .setOutputApk(signed.toFile())
+                    .setMinSdkVersion(29)
+                    .setV1SigningEnabled(false)
+                    .setV2SigningEnabled(true)
+                    .setV3SigningEnabled(v3)
+                    .build()
+                    .sign();
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to sign APK fixture " + signed.getFileName(), exception);
+        }
     }
 
     /**
