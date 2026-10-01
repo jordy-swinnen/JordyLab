@@ -93,7 +93,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-006: Production runbook points at moved files and wrong CNPG names
-- Status: FIXING — PR `fix/e2e-docs-runbook-review-prompt`
+- Status: VERIFIED — PR #69 merged; the corrected paths and log commands were run against the cluster
 - Severity: S4
 - Area/spec: docs / 008
 - Env found: both
@@ -110,7 +110,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: verified: `deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml` and `ci-deploy-rbac.yaml` exist; `kubectl -n jordylab logs cnpg-cluster-1 -c postgres` works (2026-10-01)
 
 ### BUG-007: Claude PR review prompt references a file that does not exist
-- Status: FIXING — PR `fix/e2e-docs-runbook-review-prompt`
+- Status: VERIFIED — PR #69 merged; the review prompt lists only files that exist
 - Severity: S4
 - Area/spec: CI / —
 - Env found: both
@@ -171,7 +171,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: prod backend log `AI call succeeded: feature=gamecatalog.chat.query/answer, provider=openrouter, model=anthropic/claude-haiku-4.5` after the owner added OpenRouter credits (before: 402 → one Anthropic retry)
 
 ### BUG-011: 006 US5 missing — no user menu to manage one's own login details
-- Status: FIXING — PR `fix/e2e-settings-user-menu`; prod needs `UPDATE_EMAIL` enabled (HANDOFF-06)
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session); email change needs `UPDATE_EMAIL` (enabled, HANDOFF-06)
 - Severity: S2
 - Area/spec: shared/auth, shell / 006
 - Env found: both
@@ -186,7 +186,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-012: 006 US6 missing — no per-feature AI model selection (AI Models page)
-- Status: FIXING — PR `fix/e2e-settings-ai-models` (stacked on `fix/e2e-settings-ai-routing`)
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: both
@@ -218,7 +218,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: backend log `Ntfy notifications enabled`, then `Ntfy notification sent: 'New JordyLab sign-up'` at startup for the pending test account; the ntfy server's `messages_published` rose from 0 to 2
 
 ### BUG-014: 009 US4 incomplete — Switch detail format and cross-view tests missing
-- Status: FIXING — PR `fix/e2e-switch-detail`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -233,7 +233,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-015: 009 US2 incomplete — no manual-fallback add form or relink UI
-- Status: FIXING — PR `fix/e2e-switch-detail`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -248,7 +248,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-016: 009 US3 missing — bulk add by pasting a list
-- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -263,7 +263,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-017: 009 US5 incomplete — no edit/remove on the detail page; guest-403 tests missing
-- Status: FIXING — PR `fix/e2e-switch-detail`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -588,7 +588,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the `apk` job built, signed and verified the release APK and published it: `mobile.mobile_release` row `0.0.1-rc6` (versionCode 106, 12.8 MB); the backend read the v2 signing certificate with apksig and accepted it against the pin
 
 ### BUG-038: Guests see the admin-only "Refresh" / "Regenerate" buttons on the game detail page
-- Status: FIXING — PR `fix/e2e-switch-detail`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S4
 - Area/spec: gamecatalog / 004, 006
 - Env found: code reading (while adding the Switch admin controls, 009 T052)
@@ -618,7 +618,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc4`: preflight `OPTIONS /api/gamecatalog/switch/games/x` with `Origin: https://localhost` answers `Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS`
 
 ### BUG-040: No navigation leads to the Switch add page
-- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: code reading + local (while adding 009 US3)
@@ -633,7 +633,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-041: Switch endpoints answer 500 for duplicates, bad input and unknown games
-- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: code reading
@@ -648,7 +648,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-042: Switch IGDB search misses ports and expanded games — "Mario Kart 8 Deluxe" finds nothing
-- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: local (2026-10-01, IGDB live)
@@ -663,7 +663,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-043: Detail page's admin format select always shows "Physical"
-- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: local (2026-10-01; shipped in v0.0.1-rc4 via PR #53)
@@ -723,7 +723,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the SpringDoc startup warnings are gone from the backend log; `/v3/api-docs` and `/swagger-ui.html` answer the SPA shell publicly, as before
 
 ### BUG-047: EmuDeck scan of a large ROM library fails with "scan payload exceeds 1048576 bytes"
-- Status: FIXING — PR `fix/e2e-scan-payload-cap`
+- Status: DEPLOYED in `v0.0.1-rc6` — needs the owner's EmuDeck rescan on JordyBox (MRB-03)
 - Severity: S2
 - Area/spec: gamecatalog / 003
 - Env found: prod, JordyBox (reported by the owner, 2026-10-01; Steam scan on the same machine succeeded)
