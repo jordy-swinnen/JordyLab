@@ -853,10 +853,19 @@ _Not started._
 - Machine: JordyBox · Target env: prod · Why you: only JordyBox has the ROM library.
 - Steps: download the current client from `https://jordylab.be/api/gamecatalog/ingest/client` (admin login), run `python3 jordylab-scan-prod.py scan` for the EmuDeck library. Full steps: `manual-test-runbook.md` MRB-03.
 - Expect: `EMUDECK scan APPLIED: …` instead of "scan payload exceeds … bytes". Send me the last lines.
+- Result (2026-10-02): **done** — the scan applied (148 installations on `cachyos-htpc`, 68 Steam) and reruns answer `NO_CHANGE` (exit 0). BUG-047 verified. Two scans overlapping exposed BUG-048 (fixed in rc8).
 
 #### HANDOFF-12: Sign in to prod in the browser pane
 - Machine: the Claude desktop app's browser pane · Target env: prod · Why you: I never enter your password.
 - Steps: open `https://jordylab.be` in the pane, sign in as admin, tell me "signed in". I then run the pass in `manual-test-runbook.md` MRB-01 (read-mostly; I add and remove one Switch game and change nothing else) and verify the BUG-011/012/014–017/038–043 rows on prod.
+
+#### HANDOFF-13: Sign in again in the browser pane (session ended)
+- Machine: the Claude desktop app's browser pane (tab `seed`) · Target env: prod · Why you: I never enter your password.
+- Context: the HANDOFF-12 session ended (the rc8 deploy restarted Keycloak/backend; the pane is on the Keycloak login page).
+- Steps: in the pane, sign in as admin at `https://jordylab.be`, then tell me "signed in". I then finish MRB-01: remove the
+  Pikmin 4 test game I added on prod, check the pending UI rows (BUG-011/012/014–017/038/040–043) and close them.
+- Optional (BUG-049 candidate, cosmetic): on JordyBox run `ls ~/Emulation/roms/ps3 | head` (Fish-compatible) and paste it — the
+  catalog shows platforms `Ps3` and `Usrdir` (raw EmuDeck folder names); I need the real layout before changing the mapping.
 
 ## 8. AI call tally
 
@@ -1012,3 +1021,11 @@ Procedures for everything below, and for the checks that need your login or hard
   ANSWERED: Jordy re-routed the OpenCode agents himself (removed the plus agents, changed `plan`, added a `speckit`
   agent; PR #37). `.opencode/agents/{architect,code-reviewer,test-writer}.md` still use the missing model (BUG-032).
 - **Q-05 — Podman VM memory.** ANSWERED: agent raised it from 2048 to 6144 MiB (host has 16 GiB); containers restarted.
+
+#### DEPLOY-13
+- Release: `v0.0.1-rc8` on `5f4bc05` (PR #74: scan lock, BUG-048), run 36940725164
+- Jobs: all ✅ including `apk` and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
+- Prod re-verification: backend image `v0.0.1-rc8`, 5/5 pods Running, `/api/**` 401. The concurrent-scan race itself is covered by `GameCatalogModuleTest` (fails without the lock); a live double-scan on JordyBox is optional (MRB-03 step 5).
+- Outcome: deployed; no regression
+
