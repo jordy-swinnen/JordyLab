@@ -56,6 +56,19 @@
         <p class="text-red-600">{{ error() }}</p>
       }
 
+      @if (noMatchFor(); as query) {
+        <div data-testid="switch-no-match" class="mb-6 rounded border border-dashed p-4">
+          <p>No IGDB match for “{{ query }}”.</p>
+          <button
+            type="button"
+            data-testid="switch-add-manually"
+            class="mt-2 px-4 py-2 rounded border"
+            (click)="onAddManually()">
+            Add “{{ query }}” manually
+          </button>
+        </div>
+      }
+
       @if (results().length > 0) {
         <div class="grid gap-4">
           @for (result of results(); track result.igdbGameId) {

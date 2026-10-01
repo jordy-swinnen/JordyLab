@@ -21,6 +21,12 @@ export interface SwitchSearchResult {
   bannerUrl: string | null;
 }
 
+/** PATCH /api/gamecatalog/switch/games/{id}: change the format and/or relink to another IGDB game (009 switch-api). */
+export interface SwitchGameUpdate {
+  format?: SwitchGameFormat;
+  igdbGameId?: number;
+}
+
 export interface SwitchGameResponse {
   gameId: string;
   title: string;
@@ -76,6 +82,8 @@ export interface GameDetail {
   title: string;
   platform: string;
   hosts: HostRef[];
+  /** Format per manually tracked host (e.g. Nintendo Switch → PHYSICAL); empty for scanned hosts (009 catalog-api). */
+  hostFormats: Record<string, SwitchGameFormat>;
   coverStatus: ArtworkStatus;
   coverUrl: string | null;
   coverEndpoint: string | null;

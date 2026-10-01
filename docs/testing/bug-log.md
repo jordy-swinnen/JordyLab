@@ -216,7 +216,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-014: 009 US4 incomplete — Switch detail format and cross-view tests missing
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-switch-detail`
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -226,12 +226,12 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 009 US4 — Switch games behave like any other game, format shown on detail.
 - Actual (logs/screenshot, secrets redacted): partial; exact UI gaps to be confirmed in US3 testing.
 - Root cause: story partially implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-switch-detail` (T047, with BUG-015).
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-switch-detail`: `hostFormats` on the detail response, "Format · Physical/Digital" on the detail page; T034 (filter chips) checked in the browser after deploy.
+- Regression test added: `GameRepositoryTest` (grid, hosts, platforms, chat filter on PostgreSQL), `ReconciliationServiceTest` (manual installations never hidden or purged), `GameQueryServiceTest.detailMapsManualHostsToTheirFormatAndOmitsScannedHosts`, `game-detail.component.spec.ts`
 - Verified on prod:
 
 ### BUG-015: 009 US2 incomplete — no manual-fallback add form or relink UI
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-switch-detail`
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -241,8 +241,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 009 FR-004 — add a game manually when search finds nothing; link it later.
 - Actual (logs/screenshot, secrets redacted): feature absent in the UI.
 - Root cause: story partially implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-switch-detail` (T047).
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-switch-detail`: "No IGDB match → Add manually" prompt on the add page; admin relink search on the detail page.
+- Regression test added: `switch-game.component.spec.ts`, `switch-game.store.spec.ts`, `game-detail.store.spec.ts`, `game-detail.component.spec.ts`
 - Verified on prod:
 
 ### BUG-016: 009 US3 missing — bulk add by pasting a list
@@ -261,7 +261,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-017: 009 US5 incomplete — no edit/remove on the detail page; guest-403 tests missing
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-switch-detail`
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -271,8 +271,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 009 US5 — admin edits/removes from the detail page; guests get 403 on writes.
 - Actual (logs/screenshot, secrets redacted): UI controls absent; guest-403 not covered by tests.
 - Root cause: story partially implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-switch-edit-remove` (T049).
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-switch-detail`: admin-only format change and two-step remove on the detail page.
+- Regression test added: `SwitchGameControllerSecurityTest` (guest 403 on search/add/edit/remove against the real `SecurityConfig`), `game-detail.component.spec.ts`
 - Verified on prod:
 
 ### BUG-018: Full backend suite fails 7 tests on this Mac (Podman) — `RoleMatrixTest`, `GuestChatLimitIntegrationTest`
@@ -583,4 +583,34 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: v1-only reader vs v2/v3-only signing.
 - Fix (PR / commit / tag): planned — sign release builds v1+v2 and verify with `apksigner` in the release workflow.
 - Regression test added:
+- Verified on prod:
+
+### BUG-038: Guests see the admin-only "Refresh" / "Regenerate" buttons on the game detail page
+- Status: FIXING — PR `fix/e2e-switch-detail`
+- Severity: S4
+- Area/spec: gamecatalog / 004, 006
+- Env found: code reading (while adding the Switch admin controls, 009 T052)
+- Coverage rows: 006-FR-guest-readonly
+- Steps to reproduce:
+  1. Log in as a guest, open any game's detail page.
+- Expected (cite spec/story): guests have read-only access to the Game Catalog; write actions are not offered.
+- Actual (logs/screenshot, secrets redacted): the refresh/regenerate buttons render; clicking one gets a 403 from `/api/gamecatalog/**` (admin-only), so nothing breaks but the UI offers an action the guest can't take.
+- Root cause: the buttons were never gated on the admin role.
+- Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — buttons gated on `AuthService.isAdmin`.
+- Regression test added: `game-detail.component.spec.ts` (guest sees no refresh/regenerate)
+- Verified on prod:
+
+### BUG-039: CORS allow-list has no PATCH — the Switch edit fails from the Android app
+- Status: FIXING — PR `fix/e2e-switch-detail`
+- Severity: S3
+- Area/spec: shared / 007, 009
+- Env found: code reading (`SecurityConfig.corsConfigurationSource`)
+- Coverage rows: 007-FR-mobile-api, 009-US5
+- Steps to reproduce:
+  1. In the Android app (WebView origin `https://localhost`), change a Switch game's format: the request is `PATCH /api/gamecatalog/switch/games/{id}`, cross-origin there.
+- Expected (cite spec/story): 007 — the app is the same web build and every feature works in it; 009 US5 — admin edits a Switch game.
+- Actual (logs/screenshot, secrets redacted): the preflight answer lists only GET, POST, PUT, DELETE, OPTIONS, so the browser blocks the PATCH. The web app on jordylab.be is same-origin and unaffected.
+- Root cause: PATCH missing from `allowedMethods`.
+- Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — PATCH added.
+- Regression test added: `SwitchGameControllerSecurityTest.corsPreflightAllowsPatchForTheSwitchEdit`
 - Verified on prod:

@@ -5,6 +5,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
 import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
+import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -198,6 +201,21 @@ class ReconciliationServiceTest {
     }
 
     @Test
+    void snapshotNeverHidesAManualInstallation() {
+        ScanSource source = aSource(SourceType.SWITCH);
+        GameInstallation manual = aManualInstallation(source);
+        when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of(manual));
+
+        ReconciliationCounts counts = reconciliationService.applySnapshot(source, List.of(), NOW);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(counts.removed()).isZero();
+            softly.assertThat(manual.getPresence()).isEqualTo(Presence.INSTALLED);
+            softly.assertThat(manual.getUninstalledAt()).isNull();
+        });
+    }
+
+    @Test
     void duplicateRefsInPayloadKeepFirstEntry() {
         ScanSource source = aSource();
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of());
@@ -295,6 +313,19 @@ class ReconciliationServiceTest {
         verify(gameInstallationRepository, never()).deleteAll(List.of());
     }
 
+    @Test
+    void purgeNeverDeletesAManualInstallation() {
+        GameInstallation manual = aManualInstallation(aSource(SourceType.SWITCH));
+        manual.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
+        when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
+                any(Instant.class))).thenReturn(List.of(manual));
+
+        reconciliationService.purgeUninstalledGames();
+
+        verify(gameInstallationRepository, never()).deleteAll(anyList());
+        verify(gameRepository, never()).delete(manual.getGame());
+    }
+
     private ScanSource aSource() {
         return aSource(SourceType.EMUDECK);
     }
@@ -320,6 +351,13 @@ class ReconciliationServiceTest {
                 .firstSeenAt(NOW.minusSeconds(172800))
                 .lastSeenAt(NOW.minusSeconds(86400))
                 .build();
+    }
+
+    private GameInstallation aManualInstallation(ScanSource source) {
+        Game game = Game.builder().platform(source.getPlatform()).title("Mario Kart 8 Deluxe").build();
+
+        return GameInstallation.createManual(game, source, "switch:mario-kart-8-deluxe", InstallationFormat.PHYSICAL,
+                NOW.minusSeconds(172800));
     }
 
     private GamePayload payload(String externalRef, String title) {

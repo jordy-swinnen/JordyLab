@@ -4,6 +4,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
+import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
 import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
 import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
@@ -30,6 +31,8 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -144,13 +147,18 @@ public class GameQueryService {
                         installation.getSource().getSourceType()))
                 .distinct()
                 .toList();
+        Map<String, InstallationFormat> hostFormats = installations.stream()
+                .filter(GameInstallation::isManual)
+                .filter(installation -> installation.getFormat() != null)
+                .collect(Collectors.toMap(installation -> installation.getSource().getHostname(),
+                        GameInstallation::getFormat, (first, second) -> first, LinkedHashMap::new));
         Instant firstSeenAt = installations.stream()
                 .map(GameInstallation::getFirstSeenAt)
                 .min(Comparator.naturalOrder())
                 .orElse(null);
         boolean hasCatalogData = enriched || metadataAvailable;
 
-        return new GameDetailResponse(game.getId(), game.getTitle(), game.getPlatform(), hosts,
+        return new GameDetailResponse(game.getId(), game.getTitle(), game.getPlatform(), hosts, hostFormats,
                 game.getCoverStatus(), ArtworkUrls.externalCoverUrl(game), ArtworkUrls.localCoverEndpoint(game),
                 game.getBannerStatus(), externalBannerUrl(game), null,
                 game.getEnrichmentStatus(),

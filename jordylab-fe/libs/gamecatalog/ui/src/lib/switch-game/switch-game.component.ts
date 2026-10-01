@@ -26,6 +26,7 @@ export class SwitchGameComponent {
   readonly addError = this.#store.addError;
   readonly added = this.#store.added;
   readonly canAdd = this.#store.canAdd;
+  readonly noMatchFor = this.#store.noMatchFor;
 
   readonly formats: SwitchGameFormat[] = ['PHYSICAL', 'DIGITAL'];
 
@@ -47,6 +48,10 @@ export class SwitchGameComponent {
 
   onMode(mode: 'search' | 'manual'): void {
     this.#store.setMode(mode);
+  }
+
+  onAddManually(): void {
+    this.#store.addNoMatchManually();
   }
 
   onAdd(): void {

@@ -1,7 +1,8 @@
 import { signal } from '@angular/core';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { aGameDetailMock, GameDetail, GameDetailStore } from '@jordylab-fe/gamecatalog/api';
+import { aGameDetailMock, aSwitchSearchResultMock, GameDetail, GameDetailStore, SwitchSearchResult } from '@jordylab-fe/gamecatalog/api';
+import { AuthService } from '@jordylab-fe/shared/auth';
 import { GameDetailComponent } from './game-detail.component';
 
 describe('GameDetailComponent', () => {
@@ -14,6 +15,14 @@ describe('GameDetailComponent', () => {
   const load = vi.fn<GameDetailStore['load']>();
   const refreshMetadata = vi.fn<GameDetailStore['refreshMetadata']>();
   const refreshEnrichment = vi.fn<GameDetailStore['refreshEnrichment']>();
+  const savingSwitch = signal(false);
+  const removed = signal(false);
+  const relinkCandidates = signal<SwitchSearchResult[]>([]);
+  const changeSwitchFormat = vi.fn<GameDetailStore['changeSwitchFormat']>();
+  const relinkSwitchGame = vi.fn<GameDetailStore['relinkSwitchGame']>();
+  const searchRelinkCandidates = vi.fn<GameDetailStore['searchRelinkCandidates']>();
+  const removeSwitchGame = vi.fn<GameDetailStore['removeSwitchGame']>();
+  const isAdmin = signal(false);
 
   const storeMock = {
     game: game.asReadonly(),
@@ -25,6 +34,13 @@ describe('GameDetailComponent', () => {
     load,
     refreshMetadata,
     refreshEnrichment,
+    savingSwitch: savingSwitch.asReadonly(),
+    removed: removed.asReadonly(),
+    relinkCandidates: relinkCandidates.asReadonly(),
+    changeSwitchFormat,
+    relinkSwitchGame,
+    searchRelinkCandidates,
+    removeSwitchGame,
   };
 
   let spectator: Spectator<GameDetailComponent>;
@@ -32,7 +48,9 @@ describe('GameDetailComponent', () => {
   const createComponent = createComponentFactory({
     component: GameDetailComponent,
     providers: [
+      provideRouter([]),
       { provide: GameDetailStore, useValue: storeMock },
+      { provide: AuthService, useValue: { isAdmin: isAdmin.asReadonly() } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -52,6 +70,14 @@ describe('GameDetailComponent', () => {
     load.mockReset();
     refreshMetadata.mockReset();
     refreshEnrichment.mockReset();
+    savingSwitch.set(false);
+    removed.set(false);
+    relinkCandidates.set([]);
+    changeSwitchFormat.mockReset();
+    relinkSwitchGame.mockReset();
+    searchRelinkCandidates.mockReset();
+    removeSwitchGame.mockReset();
+    isAdmin.set(false);
     spectator = createComponent();
   });
 
@@ -100,6 +126,7 @@ describe('GameDetailComponent', () => {
   });
 
   it('forwards the refresh actions to the store', () => {
+    isAdmin.set(true);
     show(aGameDetailMock({ platform: 'Steam' }));
 
     const buttons = spectator.queryAll('button');
@@ -113,6 +140,7 @@ describe('GameDetailComponent', () => {
   });
 
   it('shows a refreshing label while a refresh is in flight', () => {
+    isAdmin.set(true);
     show(aGameDetailMock({ platform: 'Steam' }));
     refreshingMetadata.set(true);
     refreshingEnrichment.set(true);
@@ -123,6 +151,7 @@ describe('GameDetailComponent', () => {
   });
 
   it('hides the deterministic refresh button for non-Steam games', () => {
+    isAdmin.set(true);
     show(aGameDetailMock({ platform: 'SNES' }));
 
     const buttons = spectator.queryAll('button');
@@ -195,5 +224,85 @@ describe('GameDetailComponent', () => {
 
   it('shows skeletons while loading', () => {
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
+  });
+
+  describe('admin-only actions and Switch games', () => {
+    const switchGame = aGameDetailMock({
+      platform: 'Nintendo Switch',
+      hosts: [{ hostname: 'Nintendo Switch', sourceType: 'SWITCH' }],
+      hostFormats: { 'Nintendo Switch': 'PHYSICAL' },
+    });
+
+    it('hides refresh and Switch management from guests but still shows the format', () => {
+      show(switchGame);
+
+      expect(spectator.query('[data-testid="switch-format"]')).toHaveText('Physical');
+      expect(spectator.query('[data-testid="switch-admin"]')).toBeNull();
+      expect(spectator.queryAll('button').map((button) => button.textContent?.trim())).not.toContain(
+        'Regenerate description'
+      );
+    });
+
+    it('shows refresh and Switch management to the admin', () => {
+      isAdmin.set(true);
+      show(switchGame);
+
+      expect(spectator.query('[data-testid="switch-admin"]')).toExist();
+      expect(spectator.queryAll('button').map((button) => button.textContent?.trim())).toContain(
+        'Regenerate description'
+      );
+    });
+
+    it('changes the format', () => {
+      isAdmin.set(true);
+      show(switchGame);
+
+      spectator.selectOption('#switch-detail-format', 'DIGITAL');
+
+      expect(changeSwitchFormat).toHaveBeenCalledWith('DIGITAL');
+    });
+
+    it('searches relink candidates and relinks to the chosen one', () => {
+      isAdmin.set(true);
+      show(switchGame);
+
+      spectator.typeInElement('Mario Kart', '#switch-relink-search');
+      expect(searchRelinkCandidates).toHaveBeenCalledWith('Mario Kart');
+
+      relinkCandidates.set([aSwitchSearchResultMock({ igdbGameId: 4321, title: 'Mario Kart 8 Deluxe' })]);
+      spectator.detectChanges();
+      spectator.click('[data-testid="relink-candidate"]');
+
+      expect(relinkSwitchGame).toHaveBeenCalledWith(4321);
+    });
+
+    it('removes only after a second, confirming click', () => {
+      isAdmin.set(true);
+      show(switchGame);
+
+      spectator.click('[data-testid="remove-switch"]');
+      expect(removeSwitchGame).not.toHaveBeenCalled();
+
+      spectator.click('[data-testid="remove-switch-confirm"]');
+      expect(removeSwitchGame).toHaveBeenCalled();
+    });
+
+    it('goes back to the library once the game is removed', () => {
+      const navigateByUrl = vi.spyOn(spectator.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      show(switchGame);
+
+      removed.set(true);
+      spectator.detectChanges();
+
+      expect(navigateByUrl).toHaveBeenCalledWith('/games/grid');
+    });
+
+    it('shows no Switch section for a scanned game', () => {
+      isAdmin.set(true);
+      show(aGameDetailMock());
+
+      expect(spectator.query('[data-testid="switch-format"]')).toBeNull();
+      expect(spectator.query('[data-testid="switch-admin"]')).toBeNull();
+    });
   });
 });

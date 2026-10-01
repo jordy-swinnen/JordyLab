@@ -114,6 +114,86 @@
         @if (game.hosts.length > 0) {
           <div class="mono-label mt-4">Installed on · {{ hostnames(game) }}</div>
         }
+        @if (switchFormat(game); as format) {
+          <div class="mono-label mt-2">
+            Format · <span data-testid="switch-format">{{ formatLabel(format) }}</span>
+          </div>
+          @if (canAdminister()) {
+            <section
+              data-testid="switch-admin"
+              class="mt-6 flex max-w-xl flex-col gap-4 rounded-2xl border border-input p-5"
+              aria-label="Manage this Switch game"
+            >
+              <div class="flex flex-col gap-1.5">
+                <label for="switch-detail-format" class="mono-label">Format</label>
+                <select
+                  id="switch-detail-format"
+                  class="h-10 rounded-xl border border-input bg-background px-3"
+                  [value]="format"
+                  [disabled]="savingSwitch()"
+                  (change)="onFormatChange($event)"
+                >
+                  @for (option of switchFormats; track option) {
+                    <option [value]="option">{{ formatLabel(option) }}</option>
+                  }
+                </select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label for="switch-relink-search" class="mono-label">Relink to another IGDB match</label>
+                <input
+                  id="switch-relink-search"
+                  type="search"
+                  class="h-10 rounded-xl border border-input bg-background px-3"
+                  placeholder="Search IGDB (3+ characters)"
+                  [disabled]="savingSwitch()"
+                  (input)="onRelinkSearch($event)"
+                />
+                @for (candidate of relinkCandidates(); track candidate.igdbGameId) {
+                  <button
+                    type="button"
+                    data-testid="relink-candidate"
+                    class="rounded-xl border border-input px-3 py-2 text-left text-[14px] hover:bg-card"
+                    [disabled]="savingSwitch()"
+                    (click)="relink.emit(candidate.igdbGameId)"
+                  >
+                    {{ candidate.title }}@if (candidate.releaseYear) { · {{ candidate.releaseYear }} }
+                  </button>
+                }
+              </div>
+              @if (confirmingRemove()) {
+                <div class="flex flex-wrap items-center gap-3">
+                  <span class="text-[14px]">Remove {{ game.title }} from the catalog?</span>
+                  <button
+                    type="button"
+                    data-testid="remove-switch-confirm"
+                    class="inline-flex h-10 items-center rounded-xl bg-destructive px-4 text-[14px] font-semibold text-destructive-foreground disabled:opacity-50"
+                    [disabled]="savingSwitch()"
+                    (click)="onConfirmRemove()"
+                  >
+                    Yes, remove
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold"
+                    (click)="confirmingRemove.set(false)"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  data-testid="remove-switch"
+                  class="inline-flex h-10 w-fit items-center rounded-xl border border-destructive/50 px-4 text-[14px] font-semibold text-destructive"
+                  [disabled]="savingSwitch()"
+                  (click)="confirmingRemove.set(true)"
+                >
+                  Remove from catalog
+                </button>
+              }
+            </section>
+          }
+        }
         <div class="mono-label mt-2 flex flex-wrap items-center gap-2">
           <span hlmBadge variant="outline" static>
             {{ game.installStatus === 'INSTALLED' ? 'Installed' : 'Not installed' }}
@@ -261,6 +341,7 @@
               >
                 {{ game.description }}
               </p>
+              @if (canAdminister()) {
               <div class="mt-6 flex flex-wrap gap-3">
                 @if (game.platform === 'Steam') {
                   <button
@@ -281,6 +362,7 @@
                   {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
                 </button>
               </div>
+              }
               <a
                 [routerLink]="['/games/chat']"
                 [queryParams]="{ attach: game.id }"
@@ -316,14 +398,16 @@
                 The AI description for this game could not be generated.
               }
             </p>
-            <button
-              type="button"
-              class="mt-4 inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
-              [disabled]="refreshingEnrichment()"
-              (click)="refreshEnrichment.emit()"
-            >
-              {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
-            </button>
+            @if (canAdminister()) {
+              <button
+                type="button"
+                class="mt-4 inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
+                [disabled]="refreshingEnrichment()"
+                (click)="refreshEnrichment.emit()"
+              >
+                {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
+              </button>
+            }
             <a
               [routerLink]="['/games/chat']"
               [queryParams]="{ attach: game.id }"

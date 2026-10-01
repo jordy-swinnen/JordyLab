@@ -6,6 +6,7 @@ export function aGameDetailMock(overrides: Partial<GameDetail> = {}): GameDetail
     title: 'Super Mario World',
     platform: 'SNES',
     hosts: [{ hostname: 'jordybox', sourceType: 'EMUDECK' }],
+    hostFormats: {},
     coverStatus: 'EXTERNAL_URL',
     coverUrl: 'https://example.com/smw.png',
     coverEndpoint: null,

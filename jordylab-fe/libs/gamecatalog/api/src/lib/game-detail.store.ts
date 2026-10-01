@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { catchError, map, of } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { GameDetail } from './gamecatalog.models';
+import { GameDetail, SwitchGameFormat, SwitchGameUpdate, SwitchSearchResult } from './gamecatalog.models';
 
 @Injectable({ providedIn: 'root' })
 export class GameDetailStore {
@@ -14,6 +14,9 @@ export class GameDetailStore {
   readonly #error = signal<string | null>(null);
   readonly #refreshingMetadata = signal(false);
   readonly #refreshingEnrichment = signal(false);
+  readonly #savingSwitch = signal(false);
+  readonly #removed = signal(false);
+  readonly #relinkCandidates = signal<SwitchSearchResult[]>([]);
 
   readonly game = this.#game.asReadonly();
   readonly loading = this.#loading.asReadonly();
@@ -21,12 +24,18 @@ export class GameDetailStore {
   readonly error = this.#error.asReadonly();
   readonly refreshingMetadata = this.#refreshingMetadata.asReadonly();
   readonly refreshingEnrichment = this.#refreshingEnrichment.asReadonly();
+  readonly savingSwitch = this.#savingSwitch.asReadonly();
+  /** True once the Switch game was removed — the page navigates back to the library. */
+  readonly removed = this.#removed.asReadonly();
+  readonly relinkCandidates = this.#relinkCandidates.asReadonly();
 
   load(id: string): void {
     this.#game.set(null);
     this.#loading.set(true);
     this.#notFound.set(false);
     this.#error.set(null);
+    this.#removed.set(false);
+    this.#relinkCandidates.set([]);
 
     this.#api
       .getGame(id)
@@ -91,6 +100,89 @@ export class GameDetailStore {
       )
       .subscribe((game) => {
         this.#refreshingEnrichment.set(false);
+        if (game) {
+          this.#game.set(game);
+        }
+      });
+  }
+
+  changeSwitchFormat(format: SwitchGameFormat): void {
+    this.#saveSwitch({ format });
+  }
+
+  relinkSwitchGame(igdbGameId: number): void {
+    this.#saveSwitch({ igdbGameId });
+  }
+
+  searchRelinkCandidates(query: string): void {
+    if (query.trim().length < 3) {
+      this.#relinkCandidates.set([]);
+
+      return;
+    }
+
+    this.#api
+      .searchSwitchGames(query.trim())
+      .pipe(catchError(() => of([])))
+      .subscribe((results) => this.#relinkCandidates.set(results));
+  }
+
+  removeSwitchGame(): void {
+    const id = this.#game()?.id;
+    if (!id || this.#savingSwitch()) {
+      return;
+    }
+
+    this.#savingSwitch.set(true);
+    this.#error.set(null);
+    // HttpClient emits null for 204 No Content, so success is an explicit flag rather than the body.
+    this.#api
+      .deleteSwitchGame(id)
+      .pipe(
+        map(() => true),
+        catchError(() => {
+          this.#error.set('Failed to remove the Switch game.');
+
+          return of(false);
+        })
+      )
+      .subscribe((deleted) => {
+        this.#savingSwitch.set(false);
+        this.#removed.set(deleted);
+      });
+  }
+
+  #saveSwitch(update: SwitchGameUpdate): void {
+    const id = this.#game()?.id;
+    if (!id || this.#savingSwitch()) {
+      return;
+    }
+
+    this.#savingSwitch.set(true);
+    this.#error.set(null);
+    this.#api
+      .updateSwitchGame(id, update)
+      .pipe(
+        catchError(() => {
+          this.#error.set('Failed to save the Switch game.');
+
+          return of(null);
+        })
+      )
+      .subscribe((response) => {
+        this.#savingSwitch.set(false);
+        if (response) {
+          this.#relinkCandidates.set([]);
+          this.#reload(id);
+        }
+      });
+  }
+
+  #reload(id: string): void {
+    this.#api
+      .getGame(id)
+      .pipe(catchError(() => of(null)))
+      .subscribe((game) => {
         if (game) {
           this.#game.set(game);
         }

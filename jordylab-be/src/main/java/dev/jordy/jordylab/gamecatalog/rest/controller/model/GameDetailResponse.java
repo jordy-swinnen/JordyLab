@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller.model;
 
+import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
@@ -8,6 +9,7 @@ import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public record GameDetailResponse(
@@ -15,6 +17,8 @@ public record GameDetailResponse(
         String title,
         String platform,
         List<HostRef> hosts,
+        // Format per manually tracked host, e.g. Nintendo Switch -> PHYSICAL; scanned hosts omitted (009 catalog-api).
+        Map<String, InstallationFormat> hostFormats,
         ArtworkStatus coverStatus,
         String coverUrl,
         String coverEndpoint,

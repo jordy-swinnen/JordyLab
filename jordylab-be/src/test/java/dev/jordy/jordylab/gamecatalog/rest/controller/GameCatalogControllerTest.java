@@ -36,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -146,7 +147,7 @@ class GameCatalogControllerTest {
     void gameDetailReturnsEnrichedGameWithHostsMetadataAndBanner() throws Exception {
         when(gameQueryService.getGameDetail(GAME_ID))
                 .thenReturn(Optional.of(new GameDetailResponse(GAME_ID, "Portal 2", "Steam",
-                        List.of(new HostRef("jordybox", SourceType.STEAM)),
+                        List.of(new HostRef("jordybox", SourceType.STEAM)), Map.of(),
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                         EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
@@ -346,7 +347,7 @@ class GameCatalogControllerTest {
 
     private GameDetailResponse aDetail() {
         return new GameDetailResponse(GAME_ID, "Portal 2", "Steam",
-                List.of(new HostRef("jordybox", SourceType.STEAM)),
+                List.of(new HostRef("jordybox", SourceType.STEAM)), Map.of(),
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                 EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",

@@ -5,22 +5,29 @@ import { GameCatalogApiService } from './gamecatalog-api.service';
 import { GameDetail } from './gamecatalog.models';
 import { GameDetailStore } from './game-detail.store';
 import { aGameDetailMock } from './mocks/game-detail.model.mock';
+import { aSwitchSearchResultMock } from './mocks/switch-search-result.model.mock';
 
 describe('GameDetailStore', () => {
   let spectator: SpectatorService<GameDetailStore>;
   const getGame = vi.fn<GameCatalogApiService['getGame']>();
   const refreshGameMetadata = vi.fn<GameCatalogApiService['refreshGameMetadata']>();
   const refreshGameEnrichment = vi.fn<GameCatalogApiService['refreshGameEnrichment']>();
+  const updateSwitchGame = vi.fn<GameCatalogApiService['updateSwitchGame']>();
+  const deleteSwitchGame = vi.fn<GameCatalogApiService['deleteSwitchGame']>();
+  const searchSwitchGames = vi.fn<GameCatalogApiService['searchSwitchGames']>();
 
   const createService = createServiceFactory({
     service: GameDetailStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment } }],
+    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment, updateSwitchGame, deleteSwitchGame, searchSwitchGames } }],
   });
 
   beforeEach(() => {
     getGame.mockReset();
     refreshGameMetadata.mockReset();
     refreshGameEnrichment.mockReset();
+    updateSwitchGame.mockReset();
+    deleteSwitchGame.mockReset();
+    searchSwitchGames.mockReset();
     spectator = createService();
   });
 
@@ -159,5 +166,74 @@ describe('GameDetailStore', () => {
 
     expect(refreshGameMetadata).not.toHaveBeenCalled();
     expect(refreshGameEnrichment).not.toHaveBeenCalled();
+  });
+
+  describe('Switch management', () => {
+    const switchGame = aGameDetailMock({ platform: 'Nintendo Switch', hostFormats: { 'Nintendo Switch': 'PHYSICAL' } });
+
+    beforeEach(() => {
+      getGame.mockReturnValue(of(switchGame));
+      spectator.service.load(switchGame.id);
+    });
+
+    it('changes the format and reloads the game', () => {
+      const changed = aGameDetailMock({ ...switchGame, hostFormats: { 'Nintendo Switch': 'DIGITAL' } });
+      updateSwitchGame.mockReturnValue(of({ gameId: switchGame.id, title: switchGame.title, platform: 'Nintendo Switch', format: 'DIGITAL' }));
+      getGame.mockReturnValue(of(changed));
+
+      spectator.service.changeSwitchFormat('DIGITAL');
+
+      expect(updateSwitchGame).toHaveBeenCalledWith(switchGame.id, { format: 'DIGITAL' });
+      expect(spectator.service.game()).toEqual(changed);
+      expect(spectator.service.savingSwitch()).toBe(false);
+    });
+
+    it('relinks to another IGDB game and reloads the game', () => {
+      updateSwitchGame.mockReturnValue(of({ gameId: switchGame.id, title: 'Relinked', platform: 'Nintendo Switch', format: 'PHYSICAL' }));
+
+      spectator.service.relinkSwitchGame(4321);
+
+      expect(updateSwitchGame).toHaveBeenCalledWith(switchGame.id, { igdbGameId: 4321 });
+      expect(getGame).toHaveBeenLastCalledWith(switchGame.id);
+    });
+
+    it('shows an error when saving a Switch change fails', () => {
+      updateSwitchGame.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      spectator.service.changeSwitchFormat('DIGITAL');
+
+      expect(spectator.service.error()).toBe('Failed to save the Switch game.');
+      expect(spectator.service.savingSwitch()).toBe(false);
+    });
+
+    it('marks the game removed after deleting it', () => {
+      // HttpClient emits null for the 204 No Content the endpoint returns.
+      deleteSwitchGame.mockReturnValue(of(null as unknown as void));
+
+      spectator.service.removeSwitchGame();
+
+      expect(deleteSwitchGame).toHaveBeenCalledWith(switchGame.id);
+      expect(spectator.service.removed()).toBe(true);
+    });
+
+    it('keeps the game and shows an error when removing fails', () => {
+      deleteSwitchGame.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      spectator.service.removeSwitchGame();
+
+      expect(spectator.service.removed()).toBe(false);
+      expect(spectator.service.error()).toBe('Failed to remove the Switch game.');
+    });
+
+    it('searches relink candidates from three characters', () => {
+      searchSwitchGames.mockReturnValue(of([aSwitchSearchResultMock()]));
+
+      spectator.service.searchRelinkCandidates('Ma');
+      expect(searchSwitchGames).not.toHaveBeenCalled();
+
+      spectator.service.searchRelinkCandidates('Mario');
+      expect(searchSwitchGames).toHaveBeenCalledWith('Mario');
+      expect(spectator.service.relinkCandidates()).toEqual([aSwitchSearchResultMock()]);
+    });
   });
 });

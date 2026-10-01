@@ -23,6 +23,9 @@ export class SwitchGameStore {
   readonly #adding = signal(false);
   readonly #addError = signal<string | null>(null);
   readonly #added = signal(false);
+  /** The query whose search last finished (null until one does) — drives the "no match" prompt (009 US2). */
+  readonly #searchedQuery = signal<string | null>(null);
+  #pendingQuery = '';
 
   readonly results = this.#results.asReadonly();
   readonly selectedResult = this.#selectedResult.asReadonly();
@@ -34,6 +37,16 @@ export class SwitchGameStore {
   readonly adding = this.#adding.asReadonly();
   readonly addError = this.#addError.asReadonly();
   readonly added = this.#added.asReadonly();
+
+  /** The query to offer as a manual title when a finished search found nothing on IGDB (009 US2, T039). */
+  readonly noMatchFor = computed(() => {
+    const query = this.#searchedQuery();
+    if (this.#mode() !== 'search' || this.#loading() || this.#error() || !query || this.#results().length > 0) {
+      return null;
+    }
+
+    return query;
+  });
 
   readonly canAdd = computed(() => {
     if (this.#adding()) {
@@ -62,6 +75,7 @@ export class SwitchGameStore {
           }
           this.#loading.set(true);
           this.#error.set(null);
+          this.#pendingQuery = trimmed;
 
           return this.#api.searchSwitchGames(trimmed).pipe(
             catchError(() => {
@@ -77,6 +91,7 @@ export class SwitchGameStore {
         this.#loading.set(false);
         if (results) {
           this.#results.set(results);
+          this.#searchedQuery.set(this.#pendingQuery);
         }
       });
   }
@@ -103,11 +118,21 @@ export class SwitchGameStore {
     this.#format.set(format);
   }
 
+  addNoMatchManually(): void {
+    const title = this.noMatchFor();
+    if (!title) {
+      return;
+    }
+    this.setMode('manual');
+    this.#manualTitle.set(title);
+  }
+
   setMode(mode: SwitchAddMode): void {
     this.#mode.set(mode);
     this.#selectedResult.set(null);
     this.#manualTitle.set('');
     this.#results.set([]);
+    this.#searchedQuery.set(null);
     this.#error.set(null);
     this.#addError.set(null);
   }
@@ -142,6 +167,7 @@ export class SwitchGameStore {
 
   reset(): void {
     this.#results.set([]);
+    this.#searchedQuery.set(null);
     this.#selectedResult.set(null);
     this.#manualTitle.set('');
     this.#format.set('PHYSICAL');
