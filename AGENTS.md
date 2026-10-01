@@ -76,7 +76,7 @@ the `Commit References` workflow on every pull-request commit. Never bypass it w
 
 ## AI Routing
 
-All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeature` (`fna.briefing`, `gamecatalog.enrichment`, `gamecatalog.chat.query`, `gamecatalog.chat.answer`) has its own model (`jordylab.ai.features`, later the AI Models page). Calls go to the **OpenRouter** gateway first and are retried once on **Anthropic** (`jordylab.ai.fallback`) on any failure; without `OPENROUTER_API_KEY` they go straight to Anthropic. Every call publishes `AiCallCompleted` and counts `jordylab.ai.calls`. Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
+All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeature` (`fna.briefing`, `gamecatalog.enrichment`, `gamecatalog.chat.query`, `gamecatalog.chat.answer`) has its own model: the one picked on Settings → AI Models (`settings.ai_feature_model_setting`), else the default in `jordylab.ai.features`. Calls go to the **OpenRouter** gateway first and are retried once on **Anthropic** (`jordylab.ai.fallback`) on any failure; without `OPENROUTER_API_KEY` they go straight to Anthropic. Every call publishes `AiCallCompleted` and counts `jordylab.ai.calls`. Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
 
 | Feature | Default model (OpenRouter id) | Rationale | Status |
 |---------|-------------------------------|-----------|--------|

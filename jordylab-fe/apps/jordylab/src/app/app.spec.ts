@@ -64,6 +64,7 @@ describe('App', () => {
       'Portfolio',
       'Briefing',
       'Users',
+      'AI Models',
     ]);
   });
 
@@ -84,6 +85,7 @@ describe('App', () => {
       '/fna/portfolio',
       '/fna/briefing',
       '/settings/users',
+      '/settings/ai-models',
     ]);
   });
 
