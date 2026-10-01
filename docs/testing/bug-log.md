@@ -508,7 +508,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): `.opencode/agents/*` mirror `.claude/agents/*` and work (dual-agent-config).
 - Actual (logs/screenshot, secrets redacted): `Error: Model not found: anthropic/claude-sonnet-4-6`; all 4 files in `.opencode/agents/` use that model. `opencode/claude-sonnet-5-5` exists but returns "Insufficient account funds" (OpenCode Zen); the configured OpenCode Go models work.
 - Root cause: model id copied from Claude naming without checking `opencode models`.
-- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33); architect and code-reviewer → `opencode-go/glm-5.2` (the `plan` model in `opencode.json`), test-writer → `opencode-go/deepseek-v4.1-flash` (the `build` model). The three still named the non-existent `anthropic/claude-sonnet-4-6` on `main`.
+- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33); architect and code-reviewer → `opencode-go/glm-5.2` (the `plan` model in `opencode.json`), test-writer → `opencode-go/deepseek-v4.1-flash` (the `build` model). The three still named the non-existent `anthropic/claude-sonnet-4-6` on `main`. The repo-wide default `model` in `opencode.json` (`anthropic/claude-sonnet-5`, also unresolvable) now follows the `build` model, `opencode-go/deepseek-v4.1-flash`; `opencode run` answers with it (2026-10-02).
 - Regression test added: none because agent config (verified with `opencode run` / `claude -p`)
 - Verified on prod: n/a (developer tooling). 2026-10-01: `opencode run "Use the <agent> subagent … reply ok"` → `ok` for architect, code-reviewer and test-writer (before: `Model not found: anthropic/claude-sonnet-4-6`)
 

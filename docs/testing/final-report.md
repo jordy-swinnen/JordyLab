@@ -42,8 +42,7 @@ and the EmuDeck scan cap.
 ## Still open
 - **Verification only (no known defect):** BUG-011/012/014–017/038/040–043 on prod UI (MRB-01); BUG-047 (MRB-03).
 - **Hardening follow-up:** a Content-Security-Policy (MRB-11) — deliberately not shipped blind.
-- **Developer tooling:** `opencode.json`'s default `model` (`anthropic/claude-sonnet-5`) does not resolve in OpenCode (the
-  `build`, `plan` and `speckit` agents override it with `opencode-go/*` models). Your file, so I left it.
+- **Developer tooling:** fixed — `opencode.json`'s default `model` now resolves (`opencode-go/deepseek-v4.1-flash`, verified with `opencode run`).
 - **Dependabot:** done — all 20 alerts were in Angular 21.1 and nx 22.5; #72 moved them to 21.2.25 / 22.7.12 and GitHub now
   reports 0 open (released as rc7). #62 (briefing markdown sanitizer) also landed.
 
