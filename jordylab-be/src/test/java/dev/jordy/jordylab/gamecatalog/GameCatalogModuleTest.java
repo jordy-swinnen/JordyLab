@@ -38,10 +38,12 @@ import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.test.ApplicationModuleTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -59,7 +61,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -153,6 +154,9 @@ class GameCatalogModuleTest {
 
     @Autowired
     private SyncReportRepository syncReportRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void scanRoundTripAppliesThenNoChangeThenReconciles() {
@@ -452,14 +456,16 @@ class GameCatalogModuleTest {
     void aSecondScanOfTheSameSourceWaitsForTheFirstInsteadOfFailingOnDuplicateKeys() throws Exception {
         CountDownLatch firstScanInsideEnrichment = new CountDownLatch(1);
         CountDownLatch releaseFirstScan = new CountDownLatch(1);
+        ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
         doAnswer(invocation -> {
             firstScanInsideEnrichment.countDown();
             releaseFirstScan.await(20, TimeUnit.SECONDS);
 
             return AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5",
                     "{\"genre\":\"Platformer\",\"description\":\"A classic.\"}", false);
-        }).when(resilientAiService).call(argThat((AiFeature feature) -> true), argThat((String prompt) -> true),
-                argThat((String prompt) -> true));
+        }).when(resilientAiService).call(eq(AiFeature.GAMECATALOG_ENRICHMENT), systemPromptCaptor.capture(),
+                userPromptCaptor.capture());
         ScanRequest request = aRequest("jordybox", SourceType.EMUDECK, List.of(
                 new GamePayload("snes/mario.smc", "Super Mario World", "SNES", null),
                 new GamePayload("snes/zelda.smc", "The Legend of Zelda", "SNES", null)));
@@ -467,7 +473,7 @@ class GameCatalogModuleTest {
         CompletableFuture<ScanResponse> first = CompletableFuture.supplyAsync(() -> scanService.submitScan(request));
         assertThat(firstScanInsideEnrichment.await(20, TimeUnit.SECONDS)).isTrue();
         CompletableFuture<ScanResponse> second = CompletableFuture.supplyAsync(() -> scanService.submitScan(request));
-        Thread.sleep(1500);
+        awaitScanWaitingOnTheLock();
         releaseFirstScan.countDown();
 
         ScanResponse firstResponse = first.get(30, TimeUnit.SECONDS);
@@ -476,7 +482,23 @@ class GameCatalogModuleTest {
             softly.assertThat(firstResponse.outcome()).isEqualTo(SyncOutcome.APPLIED);
             softly.assertThat(secondResponse.outcome()).isEqualTo(SyncOutcome.NO_CHANGE);
             softly.assertThat(gameInstallationRepository.count()).isEqualTo(2);
+            softly.assertThat(systemPromptCaptor.getAllValues()).containsOnly(EnrichmentService.SYSTEM_PROMPT);
+            softly.assertThat(userPromptCaptor.getAllValues()).isNotEmpty();
         });
+    }
+
+    // Polls pg_locks until a backend is blocked on an advisory lock, i.e. the second scan is queued behind the first.
+    private void awaitScanWaitingOnTheLock() throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 20_000;
+        while (System.currentTimeMillis() < deadline) {
+            Integer waiting = jdbcTemplate.queryForObject(
+                    "select count(*) from pg_locks where locktype = 'advisory' and not granted", Integer.class);
+            if (waiting != null && waiting > 0) {
+                return;
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("the second scan never queued on the scan lock");
     }
 
     private ScanRequest aRequest(String hostname, SourceType type, List<GamePayload> games) {

@@ -26,7 +26,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `app.ts` imports from `@jordylab-fe/settings/ui` directly while `app.routes.ts` lazy-loads it, which also pulls the settings bundle into the initial chunk.
 - Fix (PR / commit / tag):
 - Regression test added:
-- Verified on prod: 2026-10-02 — the owner's EmuDeck rescan on JordyBox applied (148 installations on `cachyos-htpc`) and a rerun answered `NO_CHANGE` (exit 0)
+- Verified on prod:
 
 ### BUG-002: Frontend lint fails — 5 accessibility errors in the Switch add dialog
 - Status: DEPLOYED (`v0.0.1-rc2`) — lint + coverage gates enforced in CI since PR #42

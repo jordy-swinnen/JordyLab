@@ -2,8 +2,10 @@ package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serializes scans of the same source (host + library type). A scan runs in one long transaction (reconcile, artwork,
@@ -13,12 +15,13 @@ import org.springframework.stereotype.Component;
  * it then finds the stored payload hash and answers {@code NO_CHANGE}. Released automatically at commit or rollback.
  */
 @Component
+@RequiredArgsConstructor
 public class ScanLock {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
 
     /** Blocks until no other transaction holds the lock for this source; must run inside the scan's transaction. */
+    @Transactional(propagation = Propagation.MANDATORY)
     public void acquire(String hostname, SourceType libraryType) {
         entityManager.createNativeQuery("select cast(pg_advisory_xact_lock(hashtextextended(:key, 0)) as text)")
                 .setParameter("key", "gamecatalog-scan:" + hostname + ":" + libraryType)
