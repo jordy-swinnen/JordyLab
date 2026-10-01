@@ -402,3 +402,7 @@ V=$(KUBECONFIG=~/.kube/jordylab.yaml kubectl -n jordylab get secret jordylab-sec
 
 Tag ruleset: only Jordy (and the agent acting for him) create `v*` tags. Branch ruleset on `main`: require PRs and
 the Build checks.
+
+## 21. Manual tests the E2E campaign could not run
+
+See [`docs/testing/manual-test-runbook.md`](testing/manual-test-runbook.md): Android app behaviour, a signed-in pass on production, the JordyBox scan, a VPS reboot, point-in-time restore, CSP rollout, colour contrast and a full rebuild.
