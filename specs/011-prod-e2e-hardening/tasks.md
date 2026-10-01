@@ -275,7 +275,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
   seeded, with any BLOCKED-no-real-data rows listed), SC-007 (AI tally ≤ 30 per pass), SC-008 (every rollback has an
   S1 incident entry and happened before the next batch started), SC-009 (handoff durations from plan §7); record the
   result table in plan §1
-- [ ] T058 Commit `docs/testing/e2e-test-plan.md`, `docs/testing/bug-log.md` and `specs/011-prod-e2e-hardening/` on
+- [x] T058 Commit `docs/testing/e2e-test-plan.md`, `docs/testing/bug-log.md` and `specs/011-prod-e2e-hardening/` on
   `011-prod-e2e-hardening`; open a PR to `main` (body ends with the Claude Code attribution line); T060 adds the
   manual runbook to this same PR
 - [x] T059 Final report to Jordy (FR-026): tested scope, bugs found/fixed/remaining by severity, AI calls used, NOT

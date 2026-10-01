@@ -1,9 +1,9 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-01 · production `https://jordylab.be` · last release `v0.0.1-rc6` (`c0e60a4`)
+2026-09-30 → 2026-10-01 · production `https://jordylab.be` · last release `v0.0.1-rc7` (`388d8c8`)
 
 ## Verdict
-Production is healthy and every S1/S2 defect found is fixed and deployed. What is **not** proven yet is the signed-in
+Production (rc7) is healthy and every S1/S2 defect found is fixed and deployed. What is **not** proven yet is the signed-in
 browser experience on prod (it needs your session: MRB-01/HANDOFF-12), the JordyBox EmuDeck rescan (HANDOFF-11) and the
 Android app (hardware). Nothing known is broken.
 
@@ -11,7 +11,7 @@ Android app (hardware). Nothing known is broken.
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
   compression and caching, deep links, OIDC issuer, unauthenticated API, CORS, pods, image tags, app links — all PASS on
   rc6 (re-run in the plan §6).
-- **Releases and rollback:** six release tags (rc1–rc6) through the tag-driven pipeline; rc6 is the first with every job
+- **Releases and rollback:** seven release tags (rc1–rc7) through the tag-driven pipeline; rc6 and rc7 are the first with every job
   green (retag, release, deploy, publish, **APK built, signed, verified and published**). Rollback to rc5 and roll-forward
   to rc6 both succeeded (DEPLOY-11).
 - **Data durability:** base backups running; a restore drill recovered production into a scratch cluster in 1 min 55 s
@@ -44,8 +44,8 @@ and the EmuDeck scan cap.
 - **Hardening follow-up:** a Content-Security-Policy (MRB-11) — deliberately not shipped blind.
 - **Developer tooling:** `opencode.json`'s default `model` (`anthropic/claude-sonnet-5`) does not resolve in OpenCode (the
   `build`, `plan` and `speckit` agents override it with `opencode-go/*` models). Your file, so I left it.
-- **Dependabot:** 20 alerts reported on `main`; a separate session triaged them and merged the briefing sanitizer fix (#62).
-  Review the rest in GitHub's Security tab.
+- **Dependabot:** done — all 20 alerts were in Angular 21.1 and nx 22.5; #72 moved them to 21.2.25 / 22.7.12 and GitHub now
+  reports 0 open (released as rc7). #62 (briefing markdown sanitizer) also landed.
 
 ## AI usage
 6 agent-triggered AI calls (all local; 0 on prod), well within the ≤ 30 budget. OpenRouter is now live as primary (you added

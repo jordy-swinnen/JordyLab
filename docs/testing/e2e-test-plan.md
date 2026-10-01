@@ -974,6 +974,13 @@ Prod calls made by the agent: 0 (the prod chat/enrichment calls in the backend l
 - `deploy-prod.yml -f version=v0.0.1-rc5` (run 36923228664): rc5 images back on all three deployments, rollout complete, 5/5 pods Running, `/` 200, `/api/**` 401, OIDC discovery 200. Then rolled forward to rc6 (run 36923517831), same checks.
 - Outcome: rollback and roll-forward both work in ~5 min each; no data touched (no migration in either).
 
+#### DEPLOY-12
+- Release: `v0.0.1-rc7` on `388d8c8` (PRs #68–#72: Angular 21.1 → 21.2.25 and nx 22.5.4 → 22.7.12 — clears all 20 Dependabot alerts — plus the close-out docs), run 36931092985
+- Jobs: all ✅ including `apk` and `publish` (APK versionCode 107 published, which is also the "newer release" for the update-prompt check, MRB-04)
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no (frontend bundle changed)
+- Prod re-verification: `/`, `/games/grid`, `/settings/ai-models` 200 (new bundle `main-P4LM4OFM.js`), API 401, assetlinks 200, HSTS and nosniff present, 5/5 pods Running, 0 backend errors; GitHub reports 0 open Dependabot alerts
+- Outcome: deployed; no regression
+
 ## 10. NOT TESTABLE
 
 Procedures for everything below, and for the checks that need your login or hardware, are in [`manual-test-runbook.md`](manual-test-runbook.md).
