@@ -62,7 +62,7 @@ Base path: `/api/gamecatalog/ingest`. All endpoints require a Keycloak-issued be
 | `paths[]` | required; `relpath` POSIX+NFC, `size` ≥ 0, `mtime` ISO-8601 |
 | `manifestContents` | optional; Steam: `relpath → raw VDF text` |
 | `games[]` | optional; client-produced entries (`externalRef`, `title`, `platform`). When present, they are the parsed game set (validated/sanitized server-side like any payload); when absent, the server infers games from `paths` (backstop) |
-| size | `paths` + `manifestContents` ≤ 1 MB (decompressed; unchanged from 002) |
+| size | `paths` + `manifestContents` ≤ 8 MiB (decompressed; raised from 1 MB by spec 011 BUG-047 — see 002). The client refuses to send more (`PayloadTooLarge`) and the server answers `PAYLOAD_TOO_LARGE`. At most 50,000 games per source (`TOO_MANY_GAMES`) |
 
 ### Outcomes
 

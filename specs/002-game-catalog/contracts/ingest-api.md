@@ -47,7 +47,7 @@ For `libraryType: "EMUDECK"` the `paths` array is the full recursive listing und
 | `paths[].size` | required, non-negative |
 | `paths[].mtime` | required, ISO-8601 instant |
 | `manifestContents` | optional, Steam only; key is the `relpath` of an `appmanifest_*.acf`, value is the raw VDF text |
-| `paths` + `manifestContents` combined size | ≤ 1 MB (configurable via `jordylab.gamecatalog.scan.max-payload-bytes`) |
+| `paths` + `manifestContents` combined size | ≤ 8 MiB (was 1 MB until spec 011 BUG-047; configurable via `jordylab.gamecatalog.scan.max-payload-bytes`) |
 
 ### Outcome: `200 OK`
 
@@ -85,7 +85,7 @@ A `REJECTED` response looks like:
 | `reason` value | When |
 |---------------|------|
 | `PAYLOAD_TOO_LARGE` | Combined `paths` + `manifestContents` exceeded the byte cap. |
-| `TOO_MANY_GAMES` | Parsed game count exceeded `jordylab.gamecatalog.scan.max-games-per-source`. |
+| `TOO_MANY_GAMES` | Parsed game count exceeded `jordylab.gamecatalog.scan.max-games-per-source` (default 50,000). |
 
 A body that is not parseable JSON, or that fails `@Valid` (e.g. blank `hostname`), never reaches `ScanService`: Spring rejects it with `400 Bad Request` before any `REJECTED` outcome is produced.
 

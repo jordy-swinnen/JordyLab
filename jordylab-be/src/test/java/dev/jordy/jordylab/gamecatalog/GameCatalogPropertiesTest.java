@@ -79,8 +79,8 @@ class GameCatalogPropertiesTest {
             softly.assertThat(defaults.enrichment().batchSize()).isEqualTo(8);
             softly.assertThat(defaults.enrichment().maxAttempts()).isEqualTo(3);
             softly.assertThat(defaults.chat().maxResultGames()).isEqualTo(50);
-            softly.assertThat(defaults.scan().maxGamesPerSource()).isEqualTo(10000);
-            softly.assertThat(defaults.scan().maxPayloadBytes()).isEqualTo(1_048_576);
+            softly.assertThat(defaults.scan().maxGamesPerSource()).isEqualTo(50000);
+            softly.assertThat(defaults.scan().maxPayloadBytes()).isEqualTo(8_388_608);
             softly.assertThat(defaults.scan().maxManifestBytesPerSource()).isEqualTo(262_144);
         });
     }

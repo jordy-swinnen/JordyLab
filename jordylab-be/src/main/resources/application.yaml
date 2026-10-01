@@ -113,8 +113,8 @@ jordylab:
       batch-size: 25
       max-attempts: 3
     scan:
-      max-games-per-source: 10000
-      max-payload-bytes: 1048576
+      max-games-per-source: 50000
+      max-payload-bytes: 8388608
       max-manifest-bytes-per-source: 262144
       max-shrink-fraction: 0.5
     library:
