@@ -35,8 +35,8 @@ jobs:
             - AGENTS.md (root) — architecture principles, module boundaries
             - jordylab-be/AGENTS.md — Java/Spring Modulith/Flyway conventions
             - jordylab-fe/AGENTS.md — Angular/Nx conventions
-            - garmin-sync-service/AGENTS.md — Python conventions
-            - coding-master-prompt.md — cross-cutting code style baseline
+            - gamecatalog-scanner/AGENTS.md and garmin-sync-service/AGENTS.md — Python conventions
+            - .claude/rules/*.md — Java, TypeScript/Angular and Python code style rules
             - .specify/memory/constitution.md — project-wide coding principles
 
             ## Spec-driven development (SDD) conformance

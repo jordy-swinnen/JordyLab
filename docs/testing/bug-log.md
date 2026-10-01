@@ -93,7 +93,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-006: Production runbook points at moved files and wrong CNPG names
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-docs-runbook-review-prompt`
 - Severity: S4
 - Area/spec: docs / 008
 - Env found: both
@@ -105,12 +105,12 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 008 FR-018 — runbook covers deploy, rollback, logs accurately.
 - Actual (logs/screenshot, secrets redacted): commands fail or target nothing when copied.
 - Root cause: `deploy/k8s/bootstrap/` split and CNPG rename after the runbook was written.
-- Fix (PR / commit / tag):
+- Fix (PR / commit / tag): `docs/runbook.md`: ClusterIssuer and CI RBAC paths point at `deploy/k8s/bootstrap/`; the log commands name the real CNPG pod (`cnpg-cluster-1` in `jordylab`) and the operator (`cnpg-cloudnative-pg` in `cnpg-system`). The §20 "fix while you are in deploy-prod.yml" list was already gone.
 - Regression test added: none because docs-only
-- Verified on prod:
+- Verified on prod: verified: `deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml` and `ci-deploy-rbac.yaml` exist; `kubectl -n jordylab logs cnpg-cluster-1 -c postgres` works (2026-10-01)
 
 ### BUG-007: Claude PR review prompt references a file that does not exist
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-docs-runbook-review-prompt`
 - Severity: S4
 - Area/spec: CI / —
 - Env found: both
@@ -120,9 +120,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): review reads the real convention sources (`.specify/memory/constitution.md`, `.claude/rules/*`, `gamecatalog-scanner/AGENTS.md`).
 - Actual (logs/screenshot, secrets redacted): stale reference.
 - Root cause: file removed/renamed after the workflow was written.
-- Fix (PR / commit / tag):
+- Fix (PR / commit / tag): `.github/workflows/claude-pr-review.yml` now lists `gamecatalog-scanner/AGENTS.md`, `garmin-sync-service/AGENTS.md` and `.claude/rules/*.md` instead of the missing `coding-master-prompt.md`.
 - Regression test added: none because workflow prompt only
-- Verified on prod:
+- Verified on prod: verified on the PR that carries it: the review reads the listed files (all exist)
 
 ### BUG-008: One-tag release flow (runbook §20) is not implemented
 - Status: DEPLOYED — first release `v0.0.1-rc1` went through verify → retag → draft release → approved deploy → publish (DEPLOY-05); only the APK publish failed (401 from Keycloak for mobile-release-ci, fix PR #46 + secret sync by Jordy)
@@ -140,7 +140,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-009: Ollama is still wired in build, tests, compose and AGENTS.md
-- Status: FIXING — PR `fix/e2e-remove-ollama`
+- Status: VERIFIED-PROD
 - Severity: S4
 - Area/spec: shared / 006, 008, 001
 - Env found: both
@@ -152,10 +152,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: 006 T025/T043/T045 never executed. Removing the starter also exposed that it silently supplied the `EmbeddingModel` the (unused) pgvector `VectorStore` auto-configuration needs.
 - Fix (PR / commit / tag): branch `fix/e2e-remove-ollama` — both Ollama dependencies, the `OllamaContainer` test bean and the compose remnant removed; `PgVectorStoreAutoConfiguration` excluded until a feature uses a VectorStore; AGENTS.md (routing table, infrastructure, reference docs, gotchas), `.claude/README.md`, the `ai-endpoint` skill and the architect memory note updated. `opencode.json`'s local Qwen model (developer tooling, not product) is left alone.
 - Regression test added: `JordylabApplicationTests` + `GameCatalogModuleTest` start the full context without Ollama; `grep -ri ollama` outside specs/history/opencode.json returns only "removed" notes
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc6`: backend, frontend, keycloak start and serve without Ollama or an embedding model (the pgvector VectorStore auto-configuration is excluded); `grep -ri ollama jordylab-be jordylab-fe` is empty
 
 ### BUG-010: 006 US4 missing — AI calls are not routed per feature (OpenRouter primary, Anthropic fallback)
-- Status: FIXING — PR `fix/e2e-settings-ai-routing`
+- Status: VERIFIED-PROD
 - Severity: S2
 - Area/spec: shared/ai / 006
 - Env found: both
@@ -168,7 +168,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): branch `fix/e2e-settings-ai-routing` — Spring AI 2.0.1 GA (+ OpenAI starter; `spring-ai-advisors-vector-store` → `spring-ai-vector-store-advisor`), `AiFeature` registry, `AiModelResolver` port (config default), `ResilientAiService.call(AiFeature, …)`: OpenRouter first, one Anthropic retry on any failure (`MODEL_NOT_FOUND` mapped from OpenRouter's 400 "not a valid model ID", verified), `AiCallCompleted` event + `jordylab.ai.calls` counter, `metrics` actuator endpoint (admin).
 - Local E2E 2026-10-01: "Regenerate description" → gateway answered **402 "Insufficient credits. This account never purchased credits"** → one Anthropic retry succeeded (`provider=anthropic`). 402 is now `INSUFFICIENT_CREDITS`. Until the OpenRouter account has credits every call takes the fallback (HANDOFF-08).
 - Regression test added: `ResilientAiServiceTest` (11: each failure reason → one fallback retry, timeout, unhealthy/unconfigured gateway, both fail → explicit failure, event + metrics), `AiPropertiesTest` (real yaml binding), `AiGatewayWiringTest` (both chat beans without a selector; real HTTP call to `/api/v1/chat/completions`), call-site tests updated
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc6`: prod backend log `AI call succeeded: feature=gamecatalog.chat.query/answer, provider=openrouter, model=anthropic/claude-haiku-4.5` after the owner added OpenRouter credits (before: 402 → one Anthropic retry)
 
 ### BUG-011: 006 US5 missing — no user menu to manage one's own login details
 - Status: FIXING — PR `fix/e2e-settings-user-menu`; prod needs `UPDATE_EMAIL` enabled (HANDOFF-06)
@@ -201,7 +201,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-013: 006 US7 missing — no Ntfy push when someone signs up
-- Status: FIXING — PR `fix/e2e-ntfy-visible` + `NTFY_TOPIC` secret (HANDOFF-07)
+- Status: VERIFIED-PROD
 - Severity: S3 (lowered from S2 on 2026-09-30 — Jordy unsure, spec priority P3; see test plan Q-04)
 - Area/spec: settings / 006, 007
 - Env found: both
@@ -215,7 +215,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `NTFY_TOPIC` was never part of the prod secrets (`specs/008…/contracts/secrets-schema.md` has no such key; ntfy runs without auth, `NTFY_BASE_URL` is set) — and the client skipped silently.
 - Fix (PR / commit / tag): branch `fix/e2e-ntfy-visible` — startup log names the missing key (never a value), every sent push logged at INFO (title only, no PII); `NTFY_TOPIC` added to the secrets contract. Jordy sets the topic (HANDOFF-07).
 - Regression test added: `NtfyClientTest` (+2: missing-key warning without values; enabled + sent log without the body)
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc6`: backend log `Ntfy notifications enabled`, then `Ntfy notification sent: 'New JordyLab sign-up'` at startup for the pending test account; the ntfy server's `messages_published` rose from 0 to 2
 
 ### BUG-014: 009 US4 incomplete — Switch detail format and cross-view tests missing
 - Status: FIXING — PR `fix/e2e-switch-detail`
@@ -294,7 +294,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a (local)
 
 ### BUG-019: Keycloak test container version drifts from production
-- Status: FIXING — PR `fix/e2e-keycloak-version`
+- Status: VERIFIED
 - Severity: S4
 - Area/spec: backend tests / 006, 008
 - Env found: local
@@ -306,7 +306,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: image pin not updated with the prod upgrade.
 - Fix (PR / commit / tag): `KeycloakIntegrationTest` and local `compose.yaml` on `quay.io/keycloak/keycloak:26.7.4`, the version prod builds from (`deploy/containers/keycloak/Containerfile`) and `KeycloakAdminClientRealmExportIntegrationTest` already uses.
 - Regression test added: none because version alignment; `RoleMatrixTest` (6) + `GuestChatLimitIntegrationTest` (1) pass on 26.7.4
-- Verified on prod: n/a
+- Verified on prod: 2026-10-01: CI `test-backend` (RoleMatrixTest, GuestChatLimitIntegrationTest) green on Keycloak 26.7.4 — test-only change
 
 ### BUG-020: Scanner client downloaded from production embeds `http://localhost:8180` as its Keycloak URL
 - Status: DEPLOYED (`14fb86b`, DEPLOY-01) — prod re-download pending admin login (PR https://github.com/jordy-swinnen/JordyLab/pull/30) — **confirmed on prod 2026-09-30 20:37**
@@ -498,7 +498,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-032: OpenCode agents point at a model that doesn't exist — none of them can start
-- Status: FIXING — devops agent fixed (PR #33, merged); Jordy re-routed the remaining OpenCode agents himself (Q-08); verify they start
+- Status: VERIFIED — all four OpenCode agents start (PR `fix/e2e-opencode-agent-models`)
 - Severity: S4
 - Area/spec: dev tooling / —
 - Env found: local (OpenCode 1.18.32)
@@ -508,9 +508,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): `.opencode/agents/*` mirror `.claude/agents/*` and work (dual-agent-config).
 - Actual (logs/screenshot, secrets redacted): `Error: Model not found: anthropic/claude-sonnet-4-6`; all 4 files in `.opencode/agents/` use that model. `opencode/claude-sonnet-5-5` exists but returns "Insufficient account funds" (OpenCode Zen); the configured OpenCode Go models work.
 - Root cause: model id copied from Claude naming without checking `opencode models`.
-- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33, verified: subagent runs and loads the `jordylab-ops` skill). Others pending Jordy's routing choice.
+- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33); architect and code-reviewer → `opencode-go/glm-5.2` (the `plan` model in `opencode.json`), test-writer → `opencode-go/deepseek-v4.1-flash` (the `build` model). The three still named the non-existent `anthropic/claude-sonnet-4-6` on `main`.
 - Regression test added: none because agent config (verified with `opencode run` / `claude -p`)
-- Verified on prod: n/a
+- Verified on prod: n/a (developer tooling). 2026-10-01: `opencode run "Use the <agent> subagent … reply ok"` → `ok` for architect, code-reviewer and test-writer (before: `Model not found: anthropic/claude-sonnet-4-6`)
 
 ### BUG-033: Approving a user fails on prod (503) — backend service account lacks `view-realm`
 - Status: VERIFIED-PROD
@@ -573,7 +573,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-037: APK signing-certificate check only reads v1 (JAR) signatures; release builds are v2/v3-only
-- Status: FIXING — apksig reader in PR #52; proof with the next release (v0.0.1-rc4)
+- Status: VERIFIED-PROD
 - Severity: S2
 - Area/spec: mobile / 007
 - Env found: code reading (while fixing BUG-036)
@@ -585,7 +585,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: v1-only reader vs v2/v3-only signing. AGP ignores `enableV1Signing = true` for minSdk ≥ 24, so signing v1 as well (PR #48/#49) was not possible; rc3's CI check proved the APK had no v1 signature.
 - Fix (PR / commit / tag): PR #52 — `ApkSigningCertificateReader` uses apksig `ApkVerifier` (v1/v2/v3, checked from API 29), requires a verified APK with exactly one signer; `release.yml` verifies with `apksigner verify` + certificate digest compare. (PR #48/#49 tried v1+v2 signing and were superseded.)
 - Regression test added: `ApkSigningCertificateReaderTest` — v1-signed, v2/v3-only, two signers (rejected), tampered after signing (rejected), not an APK (rejected)
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the `apk` job built, signed and verified the release APK and published it: `mobile.mobile_release` row `0.0.1-rc6` (versionCode 106, 12.8 MB); the backend read the v2 signing certificate with apksig and accepted it against the pin
 
 ### BUG-038: Guests see the admin-only "Refresh" / "Regenerate" buttons on the game detail page
 - Status: FIXING — PR `fix/e2e-switch-detail`
@@ -603,7 +603,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-039: CORS allow-list has no PATCH — the Switch edit fails from the Android app
-- Status: FIXING — PR `fix/e2e-switch-detail`
+- Status: VERIFIED-PROD
 - Severity: S3
 - Area/spec: shared / 007, 009
 - Env found: code reading (`SecurityConfig.corsConfigurationSource`)
@@ -615,7 +615,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: PATCH missing from `allowedMethods`.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — PATCH added.
 - Regression test added: `SwitchGameControllerSecurityTest.corsPreflightAllowsPatchForTheSwitchEdit`
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc4`: preflight `OPTIONS /api/gamecatalog/switch/games/x` with `Origin: https://localhost` answers `Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS`
 
 ### BUG-040: No navigation leads to the Switch add page
 - Status: FIXING — PR `fix/e2e-switch-bulk-add`
@@ -677,7 +677,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `game-detail.component.spec.ts` (preselects the current format); verified locally
 
 ### BUG-044: Release APK check reads an empty certificate digest — apksigner's signer label isn't "Signer #1"
-- Status: FIXING — #55 (label regex) did not help: apksigner prints no signer lines for the v2-only APK; digest comparison moved to the backend (PR `fix/e2e-apk-verify-exitcode`)
+- Status: VERIFIED-PROD
 - Severity: S2
 - Area/spec: CI / 007, 011
 - Env found: CI (release v0.0.1-rc4, run 36848803968)
@@ -690,10 +690,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): accept any `Signer…` label, require exactly one distinct certificate, and print apksigner's signer lines when that fails.
 - Regression test added: none because CI shell step; parse checked locally against both label styles
 - Update 2026-10-01 (rc5, run 36884797915): `apksigner verify --verbose --print-certs` printed only `Verifies` and the scheme lines (v2 true; v1, v3, v3.1, v3.2, v4 false) — no `Signer` line in any format, so no digest to parse. Fix: the CI step now relies on apksigner's exit code (`verify --min-sdk-version 29`); the pinned certificate is compared by the backend on upload (`SIGNING_CERT_MISMATCH`, apksig).
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the release's `apk` job passes *Verify the APK signature* (apksigner exit code) and the APK is published; a wrong-key APK is refused by the backend (`SIGNING_CERT_MISMATCH`, unit-tested)
 
 ### BUG-045: The FNA price refresh asks Yahoo for `MEUD`, which isn't a Yahoo symbol — 404 every 30 minutes
-- Status: OPEN — needs the owner's data change (HANDOFF-09)
+- Status: VERIFIED-PROD
 - Severity: S4
 - Area/spec: fna / 001
 - Env found: prod (backend log, 2026-10-01)
@@ -705,10 +705,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the position's ticker was entered without its exchange suffix. It's the owner's own portfolio row, so the agent doesn't edit it.
 - Fix (PR / commit / tag): owner edits the ticker to `MEUD.PA` on the Portfolio page (HANDOFF-09). Optional later: the portfolio form could hint that tickers need a Yahoo suffix.
 - Regression test added: none because data fix
-- Verified on prod:
+- Verified on prod: 2026-10-01: after the owner set the ticker to `MEUD.PA` (HANDOFF-09) prod shows `MEUD.PA|309.3500` and the `Could not fetch price` warning is gone
 
 ### BUG-046: SpringDoc API docs and Swagger UI are enabled in prod
-- Status: FIXING — PR `fix/e2e-prod-hygiene`
+- Status: VERIFIED-PROD
 - Severity: S4
 - Area/spec: shared / 008
 - Env found: prod (backend startup warnings, 2026-10-01)
@@ -720,7 +720,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: SpringDoc defaults, never switched off for prod.
 - Fix (PR / commit / tag): `SPRINGDOC_API_DOCS_ENABLED=false` and `SPRINGDOC_SWAGGER_UI_ENABLED=false` in the prod `backend-config` ConfigMap.
 - Regression test added: none because deploy configuration; verify the startup warnings are gone after the next release
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the SpringDoc startup warnings are gone from the backend log; `/v3/api-docs` and `/swagger-ui.html` answer the SPA shell publicly, as before
 
 ### BUG-047: EmuDeck scan of a large ROM library fails with "scan payload exceeds 1048576 bytes"
 - Status: FIXING — PR `fix/e2e-scan-payload-cap`

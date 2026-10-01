@@ -1,7 +1,7 @@
 ---
 description: Reviews code against all JordyLab conventions (Java, Angular, Python, architecture). Reports issues by severity.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: opencode-go/glm-5.2
 permission:
   write: deny
   edit: deny

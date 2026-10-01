@@ -1,7 +1,7 @@
 ---
 description: Generates tests matching existing patterns (AssertJ for Java, Spectator for Angular, pytest for Python). Runs tests to verify.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: opencode-go/deepseek-v4.1-flash
 ---
 
 # Test Writer

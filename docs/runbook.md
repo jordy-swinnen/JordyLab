@@ -141,7 +141,7 @@ kubectl apply -f https://github.com/cloudnative-pg/plugin-barman-cloud/releases/
 Then apply the ClusterIssuer, and once a domain exists, the full prod overlay:
 
 ```
-kubectl apply -f deploy/k8s/cluster/cert-manager-clusterissuer.yaml
+kubectl apply -f deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml
 ```
 
 ## 6. DNS & first TLS issuance
@@ -195,9 +195,9 @@ kubectl apply -f deploy/k8s/cluster/cert-manager-clusterissuer.yaml
    - `SOPS_AGE_KEY` — the private key from §7.
    - `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` (or `TS_AUTHKEY`) — a Tailscale OAuth client / auth key
      scoped to join this tailnet as an ephemeral node (`tailscale/github-action@v4`).
-3. Mint the namespace-scoped ServiceAccount token defined in `deploy/k8s/cluster/ci-deploy-rbac.yaml`:
+3. Mint the namespace-scoped ServiceAccount token defined in `deploy/k8s/bootstrap/ci-deploy-rbac.yaml`:
    ```
-   kubectl apply -f deploy/k8s/cluster/ci-deploy-rbac.yaml
+   kubectl apply -f deploy/k8s/bootstrap/ci-deploy-rbac.yaml
    kubectl -n jordylab create token ci-deploy --duration=8760h
    ```
    Add the result as the `KUBE_TOKEN` Environment secret, and the cluster's CA + API server address
@@ -239,7 +239,8 @@ kubectl -n jordylab logs deploy/backend -f
 kubectl -n jordylab logs deploy/frontend -f
 kubectl -n jordylab logs deploy/keycloak -f
 kubectl -n jordylab logs deploy/ntfy -f
-kubectl -n cnpg-system logs -l cnpg.io/cluster=jordylab-db -f
+kubectl -n jordylab logs cnpg-cluster-1 -c postgres -f        # the database (cluster `cnpg-cluster`, namespace `jordylab`)
+kubectl -n cnpg-system logs deploy/cnpg-cloudnative-pg -f   # the CloudNativePG operator itself
 ```
 
 ## 13. Rotate a secret
