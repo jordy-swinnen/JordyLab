@@ -727,6 +727,7 @@ _Not started._
 | HANDOFF-03 | Scanner on the MacBook: local, then prod client check | MacBook | local + prod | 2026-09-30 20:15 | 20:37 partial | prod client header read by agent: BUG-020 confirmed | | prod part done; local: Jordy registered `jordy.swinnen@pm.me`; agent granted `admin` + `gamecatalog-scanner` via kcadm (BUG-027/028). 21:11 `scan` → `/ingest/check` authorised as scanner, "unchanged, nothing uploaded" ✅ (FR-008 server check confirmed in backend log) |
 | HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | |
 | HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
+| HANDOFF-06 | Enable `UPDATE_EMAIL` in the prod realm (one kcadm command) | — | prod | 2026-10-01 | | the agent's prod realm write was blocked by its permission classifier | 1 min | ⏳ open |
 
 ### Batch 1 (sent with the approval request)
 
@@ -773,6 +774,16 @@ _Not started._
 - Target env: prod
 - Why you: I'm not allowed to read secret names or values from the cluster.
 - Questions: (a) is `STEAM_WEB_API_KEY` set in `secrets.sops.yaml`? (b) is an OpenRouter API key set? Answer yes/no only.
+
+#### HANDOFF-06: Enable "change email" in the prod realm
+- Machine: your Mac (Tailscale up, `~/.kube/jordylab.yaml`)
+- Target env: prod
+- Why you: it's a realm write on prod; my attempt was blocked by my permission classifier, so the decision is yours.
+- What it does: turns on Keycloak's `UPDATE_EMAIL` required action so users can change their own email from the new
+  account menu (006 US5, BUG-011). Nothing else changes; it's logged in `deploy/keycloak/README.md`.
+- Command (zsh/fish both fine):
+  `kubectl --kubeconfig ~/.kube/jordylab.yaml -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh update authentication/required-actions/UPDATE_EMAIL -r jordylab -s enabled=true --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh get authentication/required-actions/UPDATE_EMAIL -r jordylab --fields alias,enabled --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'`
+- Expect: the last lines print `"alias" : "UPDATE_EMAIL"` and `"enabled" : true`. Send me "done" (or the output).
 
 ## 8. AI call tally
 
