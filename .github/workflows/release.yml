@@ -193,8 +193,15 @@ jobs:
         run: |
           apksigner="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
           [ -x "$apksigner" ] || { echo "::error::apksigner not found under \$ANDROID_HOME/build-tools — the runner image no longer ships the Android SDK"; exit 1; }
-          report="$("$apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk)"
-          grep -q "Verified using v1 scheme (JAR signing): true" <<<"$report" || { echo "::error::APK has no v1 (JAR) signature"; exit 1; }
+          apk=app/build/outputs/apk/release/app-release.apk
+          report="$("$apksigner" verify --verbose --print-certs "$apk")"
+          # The backend reads the v1 (JAR) signature with java.util.jar, so check for exactly what it needs: a
+          # signature file plus a signature block in META-INF/. (apksigner judges v1 against the APK's minSdk 29,
+          # where v1 is irrelevant, so its "Verified using v1 scheme" line is not a reliable signal here.)
+          meta_inf="$(unzip -Z1 "$apk" 'META-INF/*' 2>/dev/null || true)"
+          echo "META-INF entries:"; echo "$meta_inf"
+          grep -q -E '^META-INF/[^/]+\.SF$' <<<"$meta_inf" && grep -q -E '^META-INF/[^/]+\.(RSA|EC|DSA)$' <<<"$meta_inf" \
+            || { echo "::error::APK has no v1 (JAR) signature files in META-INF/ — the backend can't verify it (BUG-037)"; exit 1; }
           actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$report" | tr '[:lower:]' '[:upper:]')"
           expected="$(sed -n 's/^ *- MOBILE_RELEASE_SIGNING_CERT_SHA256=//p' "$GITHUB_WORKSPACE/deploy/k8s/overlays/prod/kustomization.yaml" | tr '[:lower:]' '[:upper:]')"
           [ -n "$expected" ] && [ "$actual" = "$expected" ] || { echo "::error::APK signed with $actual, expected $expected (backend-config)"; exit 1; }
