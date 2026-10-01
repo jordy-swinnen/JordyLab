@@ -170,7 +170,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-011: 006 US5 missing — no user menu to manage one's own login details
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-settings-user-menu`; prod needs `UPDATE_EMAIL` enabled (HANDOFF-06)
 - Severity: S2
 - Area/spec: shared/auth, shell / 006
 - Env found: both
@@ -178,10 +178,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Steps to reproduce:
   1. 006 tasks T031–T033 open; no `UserMenuComponent` in `jordylab-fe/libs/shared/auth`.
 - Expected (cite spec/story): 006 US5 / FR-008 — every user can change password, name and email without admin help.
-- Actual (logs/screenshot, secrets redacted): static sign-out button only (to be confirmed in the UI during US2 testing).
-- Root cause: story not implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-settings-user-menu` (T044).
-- Regression test added:
+- Actual (logs/screenshot, secrets redacted): only a sign-out button (confirmed in the UI); no way to change password, name or email.
+- Root cause: 006 T031–T033 never implemented. Also found: the email field is not on Keycloak's profile page because email is the username; Keycloak (26.4+) changes it only through the `UPDATE_EMAIL` action, which is disabled on prod.
+- Fix (PR / commit / tag): `UserMenuComponent` (Angular CDK menu) replaces both sign-out buttons: Change password (`UPDATE_PASSWORD`), Edit name (`UPDATE_PROFILE`), Change email (`UPDATE_EMAIL`), Sign out; `AuthService.requestAction` (web: `keycloak.login({action})`, Android: `kc_action` on the system-browser authorize URL). Prod realm: enable `UPDATE_EMAIL` (logged in `deploy/keycloak/README.md`).
+- Regression test added: `user-menu.component.spec.ts` (6), `auth.service.spec.ts` (+2), `app.spec.ts` (menu for every signed-in user, signs out); local 2026-10-01: menu opens, Edit name → Keycloak "Update Account Information"
 - Verified on prod:
 
 ### BUG-012: 006 US6 missing — no per-feature AI model selection (AI Models page)

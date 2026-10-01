@@ -97,13 +97,15 @@ describe('App', () => {
     expect(spectator.query('router-outlet')).toBeTruthy();
   });
 
-  it('shows the signed-in user and signs out on click', async () => {
-    const button = spectator.query(
-      'button[aria-label="Sign out"]',
-    ) as HTMLElement;
+  it('gives every signed-in user an account menu, admin or guest, that signs out', async () => {
+    const triggers = spectator.queryAll('[data-testid="user-menu-trigger"]');
+    // One trigger per layout: compact in the mobile header, full in the desktop sidebar (CSS hides the other).
+    expect(triggers).toHaveLength(2);
+    expect(triggers[1]).toHaveText('jordy');
 
-    expect(button).toHaveText('jordy');
-    spectator.click(button);
+    spectator.click(triggers[1]);
+    const signOut = document.querySelector<HTMLElement>('[data-testid="user-menu-sign-out"]');
+    signOut?.click();
     // onLogout() awaits the (mocked) biometric-unlock wipe before auth.logout() — one microtask hop.
     await Promise.resolve();
 
