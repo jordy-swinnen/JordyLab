@@ -280,8 +280,11 @@ kubectl -n jordylab wait cluster/cnpg-restore-drill --for=condition=Ready --time
 date -u +%FT%TZ                                                    # ready time
 ```
 
-Compare row counts between production and the restored copy (read-only queries; recent writes after the last WAL
-segment may differ slightly):
+Compare row counts between production and the restored copy. Run this only after the `wait` above returned
+(the cluster is Ready, so recovery has finished); the queries are read-only, and writes after the last archived
+WAL segment may differ slightly. The drill checks the data, not the app: unlike the earlier plan, no throwaway
+backend is pointed at the restored database. Row counts plus Flyway history show the schemas and data came back,
+which is what FR-015 asks of a backup.
 
 ```bash
 Q="select 'gamecatalog.game', count(*) from gamecatalog.game union all select 'keycloak.user_entity', count(*) from keycloak.user_entity union all select 'flyway history', count(*) from flyway_schema_history"
