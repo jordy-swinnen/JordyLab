@@ -1,21 +1,21 @@
-import { inject, Pipe, PipeTransform } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Pipe, PipeTransform } from '@angular/core';
 import { marked } from 'marked';
 
+/**
+ * Renders markdown to an HTML string. The briefing is AI-generated from ingested RSS articles, so
+ * the result is deliberately left untrusted: bind it via `[innerHTML]` and Angular's sanitizer strips
+ * scripts, event handlers and unsafe URLs while keeping the markdown markup.
+ */
 @Pipe({
   name: 'markdown',
   standalone: true,
 })
 export class MarkdownPipe implements PipeTransform {
-  #sanitizer = inject(DomSanitizer);
-
-  transform(value: string | null | undefined): SafeHtml {
+  transform(value: string | null | undefined): string {
     if (!value) {
       return '';
     }
 
-    const html = marked.parse(value, { async: false }) as string;
-
-    return this.#sanitizer.bypassSecurityTrustHtml(html);
+    return marked.parse(value, { async: false }) as string;
   }
 }
