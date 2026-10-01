@@ -268,16 +268,39 @@ If the private key is gone from **both** the password manager and the GitHub env
 
 ## 15. Restore drill
 
-Mandatory once before go-live, then quarterly (FR-015, `/speckit-clarify`):
+Mandatory once before go-live, then quarterly (FR-015, `/speckit-clarify`). Takes ~10 minutes; must stay under 30
+(SC-004). The manifest is `deploy/k8s/drills/restore-drill-cluster.yaml` — a separate `cnpg-restore-drill`
+cluster recovered from the same ObjectStore, with no WAL archiving of its own.
 
-1. Pick a recovery point in time within the retention window (the last 30 days; spec.md FR-014).
-2. Create a new CNPG `Cluster` with a `bootstrap.recovery` section pointing at the same `ObjectStore`
-   and the chosen `recoveryTarget.targetTime`.
-3. Wait for the recovered cluster to report `Ready`, then point a throwaway backend pod at it
-   (`POSTGRES_URL` override) and confirm the app reads real data.
-4. Record the wall-clock time taken — must be under 30 minutes (SC-004) — and the date, in this file's
-   history (commit a one-line log entry here after each drill).
-5. Tear down the throwaway recovery `Cluster` once verified.
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+date -u +%FT%TZ                                                    # start time
+kubectl -n jordylab apply -f deploy/k8s/drills/restore-drill-cluster.yaml
+kubectl -n jordylab wait cluster/cnpg-restore-drill --for=condition=Ready --timeout=20m
+date -u +%FT%TZ                                                    # ready time
+```
+
+Compare row counts between production and the restored copy. Run this only after the `wait` above returned
+(the cluster is Ready, so recovery has finished); the queries are read-only, and writes after the last archived
+WAL segment may differ slightly. The drill checks the data, not the app: unlike the earlier plan, no throwaway
+backend is pointed at the restored database. Row counts plus Flyway history show the schemas and data came back,
+which is what FR-015 asks of a backup.
+
+```bash
+Q="select 'gamecatalog.game', count(*) from gamecatalog.game union all select 'keycloak.user_entity', count(*) from keycloak.user_entity union all select 'flyway history', count(*) from flyway_schema_history"
+kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "$Q"
+kubectl -n jordylab exec cnpg-restore-drill-1 -c postgres -- psql -U postgres -d jordylab -At -c "$Q"
+```
+
+Tear down and log the drill (date, recovery point, duration, result) in the table below:
+
+```bash
+kubectl -n jordylab delete cluster cnpg-restore-drill
+kubectl -n jordylab get pvc | grep restore-drill || echo "drill volume removed"
+```
+
+| Date | Recovered from | Ready after | Row counts match | By |
+|------|----------------|-------------|------------------|----|
 
 ## 16. Full VPS rebuild
 

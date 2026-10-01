@@ -1,0 +1,36 @@
+# Restore drill (docs/runbook.md §15, spec 008 FR-015 / SC-004, spec 011 BUG-023).
+# NOT part of any kustomization: applied by hand, verified, then deleted.
+#
+# Recovers the production backups (base backup + WAL from the `ovh-object-storage` ObjectStore) into a
+# separate throwaway cluster. It has no `plugins:` section on purpose, so it never archives WAL into the
+# production backup path.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cnpg-restore-drill
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.15-standard-trixie
+  storage:
+    storageClass: local-path
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1024Mi
+  bootstrap:
+    recovery:
+      source: production
+      # Optional point-in-time target, e.g.:
+      # recoveryTarget:
+      #   targetTime: "2026-10-01 08:00:00+00"
+  externalClusters:
+    - name: production
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: ovh-object-storage
+          serverName: cnpg-cluster
