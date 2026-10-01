@@ -614,3 +614,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — PATCH added.
 - Regression test added: `SwitchGameControllerSecurityTest.corsPreflightAllowsPatchForTheSwitchEdit`
 - Verified on prod:
+
+### BUG-044: Release APK check reads an empty certificate digest — apksigner's signer label isn't "Signer #1"
+- Status: FIXING — PR `fix/e2e-apk-digest-parse`
+- Severity: S2
+- Area/spec: CI / 007, 011
+- Env found: CI (release v0.0.1-rc4, run 36848803968)
+- Coverage rows: 007-FR-003, 011-FR-012b
+- Steps to reproduce:
+  1. Push a `v*` tag; the `apk` job builds and signs the APK, then *Verify the APK signature* runs `apksigner verify --verbose --print-certs`.
+- Expected (cite spec/story): the step compares the APK's certificate with `MOBILE_RELEASE_SIGNING_CERT_SHA256` and publishes on a match (007 FR-003).
+- Actual (logs/screenshot, secrets redacted): `apksigner verify` passed, then `##[error]APK signed with , expected 1B0213…77E8` — the parsed digest was empty, so nothing was published.
+- Root cause: the step only matched `Signer #1 certificate SHA-256 digest:`; apksigner labels v3 signers per SDK range (`Signer (minSdkVersion=…, maxSdkVersion=…) …`).
+- Fix (PR / commit / tag): accept any `Signer…` label, require exactly one distinct certificate, and print apksigner's signer lines when that fails.
+- Regression test added: none because CI shell step; parse checked locally against both label styles
+- Verified on prod:
