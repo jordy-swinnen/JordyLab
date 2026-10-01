@@ -301,6 +301,7 @@ kubectl -n jordylab get pvc | grep restore-drill || echo "drill volume removed"
 
 | Date | Recovered from | Ready after | Row counts match | By |
 |------|----------------|-------------|------------------|----|
+| 2026-10-01 | base backup `cnpg-daily-backup-20261001030000` (03:00 UTC) + archived WAL up to ~09:53 UTC | 1 min 55 s (09:53:35 → 09:55:30 UTC) | yes — `gamecatalog.game` 128/128, `keycloak.user_entity` 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) |
 
 ## 16. Full VPS rebuild
 
