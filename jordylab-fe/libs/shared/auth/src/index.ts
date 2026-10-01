@@ -1,5 +1,6 @@
 export { AuthService } from './lib/auth.service';
-export type { AppRole } from './lib/auth.service';
+export type { AccountAction, AppRole } from './lib/auth.service';
+export { UserMenuComponent } from './lib/user-menu.component';
 export { authGuard } from './lib/auth.guard';
 export { roleGuard } from './lib/role.guard';
 export { authInterceptor } from './lib/auth.interceptor';
