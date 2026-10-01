@@ -28,8 +28,8 @@ Built as a modular monolith with:
 
 ## Infrastructure
 
-- **Hetzner VPS** - Docker Compose production stack
-- **Main Desktop** - Ryzen 9 7950X + RX 7900 XTX for Ollama inference (AMD ROCm)
+- **OVH VPS-2** - single-node k3s production cluster (see root `AGENTS.md` → Infrastructure)
+- **Main Desktop** - Ryzen 9 7950X + RX 7900 XTX development machine
 - **JordyBox** - i7-9700K + RTX 2070 Super for HTPC/gaming and NFS storage
 
 ## Usage
