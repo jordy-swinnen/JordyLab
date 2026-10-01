@@ -20,6 +20,7 @@ decrypted only in `deploy-prod.yml` (see `research.md` §7 for the SOPS + age de
 | `STEAM_WEB_API_KEY`, `STEAM_ID` (005) | backend (`SteamOwnedGamesClient`, `@Value`) | same | Steam owned-library sync; unset → sync reports "not configured" |
 | `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` (005/009) | backend (`IgdbClient`, `@Value`) | same | Twitch client-credentials for IGDB; unset → graceful no-op |
 | `ntfy` auth token (if ntfy is configured with auth) | backend (publish), 007 mobile app (subscribe) | same | Scope depends on `/speckit-implement`'s ntfy auth choice |
+| `NTFY_TOPIC` (007, added by spec 011 BUG-013) | backend (`NtfyClient` publish), Jordy's ntfy app (subscribe) | same, plus if the topic name leaks | The in-cluster ntfy runs without auth, so the topic name is what keeps sign-up/briefing alerts (names, emails) private: use a long random value. Unset → pushes are skipped and the backend logs `Ntfy notifications disabled: NTFY_TOPIC not set` at startup |
 
 **Not in this file** — the APK signing key (spec 007) stays in GitHub Actions secrets directly, not SOPS, per the
 drafts' research (§6: "The APK signing key (007) stays in GitHub Actions secrets"), since it's a CI-time signing
