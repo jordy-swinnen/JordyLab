@@ -11,6 +11,7 @@ import {
   AuthService,
   BiometricUnlockService,
   BiometricUnlockToggleComponent,
+  UserMenuComponent,
 } from '@jordylab-fe/shared/auth';
 import {
   BrandMarkComponent,
@@ -69,6 +70,7 @@ const startsWith = (prefix: string) => (url: string) => url.startsWith(prefix);
   imports: [
     RouterOutlet,
     RouterLink,
+    UserMenuComponent,
     BrandMarkComponent,
     WordmarkComponent,
     PendingCountBadgeComponent,
@@ -223,10 +225,6 @@ export class App {
         .find((item) => item.isActive(url))?.path ?? null
     );
   });
-
-  protected readonly initial = computed(() =>
-    (this.username() ?? '?').charAt(0).toUpperCase(),
-  );
 
   async onLogout(): Promise<void> {
     // Explicit wipe, not left to the next failed refresh (FR-012) — a no-op when biometric

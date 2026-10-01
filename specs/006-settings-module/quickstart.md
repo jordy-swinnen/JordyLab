@@ -80,9 +80,10 @@ forces a password change before the app loads.
 
 ### 6. My account (US4, FR-008)
 
-As the friend: user menu → **Change password** (re-authenticate, set new password, land back in the app) and **Edit
-profile** (change name; email change is verified against Keycloak 26.3 per research §4.3 — if the login name does not
-follow the email, that finding is recorded in research.md and handled).
+As the friend: account menu → **Change password** (re-authenticate, set new password, land back in the app), **Edit
+name** (`UPDATE_PROFILE`) and **Change email** (`UPDATE_EMAIL`, re-authenticated; the realm must have that action
+enabled — `deploy/keycloak/README.md`). Email is the username here, so after the change you sign in with the new
+email.
 
 ### 7. Model catalog & per-feature model (US5, FR-013–FR-016, SC-003/SC-006)
 

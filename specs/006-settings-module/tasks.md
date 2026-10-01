@@ -256,16 +256,17 @@ modules).
 **Independent Test**: As a guest, change password and profile (name/email) from the user menu and log back in with the
 new details (quickstart scenario 6)
 
-- [ ] T031 [P] [US5] Create `UserMenuComponent` in `jordylab-fe/libs/shared/auth/src/lib/user-menu.component.ts` —
+- [x] T031 [P] [US5] Create `UserMenuComponent` (built on `@angular/cdk/menu` directly — spartan brain's menu reads private CDK overlay fields that CDK 21 no longer has; adds "Change email" via `UPDATE_EMAIL`, spec 011 BUG-011) in `jordylab-fe/libs/shared/auth/src/lib/user-menu.component.ts` —
   avatar/initial + dropdown (spartan menu helm added via `bunx @spartan-ng/cli@latest add menu` if no suitable local
   component exists) with Change password → `login({ action: 'UPDATE_PASSWORD' })`, Edit profile →
   `login({ action: 'UPDATE_PROFILE' })`, Sign out → existing logout; export from the barrel; spec with the AuthService
   mocked (`useValue` + `vi.fn`)
-- [ ] T032 [US5] Replace the static sign-out button with the user menu in the shell header (desktop + mobile) in
+- [x] T032 [US5] Replace the static sign-out button with the user menu in the shell header (desktop + mobile) in
   `jordylab-fe/apps/jordylab/src/app/app.html` + `app.ts`; update `jordylab-fe/apps/jordylab/src/app/app.spec.ts` (menu
   renders for any authenticated user — admin and guest)
-- [ ] T033 [US5] Verify AIA live against the real Keycloak 26.3 (quickstart scenario 6): `UPDATE_PASSWORD`
-  re-authentication flow, `UPDATE_PROFILE` name + email change, and the email-as-username username-sync caveat (keycloak
+- [ ] T033 [US5] Verify AIA live against the real Keycloak 26.7 (quickstart scenario 6): `UPDATE_PASSWORD`
+  re-authentication flow, `UPDATE_PROFILE` name change, `UPDATE_EMAIL` email change (needs the realm action enabled —
+  spec 011 BUG-011 / HANDOFF-06), and the email-as-username username-sync caveat (keycloak
   #13988/#16679 — research §4.3); record the verified outcome (and any workaround) in
   `specs/006-settings-module/research.md` §4
 
