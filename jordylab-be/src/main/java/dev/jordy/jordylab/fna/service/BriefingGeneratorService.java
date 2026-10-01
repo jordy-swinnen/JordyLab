@@ -8,6 +8,7 @@ import dev.jordy.jordylab.fna.domain.repository.ArticleRepository;
 import dev.jordy.jordylab.fna.domain.repository.BriefingRepository;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BriefingGeneratorService {
 
-    static final String MODULE_NAME = "fna";
 
     private static final int MAX_CONTENT_PREVIEW = 500;
 
@@ -63,7 +63,7 @@ public class BriefingGeneratorService {
                 + "\n\nAnalyse how today's news affects my portfolio positions, summarise the broader European market themes, "
                 + "and suggest one ticker I don't currently hold that looks interesting based on today's news.";
 
-        AiCallResult result = aiService.call(MODULE_NAME, systemPrompt, userPrompt);
+        AiCallResult result = aiService.call(AiFeature.FNA_BRIEFING, systemPrompt, userPrompt);
 
         if (!result.success()) {
             log.error("Briefing generation failed: {}", result.failureReason());

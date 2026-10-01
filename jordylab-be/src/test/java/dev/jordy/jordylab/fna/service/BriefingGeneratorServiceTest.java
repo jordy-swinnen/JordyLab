@@ -8,6 +8,7 @@ import dev.jordy.jordylab.fna.domain.repository.ArticleRepository;
 import dev.jordy.jordylab.fna.domain.repository.BriefingRepository;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResultTestBuilder;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ class BriefingGeneratorServiceTest {
                 .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultPortfolioPosition()));
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
-        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
                 .thenReturn(AiCallResultTestBuilder.aDefaultSuccessResult());
 
         ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
@@ -110,7 +111,7 @@ class BriefingGeneratorServiceTest {
 
         ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
-        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), systemPromptCaptor.capture(), userPromptCaptor.capture()))
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), systemPromptCaptor.capture(), userPromptCaptor.capture()))
                 .thenReturn(AiCallResultTestBuilder.aSuccessResult("General briefing"));
 
         ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
@@ -132,7 +133,7 @@ class BriefingGeneratorServiceTest {
         when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
-        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
                 .thenReturn(AiCallResultTestBuilder.aFailureResult(ProviderFailureReason.UNREACHABLE));
 
         assertThatThrownBy(() -> briefingGeneratorService.generateBriefing())
@@ -151,7 +152,7 @@ class BriefingGeneratorServiceTest {
         when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
-        when(aiService.call(eq(BriefingGeneratorService.MODULE_NAME), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
                 .thenReturn(AiCallResultTestBuilder.aFailureResult(ProviderFailureReason.TIMEOUT));
 
         assertThatThrownBy(() -> briefingGeneratorService.generateBriefing())

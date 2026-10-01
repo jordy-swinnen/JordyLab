@@ -727,6 +727,7 @@ _Not started._
 | HANDOFF-03 | Scanner on the MacBook: local, then prod client check | MacBook | local + prod | 2026-09-30 20:15 | 20:37 partial | prod client header read by agent: BUG-020 confirmed | | prod part done; local: Jordy registered `jordy.swinnen@pm.me`; agent granted `admin` + `gamecatalog-scanner` via kcadm (BUG-027/028). 21:11 `scan` → `/ingest/check` authorised as scanner, "unchanged, nothing uploaded" ✅ (FR-008 server check confirmed in backend log) |
 | HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | |
 | HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
+| HANDOFF-08 | Decide: buy OpenRouter credits (primary) or stay on Anthropic-direct | your browser | prod | 2026-10-01 | | after credits: backend log `AI call succeeded: … provider=openrouter` | 2 min | ⏳ open |
 
 ### Batch 1 (sent with the approval request)
 
@@ -773,6 +774,18 @@ _Not started._
 - Target env: prod
 - Why you: I'm not allowed to read secret names or values from the cluster.
 - Questions: (a) is `STEAM_WEB_API_KEY` set in `secrets.sops.yaml`? (b) is an OpenRouter API key set? Answer yes/no only.
+
+#### HANDOFF-08: OpenRouter has no credits
+- Machine: your browser
+- Target env: prod (and local, same key)
+- Why you: it's a purchase, and a cost decision.
+- Finding: OpenRouter answers `402 Insufficient credits. This account never purchased credits.` Nothing breaks —
+  every AI call is retried once on Anthropic (the existing setup) — but OpenRouter can't be the primary until the
+  account has credits, and each call first spends one failed round trip.
+- Options: (a) add credits at https://openrouter.ai/settings/credits (then the AI Models page's per-feature models take
+  effect); or (b) stay on Anthropic-direct: tell me and I'll make "no credits" skip the gateway for longer (or unset
+  `OPENROUTER_API_KEY` in the secrets, which skips it entirely).
+- Tell me "credits added" or "stay on Anthropic".
 
 ## 8. AI call tally
 

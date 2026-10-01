@@ -205,7 +205,7 @@ FR-011/FR-012/FR-013/FR-014/FR-016/FR-017)
 **Independent Test**: With the gateway failing for each failure reason in turn, every AI feature still answers through
 the fallback with `fallbackUsed` recorded; both providers down → explicit failure (quickstart scenario 8)
 
-- [ ] T024 [US4] Bump Spring AI 2.0.0-M2 → **2.0.1 GA** in `jordylab-be/build.gradle.kts` (`springAiVersion`), add
+- [x] T024 [US4] (done; `spring.ai.model.chat` deliberately left **unset** — each starter only matches its own value, so `openai` would switch the Anthropic fallback off; proven by `AiGatewayWiringTest`) Bump Spring AI 2.0.0-M2 → **2.0.1 GA** in `jordylab-be/build.gradle.kts` (`springAiVersion`), add
   `spring-ai-starter-model-openai`, set `spring.ai.model.chat: openai` + map gateway config `jordylab.ai.gateway.*` →
   `spring.ai.openai.base-url/api-key` (via yaml placeholders, research D2) in
   `jordylab-be/src/main/resources/application.yaml`; follow the AGENTS.md GA-move procedure (check 2.0.1 migration notes
@@ -215,19 +215,19 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `OllamaContainer` bean from `jordylab-be/src/test/java/dev/jordy/jordylab/TestcontainersConfiguration.java`, the
   commented Ollama service from `jordylab-be/compose.yaml` (keep pgvector + advisors deps); verify `./gradlew build`
   green and `SC-005` grep clean (docs history allowed) — pre-approved by Jordy 2026-09-30; done in spec 011 BUG-009
-- [ ] T026 [US4] Refactor `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/`: `AiFeature` enum (four keys with
+- [x] T026 [US4] Refactor `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/`: `AiFeature` enum (four keys with
   display name, module, description per [research.md](research.md) §2.1), `AiModelResolver` port (
   `resolveModel(AiFeature)` + `isModelKnown`), `AiCallCompleted` event record, replace `AiModuleConfig`/
   `jordylab.ai.modules` with feature/fallback config records (`jordylab.ai.features`, `jordylab.ai.fallback`), add
   `MODEL_NOT_FOUND` to `ProviderFailureReason`; keep the `@NamedInterface("ai")` exports; unit tests for registry +
   config binding
-- [ ] T027 [US4] Rewrite `ResilientAiServiceTest` (red first) in
+- [x] T027 [US4] Rewrite `ResilientAiServiceTest` (red first) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/shared/ai/ResilientAiServiceTest.java`: WireMock-backed primary (
   OpenAI-compatible endpoint) + mocked `AnthropicChatModel` — for **each** failure reason (unreachable, timeout, 429,
   401, model-not-found) the call retried **once** on the fallback with `AiCallResult` recording actual provider/model/
   `fallbackUsed`; both-fail → explicit failure (no silent empty result); per-feature model resolution via the port;
   metrics + event publication asserted (assigned captors, explicit values)
-- [ ] T028 [US4] Rewrite `ResilientAiService` in
+- [x] T028 [US4] Rewrite `ResilientAiService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/ResilientAiService.java` until T027 is green:
   `call(AiFeature, systemPrompt, userPrompt)` resolves the model via `AiModelResolver`, builds `OpenAiChatOptions`/
   `AnthropicChatOptions` per provider, tries primary then falls back on the mapped reasons, keeps the executor timeout +
@@ -238,7 +238,7 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `gamecatalog/service/EnrichmentService.java` (`GAMECATALOG_ENRICHMENT`), `gamecatalog/service/ChatService.java` (
   translate → `GAMECATALOG_CHAT_QUERY`, compose → `GAMECATALOG_CHAT_ANSWER`); keep prompts + parsing unchanged; module
   tests (`GameCatalogModuleTest`, fna module test) stay green
-- [ ] T030 [US4] Add the default config-backed `AiModelResolver` (reads `jordylab.ai.features.<key>.model`) in
+- [x] T030 [US4] Add the default config-backed `AiModelResolver` (reads `jordylab.ai.features.<key>.model`) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/` + unit test; add a boot smoke test in
   `jordylab-be/src/test/java/dev/jordy/jordylab/shared/ai/` proving both `OpenAiChatModel` (gateway base URL) and
   `AnthropicChatModel` beans exist with `spring.ai.model.chat=openai` and one plain call routes through the primary (

@@ -8,6 +8,7 @@ import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class EnrichmentService {
 
-    private static final String MODULE_NAME = "gamecatalog";
     private static final int MAX_GENRE_LENGTH = 100;
     private static final int MAX_DESCRIPTION_LENGTH = 4000;
 
@@ -82,7 +82,7 @@ public class EnrichmentService {
     }
 
     private void enrichOne(Game game) {
-        AiCallResult result = aiService.call(MODULE_NAME, SYSTEM_PROMPT, buildUserPrompt(game));
+        AiCallResult result = aiService.call(AiFeature.GAMECATALOG_ENRICHMENT, SYSTEM_PROMPT, buildUserPrompt(game));
         if (!result.success()) {
             log.warn("Enrichment AI call failed for '{}': {}", game.getTitle(), result.failureReason());
             game.recordEnrichmentFailure(properties.enrichment().maxAttempts());

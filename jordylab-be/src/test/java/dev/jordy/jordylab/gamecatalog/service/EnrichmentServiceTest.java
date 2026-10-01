@@ -7,6 +7,7 @@ import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,9 +53,9 @@ class EnrichmentServiceTest {
     void enrichesPendingGameFromValidStrictJson() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5", VALID_JSON, false));
 
         int processed = enrichmentService.enrichPending(SCAN_CAP);
 
@@ -71,14 +72,14 @@ class EnrichmentServiceTest {
     void promptContainsGameTitleAndPlatform() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5", VALID_JSON, false));
 
         enrichmentService.enrichPending(SCAN_CAP);
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
-        verify(aiService).call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        verify(aiService).call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 userPromptCaptor.capture());
         assertSoftly(softly -> {
             softly.assertThat(userPromptCaptor.getValue()).contains("Super Mario World");
@@ -90,10 +91,10 @@ class EnrichmentServiceTest {
     void malformedAiOutputRecordsAttemptWithoutFabricating() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
-                        "I think this is a great game!"));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5",
+                        "I think this is a great game!", false));
 
         enrichmentService.enrichPending(SCAN_CAP);
 
@@ -113,26 +114,26 @@ class EnrichmentServiceTest {
         String expectedPrompt = "Game: Super Mario World\nPlatform: SNES"
                 + "\nKnown multiplayer facts (use verbatim, do not contradict):"
                 + "\n- Local multiplayer: yes\n- Split-screen: yes\n- Max local players: 4";
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT), eq(expectedPrompt)))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT), eq(expectedPrompt)))
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5", VALID_JSON, false));
 
         int processed = enrichmentService.enrichPending(SCAN_CAP);
 
         assertThat(processed).isEqualTo(1);
-        verify(aiService).call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT), eq(expectedPrompt));
+        verify(aiService).call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT), eq(expectedPrompt));
     }
 
     @Test
     void outOfBoundsValuesRecordAttemptWithoutFabricating() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5",
                         """
                         {"genre": "Platformer", "releaseYear": 3000, "onlineMultiplayer": false,
                          "singlePlayer": true, "description": "A classic."}
-                        """));
+                        """, false));
 
         enrichmentService.enrichPending(SCAN_CAP);
 
@@ -146,10 +147,9 @@ class EnrichmentServiceTest {
     void aiFailureNeverFabricatesAndCountsAsAttempt() {
         Game game = aGame("Super Mario World");
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
-                        ProviderFailureReason.TIMEOUT));
+                .thenReturn(AiCallResult.failure(AiFeature.GAMECATALOG_ENRICHMENT, "anthropic", "claude-sonnet-5", ProviderFailureReason.TIMEOUT, true));
 
         enrichmentService.enrichPending(SCAN_CAP);
 
@@ -167,10 +167,9 @@ class EnrichmentServiceTest {
         game.recordEnrichmentFailure(3);
         game.recordEnrichmentFailure(3);
         stubPendingBatch(List.of(game));
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
-                        ProviderFailureReason.UNREACHABLE));
+                .thenReturn(AiCallResult.failure(AiFeature.GAMECATALOG_ENRICHMENT, "anthropic", "claude-sonnet-5", ProviderFailureReason.UNREACHABLE, true));
 
         enrichmentService.enrichPending(SCAN_CAP);
 
@@ -195,9 +194,9 @@ class EnrichmentServiceTest {
         game.recordEnrichmentFailure(3);
         game.recordEnrichmentFailure(3);
         game.recordEnrichmentFailure(3);
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", VALID_JSON));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5", VALID_JSON, false));
 
         enrichmentService.refresh(game);
 
@@ -214,10 +213,9 @@ class EnrichmentServiceTest {
         game.recordEnrichmentFailure(3);
         game.recordEnrichmentFailure(3);
         game.recordEnrichmentFailure(3);
-        when(aiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq(userPromptFor(game))))
-                .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
-                        ProviderFailureReason.TIMEOUT));
+                .thenReturn(AiCallResult.failure(AiFeature.GAMECATALOG_ENRICHMENT, "anthropic", "claude-sonnet-5", ProviderFailureReason.TIMEOUT, true));
 
         enrichmentService.refresh(game);
 

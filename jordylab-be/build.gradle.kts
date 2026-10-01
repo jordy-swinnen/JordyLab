@@ -32,7 +32,7 @@ repositories {
     }
 }
 
-extra["springAiVersion"] = "2.0.0-M2"
+extra["springAiVersion"] = "2.0.1"
 extra["springModulithVersion"] = "2.0.3"
 
 dependencies {
@@ -51,8 +51,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("com.google.guava:guava:33.4.0-jre")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
-    implementation("org.springframework.ai:spring-ai-advisors-vector-store")
+    implementation("org.springframework.ai:spring-ai-vector-store-advisor")
     implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
