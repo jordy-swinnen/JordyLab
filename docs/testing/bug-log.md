@@ -200,19 +200,20 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-013: 006 US7 missing — no Ntfy push when someone signs up
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-ntfy-visible` + `NTFY_TOPIC` secret (HANDOFF-07)
 - Severity: S3 (lowered from S2 on 2026-09-30 — Jordy unsure, spec priority P3; see test plan Q-04)
 - Area/spec: settings / 006, 007
 - Env found: both
 - Coverage rows: 006-US7, 006-FR-018, 007-FR-016
 - Steps to reproduce:
-  1. 006 tasks T041–T042 open; no `NtfyClient` / `PendingSignupNotifierService` in `jordylab-be/src/main`.
+  1. (Corrected 2026-10-01) US7 *is* built — by spec 007: `PendingSignupWatcherService` publishes `UserSignUpPending`, `mobile`'s `MobileNotificationListener` sends it through `NtfyClient` (006 T041/T042 superseded).
+  2. Prod: `kubectl -n jordylab logs deploy/ntfy` → `messages_published=0` since ntfy started (2026-09-30 13:34), despite the HANDOFF-02 sign-ups, a still-pending test account and several backend restarts (each re-announces pending users).
 - Expected (cite spec/story): 006 FR-018 — admin notified by Ntfy with the pending user's name and email.
-- Actual (logs/screenshot, secrets redacted): feature absent.
+- Actual (logs/screenshot, secrets redacted): no push ever sent, and no log line says why — `NtfyClient` skips at DEBUG when base-url or topic is blank.
 - Correction (2026-09-30 20:45) — likely invalid, re-verify after BUG-026/BUG-031: the behaviour *is* implemented via spec 007 — `settings/service/PendingSignupWatcherService` polls Keycloak every 5 min and publishes `UserSignUpPending`, and `mobile` sends the Ntfy push (007 FR-016, research D9). Only 006 T041/T042 were never ticked. On prod it currently fails because of BUG-026. Close as invalid once a sign-up push is observed after PR #30.
-- Root cause: story not implemented (superseded — see correction).
-- Fix (PR / commit / tag): planned batch `fix/e2e-settings-signup-notify` (T046).
-- Regression test added:
+- Root cause: `NTFY_TOPIC` was never part of the prod secrets (`specs/008…/contracts/secrets-schema.md` has no such key; ntfy runs without auth, `NTFY_BASE_URL` is set) — and the client skipped silently.
+- Fix (PR / commit / tag): branch `fix/e2e-ntfy-visible` — startup log names the missing key (never a value), every sent push logged at INFO (title only, no PII); `NTFY_TOPIC` added to the secrets contract. Jordy sets the topic (HANDOFF-07).
+- Regression test added: `NtfyClientTest` (+2: missing-key warning without values; enabled + sent log without the body)
 - Verified on prod:
 
 ### BUG-014: 009 US4 incomplete — Switch detail format and cross-view tests missing

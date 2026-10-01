@@ -727,6 +727,7 @@ _Not started._
 | HANDOFF-03 | Scanner on the MacBook: local, then prod client check | MacBook | local + prod | 2026-09-30 20:15 | 20:37 partial | prod client header read by agent: BUG-020 confirmed | | prod part done; local: Jordy registered `jordy.swinnen@pm.me`; agent granted `admin` + `gamecatalog-scanner` via kcadm (BUG-027/028). 21:11 `scan` → `/ingest/check` authorised as scanner, "unchanged, nothing uploaded" ✅ (FR-008 server check confirmed in backend log) |
 | HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | |
 | HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
+| HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ⏳ open |
 
 ### Batch 1 (sent with the approval request)
 
@@ -773,6 +774,21 @@ _Not started._
 - Target env: prod
 - Why you: I'm not allowed to read secret names or values from the cluster.
 - Questions: (a) is `STEAM_WEB_API_KEY` set in `secrets.sops.yaml`? (b) is an OpenRouter API key set? Answer yes/no only.
+
+#### HANDOFF-07: Give the sign-up push a topic
+- Machine: your Mac (IntelliJ) + your phone's ntfy app
+- Target env: prod
+- Why you: it's a secret; I never open or edit `secrets.sops.yaml`.
+- Steps:
+  1. Make a topic name (don't paste it anywhere): `openssl rand -hex 16`
+  2. From the repo root: `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml` → under
+     `jordylab-secrets` → `stringData` add `NTFY_TOPIC: jordylab-<that value>` → close the tab.
+  3. `sops -d deploy/k8s/overlays/prod/secrets.sops.yaml >/dev/null && echo DECRYPT_OK`
+  4. Commit it on a branch with `Refs: 011 BUG-013 HANDOFF-07` and push (or tell me "secret committed on <branch>" and
+     I'll open the PR). It ships with the next release.
+  5. In the ntfy app: add subscription → server `https://jordylab.be/ntfy` → the same topic.
+- Expect: after the deploy the backend log shows `Ntfy notifications enabled`; your phone gets "New JordyLab sign-up"
+  for the still-pending test account within 5 minutes of the backend starting. Tell me "done".
 
 ## 8. AI call tally
 

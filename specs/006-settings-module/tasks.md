@@ -326,11 +326,11 @@ registry).
 **Independent Test**: Register a new account → the admin's Ntfy push arrives within the poll interval with name +
 email (quickstart scenario 11)
 
-- [ ] T041 [US7] Create `NtfyClient` in
+- [x] T041 [US7] (superseded by spec 007: `mobile/rest/client/NtfyClient` is the only Ntfy sender) Create `NtfyClient` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/NtfyClient.java` — `POST {base-url}/{topic}` with
   title/body (+ optional `Authorization` token header; never logged); WireMock test incl. graceful failure (notification
   failure must not break anything, but is logged — no silent failure)
-- [ ] T042 [US7] Implement `PendingSignupNotifierService` in
+- [x] T042 [US7] (built as `PendingSignupWatcherService` → `UserSignUpPending` event, spec 007 FR-016) Implement `PendingSignupNotifierService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/PendingSignupNotifierService.java` —
   `@Scheduled(fixedDelay)` poll (configurable, default 5 min) of the pending list via
   `KeycloakUserAdministrationService`, diff against the last-seen pending set, push on new arrivals; complete no-op when
