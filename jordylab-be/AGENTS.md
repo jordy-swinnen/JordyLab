@@ -356,7 +356,7 @@ class SomeObjectTestBuilder {
 - **Library sync**: `SteamLibrarySyncService` (owned, `IPlayerService/GetOwnedGames` with `STEAM_WEB_API_KEY`/`STEAM_ID`) and `SteamFamilySyncService` (undocumented `IFamilyGroupsService`, short-lived user token, in-memory only). Both short-circuit identical content as `NO_CHANGE`, reject empty/suspicious responses without touching data, soft-remove missing entries, and record a `library_sync_run` with the metadata/AI call counts. The owned sync piggybacks inline on an applied Steam scan (`syncOwnedIfDue`, gated by `jordylab.gamecatalog.library.min-interval-minutes`) — **no scheduler**.
 - **Family titles excluded from sharing are omitted entirely**; owner Steam IDs are stored (display names are a follow-up). The family token is never stored, logged or returned.
 - **Tools/runtimes** (Proton, Steam Linux Runtime, Steamworks redistributables) are excluded via `ToolExclusion` (app-ID deny-list) and the appdetails `type != game` check; the 005 migration cleans up any already catalogued.
-- Endpoints: `GET /games?installStatus=&librarySource=&host=`, `POST /library/steam/sync`, `POST /library/steam-family/sync` (token in body), `GET /library/status`. `gamecatalog` AI enrichment runs on **Claude Haiku** (`jordylab.ai.modules.gamecatalog.model`).
+- Endpoints: `GET /games?installStatus=&librarySource=&host=`, `POST /library/steam/sync`, `POST /library/steam-family/sync` (token in body), `GET /library/status`. `gamecatalog` AI enrichment runs on **Claude Haiku** by default (`jordylab.ai.features."[gamecatalog.enrichment]".model`, changeable on Settings → AI Models).
 
 # Game catalog model (005 extension — local multiplayer metadata)
 

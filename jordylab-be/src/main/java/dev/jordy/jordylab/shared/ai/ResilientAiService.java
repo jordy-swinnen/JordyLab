@@ -57,7 +57,9 @@ public class ResilientAiService {
     private final ApplicationEventPublisher eventPublisher;
     private final MeterRegistry meterRegistry;
     private final Clock clock;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    // One virtual thread per call: cheap, so an SDK call that ignores the timeout's interrupt can't pile up platform
+    // threads; future.cancel(true) still interrupts it.
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     public AiCallResult call(AiFeature feature, String systemPrompt, String userPrompt) {
         AiCallResult result = tryGateway(feature, systemPrompt, userPrompt);
