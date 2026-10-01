@@ -198,6 +198,7 @@ jobs:
           # The backend reads the v1 (JAR) signature with java.util.jar, so check for exactly what it needs: a
           # signature file plus a signature block in META-INF/. (apksigner judges v1 against the APK's minSdk 29,
           # where v1 is irrelevant, so its "Verified using v1 scheme" line is not a reliable signal here.)
+          command -v unzip >/dev/null || { echo "::error::unzip is not installed on the runner"; exit 1; }
           meta_inf="$(unzip -Z1 "$apk" 'META-INF/*' 2>/dev/null || true)"
           echo "META-INF entries:"; echo "$meta_inf"
           grep -q -E '^META-INF/[^/]+\.SF$' <<<"$meta_inf" && grep -q -E '^META-INF/[^/]+\.(RSA|EC|DSA)$' <<<"$meta_inf" \
