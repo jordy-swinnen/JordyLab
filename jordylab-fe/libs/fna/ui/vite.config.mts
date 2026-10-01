@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import angular from '@analogjs/vite-plugin-angular';
@@ -26,7 +27,7 @@ export default defineConfig(() => ({
       },
     },
     coverage: {
-      reportsDirectory: '../../../coverage/libs/fna/ui',
+      reportsDirectory: resolve(__dirname, '../../../coverage/libs/fna/ui'),
       provider: 'v8' as const,
       thresholds: {
         lines: 80,

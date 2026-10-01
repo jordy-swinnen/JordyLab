@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import angular from '@analogjs/vite-plugin-angular';
@@ -19,7 +20,7 @@ export default defineConfig(() => ({
     server: { deps: { inline: ['@ngneat/spectator'] } },
     reporters: ['default'],
     coverage: {
-      reportsDirectory: '../../../coverage/libs/settings/ui',
+      reportsDirectory: resolve(__dirname, '../../../coverage/libs/settings/ui'),
       provider: 'v8' as const,
       thresholds: { lines: 80 },
     },
