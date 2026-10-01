@@ -677,7 +677,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `game-detail.component.spec.ts` (preselects the current format); verified locally
 
 ### BUG-044: Release APK check reads an empty certificate digest — apksigner's signer label isn't "Signer #1"
-- Status: FIXING — PR `fix/e2e-apk-digest-parse`
+- Status: FIXING — #55 (label regex) did not help: apksigner prints no signer lines for the v2-only APK; digest comparison moved to the backend (PR `fix/e2e-apk-verify-exitcode`)
 - Severity: S2
 - Area/spec: CI / 007, 011
 - Env found: CI (release v0.0.1-rc4, run 36848803968)
@@ -689,6 +689,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the step only matched `Signer #1 certificate SHA-256 digest:`; apksigner labels v3 signers per SDK range (`Signer (minSdkVersion=…, maxSdkVersion=…) …`).
 - Fix (PR / commit / tag): accept any `Signer…` label, require exactly one distinct certificate, and print apksigner's signer lines when that fails.
 - Regression test added: none because CI shell step; parse checked locally against both label styles
+- Update 2026-10-01 (rc5, run 36884797915): `apksigner verify --verbose --print-certs` printed only `Verifies` and the scheme lines (v2 true; v1, v3, v3.1, v3.2, v4 false) — no `Signer` line in any format, so no digest to parse. Fix: the CI step now relies on apksigner's exit code (`verify --min-sdk-version 29`); the pinned certificate is compared by the backend on upload (`SIGNING_CERT_MISMATCH`, apksig).
 - Verified on prod:
 
 ### BUG-045: The FNA price refresh asks Yahoo for `MEUD`, which isn't a Yahoo symbol — 404 every 30 minutes
