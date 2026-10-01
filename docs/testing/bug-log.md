@@ -539,3 +539,48 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): PR #35 (`7decf8d`) — `guest` or `admin` → APPROVED.
 - Regression test added: `KeycloakUserAdministrationServiceTest.anAdminWithoutADirectGuestRoleIsApprovedNotPending`
 - Verified on prod:
+
+### BUG-035: `src/test/resources/application.yaml` replaced the main `application.yaml` in every test
+- Status: FIXING (branch fix/e2e-apk-upload-limits)
+- Severity: S3
+- Area/spec: backend test infra / 001
+- Env found: local (while writing the BUG-036 regression test)
+- Coverage rows: 001-FR-016b, G cross-cutting
+- Steps to reproduce:
+  1. Add any property to `src/main/resources/application.yaml` and assert it in a `@SpringBootTest` → it is absent.
+- Expected (cite spec/story): tests exercise the real shared configuration.
+- Actual (logs/screenshot, secrets redacted): the test file (only an Anthropic test key + model) has the same classpath name, so Spring loads it *instead of* the main file; every context test ran without the shared config.
+- Root cause: same-named resource on the test classpath shadows the main one.
+- Fix (PR / commit / tag): delete the test file; set the two test-only properties as Gradle test system properties.
+- Regression test added: `MobileReleaseUploadIntegrationTest` depends on the main file's multipart limit, so it fails if the shadowing returns.
+- Verified on prod: n/a
+
+### BUG-036: APK upload to `POST /api/mobile/releases` answers 403 — 1 MB multipart limit, errors masked by `/error` denyAll
+- Status: FIXING (branch fix/e2e-apk-upload-limits)
+- Severity: S2
+- Area/spec: mobile / 007
+- Env found: prod (release `v0.0.1-rc1`, apk job: `curl: (22) … 403` after the token request succeeded)
+- Coverage rows: 007-FR-001, 007-US3, 007-SC-004
+- Steps to reproduce:
+  1. As `mobile-release-publisher`, upload a multi-MB file to `POST /api/mobile/releases`.
+- Expected (cite spec/story): 007 FR-001 — CI publishes signed releases; invalid uploads get a clear error.
+- Actual (logs/screenshot, secrets redacted): 403, empty body, nothing logged. Reproduced by `MobileReleaseUploadIntegrationTest` (real Tomcat): 2 MB upload by a publisher → 403.
+- Root cause: no `spring.servlet.multipart` limits → Spring's 1 MB default rejects the APK; the exception is forwarded to `/error`, which `SecurityConfig` denies (`anyRequest().denyAll()`), so every server-side error became a bare 403. A non-APK file also escaped as an unmapped `IllegalArgumentException`.
+- Fix (PR / commit / tag): multipart limits 200 MB / 210 MB; `DispatcherType.ERROR` permitted; `InvalidApkException` → 400 `INVALID_APK`.
+- Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/MobileReleaseUploadIntegrationTest.java`
+- Verified on prod:
+
+### BUG-037: APK signing-certificate check only reads v1 (JAR) signatures; release builds are v2/v3-only
+- Status: OPEN
+- Severity: S2
+- Area/spec: mobile / 007
+- Env found: code reading (while fixing BUG-036)
+- Coverage rows: 007-FR-003, 007-FR-001
+- Steps to reproduce:
+  1. `ApkSigningCertificateReader` opens the APK as a verified `JarFile` (v1 scheme). AGP 8.13 with `minSdkVersion = 29` signs release builds with v2/v3 only by default.
+- Expected (cite spec/story): 007 FR-003 — every published APK's certificate is checked against the release certificate.
+- Actual (logs/screenshot, secrets redacted): a real release APK would be rejected as "APK is not signed" (the class's own javadoc notes it was never tested on a real APK).
+- Root cause: v1-only reader vs v2/v3-only signing.
+- Fix (PR / commit / tag): planned — sign release builds v1+v2 and verify with `apksigner` in the release workflow.
+- Regression test added:
+- Verified on prod:

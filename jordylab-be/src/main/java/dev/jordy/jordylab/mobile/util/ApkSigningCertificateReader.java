@@ -41,9 +41,9 @@ public class ApkSigningCertificateReader {
                     return sha256Hex(certificates[0].getEncoded());
                 }
             }
-            throw new IllegalArgumentException("APK is not signed: no signing certificate found");
+            throw new InvalidApkException("APK is not signed: no signing certificate found");
         } catch (IOException | GeneralSecurityException exception) {
-            throw new IllegalArgumentException("Unable to read APK signing certificate", exception);
+            throw new InvalidApkException("Unable to read APK signing certificate", exception);
         }
     }
 

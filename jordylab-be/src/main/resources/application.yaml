@@ -1,4 +1,9 @@
 spring:
+  servlet:
+    multipart:
+      # Signed release APKs are uploaded by CI (POST /api/mobile/releases); Spring's 1 MB default rejects them.
+      max-file-size: 200MB
+      max-request-size: 210MB
   application:
     name: jordylab-be
   datasource:
