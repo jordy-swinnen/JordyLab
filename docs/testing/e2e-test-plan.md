@@ -730,6 +730,7 @@ _Not started._
 | HANDOFF-06 | Enable `UPDATE_EMAIL` in the prod realm (one kcadm command) | — | prod | 2026-10-01 | | the agent's prod realm write was blocked by its permission classifier | 1 min | ⏳ open |
 | HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ⏳ open |
 | HANDOFF-08 | Decide: buy OpenRouter credits (primary) or stay on Anthropic-direct | your browser | prod | 2026-10-01 | | after credits: backend log `AI call succeeded: … provider=openrouter` | 2 min | ⏳ open |
+| HANDOFF-09 | Change the `MEUD` portfolio ticker to `MEUD.PA` | your browser | prod | 2026-10-01 | | within 30 min the position shows a price; no more `Could not fetch price` warnings | 1 min | ⏳ open |
 
 ### Batch 1 (sent with the approval request)
 
@@ -813,6 +814,14 @@ _Not started._
   effect); or (b) stay on Anthropic-direct: tell me and I'll make "no credits" skip the gateway for longer (or unset
   `OPENROUTER_API_KEY` in the secrets, which skips it entirely).
 - Tell me "credits added" or "stay on Anthropic".
+
+#### HANDOFF-09: Give the MEUD position a price
+- Machine: your browser
+- Target env: prod
+- Why you: it's your own portfolio data.
+- Steps: Portfolio page → the `MEUD` position → change the ticker to `MEUD.PA` (Yahoo's symbol for the Amundi Core Stoxx
+  Europe 600 ETF; `MEUD` alone returns 404) → save.
+- Expect: within 30 minutes the position shows a price (~309.7 today). Tell me "done".
 
 ## 8. AI call tally
 

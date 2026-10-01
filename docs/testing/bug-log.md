@@ -690,3 +690,33 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): accept any `Signer…` label, require exactly one distinct certificate, and print apksigner's signer lines when that fails.
 - Regression test added: none because CI shell step; parse checked locally against both label styles
 - Verified on prod:
+
+### BUG-045: The FNA price refresh asks Yahoo for `MEUD`, which isn't a Yahoo symbol — 404 every 30 minutes
+- Status: OPEN — needs the owner's data change (HANDOFF-09)
+- Severity: S4
+- Area/spec: fna / 001
+- Env found: prod (backend log, 2026-10-01)
+- Coverage rows: 001-FR-portfolio-prices
+- Steps to reproduce:
+  1. `kubectl -n jordylab logs deploy/backend | grep "Could not fetch price"` → `MEUD: 404 Not Found … symbol may be delisted`, every 30 min. The portfolio has `BTC` (price present) and `MEUD` (no price).
+- Expected (cite spec/story): every position shows its last price.
+- Actual (logs/screenshot, secrets redacted): `MEUD` never gets a price. Yahoo knows the exchange-qualified symbol `MEUD.PA` (Amundi Core Stoxx Europe 600 UCITS ETF Acc, 309.7 on 2026-10-01), not `MEUD`.
+- Root cause: the position's ticker was entered without its exchange suffix. It's the owner's own portfolio row, so the agent doesn't edit it.
+- Fix (PR / commit / tag): owner edits the ticker to `MEUD.PA` on the Portfolio page (HANDOFF-09). Optional later: the portfolio form could hint that tickers need a Yahoo suffix.
+- Regression test added: none because data fix
+- Verified on prod:
+
+### BUG-046: SpringDoc API docs and Swagger UI are enabled in prod
+- Status: FIXING — PR `fix/e2e-prod-hygiene`
+- Severity: S4
+- Area/spec: shared / 008
+- Env found: prod (backend startup warnings, 2026-10-01)
+- Coverage rows: 008-FR-019
+- Steps to reproduce:
+  1. Backend start log: "SpringDoc /v3/api-docs endpoint is enabled by default. To disable it in production, set `springdoc.api-docs.enabled=false`" (same for `/swagger-ui.html`).
+- Expected (cite spec/story): nothing in prod advertises the API surface.
+- Actual (logs/screenshot, secrets redacted): both endpoints are on. The public gateway only routes `/api` to the backend, so they are not reachable from the internet today (the SPA answers instead), but a routing change would expose them.
+- Root cause: SpringDoc defaults, never switched off for prod.
+- Fix (PR / commit / tag): `SPRINGDOC_API_DOCS_ENABLED=false` and `SPRINGDOC_SWAGGER_UI_ENABLED=false` in the prod `backend-config` ConfigMap.
+- Regression test added: none because deploy configuration; verify the startup warnings are gone after the next release
+- Verified on prod:
