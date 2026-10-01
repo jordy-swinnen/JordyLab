@@ -1,7 +1,8 @@
 spring:
   autoconfigure:
-    # pgvector's VectorStore needs an EmbeddingModel; the Ollama starter used to supply one silently. Nothing uses a
-    # VectorStore yet (no RAG/semantic search), so it stays off until a feature needs it (spec 011 BUG-009).
+    # pgvector's VectorStore needs an EmbeddingModel, which a since-removed local-LLM starter supplied silently.
+    # Nothing uses a VectorStore yet (no RAG/semantic search), so it stays off until a feature needs it: then remove
+    # this exclusion and configure an embedding model (spec 011 BUG-009; see AGENTS.md → Shared Gotchas).
     exclude: org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
   servlet:
     multipart:

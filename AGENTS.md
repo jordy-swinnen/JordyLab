@@ -125,6 +125,7 @@ present in the repo.
 ## Shared Gotchas
 
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
+- Spring AI's pgvector `VectorStore` auto-configuration is excluded in `jordylab-be/src/main/resources/application.yaml` (nothing uses it and no embedding model is configured). A RAG/semantic-search feature must remove that exclusion and configure an `EmbeddingModel`
 - NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off
 
 ## Secrets
