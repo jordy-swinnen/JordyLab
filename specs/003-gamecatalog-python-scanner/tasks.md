@@ -53,7 +53,7 @@ description: "Task list for Game Catalog Python Scanner (replaces the shell scan
 - [x] T024 [US1] `lock.py`: cross-process lock
 - [x] T025 [US1] `config.py` + `paths.py`: explicit roots, per-OS defaults incl. Flatpak Steam
 - [x] T026 [US2] `manifest.py`: symlink-safe walk, realpath dedupe, NFC, digest
-- [x] T027 [US2] `payload.py`: canonical digest + 1 MB guard
+- [x] T027 [US2] `payload.py`: canonical digest + payload-size guard (1 MB originally, 8 MiB since spec 011 BUG-047)
 - [x] T028 [US1/US2] `api.py`: timeouts, TLS on, exit-code mapping
 - [x] T029 [US1] `__main__.py` CLI
 - [x] T030 [US1] `status.py`

@@ -61,8 +61,8 @@ import static org.mockito.Mockito.when;
 @ApplicationModuleTest
 @Testcontainers
 @TestPropertySource(properties = {
-        "jordylab.gamecatalog.scan.max-games-per-source=10000",
-        "jordylab.gamecatalog.scan.max-payload-bytes=1048576",
+        "jordylab.gamecatalog.scan.max-games-per-source=50000",
+        "jordylab.gamecatalog.scan.max-payload-bytes=8388608",
         "jordylab.gamecatalog.scan.max-manifest-bytes-per-source=262144",
         "jordylab.gamecatalog.artwork.dir=/tmp/module-test-artwork",
         "jordylab.gamecatalog.artwork.max-bytes=2097152",

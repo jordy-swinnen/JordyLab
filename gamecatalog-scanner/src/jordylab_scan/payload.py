@@ -4,7 +4,8 @@ import datetime
 
 from .manifest import compute_digest, nfc
 
-# Roughly 100 bytes per path row: 8 MiB carries ~80,000 files, matching the server's 50,000-game limit.
+# The estimate is ~100 bytes per path row, so 8 MiB carries ~80,000 files. The server allows 50,000 games per source;
+# a source with many multi-file games (bin/cue, m3u) can exceed 8 MiB first — the clear error then says so.
 MAX_PAYLOAD_BYTES = 8 * 1024 * 1024
 
 

@@ -85,7 +85,7 @@ A `REJECTED` response looks like:
 | `reason` value | When |
 |---------------|------|
 | `PAYLOAD_TOO_LARGE` | Combined `paths` + `manifestContents` exceeded the byte cap. |
-| `TOO_MANY_GAMES` | Parsed game count exceeded `jordylab.gamecatalog.scan.max-games-per-source`. |
+| `TOO_MANY_GAMES` | Parsed game count exceeded `jordylab.gamecatalog.scan.max-games-per-source` (default 50,000). |
 
 A body that is not parseable JSON, or that fails `@Valid` (e.g. blank `hostname`), never reaches `ScanService`: Spring rejects it with `400 Bad Request` before any `REJECTED` outcome is produced.
 

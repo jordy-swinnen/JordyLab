@@ -49,6 +49,16 @@ def test_build_payload_rejects_oversize_body():
         build_payload("EMUDECK", "host", "2026-01-01T00:00:00Z", entries, games=games)
 
 
+def test_build_payload_accepts_a_large_library_under_the_cap():
+    # BUG-047: ~20,000 files overran the old 1 MiB cap on JordyBox's EmuDeck library.
+    entries = [ScanEntry(f"roms/snes/Game {i:05d} (Europe) (Rev 1).sfc", 1, 0) for i in range(20_000)]
+
+    body, _ = build_payload("EMUDECK", "host", "2026-01-01T00:00:00Z", entries)
+
+    assert len(body["paths"]) == 20_000
+    assert MAX_PAYLOAD_BYTES == 8 * 1024 * 1024
+
+
 def test_build_check_body_includes_machine_id():
     body = build_check_body("STEAM", "host", "sha256:abc", "m1")
 

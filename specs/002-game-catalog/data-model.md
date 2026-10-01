@@ -123,7 +123,7 @@ otherwise ───────────────────────�
 | Key | Default | Purpose |
 |-----|---------|---------|
 | `ingest.token` | `${GAMECATALOG_INGEST_TOKEN:}` | bearer credential (blank = fail-closed 503) |
-| `ingest.max-games-per-source` | 10000 | payload bound (FR-003) |
+| `scan.max-games-per-source` (`jordylab.gamecatalog.scan`) | 50000 (10000 until spec 011 BUG-047) | payload bound (FR-003); `scan.max-payload-bytes` is 8 MiB (1 MB until BUG-047) |
 | `artwork.dir` | `/var/jordylab/artwork` | local upload storage (Docker volume) |
 | `artwork.max-bytes` | 2097152 | upload cap (2 MB) |
 | `artwork.external-lookup-enabled` | true | Steam CDN / libretro probing toggle |

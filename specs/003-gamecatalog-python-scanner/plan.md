@@ -22,7 +22,7 @@ Replace the downloaded shell script with a resident Python client, and extend th
 
 **Target Platform**: Linux (CachyOS, systemd user units) and macOS (LaunchAgent); the backend on local dev / VPS
 
-**Constraints**: No administrator/root; no inbound connections to scanning machines; TLS verification always on; payload limit unchanged (1 MB, decompressed) — compression deferred; client must never read file contents to decide whether to scan
+**Constraints**: No administrator/root; no inbound connections to scanning machines; TLS verification always on; payload limit 8 MiB (was 1 MB until spec 011 BUG-047, decompressed) — compression deferred; client must never read file contents to decide whether to scan
 
 **Scale/Scope**: single user; up to ~10k files per library; 2 grouping categories beyond Steam VDF (`.m3u`, `.cue`/`.gdi`/`.chd`)
 
