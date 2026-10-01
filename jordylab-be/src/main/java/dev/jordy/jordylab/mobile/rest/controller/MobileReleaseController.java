@@ -10,6 +10,7 @@ import dev.jordy.jordylab.mobile.service.NoReleasesPublishedException;
 import dev.jordy.jordylab.mobile.service.ReleaseNotFoundException;
 import dev.jordy.jordylab.mobile.service.SigningCertMismatchException;
 import dev.jordy.jordylab.mobile.service.VersionCodeNotMonotonicException;
+import dev.jordy.jordylab.mobile.util.InvalidApkException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -77,6 +78,11 @@ public class MobileReleaseController {
     @ExceptionHandler(ReleaseNotFoundException.class)
     public ResponseEntity<ErrorBody> handleReleaseNotFound(ReleaseNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorBody("RELEASE_NOT_FOUND"));
+    }
+
+    @ExceptionHandler(InvalidApkException.class)
+    public ResponseEntity<ErrorBody> handleInvalidApk(InvalidApkException exception) {
+        return ResponseEntity.badRequest().body(new ErrorBody("INVALID_APK"));
     }
 
     @ExceptionHandler(SigningCertMismatchException.class)

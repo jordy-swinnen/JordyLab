@@ -89,6 +89,11 @@ tasks.withType<Test> {
     // @ApplicationModuleTest) need a valid profile active or EnvironmentProfileGuard fails them
     // fast, per FR-002. "local" matches how the app actually runs outside prod.
     systemProperty("spring.profiles.active", "local")
+    // Test-only values, set here rather than in src/test/resources/application.yaml: a file with that name
+    // replaces the main application.yaml on the test classpath, so tests never saw the real shared config
+    // (spec 011 BUG-035).
+    systemProperty("spring.ai.anthropic.api-key", "test-key-not-used")
+    systemProperty("spring.ai.anthropic.chat.options.model", "claude-sonnet-5")
 }
 
 // The Spring Boot bootstrap class is a single `main` method delegating to

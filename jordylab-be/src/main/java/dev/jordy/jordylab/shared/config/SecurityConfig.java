@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.shared.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -49,6 +50,10 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(authorize -> authorize
+                // Let Spring's error dispatch through: otherwise every exception (oversized upload,
+                // unmapped error) is forwarded to /error, hits denyAll and reaches the client as a bare
+                // 403 that hides the real status (spec 011, release v0.0.1-rc1 APK upload).
+                .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                     .requestMatchers("/actuator/metrics/**").hasRole("admin")
                 .requestMatchers("/h2-console/**").permitAll()

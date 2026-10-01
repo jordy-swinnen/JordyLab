@@ -1,4 +1,9 @@
 spring:
+  servlet:
+    multipart:
+      # Signed release APKs are uploaded by CI (POST /api/mobile/releases); Spring's 1 MB default rejects them.
+      max-file-size: 200MB
+      max-request-size: 210MB
   application:
     name: jordylab-be
   datasource:
@@ -35,6 +40,14 @@ spring:
        resourceserver:
          jwt:
            issuer-uri: ${KEYCLOAK_URL}/realms/jordylab
+
+server:
+  error:
+    # /error is reachable now (SecurityConfig permits DispatcherType.ERROR), so never expose internals in it.
+    include-message: never
+    include-stacktrace: never
+    include-exception: false
+    include-binding-errors: never
 
 management:
   endpoints:
