@@ -736,3 +736,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): payload cap 8 MiB (client + server default + yaml), games per source 50,000; frozen client regenerated; ingest contract updated. A request is still bounded.
 - Regression test added: `GameCatalogPropertiesTest` (new defaults); client checked with 20,000 entries (accepted) and an oversize payload (still rejected). Verified on prod: after rc6 the owner reruns the EmuDeck scan (HANDOFF-11).
 - Verified on prod:
+
+### BUG-048: Two overlapping scans of the same source fail one of them with a duplicate-key 500
+- Status: FIXED locally — release pending (`fix/e2e-concurrent-scan`)
+- Severity: S3
+- Area/spec: gamecatalog / 003
+- Env found: prod (backend log, 2026-10-01 22:50:55Z; the owner's EmuDeck rescan was started twice in a row)
+- Coverage rows: 003-FR-idempotency
+- Steps to reproduce:
+  1. Start a scan of a source; while it is still enriching (one long transaction, ~40 s with 8 AI calls) submit the same scan again.
+- Expected (cite spec/story): the second scan waits, then answers `NO_CHANGE`; no scan ends in an error.
+- Actual (logs/screenshot, secrets redacted): the second scan inserts the same installations and dies with `duplicate key … uq_game_installation_source_ref` (HTTP 500); for a brand-new source the same race hits `scan_source_source_key_key`.
+- Root cause: `ScanService.submitScan` is one long `@Transactional`; the idempotency hash is only visible after the first transaction commits, so a concurrent scan sees nothing and re-creates the rows.
+- Fix (PR / commit / tag): `ScanLock` takes a Postgres transaction-scoped advisory lock per host + library type at the start of `submitScan`; the second scan blocks until the first commits, then sees the stored hash and answers `NO_CHANGE`.
+- Regression test added: `GameCatalogModuleTest.aSecondScanOfTheSameSourceWaitsForTheFirstInsteadOfFailingOnDuplicateKeys` (fails with `DataIntegrityViolationException` without the lock, passes with it); `ScanServiceTest` constructor updated.
+- Verified on prod:
