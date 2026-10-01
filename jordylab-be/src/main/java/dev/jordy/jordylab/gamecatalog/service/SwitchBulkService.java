@@ -69,7 +69,7 @@ public class SwitchBulkService {
                 added.add(item.igdbGameId() != null
                         ? switchGameService.addFromIgdb(single)
                         : switchGameService.addManual(single));
-            } catch (IllegalStateException duplicate) {
+            } catch (SwitchGameAlreadyPresentException duplicate) {
                 alreadyPresent.add(item.line());
             } catch (IllegalArgumentException invalid) {
                 log.info("Switch bulk add skipped '{}': {}", item.line(), invalid.getMessage());

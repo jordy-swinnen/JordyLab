@@ -11,6 +11,7 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameUpdateRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchSearchResult;
 import dev.jordy.jordylab.gamecatalog.service.SwitchBulkService;
+import dev.jordy.jordylab.gamecatalog.service.SwitchGameAlreadyPresentException;
 import dev.jordy.jordylab.gamecatalog.service.SwitchGameNotFoundException;
 import dev.jordy.jordylab.gamecatalog.service.SwitchGameService;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -205,7 +207,7 @@ class SwitchGameControllerTest {
     @Test
     void addingAGameAlreadyOnTheSwitchIsAConflict() throws Exception {
         when(switchGameService.addManual(eq(new SwitchGameRequest(null, "Pikmin 4", InstallationFormat.PHYSICAL))))
-                .thenThrow(new IllegalStateException("Switch installation already exists"));
+                .thenThrow(new SwitchGameAlreadyPresentException("Switch installation already exists"));
 
         mockMvc.perform(post("/api/gamecatalog/switch/games")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -222,5 +224,20 @@ class SwitchGameControllerTest {
 
         mockMvc.perform(delete("/api/gamecatalog/switch/games/" + gameId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aMissingVirtualSwitchSourceStaysAServerError() throws Exception {
+        when(switchGameService.addManual(eq(new SwitchGameRequest(null, "Pikmin 4", InstallationFormat.PHYSICAL))))
+                .thenThrow(new IllegalStateException("Virtual Switch source is missing"));
+
+        // Not mapped to 409: MockMvc rethrows unhandled exceptions, which a real server answers with 500.
+        assertThatThrownBy(() -> mockMvc.perform(post("/api/gamecatalog/switch/games")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Pikmin 4", "format": "PHYSICAL"}
+                                """)))
+                .hasRootCauseInstanceOf(IllegalStateException.class)
+                .hasRootCauseMessage("Virtual Switch source is missing");
     }
 }

@@ -173,11 +173,25 @@ class SwitchBulkServiceTest {
                 InstallationFormat.PHYSICAL);
         when(switchGameService.findSwitchGameId("Pikmin 4", 111L)).thenReturn(Optional.empty());
         when(switchGameService.addFromIgdb(new SwitchGameRequest(111L, "Pikmin 4", InstallationFormat.PHYSICAL)))
-                .thenThrow(new IllegalStateException("Switch installation already exists"));
+                .thenThrow(new SwitchGameAlreadyPresentException("Switch installation already exists"));
 
         SwitchBulkConfirmResponse summary = bulkService.confirm(new SwitchBulkConfirmRequest(List.of(item)));
 
         assertThat(summary.alreadyPresent()).containsExactly("Pikmin 4");
+    }
+
+    @Test
+    void confirmDoesNotHideAServerMisconfigurationAsAlreadyPresent() {
+        SwitchBulkConfirmRequest.Item item = new SwitchBulkConfirmRequest.Item("Pikmin 4", 111L, null,
+                InstallationFormat.PHYSICAL);
+        when(switchGameService.findSwitchGameId("Pikmin 4", 111L)).thenReturn(Optional.empty());
+        when(switchGameService.addFromIgdb(new SwitchGameRequest(111L, "Pikmin 4", InstallationFormat.PHYSICAL)))
+                .thenThrow(new IllegalStateException("Virtual Switch source is missing"));
+        SwitchBulkConfirmRequest request = new SwitchBulkConfirmRequest(List.of(item));
+
+        assertThatThrownBy(() -> bulkService.confirm(request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Virtual Switch source is missing");
     }
 
     private static SwitchSearchResult aResult(long igdbGameId, String title) {

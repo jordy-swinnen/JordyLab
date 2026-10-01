@@ -104,7 +104,7 @@ entries remain.
 
 **Response** `403 Forbidden` for guests.
 
-## Future endpoints
+## Bulk add (US3)
 
 ### `POST /api/gamecatalog/switch/bulk/preview`
 
@@ -146,7 +146,7 @@ Add the ticked lines (US3 AS2). Each line runs the single-add flow in its own tr
 
 IGDB calls are paced to IGDB's 4 requests/second, so a 40-line preview takes roughly 10 seconds.
 
-### Search scope
+## Search scope
 
 `/search` and the bulk preview return IGDB `game_type` main game, standalone expansion, remake, remaster, expanded
 game and port (spec 011 BUG-042); DLC, bundles, mods, episodes, seasons, packs and updates are excluded.

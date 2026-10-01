@@ -225,7 +225,7 @@ public class SwitchGameService {
         Optional<GameInstallation> existing = installationRepository.findBySourceIdAndExternalRef(source.getId(),
                 game.getId().toString());
         if (existing.isPresent()) {
-            throw new IllegalStateException("Switch installation already exists for game " + game.getId());
+            throw new SwitchGameAlreadyPresentException("Switch installation already exists for game " + game.getId());
         }
     }
 

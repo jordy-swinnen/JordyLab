@@ -205,17 +205,18 @@ scans.
 
 ### Tests for User Story 3
 
-- [x] T041 [P] [US3] Unit test for `SwitchGameService.bulkPreview` (match / no-match / already-present / duplicate line
-  collapse) in `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameServiceTest.java`
+- [x] T041 [P] [US3] Unit test for the bulk preview (match / no-match / already-present / duplicate line
+  collapse) in `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/SwitchBulkServiceTest.java` (built as a
+  separate `SwitchBulkService`; `SwitchGameServiceTest` covers its `findSwitchGameId` helper)
 - [x] T042 [P] [US3] `@WebMvcTest` for `POST /switch/bulk/preview` and `POST /switch/bulk/confirm` in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/SwitchGameControllerTest.java`
 
 ### Implementation for User Story 3
 
 - [x] T043 [US3] Implement bulk preview logic (line normalisation, per-line IGDB search, duplicate detection, status
-  classification) in `SwitchGameService`
+  classification) in `SwitchBulkService` (separate service so each confirmed line runs in its own transaction)
 - [x] T044 [US3] Implement bulk confirm logic (add selected lines via US1/US2 flows, produce added/skipped/already-present
-  summary) in `SwitchGameService`
+  summary) in `SwitchBulkService`
 - [x] T045 [US3] Add `POST /switch/bulk/preview` and `POST /switch/bulk/confirm` endpoints in
   `SwitchGameController`
 - [x] T046 [US3] Create `switch-bulk-dialog` container + view components (paste textarea, review table with

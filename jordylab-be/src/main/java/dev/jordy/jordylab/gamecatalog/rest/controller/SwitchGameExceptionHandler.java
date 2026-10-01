@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
+import dev.jordy.jordylab.gamecatalog.service.SwitchGameAlreadyPresentException;
 import dev.jordy.jordylab.gamecatalog.service.SwitchGameNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -24,8 +25,8 @@ public class SwitchGameExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ProblemDetail handleDuplicate(IllegalStateException exception) {
+    @ExceptionHandler(SwitchGameAlreadyPresentException.class)
+    public ProblemDetail handleDuplicate(SwitchGameAlreadyPresentException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     }
 }
