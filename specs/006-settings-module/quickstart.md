@@ -8,7 +8,7 @@ Interfaces: [settings-users-api](contracts/settings-users-api.md) · [settings-a
 
 ## Prerequisites
 
-- Podman + the compose stack (`jordylab-be/compose.yaml`): pgvector + Keycloak 26.3.2
+- Podman + the compose stack (`jordylab-be/compose.yaml`): pgvector + Keycloak 26.7.4 (26.3.2 until spec 011 BUG-019)
 - Env for the backend: `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, plus the existing compose vars; optional
   `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN` (US7); optional overrides: `JORDYLAB_GUEST_CHAT_DAILY_LIMIT`,
   `OPENROUTER_BASE_URL`
