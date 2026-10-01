@@ -93,7 +93,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-006: Production runbook points at moved files and wrong CNPG names
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-docs-runbook-review-prompt`
 - Severity: S4
 - Area/spec: docs / 008
 - Env found: both
@@ -105,12 +105,12 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 008 FR-018 — runbook covers deploy, rollback, logs accurately.
 - Actual (logs/screenshot, secrets redacted): commands fail or target nothing when copied.
 - Root cause: `deploy/k8s/bootstrap/` split and CNPG rename after the runbook was written.
-- Fix (PR / commit / tag):
+- Fix (PR / commit / tag): `docs/runbook.md`: ClusterIssuer and CI RBAC paths point at `deploy/k8s/bootstrap/`; the log commands name the real CNPG pod (`cnpg-cluster-1` in `jordylab`) and the operator (`cnpg-cloudnative-pg` in `cnpg-system`). The §20 "fix while you are in deploy-prod.yml" list was already gone.
 - Regression test added: none because docs-only
-- Verified on prod:
+- Verified on prod: verified: `deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml` and `ci-deploy-rbac.yaml` exist; `kubectl -n jordylab logs cnpg-cluster-1 -c postgres` works (2026-10-01)
 
 ### BUG-007: Claude PR review prompt references a file that does not exist
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-docs-runbook-review-prompt`
 - Severity: S4
 - Area/spec: CI / —
 - Env found: both
@@ -120,9 +120,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): review reads the real convention sources (`.specify/memory/constitution.md`, `.claude/rules/*`, `gamecatalog-scanner/AGENTS.md`).
 - Actual (logs/screenshot, secrets redacted): stale reference.
 - Root cause: file removed/renamed after the workflow was written.
-- Fix (PR / commit / tag):
+- Fix (PR / commit / tag): `.github/workflows/claude-pr-review.yml` now lists `gamecatalog-scanner/AGENTS.md`, `garmin-sync-service/AGENTS.md` and `.claude/rules/*.md` instead of the missing `coding-master-prompt.md`.
 - Regression test added: none because workflow prompt only
-- Verified on prod:
+- Verified on prod: verified on the PR that carries it: the review reads the listed files (all exist)
 
 ### BUG-008: One-tag release flow (runbook §20) is not implemented
 - Status: DEPLOYED — first release `v0.0.1-rc1` went through verify → retag → draft release → approved deploy → publish (DEPLOY-05); only the APK publish failed (401 from Keycloak for mobile-release-ci, fix PR #46 + secret sync by Jordy)
