@@ -65,6 +65,7 @@ public class NtfyClient {
                 request = request.header(HttpHeaders.AUTHORIZATION, "Bearer " + ntfy.token());
             }
             request.body(body).retrieve().toBodilessEntity();
+            // Titles are fixed strings ("New JordyLab sign-up"); never put names or emails in a title — it is logged.
             log.info("Ntfy notification sent: '{}'", title);
         } catch (RestClientException exception) {
             log.warn("Ntfy publish failed for '{}': {}", title, exception.getMessage());

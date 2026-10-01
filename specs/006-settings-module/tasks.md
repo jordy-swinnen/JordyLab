@@ -326,22 +326,14 @@ registry).
 **Independent Test**: Register a new account → the admin's Ntfy push arrives within the poll interval with name +
 email (quickstart scenario 11)
 
-- [x] T041 [US7] (superseded by spec 007: `mobile/rest/client/NtfyClient` is the only Ntfy sender) Create `NtfyClient` in
-  `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/NtfyClient.java` — `POST {base-url}/{topic}` with
-  title/body (+ optional `Authorization` token header; never logged); WireMock test incl. graceful failure (notification
-  failure must not break anything, but is logged — no silent failure)
-- [x] T042 [US7] (built as `PendingSignupWatcherService` → `UserSignUpPending` event, spec 007 FR-016) Implement `PendingSignupNotifierService` in
-  `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/PendingSignupNotifierService.java` —
-  `@Scheduled(fixedDelay)` poll (configurable, default 5 min) of the pending list via
-  `KeycloakUserAdministrationService`, diff against the last-seen pending set, push on new arrivals; complete no-op when
-  Ntfy unconfigured (research D8); tests with injected `Clock` + mocked client/deps
+- [x] T041 [US7] **SUPERSEDED** (superseded by spec 007: `mobile/rest/client/NtfyClient` is the only Ntfy sender) — ~~Create `NtfyClient` in `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/NtfyClient.java` — `POST {base-url}/{topic}` with title/body (+ optional `Authorization` token header; never logged); WireMock test incl. graceful failure (notification failure must not break anything, but is logged — no silent failure)~~
+- [x] T042 [US7] **SUPERSEDED** (built as `PendingSignupWatcherService` → `UserSignUpPending` event, spec 007 FR-016) — ~~Implement `PendingSignupNotifierService` in `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/PendingSignupNotifierService.java` — `@Scheduled(fixedDelay)` poll (configurable, default 5 min) of the pending list via `KeycloakUserAdministrationService`, diff against the last-seen pending set, push on new arrivals; complete no-op when Ntfy unconfigured (research D8); tests with injected `Clock` + mocked client/deps
 
 ---
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-**Purpose**: Docs, generated artifacts, and full validation across all stories
-
+**Purpose**: Docs, generated artifacts, and full validation across all stories~~
 - [ ] T043 [P] Update docs: root `AGENTS.md` (remove Ollama/WireGuard guidance, rewrite the AI-routing table —
   OpenRouter primary per feature + Anthropic `claude-sonnet-5` fallback, MVP1 status; flag/update "Hetzner VPS" →
   OVHcloud), `jordylab-be/AGENTS.md` (new "Settings model (feature 006 — settings module)" section — note the label
