@@ -698,6 +698,26 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | A13 | Running images | PASS | backend/frontend/keycloak `sha-e167de8834a1…` = latest green Build |
 | — | CNPG / backups | FAIL → PASS | cluster healthy, WAL archiving OK; no base backup / drill at first (BUG-023); 2026-10-01 daily backup + restore drill passed |
 | — | `assetlinks.json` | NOTE | `package_name: ""`, fingerprint `""` — Android App Links can't verify until 007 T052 (keystore) is done → Q-06 |
+
+
+**Re-run 2026-10-01 on `v0.0.1-rc6`** (no login needed; supersedes the two FAILs above):
+
+| # | Check | Result | Evidence |
+|---|-------|--------|----------|
+| A1 | DNS | PASS | `57.129.163.110` |
+| A2 | TLS | PASS | Let's Encrypt, CN/SAN `jordylab.be`, expires 2026-12-29 |
+| A3 | HTTP → HTTPS | PASS | `301 → https://jordylab.be/` |
+| A4 | Security headers | PASS | `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `server: nginx` (no version); CSP still open (follow-up to BUG-021) |
+| A5 | Deep links | PASS | `/games/grid`, `/settings/ai-models` → 200 app shell |
+| A6 | Compression / caching | PASS | `index.html` gzip + `no-cache`; `main-*.js` gzip + `public, max-age=31536000, immutable` |
+| A7 | favicon / manifest | PASS | `favicon.svg` 200 (`/favicon.ico` 404, harmless); manifest `application/manifest+json` |
+| A8 | OIDC issuer | PASS | `https://jordylab.be/auth/realms/jordylab` |
+| A9 | Unauthenticated API | PASS | `/api/gamecatalog/games` 401, no body |
+| A10 | CORS | PASS | `evil.example` → no `Access-Control-Allow-Origin`; `https://localhost` → allowed |
+| A11 | Pods | PASS | 5/5 Running, 0 restarts |
+| A13 | Images | PASS | backend/frontend/keycloak `:v0.0.1-rc6` |
+| — | `assetlinks.json` | PASS | `package_name: be.jordylab.app`, release fingerprint `1B:02:13:85:…` (BUG-020/029 fixed) |
+| — | Rollback / roll-forward | PASS | DEPLOY-11 |
 | A12 | Browser console per route | TODO | needs HANDOFF-01 (admin session) |
 
 ### B. Auth, roles and Settings
@@ -909,6 +929,29 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Running images: `:v0.0.1-rc3`
 - Prod re-verification: BUG-033 (approve) verified; assetlinks served; daily + manual backups completed
 - Outcome: deployed; no regression
+
+#### DEPLOY-08
+- Release: `v0.0.1-rc4` on `69f7c6a` (PRs #51–#54), run 36848803968
+- Jobs: verify ✅ · retag ×3 ✅ · release ✅ · deploy ✅ (standing approval) · publish ✅ · apk ❌ (digest parse, BUG-044)
+- Contains Flyway migration: no · realm change: no · config change: no
+- Outcome: deployed; no regression. BUG-039 (CORS PATCH) verified on prod.
+
+#### DEPLOY-09
+- Release: `v0.0.1-rc5` on `61d0cce` (PRs #55–#65), run 36884797915
+- Jobs: verify ✅ · retag ×3 ✅ · release ✅ · deploy ✅ · publish ✅ · apk ❌ (apksigner prints no signer lines for a v2-only APK, BUG-044)
+- Contains Flyway migration: no · realm change: no · secret change: yes (`NTFY_TOPIC`, added by the owner, HANDOFF-07) · config change: yes (SpringDoc off, Spring AI 2.0.1, OpenRouter routing)
+- Prod re-verification: OpenRouter answers chat calls; MEUD price; ntfy `messages_published` 0 → 2
+- Outcome: deployed; no regression
+
+#### DEPLOY-10
+- Release: `v0.0.1-rc6` on `c0e60a4` (PRs #62, #66, #67), run 36922530895
+- Jobs: all ✅ including `apk` and `publish`; the APK is on prod (versionCode 106)
+- Contains Flyway migration: no · realm change: no · config change: no
+- Outcome: deployed; no regression
+
+#### DEPLOY-11 — rollback test (T041)
+- `deploy-prod.yml -f version=v0.0.1-rc5` (run 36923228664): rc5 images back on all three deployments, rollout complete, 5/5 pods Running, `/` 200, `/api/**` 401, OIDC discovery 200. Then rolled forward to rc6 (run 36923517831), same checks.
+- Outcome: rollback and roll-forward both work in ~5 min each; no data touched (no migration in either).
 
 ## 10. NOT TESTABLE
 

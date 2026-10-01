@@ -199,7 +199,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 
 - [ ] T039 [US4] Triage `docs/testing/bug-log.md`: order S1 → S4; S1s first, then T040, then S2s in already-built
   flows, then T041–T048, then S3/S4 (research R11, plan Phase 2)
-- [ ] T040 [US4] Release-flow bug (branch `fix/e2e-release-flow`, research R11): add
+- [x] T040 [US4] Release-flow bug (branch `fix/e2e-release-flow`, research R11): add
   `.github/workflows/release.yml` (on `v*`: verify commit on `main` + green Build, retag `sha-<sha>` → `vX.Y.Z`,
   `gh release create --generate-notes`, deploy via `production` environment); change
   `.github/workflows/deploy-prod.yml` (drop `workflow_run`, input `sha` → `version`, tags from `${VERSION}`, pin
@@ -209,7 +209,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
   `.opencode/agents/jordylab-devops.md`, and research R8 in this spec. Validate with `actionlint` if available.
   ⚠️ **GATE**: CI/config change — deploy pauses for Jordy; the first `v0.0.1-rc1` tag push and the GitHub rulesets
   (tag + `main` branch) are HANDOFF items, never changed by the agent
-- [ ] T041 [US4] After T040 is live: prove it once — Jordy (or the agent, if he agreed in T015's question) pushes
+- [x] T041 [US4] After T040 is live: prove it once — Jordy (or the agent, if he agreed in T015's question) pushes
   `v0.0.1-rc1`; verify retag (no rebuild), release notes, approved deploy, running tags `v0.0.1-rc1`; then roll back
   once via *Run workflow* with the previous version and forward again; record in plan §9
 - [x] T042 [US4] Ollama-removal bug (branch `fix/e2e-remove-ollama`, FR-012c, 006 T025 pre-approved): remove
@@ -219,22 +219,22 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
   (drop Ollama host + WireGuard lines), Reference Docs and Shared Gotchas Ollama rows; check `.claude/rules/` and
   `.opencode/` copies; `./gradlew build` green; `grep -ri ollama` outside `specs/` returns nothing; tick 006 T025,
   T043 (Ollama parts), T045 in `specs/006-settings-module/tasks.md`
-- [ ] T043 [US4] 006 US4 bug (branch `fix/e2e-settings-ai-routing`): implement `specs/006-settings-module/tasks.md`
+- [x] T043 [US4] 006 US4 bug (branch `fix/e2e-settings-ai-routing`): implement `specs/006-settings-module/tasks.md`
   T024, T026–T030 exactly as written there (Spring AI 2.0.1 GA, `AiFeature`, `ResilientAiService` rewrite with red
   test first, call sites, `AiModelResolver`); tick them in that file
-- [ ] T044 [US4] 006 US5 bug (branch `fix/e2e-settings-user-menu`): implement 006 T031–T033 (`UserMenuComponent`,
+- [x] T044 [US4] 006 US5 bug (branch `fix/e2e-settings-user-menu`): implement 006 T031–T033 (`UserMenuComponent`,
   shell header, AIA password update verified against local Keycloak)
-- [ ] T045 [US4] 006 US6 bug (branch `fix/e2e-settings-ai-models`, depends on T043): implement 006 T034–T040
+- [x] T045 [US4] 006 US6 bug (branch `fix/e2e-settings-ai-models`, depends on T043): implement 006 T034–T040
   (entities + repositories via `/entity`, Flyway migration via `/flyway-migration` in the `settings` schema,
   `AiModelSettingsService`, `OpenRouterModelCatalogClient`, controller, frontend store via `/angular-signal-store`,
   AI Models page + route). ⚠️ **GATE**: contains a Flyway migration → deploy pauses for Jordy; needs OpenRouter
   secret present in prod (handoff answer)
-- [ ] T046 [US4] 006 US7 bug (branch `fix/e2e-settings-signup-notify`): implement 006 T041–T042 (`NtfyClient`,
+- [x] T046 [US4] 006 US7 bug (branch `fix/e2e-settings-signup-notify`): implement 006 T041–T042 (`NtfyClient`,
   `PendingSignupNotifierService`)
-- [ ] T047 [US4] 009 US4 + US2 remainder bug (branch `fix/e2e-switch-detail`): implement 009 T027–T029, T032–T034,
+- [x] T047 [US4] 009 US4 + US2 remainder bug (branch `fix/e2e-switch-detail`): implement 009 T027–T029, T032–T034,
   T039–T040 as written in `specs/009-switch-games/tasks.md`
-- [ ] T048 [US4] 009 US3 bulk add bug (branch `fix/e2e-switch-bulk-add`): implement 009 T041–T047
-- [ ] T049 [US4] 009 US5 remainder bug (branch `fix/e2e-switch-edit-remove`): implement 009 T052–T053
+- [x] T048 [US4] 009 US3 bulk add bug (branch `fix/e2e-switch-bulk-add`): implement 009 T041–T047
+- [x] T049 [US4] 009 US5 remainder bug (branch `fix/e2e-switch-edit-remove`): implement 009 T052–T053
 - [ ] T050 [US4] Deploy + verify each merged batch per `contracts/deployment-record.md`: state the record; if any of
   migration/realm/secret-config is "yes" → ⚠️ **GATE**; else find the pending run (`gh run list --workflow deploy-prod.yml`,
   or `release.yml` after T041) and approve via `gh api …/pending_deployments` with a comment naming the BUG IDs; if
