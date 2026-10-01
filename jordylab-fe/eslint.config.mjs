@@ -19,7 +19,11 @@ export default [
         'error',
         {
           enforceBuildableLibDependency: true,
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
+          allow: [
+            '^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
+            // shared Tailwind theme at the workspace root, required by each app's tailwind.config.js
+            '^.*/tailwind\\.theme\\.js$',
+          ],
           depConstraints: [
             {
               sourceTag: 'type:api',

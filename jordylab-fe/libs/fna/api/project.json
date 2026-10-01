@@ -10,7 +10,7 @@
       "executor": "@nx/vitest:test",
       "outputs": ["{options.reportsDirectory}"],
       "options": {
-        "reportsDirectory": "../../../coverage/libs/fna/api"
+        "reportsDirectory": "{projectRoot}/../../../coverage/libs/fna/api"
       }
     },
     "lint": {

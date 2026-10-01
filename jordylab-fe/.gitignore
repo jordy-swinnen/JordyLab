@@ -47,3 +47,7 @@ lerna-debug.log*
 
 vitest.config.*.timestamp*
 __screenshots__/
+
+.claude/worktrees
+.nx/polygraph
+.nx/self-healing
