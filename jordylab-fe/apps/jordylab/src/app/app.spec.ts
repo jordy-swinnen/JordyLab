@@ -105,6 +105,7 @@ describe('App', () => {
 
     spectator.click(triggers[1]);
     const signOut = document.querySelector<HTMLElement>('[data-testid="user-menu-sign-out"]');
+    expect(signOut).not.toBeNull();
     signOut?.click();
     // onLogout() awaits the (mocked) biometric-unlock wipe before auth.logout() — one microtask hop.
     await Promise.resolve();

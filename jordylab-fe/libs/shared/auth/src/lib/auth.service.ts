@@ -31,15 +31,15 @@ function realmRolesFrom(tokenParsed: KeycloakTokenParsed | undefined): string[] 
   return roles.filter((role): role is string => typeof role === 'string');
 }
 
+/** Keycloak application-initiated actions a user may start on their own account (006 US5). */
+export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL';
+
 /**
  * Wraps the official `keycloak-js` SDK behind Angular signals. Every deployable app
  * (`jordylab`, and the `fna`/`gamecatalog` standalone dev harnesses) provides its own
  * {@link AUTH_CONFIG} and uses this same service, so each authenticates against the real
  * Keycloak realm independently rather than relying on a host shell to hold the only session.
  */
-/** Keycloak application-initiated actions a user may start on their own account (006 US5). */
-export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL';
-
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   #config = inject(AUTH_CONFIG);

@@ -240,6 +240,8 @@ user's name and email.
   changed at next login, shown once to the admin to share out-of-band).
 - **FR-007**: There MUST always be at least one admin; removing the last one MUST be blocked.
 - **FR-008**: Every user MUST be able to change their own password, name and email without admin help.
+  *(Implementation note, spec 011 BUG-011: email is the username in this realm, so Keycloak 26.4+ changes it only
+  through the `UPDATE_EMAIL` action, which the realm must enable — see `deploy/keycloak/README.md`.)*
 - **FR-009**: Each guest MUST have a daily limit of 20 chat messages, resetting each calendar day at midnight. The count
   MUST survive a backend restart. The admin is exempt.
 - **FR-010**: Admin-only service credentials used to manage users MUST never reach the browser.

@@ -264,8 +264,9 @@ new details (quickstart scenario 6)
 - [x] T032 [US5] Replace the static sign-out button with the user menu in the shell header (desktop + mobile) in
   `jordylab-fe/apps/jordylab/src/app/app.html` + `app.ts`; update `jordylab-fe/apps/jordylab/src/app/app.spec.ts` (menu
   renders for any authenticated user — admin and guest)
-- [ ] T033 [US5] Verify AIA live against the real Keycloak 26.3 (quickstart scenario 6): `UPDATE_PASSWORD`
-  re-authentication flow, `UPDATE_PROFILE` name + email change, and the email-as-username username-sync caveat (keycloak
+- [ ] T033 [US5] Verify AIA live against the real Keycloak 26.7 (quickstart scenario 6): `UPDATE_PASSWORD`
+  re-authentication flow, `UPDATE_PROFILE` name change, `UPDATE_EMAIL` email change (needs the realm action enabled —
+  spec 011 BUG-011 / HANDOFF-06), and the email-as-username username-sync caveat (keycloak
   #13988/#16679 — research §4.3); record the verified outcome (and any workaround) in
   `specs/006-settings-module/research.md` §4
 

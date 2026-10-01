@@ -217,7 +217,6 @@ export class App {
     );
   });
 
-
   async onLogout(): Promise<void> {
     // Explicit wipe, not left to the next failed refresh (FR-012) — a no-op when biometric
     // unlock was never enabled.
