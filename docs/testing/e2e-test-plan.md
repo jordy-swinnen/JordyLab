@@ -715,7 +715,9 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | A9 | Unauthenticated API | PASS | `/api/gamecatalog/games` 401, no body |
 | A10 | CORS | PASS | `evil.example` → no `Access-Control-Allow-Origin`; `https://localhost` → allowed |
 | A11 | Pods | PASS | 5/5 Running, 0 restarts |
+| A12 | Browser pass, every route | PASS (local) / BLOCKED (prod) | local, admin: 9 routes render, 0 console errors, 306 requests all 2xx, no overflow at 375 px, no unnamed buttons/unlabeled inputs; prod needs a signed-in session → MRB-01 |
 | A13 | Images | PASS | backend/frontend/keycloak `:v0.0.1-rc6` |
+| — | CNPG / backups | PASS | cluster healthy; restore drill passed (runbook §15, 1 min 55 s); daily + manual base backups completed |
 | — | `assetlinks.json` | PASS | `package_name: be.jordylab.app`, release fingerprint `1B:02:13:85:…` (BUG-020/029 fixed) |
 | — | Rollback / roll-forward | PASS | DEPLOY-11 |
 | A12 | Browser console per route | TODO | needs HANDOFF-01 (admin session) |
@@ -940,6 +942,7 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Release: `v0.0.1-rc5` on `61d0cce` (PRs #55–#65), run 36884797915
 - Jobs: verify ✅ · retag ×3 ✅ · release ✅ · deploy ✅ · publish ✅ · apk ❌ (apksigner prints no signer lines for a v2-only APK, BUG-044)
 - Contains Flyway migration: no · realm change: no · secret change: yes (`NTFY_TOPIC`, added by the owner, HANDOFF-07) · config change: yes (SpringDoc off, Spring AI 2.0.1, OpenRouter routing)
+- Gate checklist (`contracts/deployment-record.md`): sensitive-change pause applied — the secret change was made by the owner himself (HANDOFF-07) and approved by him; no migration or realm change.
 - Prod re-verification: OpenRouter answers chat calls; MEUD price; ntfy `messages_published` 0 → 2
 - Outcome: deployed; no regression
 
