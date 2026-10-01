@@ -23,6 +23,14 @@ class ApkSigningCertificateReaderTest {
     }
 
     @Test
+    void readsSha256FingerprintFromAnApkSignedOnlyWithSchemeV2AndV3() {
+        SignedApkFixture fixture = new SignedApkFixture(tempDir);
+
+        assertThat(ApkSigningCertificateReader.sha256Fingerprint(fixture.v2v3SignedApk()))
+                .isEqualToIgnoringCase(fixture.sha256Fingerprint());
+    }
+
+    @Test
     void rejectsUnsignedApk() {
         Path unsignedApk = tempDir.resolve("unsigned.apk");
 

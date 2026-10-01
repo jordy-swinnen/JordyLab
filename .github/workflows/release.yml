@@ -185,28 +185,21 @@ jobs:
             -PjordylabVersionName="$VERSION_NAME" \
             -PjordylabKeystoreFile="$(pwd)/release.keystore"
 
-      # Same check the backend makes on upload (FR-003), done here first so a wrong key or a missing v1
-      # signature fails the build with a clear message (spec 011 BUG-037). The expected certificate is the
-      # public value from the prod backend-config, so there is one source of truth.
+      # Same check the backend makes on upload (FR-003, apksig ApkVerifier there), done here first so an unsigned
+      # APK or a wrong key fails the build with a clear message (spec 011 BUG-037). The expected certificate is
+      # the public value from the prod backend-config, so there is one source of truth.
       - name: Verify the APK signature
         working-directory: jordylab-fe/apps/jordylab-mobile/android
         run: |
           apksigner="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
           [ -x "$apksigner" ] || { echo "::error::apksigner not found under \$ANDROID_HOME/build-tools — the runner image no longer ships the Android SDK"; exit 1; }
           apk=app/build/outputs/apk/release/app-release.apk
+          # Fails (non-zero) unless the APK carries a valid signature for every platform it supports (v2/v3 here).
           report="$("$apksigner" verify --verbose --print-certs "$apk")"
-          # The backend reads the v1 (JAR) signature with java.util.jar, so check for exactly what it needs: a
-          # signature file plus a signature block in META-INF/. (apksigner judges v1 against the APK's minSdk 29,
-          # where v1 is irrelevant, so its "Verified using v1 scheme" line is not a reliable signal here.)
-          command -v unzip >/dev/null || { echo "::error::unzip is not installed on the runner"; exit 1; }
-          meta_inf="$(unzip -Z1 "$apk" 'META-INF/*' 2>/dev/null || true)"
-          echo "META-INF entries:"; echo "$meta_inf"
-          grep -q -E '^META-INF/[^/]+\.SF$' <<<"$meta_inf" && grep -q -E '^META-INF/[^/]+\.(RSA|EC|DSA)$' <<<"$meta_inf" \
-            || { echo "::error::APK has no v1 (JAR) signature files in META-INF/ — the backend can't verify it (BUG-037)"; exit 1; }
           actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$report" | tr '[:lower:]' '[:upper:]')"
           expected="$(sed -n 's/^ *- MOBILE_RELEASE_SIGNING_CERT_SHA256=//p' "$GITHUB_WORKSPACE/deploy/k8s/overlays/prod/kustomization.yaml" | tr '[:lower:]' '[:upper:]')"
           [ -n "$expected" ] && [ "$actual" = "$expected" ] || { echo "::error::APK signed with $actual, expected $expected (backend-config)"; exit 1; }
-          echo "APK signature OK: v1 + certificate $actual"
+          echo "APK signature OK: certificate $actual"
 
       - name: Remove the decoded keystore
         if: always()
