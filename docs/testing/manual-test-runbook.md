@@ -71,7 +71,8 @@ password manager or from the app, never from this file.
   1. On JordyBox, download the current client (admin login) from `https://jordylab.be/api/gamecatalog/ingest/client` and save it as `jordylab-scan-prod.py` → expect: the file contains `MAX_PAYLOAD_BYTES = 8 * 1024 * 1024`.
   2. `python3 jordylab-scan-prod.py scan` for the EmuDeck library → expect: `EMUDECK scan APPLIED: {"submitted": N, "added": N, …}` — no "payload exceeds" error.
   3. In the app: Library → host filter → expect: a host for JordyBox with the ROM platforms.
-  4. Run the scan a second time → expect: "unchanged, nothing uploaded".
+  4. Run the scan a second time → expect: "unchanged, nothing uploaded" (exit 0 — `NO_CHANGE` is success, not a failure).
+  5. Optional (BUG-048): start the scan in two terminals at the same time → expect: one prints `APPLIED` (or `NO_CHANGE`), the other waits and prints `NO_CHANGE`; neither ends in an HTTP 500.
 - Pass when: the EmuDeck games are in the catalog and the rescan is a no-op.
 - If it fails: send the last lines of the output; add `BUG-<next>` (a new cap error means the library is larger than 50,000 games or 8 MiB).
 - Record result: 003 rows `PASS`; set BUG-047 to `VERIFIED-PROD`.

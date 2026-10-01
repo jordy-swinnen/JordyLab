@@ -723,7 +723,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the SpringDoc startup warnings are gone from the backend log; `/v3/api-docs` and `/swagger-ui.html` answer the SPA shell publicly, as before
 
 ### BUG-047: EmuDeck scan of a large ROM library fails with "scan payload exceeds 1048576 bytes"
-- Status: DEPLOYED in `v0.0.1-rc6` — needs the owner's EmuDeck rescan on JordyBox (MRB-03)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog / 003
 - Env found: prod, JordyBox (reported by the owner, 2026-10-01; Steam scan on the same machine succeeded)
@@ -735,10 +735,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the 1 MiB cap (client `MAX_PAYLOAD_BYTES` and server `max-payload-bytes`) counts ~100 bytes per path, so it holds ~11,000 files; the server's `max-games-per-source` was 10,000. A big EmuDeck library (multi-file games) exceeds both.
 - Fix (PR / commit / tag): payload cap 8 MiB (client + server default + yaml), games per source 50,000; frozen client regenerated; ingest contract updated. A request is still bounded.
 - Regression test added: `GameCatalogPropertiesTest` (new defaults); client checked with 20,000 entries (accepted) and an oversize payload (still rejected). Verified on prod: after rc6 the owner reruns the EmuDeck scan (HANDOFF-11).
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc7`: the owner's EmuDeck rescan on JordyBox applied (148 installations on `cachyos-htpc`, 68 Steam); a rerun answered `NO_CHANGE` (exit 0).
 
 ### BUG-048: Two overlapping scans of the same source fail one of them with a duplicate-key 500
-- Status: FIXED locally — release pending (`fix/e2e-concurrent-scan`)
+- Status: DEPLOYED in `v0.0.1-rc8` (PR #74) — a live double-scan on JordyBox is optional (MRB-03 step 5)
 - Severity: S3
 - Area/spec: gamecatalog / 003
 - Env found: prod (backend log, 2026-10-01 22:50:55Z; the owner's EmuDeck rescan was started twice in a row)
@@ -748,6 +748,6 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): the second scan waits, then answers `NO_CHANGE`; no scan ends in an error.
 - Actual (logs/screenshot, secrets redacted): the second scan inserts the same installations and dies with `duplicate key … uq_game_installation_source_ref` (HTTP 500); for a brand-new source the same race hits `scan_source_source_key_key`.
 - Root cause: `ScanService.submitScan` is one long `@Transactional`; the idempotency hash is only visible after the first transaction commits, so a concurrent scan sees nothing and re-creates the rows.
-- Fix (PR / commit / tag): `ScanLock` takes a Postgres transaction-scoped advisory lock per host + library type at the start of `submitScan`; the second scan blocks until the first commits, then sees the stored hash and answers `NO_CHANGE`.
+- Fix (PR / commit / tag): PR #74, `v0.0.1-rc8` — `ScanLock` takes a Postgres transaction-scoped advisory lock per host + library type at the start of `submitScan`; the second scan blocks until the first commits, then sees the stored hash and answers `NO_CHANGE`.
 - Regression test added: `GameCatalogModuleTest.aSecondScanOfTheSameSourceWaitsForTheFirstInsteadOfFailingOnDuplicateKeys` (fails with `DataIntegrityViolationException` without the lock, passes with it); `ScanServiceTest` constructor updated.
 - Verified on prod:
