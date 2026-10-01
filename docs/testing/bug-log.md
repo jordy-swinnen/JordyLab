@@ -292,7 +292,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a (local)
 
 ### BUG-019: Keycloak test container version drifts from production
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-keycloak-version`
 - Severity: S4
 - Area/spec: backend tests / 006, 008
 - Env found: local
@@ -302,8 +302,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): integration tests run against the same major/minor Keycloak as prod.
 - Actual (logs/screenshot, secrets redacted): 4 minor versions apart.
 - Root cause: image pin not updated with the prod upgrade.
-- Fix (PR / commit / tag):
-- Regression test added:
+- Fix (PR / commit / tag): `KeycloakIntegrationTest` and local `compose.yaml` on `quay.io/keycloak/keycloak:26.7.4`, the version prod builds from (`deploy/containers/keycloak/Containerfile`) and `KeycloakAdminClientRealmExportIntegrationTest` already uses.
+- Regression test added: none because version alignment; `RoleMatrixTest` (6) + `GuestChatLimitIntegrationTest` (1) pass on 26.7.4
 - Verified on prod: n/a
 
 ### BUG-020: Scanner client downloaded from production embeds `http://localhost:8180` as its Keycloak URL
