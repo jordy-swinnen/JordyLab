@@ -54,6 +54,17 @@ class AiFeatureModelSettingTest {
     }
 
     @Test
+    void markCreatedAnnouncesAFirstChoiceLikeAnyChange() {
+        AiFeatureModelSetting setting = AiFeatureModelSettingTestBuilder.aDefaultAiFeatureModelSetting();
+
+        setting.markCreated();
+
+        Collection<Object> events = ReflectionTestUtils.invokeMethod(setting, "domainEvents");
+        assertThat(events).containsExactly(new AiFeatureModelSettingUpdated(
+                AiFeatureModelSettingTestBuilder.DEFAULT_FEATURE_KEY, AiFeatureModelSettingTestBuilder.DEFAULT_MODEL_ID));
+    }
+
+    @Test
     void updateModelRejectsABlankModel() {
         AiFeatureModelSetting setting = AiFeatureModelSettingTestBuilder.aDefaultAiFeatureModelSetting();
 

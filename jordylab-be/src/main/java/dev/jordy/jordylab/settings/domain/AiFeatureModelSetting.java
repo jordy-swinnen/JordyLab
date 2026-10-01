@@ -48,6 +48,11 @@ public class AiFeatureModelSetting extends BaseEntity<AiFeatureModelSetting> {
         registerEvent(new AiFeatureModelSettingUpdated(featureKey, newModelId));
     }
 
+    /** Announces a first-time choice, so the resolver cache is dropped after the commit like for any change. */
+    public void markCreated() {
+        registerEvent(new AiFeatureModelSettingUpdated(featureKey, modelId));
+    }
+
     public static class AiFeatureModelSettingBuilder {
         public AiFeatureModelSetting build() {
             Preconditions.checkArgument(StringUtils.hasText(featureKey), "featureKey is required");

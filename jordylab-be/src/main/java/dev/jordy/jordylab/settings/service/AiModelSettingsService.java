@@ -80,7 +80,11 @@ public class AiModelSettingsService implements AiModelResolver {
                 .toList();
     }
 
-    @Transactional
+    /**
+     * Validates against the gateway catalog first — a network call that must not hold a database connection — then
+     * saves in a short transaction. The resolver cache is dropped by {@link #onSettingUpdated} after that commits,
+     * for a first choice and for a change alike.
+     */
     public void saveModel(String featureKey, String modelId, String updatedBy) {
         AiFeature feature = AiFeature.fromKey(featureKey).orElseThrow(UnknownAiFeatureException::new);
         if (!StringUtils.hasText(modelId)) {
@@ -93,15 +97,18 @@ public class AiModelSettingsService implements AiModelResolver {
             throw new ModelUnavailableException();
         }
 
-        Optional<AiFeatureModelSetting> existing = settingRepository.findByFeatureKey(feature.key());
-        if (existing.isPresent()) {
-            existing.get().updateModel(trimmed, updatedBy);
-            settingRepository.save(existing.get());
-        } else {
-            settingRepository.save(AiFeatureModelSetting.builder()
-                    .featureKey(feature.key()).modelId(trimmed).updatedBySubject(updatedBy).build());
-            resolvedModels.remove(feature);
-        }
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            Optional<AiFeatureModelSetting> existing = settingRepository.findByFeatureKey(feature.key());
+            if (existing.isPresent()) {
+                existing.get().updateModel(trimmed, updatedBy);
+                settingRepository.save(existing.get());
+            } else {
+                AiFeatureModelSetting created = AiFeatureModelSetting.builder()
+                        .featureKey(feature.key()).modelId(trimmed).updatedBySubject(updatedBy).build();
+                created.markCreated();
+                settingRepository.save(created);
+            }
+        });
     }
 
     @TransactionalEventListener
