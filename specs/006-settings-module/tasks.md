@@ -282,35 +282,35 @@ flagging (spec US6, FR-014/FR-015/FR-016)
 **Independent Test**: Change the game-description feature's model, trigger one enrichment → the result records the new
 model, no restart (quickstart scenario 7, SC-003)
 
-- [ ] T034 [P] [US6] Create `AiFeatureModelSetting` + `AiFeatureLastRun` entities + repositories
+- [x] T034 [P] [US6] Create `AiFeatureModelSetting` + `AiFeatureLastRun` entities + repositories
   per [data-model.md](data-model.md) in `jordylab-be/src/main/java/dev/jordy/jordylab/settings/domain/` (canonical
   `/entity` structure, `updateModel` mutation registering `AiFeatureModelSettingUpdated`); entity tests + TestBuilders
   via `/test-builder` in `jordylab-be/src/test/java/dev/jordy/jordylab/settings/domain/`
-- [ ] T035 [US6] Implement `AiModelSettingsService` in
+- [x] T035 [US6] Implement `AiModelSettingsService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/AiModelSettingsService.java` —
   `@Primary AiModelResolver` (setting row → cached effective model, else config default; cache invalidated on
   `AiFeatureModelSettingUpdated`), `AiCallCompleted` listener upserting `AiFeatureLastRun` (injected `Clock`); unit
   tests (resolution precedence, invalidation on update, listener upsert incl. failure reasons)
-- [ ] T036 [US6] Create `OpenRouterModelCatalogClient` in
+- [x] T036 [US6] Create `OpenRouterModelCatalogClient` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/OpenRouterModelCatalogClient.java` — keyless
   `GET {jordylab.ai.gateway.base-url}/models`, TTL cache, trim to text-output chat models (exclude `~` aliases),
   per-MTok pricing (×1M, `"-1"` → null), `expiration_date` → expiring flag; WireMock tests (list shape, cache TTL,
   unreachable → stale-or-`GATEWAY_CATALOG_UNAVAILABLE`, never a silent empty list)
-- [ ] T037 [US6] Implement `SettingsAiModelsController` + records in
+- [x] T037 [US6] Implement `SettingsAiModelsController` + records in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/controller/`
   per [contracts/settings-ai-models-api.md](contracts/settings-ai-models-api.md) — `GET /api/settings/ai-models` (
   registry + effective/default/fallback models + availability flag + last run), `GET …/catalog?search=&vendor=` (trimmed
   list + `fetchedAt`/`fresh`), `PUT …/{featureKey}` (`UNKNOWN_FEATURE`/`BLANK_MODEL`/`MODEL_UNAVAILABLE`
   -only-when-fresh); MockMvc tests in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/controller/SettingsAiModelsControllerTest.java`
-- [ ] T038 [P] [US6] Create the frontend AI-models surface in `jordylab-fe/libs/settings/api/src/lib/` — catalog +
+- [x] T038 [P] [US6] Create the frontend AI-models surface in `jordylab-fe/libs/settings/api/src/lib/` — catalog +
   feature models, `ai-models.store.ts` per `/angular-signal-store` (features, catalog with search/vendor filter, save
   action, stale metadata); mock factories + specs per `/angular-test`
-- [ ] T039 [US6] Build the AI Models page in `jordylab-fe/libs/settings/ui/src/lib/ai-models-page/` —
+- [x] T039 [US6] Build the AI Models page in `jordylab-fe/libs/settings/ui/src/lib/ai-models-page/` —
   container/presentation: one row per feature (current model, read-only fallback, last-run line, "model unavailable"
   flag), model picker dialog/panel (vendor-grouped, search, price/context per MTok), stale-catalog hint; specs with
   store mock
-- [ ] T040 [US6] Add the "AI Models" child route + nav item under Settings (
+- [x] T040 [US6] Add the "AI Models" child route + nav item under Settings (
   `jordylab-fe/libs/settings/ui/src/lib/settings.routes.ts` + `jordylab-fe/apps/jordylab/src/app/app.ts`/`app.spec.ts`);
   prove SC-003 in `SettingsModuleTest`: save a model via the API → next `ResilientAiService` call uses it without
   restart (mocked model beans, explicit captor)

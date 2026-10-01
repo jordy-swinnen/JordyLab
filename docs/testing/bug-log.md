@@ -186,7 +186,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-012: 006 US6 missing — no per-feature AI model selection (AI Models page)
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-settings-ai-models` (stacked on `fix/e2e-settings-ai-routing`)
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: both
@@ -196,8 +196,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 006 US6 — choose a model per AI feature; applies on the next call.
 - Actual (logs/screenshot, secrets redacted): feature absent.
 - Root cause: story not implemented; depends on BUG-010.
-- Fix (PR / commit / tag): planned batch `fix/e2e-settings-ai-models` (T045) — includes a Flyway migration → deploy pauses for Jordy.
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-settings-ai-models` — `AiFeatureModelSetting`/`AiFeatureLastRun` entities on the existing `settings` tables (**no new migration** — `V20260928003` already created them, so no deploy pause), `AiModelSettingsService` (`@Primary AiModelResolver`, cache dropped on `AiFeatureModelSettingUpdated`, `AiCallCompleted` → last run in its own transaction), keyless `OpenRouterModelCatalogClient` (TTL cache, stale-on-outage, loud when empty), `/api/settings/ai-models` (list, catalog, PUT), Settings → AI Models page.
+- Regression test added: entity tests (11), `OpenRouterModelCatalogClientTest` (5), `AiModelSettingsServiceTest` (12), `SettingsAiModelsControllerTest` (5), `AiModelSelectionIntegrationTest` (SC-003 on Postgres: the next call uses the saved model, last run recorded), `ai-models.store.spec` (7), `ai-models-page.component.spec` (5); local E2E 2026-10-01 against the real catalog: list → picker → save → revert
 - Verified on prod:
 
 ### BUG-013: 006 US7 missing — no Ntfy push when someone signs up

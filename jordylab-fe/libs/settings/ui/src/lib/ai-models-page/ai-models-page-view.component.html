@@ -1,0 +1,133 @@
+<div class="flex flex-col gap-3.5">
+  <div class="eyebrow">Settings · AI Models</div>
+  <h2 class="page-title">AI Models</h2>
+  <p class="max-w-2xl text-sm text-muted-foreground">
+    Each AI feature calls its own model through the OpenRouter gateway. If that fails, the call is retried once on
+    Anthropic. A new choice applies from the next call.
+  </p>
+</div>
+
+@if (error()) {
+  <div class="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+    {{ error() }}
+  </div>
+}
+
+@if (loading()) {
+  <div class="mt-10 space-y-3" aria-label="Loading AI features">
+    @for (row of [1, 2, 3, 4]; track row) {
+      <hlm-skeleton class="h-24 w-full rounded-2xl" />
+    }
+  </div>
+} @else {
+  <ul class="mt-10 flex flex-col gap-3" aria-label="AI features">
+    @for (feature of features(); track feature.key) {
+      <li data-testid="ai-feature" class="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border p-5">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 class="text-base font-semibold">{{ feature.displayName }}</h3>
+            <span hlmBadge variant="secondary">{{ feature.moduleName }}</span>
+            @if (!feature.modelAvailable) {
+              <span hlmBadge variant="destructive" data-testid="model-unavailable">Model unavailable — using fallback</span>
+            }
+          </div>
+          <p class="mt-1 text-sm text-muted-foreground">{{ feature.description }}</p>
+          <p class="mt-3 font-mono text-sm" data-testid="current-model">{{ feature.currentModel }}</p>
+          <p class="mt-1 text-xs text-muted-foreground">
+            Fallback: {{ feature.fallbackModel }}
+            @if (feature.currentModel !== feature.defaultModel) {
+              · default {{ feature.defaultModel }}
+            }
+          </p>
+          <p class="mt-1 text-xs text-muted-foreground" data-testid="last-run">
+            {{ lastRunLine(feature) }}
+            @if (feature.lastRun; as run) {
+              · {{ run.ranAt | date: 'medium' }}
+            }
+          </p>
+        </div>
+        <button hlmBtn variant="outline" type="button" data-testid="change-model" (click)="openPicker.emit(feature.key)">
+          Change model
+        </button>
+      </li>
+    }
+  </ul>
+}
+
+@if (pickerFeature(); as feature) {
+  <section
+    data-testid="model-picker"
+    class="mt-8 rounded-2xl border border-input p-5"
+    [attr.aria-label]="'Choose a model for ' + feature.displayName"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="text-base font-semibold">Model for {{ feature.displayName }}</h3>
+      <button hlmBtn variant="ghost" type="button" data-testid="close-picker" (click)="closePicker.emit()">Close</button>
+    </div>
+
+    @if (catalog(); as list) {
+      @if (!list.fresh) {
+        <p class="mt-2 text-xs text-muted-foreground" data-testid="stale-catalog">
+          The gateway is unreachable; showing the list from {{ list.fetchedAt | date: 'medium' }}.
+        </p>
+      }
+    }
+
+    <label for="model-search" class="mt-4 block text-sm font-medium">Search</label>
+    <input
+      id="model-search"
+      type="search"
+      class="mt-1 h-10 w-full rounded-xl border border-input bg-background px-3 text-foreground"
+      placeholder="e.g. haiku, deepseek, gpt"
+      [value]="search()"
+      (input)="searchChange.emit($any($event.target).value)"
+    />
+
+    @if (saveError()) {
+      <p class="mt-3 text-sm text-destructive" data-testid="save-error">{{ saveError() }}</p>
+    }
+    @if (catalogError()) {
+      <p class="mt-3 text-sm text-destructive">{{ catalogError() }}</p>
+    } @else if (!catalog()) {
+      <p class="mt-3 text-sm text-muted-foreground">Loading the gateway's models…</p>
+    } @else {
+      <div class="mt-4 flex max-h-[28rem] flex-col gap-5 overflow-y-auto pr-1">
+        @for (group of vendorGroups(); track group.vendor) {
+          <div>
+            <p class="mono-label mb-2">{{ group.vendor }}</p>
+            <ul class="flex flex-col gap-1.5">
+              @for (model of group.models; track model.id) {
+                <li>
+                  <button
+                    type="button"
+                    data-testid="catalog-model"
+                    class="flex w-full flex-wrap items-baseline justify-between gap-2 rounded-xl border border-border px-3 py-2 text-left hover:border-input disabled:opacity-50"
+                    [class.border-primary]="model.id === feature.currentModel"
+                    [disabled]="saving()"
+                    (click)="choose.emit(model.id)"
+                  >
+                    <span class="min-w-0">
+                      <span class="block text-sm font-medium">{{ model.name }}</span>
+                      <span class="block font-mono text-xs text-muted-foreground">{{ model.id }}</span>
+                    </span>
+                    <span class="text-xs text-muted-foreground">
+                      {{ price(model) }}
+                      @if (model.contextLength) {
+                        · {{ model.contextLength | number }} context
+                      }
+                      @if (model.expiring) {
+                        · <span class="text-destructive">expiring</span>
+                      }
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        } @empty {
+          <p class="text-sm text-muted-foreground">No model matches “{{ search() }}”.</p>
+        }
+      </div>
+    }
+  </section>
+}
