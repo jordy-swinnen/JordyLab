@@ -728,6 +728,7 @@ _Not started._
 | HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | |
 | HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
 | HANDOFF-06 | Enable `UPDATE_EMAIL` in the prod realm (one kcadm command) | — | prod | 2026-10-01 | | the agent's prod realm write was blocked by its permission classifier | 1 min | ⏳ open |
+| HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ⏳ open |
 
 ### Batch 1 (sent with the approval request)
 
@@ -784,6 +785,21 @@ _Not started._
 - Command (zsh/fish both fine):
   `kubectl --kubeconfig ~/.kube/jordylab.yaml -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh update authentication/required-actions/UPDATE_EMAIL -r jordylab -s enabled=true --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh get authentication/required-actions/UPDATE_EMAIL -r jordylab --fields alias,enabled --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'`
 - Expect: the last lines print `"alias" : "UPDATE_EMAIL"` and `"enabled" : true`. Send me "done" (or the output).
+
+#### HANDOFF-07: Give the sign-up push a topic
+- Machine: your Mac (IntelliJ) + your phone's ntfy app
+- Target env: prod
+- Why you: it's a secret; I never open or edit `secrets.sops.yaml`.
+- Steps:
+  1. Make a topic name (don't paste it anywhere): `openssl rand -hex 16`
+  2. From the repo root: `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml` → under
+     `jordylab-secrets` → `stringData` add `NTFY_TOPIC: jordylab-<that value>` → close the tab.
+  3. `sops -d deploy/k8s/overlays/prod/secrets.sops.yaml >/dev/null && echo DECRYPT_OK`
+  4. Commit it on a branch with `Refs: 011 BUG-013 HANDOFF-07` and push (or tell me "secret committed on <branch>" and
+     I'll open the PR). It ships with the next release.
+  5. In the ntfy app: add subscription → server `https://jordylab.be/ntfy` → the same topic.
+- Expect: after the deploy the backend log shows `Ntfy notifications enabled`; your phone gets "New JordyLab sign-up"
+  for the still-pending test account within 5 minutes of the backend starting. Tell me "done".
 
 ## 8. AI call tally
 
