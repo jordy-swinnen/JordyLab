@@ -571,7 +571,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-037: APK signing-certificate check only reads v1 (JAR) signatures; release builds are v2/v3-only
-- Status: FIXING — v1+v2 signing + CI check merged (PR #48); rc2's check misread apksigner's v1 line → META-INF check in PR #49; proof with v0.0.1-rc3
+- Status: FIXING — apksig reader in PR #52; proof with the next release (v0.0.1-rc4)
 - Severity: S2
 - Area/spec: mobile / 007
 - Env found: code reading (while fixing BUG-036)
@@ -580,7 +580,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   1. `ApkSigningCertificateReader` opens the APK as a verified `JarFile` (v1 scheme). AGP 8.13 with `minSdkVersion = 29` signs release builds with v2/v3 only by default.
 - Expected (cite spec/story): 007 FR-003 — every published APK's certificate is checked against the release certificate.
 - Actual (logs/screenshot, secrets redacted): a real release APK would be rejected as "APK is not signed" (the class's own javadoc notes it was never tested on a real APK).
-- Root cause: v1-only reader vs v2/v3-only signing.
-- Fix (PR / commit / tag): planned — sign release builds v1+v2 and verify with `apksigner` in the release workflow.
-- Regression test added:
+- Root cause: v1-only reader vs v2/v3-only signing. AGP ignores `enableV1Signing = true` for minSdk ≥ 24, so signing v1 as well (PR #48/#49) was not possible; rc3's CI check proved the APK had no v1 signature.
+- Fix (PR / commit / tag): PR #52 — `ApkSigningCertificateReader` uses apksig `ApkVerifier` (v1/v2/v3, checked from API 29), requires a verified APK with exactly one signer; `release.yml` verifies with `apksigner verify` + certificate digest compare. (PR #48/#49 tried v1+v2 signing and were superseded.)
+- Regression test added: `ApkSigningCertificateReaderTest` — v1-signed, v2/v3-only, two signers (rejected), tampered after signing (rejected), not an APK (rejected)
 - Verified on prod:

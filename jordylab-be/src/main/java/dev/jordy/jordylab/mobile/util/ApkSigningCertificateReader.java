@@ -1,55 +1,55 @@
 package dev.jordy.jordylab.mobile.util;
 
+import com.android.apksig.ApkVerifier;
+import com.android.apksig.apk.ApkFormatException;
 import lombok.experimental.UtilityClass;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.security.cert.Certificate;
-import java.util.Enumeration;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import java.util.List;
 
 /**
- * Reads the SHA-256 fingerprint of the certificate an APK is signed with (spec FR-003, research
- * D7). An APK is a signed JAR (Signature Scheme v1) — opening it with verification enabled and
- * fully reading one non-{@code META-INF/} entry populates {@link JarEntry#getCertificates()}
- * with the signer chain; the first certificate is the signing certificate.
+ * Reads the SHA-256 fingerprint of the certificate an APK is signed with (spec 007 FR-003, research D7).
  *
- * <p><strong>Implementation note:</strong> this has not been exercised against a real signed APK
- * in this environment (no Android SDK / build tooling available) — verify against a real release
- * build before relying on it in production.
+ * <p>Uses Google's apksig {@code ApkVerifier}, the reference implementation of every APK signature scheme
+ * (v1 JAR, v2, v3). Release builds with {@code minSdk 29} carry only v2/v3 signatures, which a plain
+ * {@link java.util.jar.JarFile} can't see (spec 011 BUG-037). Verification is checked from Android 10 (API 29,
+ * spec 007 FR-018) upwards, so the APK's own manifest isn't needed to pick the schemes.
  */
 @UtilityClass
 public class ApkSigningCertificateReader {
 
+    private static final int MIN_SUPPORTED_ANDROID_API = 29;
     private static final int HEX_RADIX = 16;
 
     public static String sha256Fingerprint(Path apkFile) {
-        try (JarFile jarFile = new JarFile(apkFile.toFile(), true)) {
-            Enumeration<JarEntry> entries = jarFile.entries();
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                if (entry.isDirectory() || entry.getName().startsWith("META-INF/")) {
-                    continue;
-                }
-                fullyRead(jarFile, entry);
-                Certificate[] certificates = entry.getCertificates();
-                if (certificates != null && certificates.length > 0) {
-                    return sha256Hex(certificates[0].getEncoded());
-                }
-            }
-            throw new InvalidApkException("APK is not signed: no signing certificate found");
-        } catch (IOException | GeneralSecurityException exception) {
+        ApkVerifier.Result result;
+        try {
+            result = new ApkVerifier.Builder(apkFile.toFile())
+                    .setMinCheckedPlatformVersion(MIN_SUPPORTED_ANDROID_API)
+                    .build()
+                    .verify();
+        } catch (IOException | ApkFormatException | NoSuchAlgorithmException | IllegalStateException exception) {
             throw new InvalidApkException("Unable to read APK signing certificate", exception);
         }
-    }
 
-    private static void fullyRead(JarFile jarFile, JarEntry entry) throws IOException {
-        try (InputStream in = jarFile.getInputStream(entry)) {
-            in.readAllBytes();
+        List<X509Certificate> signerCertificates = result.getSignerCertificates();
+        if (!result.isVerified() || signerCertificates.isEmpty()) {
+            throw new InvalidApkException("APK is not signed, or its signature does not verify");
+        }
+        // Release builds have exactly one signer; with several, "the" certificate to pin is ambiguous.
+        if (signerCertificates.size() != 1) {
+            throw new InvalidApkException("APK has " + signerCertificates.size() + " signers; expected exactly one");
+        }
+
+        try {
+            return sha256Hex(signerCertificates.getFirst().getEncoded());
+        } catch (GeneralSecurityException exception) {
+            throw new InvalidApkException("Unable to read APK signing certificate", exception);
         }
     }
 

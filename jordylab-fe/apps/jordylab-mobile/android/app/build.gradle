@@ -19,8 +19,7 @@ android {
         }
     }
     // Release signing for release.yml (keystore path via -PjordylabKeystoreFile, credentials via env so they
-    // never appear on a command line). v1 (JAR) signing stays on next to v2: minSdk 29 would otherwise sign
-    // v2/v3 only, and the backend's certificate check (ApkSigningCertificateReader) reads v1 (spec 011 BUG-037).
+    // never appear on a command line). With minSdk 29 AGP signs v2/v3 only; the backend reads those with apksig.
     signingConfigs {
         release {
             def keystoreFile = project.findProperty("jordylabKeystoreFile")
@@ -29,8 +28,6 @@ android {
                 storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
                 keyAlias System.getenv("ANDROID_KEY_ALIAS")
                 keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-                enableV1Signing true
-                enableV2Signing true
             }
         }
     }

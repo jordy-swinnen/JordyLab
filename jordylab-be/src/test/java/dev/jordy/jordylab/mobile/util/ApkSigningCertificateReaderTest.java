@@ -23,7 +23,33 @@ class ApkSigningCertificateReaderTest {
     }
 
     @Test
-    void rejectsUnsignedApk() {
+    void readsSha256FingerprintFromAnApkSignedOnlyWithSchemeV2AndV3() {
+        SignedApkFixture fixture = new SignedApkFixture(tempDir);
+
+        assertThat(ApkSigningCertificateReader.sha256Fingerprint(fixture.v2v3SignedApk()))
+                .isEqualToIgnoringCase(fixture.sha256Fingerprint());
+    }
+
+    @Test
+    void rejectsAnApkWithTwoSigners() {
+        SignedApkFixture fixture = new SignedApkFixture(tempDir);
+
+        assertThatThrownBy(() -> ApkSigningCertificateReader.sha256Fingerprint(fixture.twoSignerApk()))
+                .isInstanceOf(InvalidApkException.class)
+                .hasMessage("APK has 2 signers; expected exactly one");
+    }
+
+    @Test
+    void rejectsAnApkChangedAfterSigning() {
+        SignedApkFixture fixture = new SignedApkFixture(tempDir);
+
+        assertThatThrownBy(() -> ApkSigningCertificateReader.sha256Fingerprint(fixture.tamperedApk()))
+                .isInstanceOf(InvalidApkException.class)
+                .hasMessage("APK is not signed, or its signature does not verify");
+    }
+
+    @Test
+    void rejectsAFileThatIsNotAnApk() {
         Path unsignedApk = tempDir.resolve("unsigned.apk");
 
         assertThatThrownBy(() -> ApkSigningCertificateReader.sha256Fingerprint(unsignedApk))

@@ -23,12 +23,20 @@ configurations {
 
 repositories {
     mavenCentral()
+    // Only for com.android.tools.build:apksig (APK signature verification, spec 011 BUG-037) — Google
+    // publishes it there, not on Maven Central. Restricted to that group so nothing else resolves from it.
+    google {
+        content {
+            includeGroup("com.android.tools.build")
+        }
+    }
 }
 
 extra["springAiVersion"] = "2.0.0-M2"
 extra["springModulithVersion"] = "2.0.3"
 
 dependencies {
+    implementation("com.android.tools.build:apksig:8.13.2")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")

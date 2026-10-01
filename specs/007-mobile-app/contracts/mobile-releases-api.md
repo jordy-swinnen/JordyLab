@@ -94,7 +94,8 @@ Server-side, in order:
 0. The upload may be at most **200 MB** (request 210 MB, `spring.servlet.multipart`) — larger → `413` (added
    2026-10-01, spec 011 BUG-036; Spring's 1 MB default had rejected every APK).
 1. Compute the APK's SHA-256 and its signing-certificate SHA-256. A file that is not a readable, signed APK →
-   `400 INVALID_APK` (spec 011 BUG-036; the reader expects a v1 JAR signature, which release builds carry — BUG-037).
+   `400 INVALID_APK` (spec 011 BUG-036). The certificate is read with Google's apksig `ApkVerifier`, so v1, v2 and v3 signatures all
+   work (release builds are v2/v3-only, spec 011 BUG-037); the APK must verify and have exactly one signer.
 2. Signing-cert SHA-256 must equal the one fixed, configured value (`jordylab.mobile.release.signing-cert-sha256`) —
    mismatch → `400 SIGNING_CERT_MISMATCH`, nothing persisted, uploaded file discarded (spec Edge Cases — "an APK
    signed with a different key" is refused before it ever reaches a device).
