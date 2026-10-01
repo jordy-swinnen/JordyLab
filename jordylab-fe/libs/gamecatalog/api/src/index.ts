@@ -4,6 +4,8 @@ export { GameChatStore } from './lib/game-chat.store';
 export { GameDetailStore } from './lib/game-detail.store';
 export { GAME_LIBRARY_PAGE_SIZE, GameLibraryStore } from './lib/game-library.store';
 export { ScanSourceStore } from './lib/scan-source.store';
+export { SwitchBulkStore } from './lib/switch-bulk.store';
+export type { SwitchBulkRow } from './lib/switch-bulk.store';
 export { SwitchGameStore } from './lib/switch-game.store';
 export type {
   ArtworkStatus,
@@ -33,6 +35,11 @@ export type {
   SwitchGameFormat,
   SwitchSearchResult,
   SwitchGameResponse,
+  SwitchBulkStatus,
+  SwitchBulkLine,
+  SwitchBulkPreview,
+  SwitchBulkItem,
+  SwitchBulkSummary,
 } from './lib/gamecatalog.models';
 export { aAttachedGameMock } from './lib/mocks/attached-game.model.mock';
 export { aChatAnswerMock } from './lib/mocks/chat-answer.model.mock';
@@ -44,4 +51,5 @@ export { aGamesPageMock } from './lib/mocks/games-page.model.mock';
 export { aScanSourceMock } from './lib/mocks/scan-source.model.mock';
 export { aLibrarySyncRunMock } from './lib/mocks/library-sync-run.model.mock';
 export { aLibraryStatusMock } from './lib/mocks/library-status.model.mock';
+export { aSwitchBulkLineMock } from './lib/mocks/switch-bulk-line.model.mock';
 export { aSwitchSearchResultMock } from './lib/mocks/switch-search-result.model.mock';

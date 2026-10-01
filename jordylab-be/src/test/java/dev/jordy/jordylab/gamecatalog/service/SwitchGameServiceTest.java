@@ -186,6 +186,32 @@ class SwitchGameServiceTest {
     }
 
     @Test
+    void findSwitchGameIdMatchesByIgdbIdOnlyWhenTheGameIsOnTheSwitch() {
+        givenSwitchSource();
+        Game existing = Game.builder().id(GAME_ID).platform("Nintendo Switch").igdbGameId("111")
+                .title("Mario Kart 8 Deluxe").titleSource(TitleSource.MANUAL).build();
+        when(gameRepository.findByPlatformAndIgdbGameId("Nintendo Switch", "111")).thenReturn(Optional.of(existing));
+        when(installationRepository.findBySourceIdAndExternalRef(SOURCE_ID, GAME_ID.toString()))
+                .thenReturn(Optional.of(GameInstallation.builder().game(existing).source(switchSource())
+                        .externalRef(GAME_ID.toString()).firstSeenAt(NOW).lastSeenAt(NOW).build()));
+
+        assertThat(switchGameService.findSwitchGameId("MK8 Deluxe", 111L)).contains(GAME_ID);
+    }
+
+    @Test
+    void findSwitchGameIdFallsBackToTheTitleAndIgnoresGamesNotOnTheSwitch() {
+        givenSwitchSource();
+        Game sameTitle = Game.builder().id(GAME_ID).platform("Nintendo Switch").title("Pikmin 4")
+                .titleSource(TitleSource.MANUAL).build();
+        when(gameRepository.findByPlatformAndLowercaseTitle("Nintendo Switch", "pikmin 4", PageRequest.of(0, 1)))
+                .thenReturn(List.of(sameTitle));
+        when(installationRepository.findBySourceIdAndExternalRef(SOURCE_ID, GAME_ID.toString()))
+                .thenReturn(Optional.empty());
+
+        assertThat(switchGameService.findSwitchGameId("pikmin 4", null)).isEmpty();
+    }
+
+    @Test
     void addManualCreatesCustomGameWithPlaceholderArtwork() {
         givenSwitchSource();
         when(gameRepository.findByPlatformAndLowercaseTitle("Nintendo Switch", "My Custom Game",

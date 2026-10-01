@@ -21,6 +21,38 @@ export interface SwitchSearchResult {
   bannerUrl: string | null;
 }
 
+/** Review status of one pasted line in a Switch bulk add (009 US3). */
+export type SwitchBulkStatus = 'MATCH' | 'NO_MATCH' | 'ALREADY_PRESENT' | 'NEEDS_REVIEW';
+
+/** POST /api/gamecatalog/switch/bulk/preview: one reviewed line; nothing is saved yet. */
+export interface SwitchBulkLine {
+  line: string;
+  status: SwitchBulkStatus;
+  /** IGDB matches, best first. */
+  candidates: SwitchSearchResult[];
+  existingGameId: string | null;
+  /** Ticked by default. */
+  include: boolean;
+}
+
+export interface SwitchBulkPreview {
+  lines: SwitchBulkLine[];
+}
+
+/** One ticked line sent to POST /api/gamecatalog/switch/bulk/confirm; without igdbGameId it is added by title. */
+export interface SwitchBulkItem {
+  line: string;
+  igdbGameId: number | null;
+  title: string | null;
+  format: SwitchGameFormat;
+}
+
+export interface SwitchBulkSummary {
+  added: SwitchGameResponse[];
+  alreadyPresent: string[];
+  skipped: { line: string; reason: string }[];
+}
+
 /** PATCH /api/gamecatalog/switch/games/{id}: change the format and/or relink to another IGDB game (009 switch-api). */
 export interface SwitchGameUpdate {
   format?: SwitchGameFormat;

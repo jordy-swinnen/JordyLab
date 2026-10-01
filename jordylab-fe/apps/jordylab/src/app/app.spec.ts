@@ -59,6 +59,7 @@ describe('App', () => {
       'Library',
       'Chat',
       'Sources',
+      'Switch games',
       'Articles',
       'Portfolio',
       'Briefing',
@@ -78,6 +79,7 @@ describe('App', () => {
       '/games/grid',
       '/games/chat',
       '/games/sources',
+      '/games/switch',
       '/fna/articles',
       '/fna/portfolio',
       '/fna/briefing',
@@ -85,7 +87,7 @@ describe('App', () => {
     ]);
   });
 
-  it('shows a guest only the Game Catalog library and chat, with Sources, FNA and Settings hidden', () => {
+  it('shows a guest only the Game Catalog library and chat, with Sources, Switch games, FNA and Settings hidden', () => {
     const links = spectator
       .queryAll('nav a')
       .map((link) => link.textContent?.trim());

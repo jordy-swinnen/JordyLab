@@ -41,6 +41,13 @@ public class IgdbClient {
     private static final int MAX_SEARCH_RESULTS = 10;
     private static final int MAX_MODE_ROWS = 500;
     private static final long NINTENDO_SWITCH_PLATFORM_ID = 130L;
+    /**
+     * IGDB {@code game_type}s a Switch library holds: main game (0), standalone expansion (4), remake (8),
+     * remaster (9), expanded game (10) and port (11). Main games alone missed Switch staples such as
+     * Mario Kart 8 Deluxe (expanded game) and every port (spec 011 BUG-042); DLC, bundles, mods, episodes,
+     * seasons, packs and updates stay out.
+     */
+    static final String SWITCH_GAME_TYPES = "(0,4,8,9,10,11)";
 
     @Value("${IGDB_CLIENT_ID:}")
     String clientId;
@@ -57,11 +64,19 @@ public class IgdbClient {
     @Value("${jordylab.gamecatalog.igdb.timeout-ms:5000}")
     int timeoutMs;
 
+    /**
+     * Minimum gap between two IGDB calls. IGDB allows 4 requests per second per client and answers 429 beyond that;
+     * a Switch bulk add (spec 009 US3) makes one search per pasted line, so calls are paced here, for every caller.
+     */
+    @Value("${jordylab.gamecatalog.igdb.min-interval-ms:260}")
+    long minIntervalMs;
+
     private final ObjectMapper objectMapper;
 
     private RestClient restClient;
     private volatile String accessToken;
     private volatile Instant tokenExpiresAt;
+    private long lastCallNanos;
 
     @PostConstruct
     void init() {
@@ -109,7 +124,8 @@ public class IgdbClient {
         String apicalypse = "search \"" + escapeQuery(query) + "\"; "
                 + "fields name,first_release_date,genres.name,involved_companies.company.name,"
                 + "cover.image_id,artworks.image_id; "
-                + "where platforms = (" + NINTENDO_SWITCH_PLATFORM_ID + ") & version_parent = null & game_type = 0; "
+                + "where platforms = (" + NINTENDO_SWITCH_PLATFORM_ID + ") & version_parent = null & game_type = "
+                + SWITCH_GAME_TYPES + "; "
                 + "limit " + MAX_SEARCH_RESULTS + ";";
         JsonNode response = post("/games", apicalypse);
         if (response == null || !response.isArray()) {
@@ -307,7 +323,20 @@ public class IgdbClient {
         }
     }
 
+    private synchronized void paceCalls() {
+        long waitNanos = lastCallNanos + minIntervalMs * 1_000_000L - System.nanoTime();
+        if (lastCallNanos != 0 && waitNanos > 0) {
+            try {
+                Thread.sleep(waitNanos / 1_000_000L, (int) (waitNanos % 1_000_000L));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        lastCallNanos = System.nanoTime();
+    }
+
     private JsonNode execute(String path, String query, String token) {
+        paceCalls();
         try {
             String body = restClient.post()
                     .uri(apiBaseUrl + path)

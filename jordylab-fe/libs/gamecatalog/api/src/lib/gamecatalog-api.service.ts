@@ -13,6 +13,9 @@ import {
   RefreshAll,
   ScanLibraryType,
   ScanSource,
+  SwitchBulkItem,
+  SwitchBulkPreview,
+  SwitchBulkSummary,
   SwitchGameFormat,
   SwitchGameResponse,
   SwitchGameUpdate,
@@ -157,6 +160,14 @@ export class GameCatalogApiService {
 
   deleteSwitchGame(gameId: string): Observable<void> {
     return this.#http.delete<void>(`/api/gamecatalog/switch/games/${gameId}`);
+  }
+
+  previewSwitchBulk(text: string): Observable<SwitchBulkPreview> {
+    return this.#http.post<SwitchBulkPreview>('/api/gamecatalog/switch/bulk/preview', { text });
+  }
+
+  confirmSwitchBulk(items: SwitchBulkItem[]): Observable<SwitchBulkSummary> {
+    return this.#http.post<SwitchBulkSummary>('/api/gamecatalog/switch/bulk/confirm', { items });
   }
 }
 

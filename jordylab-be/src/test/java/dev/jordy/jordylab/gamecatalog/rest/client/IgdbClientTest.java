@@ -181,6 +181,17 @@ class IgdbClientTest {
     }
 
     @Test
+    void searchSwitchGamesKeepsPortsAndExpandedGamesButNotDlcOrBundles() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("[]")));
+
+        igdbClient.searchSwitchGames("mario kart 8 deluxe");
+
+        verify(postRequestedFor(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("platforms = (130)"))
+                .withRequestBody(containing("game_type = (0,4,8,9,10,11)")));
+    }
+
+    @Test
     void searchSwitchGamesEmptyWhenUnconfigured() {
         igdbClient.clientId = "";
 

@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
+import dev.jordy.jordylab.gamecatalog.service.SwitchBulkService;
 import dev.jordy.jordylab.gamecatalog.service.SwitchGameService;
 import dev.jordy.jordylab.shared.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,9 @@ class SwitchGameControllerSecurityTest {
     @MockitoBean
     private SwitchGameService switchGameService;
 
+    @MockitoBean
+    private SwitchBulkService switchBulkService;
+
     @Test
     void guestCannotSearchIgdb() throws Exception {
         mockMvc.perform(get("/api/gamecatalog/switch/search").param("query", "mario").with(guest()))
@@ -86,6 +90,24 @@ class SwitchGameControllerSecurityTest {
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(switchGameService);
+    }
+
+    @Test
+    void guestCannotBulkAdd() throws Exception {
+        mockMvc.perform(post("/api/gamecatalog/switch/bulk/preview").with(guest())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"text": "Pikmin 4"}
+                                """))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/gamecatalog/switch/bulk/confirm").with(guest())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"items": [{"line": "Pikmin 4", "igdbGameId": 111, "format": "DIGITAL"}]}
+                                """))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(switchBulkService);
     }
 
     @Test
