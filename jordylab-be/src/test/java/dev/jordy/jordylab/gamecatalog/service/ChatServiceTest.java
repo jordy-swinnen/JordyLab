@@ -7,6 +7,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationReposito
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatResponse;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,10 +77,10 @@ class ChatServiceTest {
         when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq(4),
                 isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario, kart));
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(compositionPromptFor(mario, kart))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
-                        "Two games support 4+ player local co-op."));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_CHAT_ANSWER, "openrouter", "anthropic/claude-haiku-4.5",
+                        "Two games support 4+ player local co-op.", false));
 
         ChatResponse response = chatService.ask(QUESTION, List.of());
 
@@ -102,14 +103,14 @@ class ChatServiceTest {
         when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                 isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario));
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(compositionPromptFor(mario))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", "One game."));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_CHAT_ANSWER, "openrouter", "anthropic/claude-haiku-4.5", "One game.", false));
 
         chatService.ask(QUESTION, List.of());
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
-        verify(aiService).call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+        verify(aiService).call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 promptCaptor.capture());
         assertSoftly(softly -> {
             softly.assertThat(promptCaptor.getValue()).contains("Super Mario World");
@@ -123,10 +124,10 @@ class ChatServiceTest {
         stubVisibleFilters();
         stubTranslation(ALL_NULL_FILTER);
         when(gameRepository.findVisibleById(portal.getId())).thenReturn(Optional.of(portal));
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(attachedCompositionPromptFor(portal))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
-                        "Portal 2 supports 4-player local co-op."));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_CHAT_ANSWER, "openrouter", "anthropic/claude-haiku-4.5",
+                        "Portal 2 supports 4-player local co-op.", false));
 
         ChatResponse response = chatService.ask(QUESTION, List.of(portal.getId()));
 
@@ -150,10 +151,10 @@ class ChatServiceTest {
         lenient().when(gameRepository.findForChatFilter(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                 isNull(), isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(portal, mario));
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(attachedCompositionPromptFor(portal))))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude",
-                        "Portal 2 supports 4-player local co-op."));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_CHAT_ANSWER, "openrouter", "anthropic/claude-haiku-4.5",
+                        "Portal 2 supports 4-player local co-op.", false));
 
         ChatResponse response = chatService.ask(QUESTION, List.of(portal.getId()));
 
@@ -176,8 +177,8 @@ class ChatServiceTest {
                 .thenReturn(List.of(portal, mario));
         String expectedPrompt = "Question: " + QUESTION + "\n\nCatalog rows:\n"
                 + rowLine(portal, true) + "\n" + rowLine(mario, false) + "\n";
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT), eq(expectedPrompt)))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", "Both."));
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT), eq(expectedPrompt)))
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_CHAT_ANSWER, "openrouter", "anthropic/claude-haiku-4.5", "Both.", false));
 
         ChatResponse response = chatService.ask(QUESTION, List.of(portal.getId()));
 
@@ -266,10 +267,9 @@ class ChatServiceTest {
     @Test
     void translationAiFailureIsChatUnavailable() {
         stubVisibleFilters();
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_QUERY), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
                 eq(TRANSLATION_USER_PROMPT)))
-                .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
-                        ProviderFailureReason.TIMEOUT));
+                .thenReturn(AiCallResult.failure(AiFeature.GAMECATALOG_CHAT_ANSWER, "anthropic", "claude-sonnet-5", ProviderFailureReason.TIMEOUT, true));
 
         assertThatThrownBy(() -> chatService.ask(QUESTION, List.of()))
                 .isInstanceOf(ChatUnavailableException.class);
@@ -287,10 +287,9 @@ class ChatServiceTest {
         when(gameRepository.findForChatFilter(eq("mario"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                 isNull(), isNull(), isNull(), isNull(), eq("ALL"), isNull(), isNull(), eq(PageRequest.of(0, 50))))
                 .thenReturn(List.of(mario));
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_ANSWER), eq(ChatService.COMPOSITION_SYSTEM_PROMPT),
                 eq(compositionPromptFor(mario))))
-                .thenReturn(AiCallResult.failure("gamecatalog", "anthropic", "claude",
-                        ProviderFailureReason.RATE_LIMITED));
+                .thenReturn(AiCallResult.failure(AiFeature.GAMECATALOG_CHAT_ANSWER, "anthropic", "claude-sonnet-5", ProviderFailureReason.RATE_LIMITED, true));
 
         assertThatThrownBy(() -> chatService.ask(QUESTION, List.of()))
                 .isInstanceOf(ChatUnavailableException.class);
@@ -315,7 +314,7 @@ class ChatServiceTest {
             softly.assertThat(response.games()).isEmpty();
             softly.assertThat(response.answer()).isNotBlank();
         });
-        verify(aiService).call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
+        verify(aiService).call(eq(AiFeature.GAMECATALOG_CHAT_QUERY), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
                 eq(TRANSLATION_USER_PROMPT));
         verifyNoMoreInteractions(aiService);
     }
@@ -331,7 +330,7 @@ class ChatServiceTest {
         chatService.ask(QUESTION, List.of());
 
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
-        verify(aiService).call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
+        verify(aiService).call(eq(AiFeature.GAMECATALOG_CHAT_QUERY), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
                 promptCaptor.capture());
         assertSoftly(softly -> {
             softly.assertThat(promptCaptor.getValue()).contains(QUESTION);
@@ -386,9 +385,9 @@ class ChatServiceTest {
     }
 
     private void stubTranslation(String json) {
-        when(aiService.call(eq("gamecatalog"), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
+        when(aiService.call(eq(AiFeature.GAMECATALOG_CHAT_QUERY), eq(ChatService.TRANSLATION_SYSTEM_PROMPT),
                 eq(TRANSLATION_USER_PROMPT)))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", json));
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_CHAT_ANSWER, "openrouter", "anthropic/claude-haiku-4.5", json, false));
     }
 
     private Game aGame(String title, String platform) {

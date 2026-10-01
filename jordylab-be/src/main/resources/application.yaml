@@ -34,6 +34,21 @@ spring:
       # Spring AI's AnthropicApi and StockPriceService's Yahoo Finance client.
       read-timeout: 120s
   ai:
+    # Only chat is used: keep the OpenAI starter's other clients (embedding, image, audio, moderation) out of the context.
+    model:
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    # Both chat models are needed: OpenRouter (OpenAI-compatible) is the primary, Anthropic the fallback. Leave
+    # spring.ai.model.chat unset — each starter only matches its own value there, so setting it switches the other off.
+    openai:
+      base-url: ${jordylab.ai.gateway.base-url}
+      # The OpenAI auto-configuration refuses to start without a key; "unset" keeps it up, and ResilientAiService
+      # skips the gateway while jordylab.ai.gateway.api-key is blank.
+      api-key: ${OPENROUTER_API_KEY:unset}
     anthropic:
       api-key: ${ANTHROPIC_API_KEY:}
       chat:
@@ -58,33 +73,29 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
 
 jordylab:
   ai:
     health-check-ttl-seconds: 30
     call-timeout-seconds: 120
     gateway:
+      # Keep /v1: the official openai-java SDK appends /chat/completions itself (006 research §1.1).
       base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+      api-key: ${OPENROUTER_API_KEY:}
     fallback:
       provider: anthropic
       model: claude-sonnet-5
+    # Feature keys contain dots: the brackets keep them whole instead of nesting (AiPropertiesTest).
     features:
-      fna.briefing:
+      "[fna.briefing]":
         model: anthropic/claude-sonnet-5
-      gamecatalog.enrichment:
+      "[gamecatalog.enrichment]":
         model: anthropic/claude-haiku-4.5
-      gamecatalog.chat.query:
+      "[gamecatalog.chat.query]":
         model: anthropic/claude-haiku-4.5
-      gamecatalog.chat.answer:
+      "[gamecatalog.chat.answer]":
         model: anthropic/claude-haiku-4.5
-    modules:
-      fna:
-        provider: anthropic
-        model: claude-sonnet-5
-      gamecatalog:
-        provider: anthropic
-        model: claude-haiku-4-5-20251001
   gamecatalog:
     artwork:
       dir: ${GAMECATALOG_ARTWORK_DIR:/var/jordylab/artwork}

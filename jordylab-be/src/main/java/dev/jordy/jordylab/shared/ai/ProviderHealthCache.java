@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProviderHealthCache {
 
     private final ConcurrentHashMap<String, ProviderHealth> cache = new ConcurrentHashMap<>();
-    private final AiModuleConfig aiModuleConfig;
+    private final AiProperties aiProperties;
     private final Clock clock;
 
     public boolean isHealthy(String providerName) {
@@ -26,7 +26,7 @@ public class ProviderHealthCache {
             return true;
         }
 
-        if (health.isStale(aiModuleConfig.healthCheckTtlSeconds(), clock)) {
+        if (health.isStale(aiProperties.healthCheckTtlSeconds(), clock)) {
             cache.remove(providerName);
 
             return true;

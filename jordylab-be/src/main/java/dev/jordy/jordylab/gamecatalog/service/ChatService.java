@@ -11,6 +11,7 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatGameRef;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatResponse;
 import dev.jordy.jordylab.gamecatalog.util.ArtworkUrls;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatService {
 
-    private static final String MODULE_NAME = "gamecatalog";
     private static final int MAX_FILTER_TEXT_LENGTH = 100;
     private static final int MAX_LOCAL_PLAYERS_UPPER_BOUND = 64;
     private static final int MAX_FILTER_PLATFORMS = 10;
@@ -140,7 +140,7 @@ public class ChatService {
         String userPrompt = "Question: " + question + "\n\nVisible platforms in the catalog: "
                 + String.join(", ", visiblePlatforms) + "\n\nVisible hosts in the catalog: "
                 + String.join(", ", visibleHosts);
-        AiCallResult result = aiService.call(MODULE_NAME, TRANSLATION_SYSTEM_PROMPT, userPrompt);
+        AiCallResult result = aiService.call(AiFeature.GAMECATALOG_CHAT_QUERY, TRANSLATION_SYSTEM_PROMPT, userPrompt);
         if (!result.success()) {
             log.warn("Chat translation AI call failed: {}", result.failureReason());
             throw new ChatUnavailableException("chat translation failed: " + result.failureReason());
@@ -152,7 +152,7 @@ public class ChatService {
 
     private String compose(String question, List<Game> contextRows, List<Game> attachedGames) {
         Set<UUID> attachedIds = attachedGames.stream().map(Game::getId).collect(Collectors.toSet());
-        AiCallResult result = aiService.call(MODULE_NAME, COMPOSITION_SYSTEM_PROMPT,
+        AiCallResult result = aiService.call(AiFeature.GAMECATALOG_CHAT_ANSWER, COMPOSITION_SYSTEM_PROMPT,
                 buildCompositionPrompt(question, contextRows, attachedIds));
         if (!result.success()) {
             log.warn("Chat composition AI call failed: {}", result.failureReason());
