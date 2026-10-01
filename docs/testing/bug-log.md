@@ -14,7 +14,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 ---
 
 ### BUG-001: Frontend lint fails — `app.ts` statically imports lazy-loaded `settings-ui`
-- Status: FIXED-LOCAL (PR #42, `06c645c`) — badge moved to new `settings-nav` lib; lint green; ships with the next release
+- Status: DEPLOYED (`v0.0.1-rc2`) — lint + coverage gates enforced in CI since PR #42
 - Severity: S3
 - Area/spec: frontend shell / 001, 006
 - Env found: local (baseline `bunx nx run-many -t test,lint`)
@@ -29,7 +29,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-002: Frontend lint fails — 5 accessibility errors in the Switch add dialog
-- Status: FIXED-LOCAL (PR #42, `06c645c`) — lint green; ships with the next release
+- Status: DEPLOYED (`v0.0.1-rc2`) — lint + coverage gates enforced in CI since PR #42
 - Severity: S3
 - Area/spec: gamecatalog-ui / 009
 - Env found: local (baseline)
@@ -44,7 +44,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-003: CI never runs frontend lint, so boundary and a11y violations reach `main`
-- Status: FIXED-LOCAL (PR #42, `06c645c`) — Build runs lint for all projects; first enforced on #42's own CI (green)
+- Status: DEPLOYED (`v0.0.1-rc2`) — lint + coverage gates enforced in CI since PR #42
 - Severity: S3
 - Area/spec: CI / 001
 - Env found: both (`.github/workflows/build.yml`)
@@ -60,7 +60,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-004: CI does not enforce coverage gates (backend JaCoCo, frontend thresholds)
-- Status: FIXED-LOCAL (PR #42, `06c645c`) — Build runs `./gradlew check` (JaCoCo) + `nx test --coverage`; enforced from #42 on
+- Status: DEPLOYED (`v0.0.1-rc2`) — lint + coverage gates enforced in CI since PR #42
 - Severity: S3
 - Area/spec: CI / 001
 - Env found: both
@@ -324,7 +324,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-021: Frontend nginx — no compression, no HSTS, version leak, `index.html` cacheable, headers lost on assets, wrong manifest MIME
-- Status: FIXED-LOCAL (PR #40, `e5989e1`) — verified on the runtime image locally; prod check after the next release; CSP still open
+- Status: VERIFIED-PROD (CSP still open as follow-up)
 - Severity: S3
 - Area/spec: frontend container / 008, 007
 - Env found: prod
@@ -338,10 +338,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `deploy/containers/frontend/nginx.conf` has no `gzip`, no `server_tokens off`, no HSTS/CSP, no `Cache-Control: no-cache` for `index.html`, and the asset `location` sets its own `add_header`, which drops the server-level headers (nginx inheritance rule); default `mime.types` lacks `webmanifest`.
 - Fix (PR / commit / tag):
 - Regression test added:
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc2`: `/` → HSTS, nosniff, `Cache-Control: no-cache`, `server: nginx` (no version); `main-*.js` → gzip + `immutable` + HSTS; manifest → `application/manifest+json`
 
 ### BUG-022: Keycloak `master` realm is publicly reachable (login, account console, token endpoint)
-- Status: FIXED-LOCAL (PR #41, `7d68ff8`) — prod check after the next release
+- Status: VERIFIED-PROD
 - Severity: S3
 - Area/spec: gateway / 008
 - Env found: prod
@@ -354,7 +354,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: Gateway route matches `/auth/realms` for every realm.
 - Fix (PR / commit / tag): restrict the route to `/auth/realms/jordylab` (+ `/auth/resources`); verify the admin still manages Keycloak over Tailscale/port-forward (runbook).
 - Regression test added:
-- Verified on prod:
+- Verified on prod: 2026-10-01 on `v0.0.1-rc2`: `/auth/realms/master/{.well-known/openid-configuration,account}` → SPA fallback (HTML); jordylab realm issuer still served
 
 ### BUG-023: No base backup exists yet and the restore drill was never performed
 - Status: FIXING — first base backup `manual-backup-20261001` completed 2026-10-01 (on-demand, approved by Jordy); restore drill still to do
@@ -541,7 +541,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-035: `src/test/resources/application.yaml` replaced the main `application.yaml` in every test
-- Status: FIXING (branch fix/e2e-apk-upload-limits)
+- Status: FIXED-LOCAL (PR #47) — test infra, no prod component
 - Severity: S3
 - Area/spec: backend test infra / 001
 - Env found: local (while writing the BUG-036 regression test)
@@ -556,7 +556,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-036: APK upload to `POST /api/mobile/releases` answers 403 — 1 MB multipart limit, errors masked by `/error` denyAll
-- Status: FIXING (branch fix/e2e-apk-upload-limits)
+- Status: DEPLOYED (`v0.0.1-rc2`, PR #47) — upload limit + real error statuses live; end-to-end proof waits on a published APK (BUG-037)
 - Severity: S2
 - Area/spec: mobile / 007
 - Env found: prod (release `v0.0.1-rc1`, apk job: `curl: (22) … 403` after the token request succeeded)
@@ -571,7 +571,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-037: APK signing-certificate check only reads v1 (JAR) signatures; release builds are v2/v3-only
-- Status: OPEN
+- Status: FIXING — v1+v2 signing + CI check merged (PR #48); rc2's check misread apksigner's v1 line → META-INF check in PR #49; proof with v0.0.1-rc3
 - Severity: S2
 - Area/spec: mobile / 007
 - Env found: code reading (while fixing BUG-036)

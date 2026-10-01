@@ -845,6 +845,14 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Prod re-verification: `/`, deep link, API 401, OIDC config, assetlinks OK; 5/5 pods, 0 restarts, 0 backend errors
 - Outcome: deployed; no regression
 
+#### DEPLOY-06
+- Release: `v0.0.1-rc2` on `a1289bf` (PRs #40–#48), run 36837614838
+- Jobs: verify ✅ · retag ×3 ✅ · release (draft) ✅ · deploy ✅ (standing approval) · publish ✅ · apk ❌ at *Verify the APK signature* ("no v1 signature" — apksigner's v1 line is not meaningful at minSdk 29; fixed check in PR #49). Nothing was uploaded.
+- Contains Flyway migration: no · realm change: no · config change: yes (multipart limits, server.error, Keycloak route, nginx)
+- Running images: `:v0.0.1-rc2`
+- Prod re-verification: BUG-021 and BUG-022 verified (see bug log); OIDC issuer OK
+- Outcome: deployed; no regression
+
 ## 10. NOT TESTABLE
 
 - **NOT BUILT**: all 010 rows (Eufy presence); `garmin-sync-service` (no code).
