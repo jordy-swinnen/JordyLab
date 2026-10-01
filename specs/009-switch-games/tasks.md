@@ -138,12 +138,12 @@ question, run a scan, and verify Switch games survive.
 
 ### Tests for User Story 4
 
-- [ ] T027 [P] [US4] Integration/repository test that Switch games are returned by `findVisibleGames` and
+- [x] T027 [P] [US4] Integration/repository test that Switch games are returned by `findVisibleGames` and
   `findVisibleHosts` in `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/repository/GameRepositoryTest.java`
-- [ ] T028 [P] [US4] Test that `ReconciliationService.hideMissingInstallations` and `purgeUninstalledGames` skip manual
+- [x] T028 [P] [US4] Test that `ReconciliationService.hideMissingInstallations` and `purgeUninstalledGames` skip manual
   installations in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/ReconciliationServiceTest.java`
-- [ ] T029 [P] [US4] Test that grounded chat includes Switch games in its corpus in
+- [x] T029 [P] [US4] Test that grounded chat includes Switch games in its corpus in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/ChatServiceTest.java` (or equivalent)
 
 ### Implementation for User Story 4
@@ -154,10 +154,10 @@ question, run a scan, and verify Switch games survive.
 - [x] T031 [US4] Add explicit `manual = true` exclusion guards in `ReconciliationService.hideMissingInstallations` and
   `purgeUninstalledGames` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/ReconciliationService.java`
-- [ ] T032 [US4] Add `hostFormats` to `GameDetailResponse` and populate Switch format in
+- [x] T032 [US4] Add `hostFormats` to `GameDetailResponse` and populate Switch format in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/model/GameDetailResponse.java` and
   `GameCatalogController.java`
-- [ ] T033 [US4] Display Switch format on the detail page (read-only for guests) in
+- [x] T033 [US4] Display Switch format on the detail page (read-only for guests) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/game-detail/game-detail-view.component.html`
 - [ ] T034 [US4] Verify host/platform filter chips show "Nintendo Switch" and the grid refreshes correctly (validate via
   frontend test if needed)
@@ -188,9 +188,9 @@ scans.
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameService.java`
 - [x] T038 [US2] Implement link-later PATCH `/switch/games/{id}` (set `igdbGameId`, fill metadata/artwork/multiplayer,
   do not regenerate AI description) in `SwitchGameController` + `SwitchGameService`
-- [ ] T039 [US2] Add manual-fallback UI to `switch-add-dialog` (no-match state + manual form) in
+- [x] T039 [US2] Add manual-fallback UI to `switch-add-dialog` (no-match state + manual form) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/switch-add-dialog/`
-- [ ] T040 [US2] Add relink UI to the detail page (admin-only) in
+- [x] T040 [US2] Add relink UI to the detail page (admin-only) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/game-detail/game-detail-view.component.*`
 
 **Checkpoint**: User Stories 1, 2 and 4 are independently functional.
@@ -249,9 +249,9 @@ get 403 on API writes.
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/SwitchGameService.java`
 - [x] T051 [US5] Implement `DELETE /switch/games/{id}` (delete Switch installation; conditionally delete library entry
   and game) in `SwitchGameController` + `SwitchGameService`
-- [ ] T052 [US5] Add edit/remove controls on the detail page (admin-only; hidden for guests) in
+- [x] T052 [US5] Add edit/remove controls on the detail page (admin-only; hidden for guests) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/game-detail/game-detail-view.component.*`
-- [ ] T053 [US5] Add guest-403 assertions for Switch write endpoints in the role-matrix tests or
+- [x] T053 [US5] Add guest-403 assertions for Switch write endpoints in the role-matrix tests or
   `SwitchGameControllerTest`
 
 **Checkpoint**: All five user stories are independently functional.

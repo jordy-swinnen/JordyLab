@@ -4,6 +4,7 @@ import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
+import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
@@ -28,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -192,6 +194,20 @@ class GameQueryServiceTest {
 
         assertThat(detail.hosts()).hasSize(1);
         assertThat(detail.hosts().getFirst().hostname()).isEqualTo("jordybox");
+    }
+
+    @Test
+    void detailMapsManualHostsToTheirFormatAndOmitsScannedHosts() {
+        Game game = aGame("Mario Kart 8 Deluxe");
+        GameInstallation switchCopy = GameInstallation.createManual(game, aSource("Nintendo Switch", SourceType.SWITCH),
+                "igdb:1234", InstallationFormat.PHYSICAL, FIRST_SEEN);
+        GameInstallation steamCopy = anInstallation(game, aSource("jordybox", SourceType.STEAM));
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(switchCopy, steamCopy));
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId()).orElseThrow();
+
+        assertThat(detail.hostFormats()).containsExactly(Map.entry("Nintendo Switch", InstallationFormat.PHYSICAL));
     }
 
     @Test

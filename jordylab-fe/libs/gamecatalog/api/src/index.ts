@@ -44,3 +44,4 @@ export { aGamesPageMock } from './lib/mocks/games-page.model.mock';
 export { aScanSourceMock } from './lib/mocks/scan-source.model.mock';
 export { aLibrarySyncRunMock } from './lib/mocks/library-sync-run.model.mock';
 export { aLibraryStatusMock } from './lib/mocks/library-status.model.mock';
+export { aSwitchSearchResultMock } from './lib/mocks/switch-search-result.model.mock';

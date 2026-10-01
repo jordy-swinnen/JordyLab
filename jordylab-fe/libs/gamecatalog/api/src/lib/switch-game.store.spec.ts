@@ -41,6 +41,30 @@ describe('SwitchGameStore', () => {
     expect(spectator.service.loading()).toBe(false);
   });
 
+  it('reports no match for a finished search with no results, and offers it as a manual title', () => {
+    searchSwitchGames.mockReturnValue(of([]));
+
+    spectator.service.search('My Indie Game');
+    vi.advanceTimersByTime(400);
+
+    expect(spectator.service.noMatchFor()).toBe('My Indie Game');
+
+    spectator.service.addNoMatchManually();
+
+    expect(spectator.service.mode()).toBe('manual');
+    expect(spectator.service.manualTitle()).toBe('My Indie Game');
+  });
+
+  it('reports no match only once a search has finished empty', () => {
+    expect(spectator.service.noMatchFor()).toBeNull();
+    searchSwitchGames.mockReturnValue(of([aSwitchSearchResultMock()]));
+
+    spectator.service.search('mario');
+    vi.advanceTimersByTime(400);
+
+    expect(spectator.service.noMatchFor()).toBeNull();
+  });
+
   it('sets an error when search fails', () => {
     searchSwitchGames.mockReturnValue(throwError(() => new Error('network error')));
     spectator = createService();

@@ -1,7 +1,23 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
-import { ChatAnswer, ChatAskResponse, GameDetail, GamesPage, InstallStatus, LibrarySource, LibraryStatus, LibrarySyncRun, RefreshAll, ScanLibraryType, ScanSource, SwitchGameFormat, SwitchGameResponse, SwitchSearchResult } from './gamecatalog.models';
+import {
+  ChatAnswer,
+  ChatAskResponse,
+  GameDetail,
+  GamesPage,
+  InstallStatus,
+  LibrarySource,
+  LibraryStatus,
+  LibrarySyncRun,
+  RefreshAll,
+  ScanLibraryType,
+  ScanSource,
+  SwitchGameFormat,
+  SwitchGameResponse,
+  SwitchGameUpdate,
+  SwitchSearchResult,
+} from './gamecatalog.models';
 
 export interface GamesQuery {
   search?: string;
@@ -133,6 +149,14 @@ export class GameCatalogApiService {
     const body = igdbGameId != null ? { igdbGameId, format } : { title, format };
 
     return this.#http.post<SwitchGameResponse>('/api/gamecatalog/switch/games', body);
+  }
+
+  updateSwitchGame(gameId: string, update: SwitchGameUpdate): Observable<SwitchGameResponse> {
+    return this.#http.patch<SwitchGameResponse>(`/api/gamecatalog/switch/games/${gameId}`, update);
+  }
+
+  deleteSwitchGame(gameId: string): Observable<void> {
+    return this.#http.delete<void>(`/api/gamecatalog/switch/games/${gameId}`);
   }
 }
 

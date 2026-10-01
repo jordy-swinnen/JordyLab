@@ -5,6 +5,13 @@
   [error]="error()"
   [refreshingMetadata]="refreshingMetadata()"
   [refreshingEnrichment]="refreshingEnrichment()"
+  [canAdminister]="canAdminister()"
+  [savingSwitch]="savingSwitch()"
+  [relinkCandidates]="relinkCandidates()"
   (refreshMetadata)="onRefreshMetadata()"
   (refreshEnrichment)="onRefreshEnrichment()"
+  (changeSwitchFormat)="onChangeSwitchFormat($event)"
+  (searchRelink)="onSearchRelink($event)"
+  (relink)="onRelink($event)"
+  (removeSwitch)="onRemoveSwitch()"
 />
