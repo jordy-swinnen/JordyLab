@@ -729,6 +729,7 @@ _Not started._
 | HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
 | HANDOFF-06 | Enable `UPDATE_EMAIL` in the prod realm (one kcadm command) | — | prod | 2026-10-01 | | the agent's prod realm write was blocked by its permission classifier | 1 min | ⏳ open |
 | HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ⏳ open |
+| HANDOFF-08 | Decide: buy OpenRouter credits (primary) or stay on Anthropic-direct | your browser | prod | 2026-10-01 | | after credits: backend log `AI call succeeded: … provider=openrouter` | 2 min | ⏳ open |
 | HANDOFF-09 | Change the `MEUD` portfolio ticker to `MEUD.PA` | your browser | prod | 2026-10-01 | | within 30 min the position shows a price; no more `Could not fetch price` warnings | 1 min | ⏳ open |
 
 ### Batch 1 (sent with the approval request)
@@ -801,6 +802,18 @@ _Not started._
   5. In the ntfy app: add subscription → server `https://jordylab.be/ntfy` → the same topic.
 - Expect: after the deploy the backend log shows `Ntfy notifications enabled`; your phone gets "New JordyLab sign-up"
   for the still-pending test account within 5 minutes of the backend starting. Tell me "done".
+
+#### HANDOFF-08: OpenRouter has no credits
+- Machine: your browser
+- Target env: prod (and local, same key)
+- Why you: it's a purchase, and a cost decision.
+- Finding: OpenRouter answers `402 Insufficient credits. This account never purchased credits.` Nothing breaks —
+  every AI call is retried once on Anthropic (the existing setup) — but OpenRouter can't be the primary until the
+  account has credits, and each call first spends one failed round trip.
+- Options: (a) add credits at https://openrouter.ai/settings/credits (then the AI Models page's per-feature models take
+  effect); or (b) stay on Anthropic-direct: tell me and I'll make "no credits" skip the gateway for longer (or unset
+  `OPENROUTER_API_KEY` in the secrets, which skips it entirely).
+- Tell me "credits added" or "stay on Anthropic".
 
 #### HANDOFF-09: Give the MEUD position a price
 - Machine: your browser

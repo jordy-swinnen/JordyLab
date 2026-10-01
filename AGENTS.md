@@ -76,13 +76,14 @@ the `Commit References` workflow on every pull-request commit. Never bypass it w
 
 ## AI Routing
 
-All AI calls go through `ResilientAiService` with a per-module model (`jordylab.ai.modules.<module>`). One provider (Anthropic) is wired today for the modules that need AI; OpenRouter-first routing with an Anthropic fallback is planned in spec 006 (AI Models page). Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
+All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeature` (`fna.briefing`, `gamecatalog.enrichment`, `gamecatalog.chat.query`, `gamecatalog.chat.answer`) has its own model: the one picked on Settings → AI Models (`settings.ai_feature_model_setting`), else the default in `jordylab.ai.features`. Calls go to the **OpenRouter** gateway first and are retried once on **Anthropic** (`jordylab.ai.fallback`) on any failure; without `OPENROUTER_API_KEY` they go straight to Anthropic. Every call publishes `AiCallCompleted` and counts `jordylab.ai.calls`. Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
 
-| Module | Provider | Model | Rationale | MVP1 Status |
-|--------|----------|-------|-----------|-------------|
-| `fna` | Anthropic | Claude Sonnet | Financial analysis needs quality | **Wired** |
-| `gamecatalog` | Anthropic | Claude Haiku | Structured JSON + grounded chat share provider for prompt consistency; Haiku for cost | **Wired** |
-| `recipe` | — | — | Module not built yet; picks a model through the AI Models settings (006) | Not built |
+| Feature | Default model (OpenRouter id) | Rationale | Status |
+|---------|-------------------------------|-----------|--------|
+| `fna.briefing` | `anthropic/claude-sonnet-5` | Financial analysis needs quality | **Wired** |
+| `gamecatalog.enrichment`, `.chat.query`, `.chat.answer` | `anthropic/claude-haiku-4.5` | Structured JSON + grounded chat; Haiku for cost | **Wired** |
+| fallback (any feature) | Anthropic `claude-sonnet-5` | Used once when the gateway fails | **Wired** |
+| `recipe` | — | Module not built yet; adds its own `AiFeature` | Not built |
 
 ## Infrastructure
 
@@ -125,6 +126,7 @@ present in the repo.
 ## Shared Gotchas
 
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
+- Spring AI: leave `spring.ai.model.chat` **unset** — both the OpenAI (OpenRouter) and Anthropic chat starters only create their model when it is unset or names them, and `ResilientAiService` needs both. Feature keys under `jordylab.ai.features` contain dots: write them as `"[fna.briefing]"`, or they don't bind
 - Spring AI's pgvector `VectorStore` auto-configuration is excluded in `jordylab-be/src/main/resources/application.yaml` (nothing uses it and no embedding model is configured). A RAG/semantic-search feature must remove that exclusion and configure an `EmbeddingModel`
 - NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off
 

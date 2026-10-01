@@ -34,6 +34,7 @@ import dev.jordy.jordylab.gamecatalog.service.ReconciliationService;
 import dev.jordy.jordylab.gamecatalog.service.ScanService;
 import dev.jordy.jordylab.gamecatalog.service.SteamLibrarySyncService;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import org.mockito.Answers;
 import org.junit.jupiter.api.Test;
@@ -391,14 +392,14 @@ class GameCatalogModuleTest {
                 new SteamAppDetailsClient.MultiplayerFacts(true, false, false, false, true))));
         scanService.submitScan(aSteamRequest("jordybox", "620", "Portal 2"));
         Game game = gameRepository.findAll().getFirst();
-        when(resilientAiService.call(eq("gamecatalog"), eq(EnrichmentService.SYSTEM_PROMPT),
+        when(resilientAiService.call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(EnrichmentService.SYSTEM_PROMPT),
                 eq("Game: Portal 2\nPlatform: Steam\nKnown multiplayer facts (use verbatim, do not contradict):"
                         + "\n- Local multiplayer: no\n- Split-screen: no")))
-                .thenReturn(AiCallResult.success("gamecatalog", "anthropic", "claude", """
+                .thenReturn(AiCallResult.success(AiFeature.GAMECATALOG_ENRICHMENT, "openrouter", "anthropic/claude-haiku-4.5", """
                         {"genre":"Puzzle","genres":"Puzzle, Adventure","developer":"Valve","publisher":"Valve",
                          "releaseYear":2011,"onlineMultiplayer":false,"singlePlayer":true,
                          "description":"A classic."}
-                        """));
+                        """, false));
         catalogRefreshService.refreshEnrichment(game.getId());
         org.mockito.Mockito.clearInvocations(steamAppDetailsClient, resilientAiService);
 

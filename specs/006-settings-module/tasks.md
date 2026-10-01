@@ -205,7 +205,7 @@ FR-011/FR-012/FR-013/FR-014/FR-016/FR-017)
 **Independent Test**: With the gateway failing for each failure reason in turn, every AI feature still answers through
 the fallback with `fallbackUsed` recorded; both providers down → explicit failure (quickstart scenario 8)
 
-- [ ] T024 [US4] Bump Spring AI 2.0.0-M2 → **2.0.1 GA** in `jordylab-be/build.gradle.kts` (`springAiVersion`), add
+- [x] T024 [US4] (done; `spring.ai.model.chat` deliberately left **unset** — each starter only matches its own value, so `openai` would switch the Anthropic fallback off; proven by `AiGatewayWiringTest`) Bump Spring AI 2.0.0-M2 → **2.0.1 GA** in `jordylab-be/build.gradle.kts` (`springAiVersion`), add
   `spring-ai-starter-model-openai`, set `spring.ai.model.chat: openai` + map gateway config `jordylab.ai.gateway.*` →
   `spring.ai.openai.base-url/api-key` (via yaml placeholders, research D2) in
   `jordylab-be/src/main/resources/application.yaml`; follow the AGENTS.md GA-move procedure (check 2.0.1 migration notes
@@ -215,19 +215,19 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `OllamaContainer` bean from `jordylab-be/src/test/java/dev/jordy/jordylab/TestcontainersConfiguration.java`, the
   commented Ollama service from `jordylab-be/compose.yaml` (keep pgvector + advisors deps); verify `./gradlew build`
   green and `SC-005` grep clean (docs history allowed) — pre-approved by Jordy 2026-09-30; done in spec 011 BUG-009
-- [ ] T026 [US4] Refactor `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/`: `AiFeature` enum (four keys with
+- [x] T026 [US4] Refactor `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/`: `AiFeature` enum (four keys with
   display name, module, description per [research.md](research.md) §2.1), `AiModelResolver` port (
   `resolveModel(AiFeature)` + `isModelKnown`), `AiCallCompleted` event record, replace `AiModuleConfig`/
   `jordylab.ai.modules` with feature/fallback config records (`jordylab.ai.features`, `jordylab.ai.fallback`), add
   `MODEL_NOT_FOUND` to `ProviderFailureReason`; keep the `@NamedInterface("ai")` exports; unit tests for registry +
   config binding
-- [ ] T027 [US4] Rewrite `ResilientAiServiceTest` (red first) in
+- [x] T027 [US4] Rewrite `ResilientAiServiceTest` (red first) in
   `jordylab-be/src/test/java/dev/jordy/jordylab/shared/ai/ResilientAiServiceTest.java`: WireMock-backed primary (
   OpenAI-compatible endpoint) + mocked `AnthropicChatModel` — for **each** failure reason (unreachable, timeout, 429,
   401, model-not-found) the call retried **once** on the fallback with `AiCallResult` recording actual provider/model/
   `fallbackUsed`; both-fail → explicit failure (no silent empty result); per-feature model resolution via the port;
   metrics + event publication asserted (assigned captors, explicit values)
-- [ ] T028 [US4] Rewrite `ResilientAiService` in
+- [x] T028 [US4] Rewrite `ResilientAiService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/ResilientAiService.java` until T027 is green:
   `call(AiFeature, systemPrompt, userPrompt)` resolves the model via `AiModelResolver`, builds `OpenAiChatOptions`/
   `AnthropicChatOptions` per provider, tries primary then falls back on the mapped reasons, keeps the executor timeout +
@@ -238,7 +238,7 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `gamecatalog/service/EnrichmentService.java` (`GAMECATALOG_ENRICHMENT`), `gamecatalog/service/ChatService.java` (
   translate → `GAMECATALOG_CHAT_QUERY`, compose → `GAMECATALOG_CHAT_ANSWER`); keep prompts + parsing unchanged; module
   tests (`GameCatalogModuleTest`, fna module test) stay green
-- [ ] T030 [US4] Add the default config-backed `AiModelResolver` (reads `jordylab.ai.features.<key>.model`) in
+- [x] T030 [US4] Add the default config-backed `AiModelResolver` (reads `jordylab.ai.features.<key>.model`) in
   `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/` + unit test; add a boot smoke test in
   `jordylab-be/src/test/java/dev/jordy/jordylab/shared/ai/` proving both `OpenAiChatModel` (gateway base URL) and
   `AnthropicChatModel` beans exist with `spring.ai.model.chat=openai` and one plain call routes through the primary (
@@ -282,35 +282,35 @@ flagging (spec US6, FR-014/FR-015/FR-016)
 **Independent Test**: Change the game-description feature's model, trigger one enrichment → the result records the new
 model, no restart (quickstart scenario 7, SC-003)
 
-- [ ] T034 [P] [US6] Create `AiFeatureModelSetting` + `AiFeatureLastRun` entities + repositories
+- [x] T034 [P] [US6] Create `AiFeatureModelSetting` + `AiFeatureLastRun` entities + repositories
   per [data-model.md](data-model.md) in `jordylab-be/src/main/java/dev/jordy/jordylab/settings/domain/` (canonical
   `/entity` structure, `updateModel` mutation registering `AiFeatureModelSettingUpdated`); entity tests + TestBuilders
   via `/test-builder` in `jordylab-be/src/test/java/dev/jordy/jordylab/settings/domain/`
-- [ ] T035 [US6] Implement `AiModelSettingsService` in
+- [x] T035 [US6] Implement `AiModelSettingsService` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/service/AiModelSettingsService.java` —
   `@Primary AiModelResolver` (setting row → cached effective model, else config default; cache invalidated on
   `AiFeatureModelSettingUpdated`), `AiCallCompleted` listener upserting `AiFeatureLastRun` (injected `Clock`); unit
   tests (resolution precedence, invalidation on update, listener upsert incl. failure reasons)
-- [ ] T036 [US6] Create `OpenRouterModelCatalogClient` in
+- [x] T036 [US6] Create `OpenRouterModelCatalogClient` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/client/OpenRouterModelCatalogClient.java` — keyless
   `GET {jordylab.ai.gateway.base-url}/models`, TTL cache, trim to text-output chat models (exclude `~` aliases),
   per-MTok pricing (×1M, `"-1"` → null), `expiration_date` → expiring flag; WireMock tests (list shape, cache TTL,
   unreachable → stale-or-`GATEWAY_CATALOG_UNAVAILABLE`, never a silent empty list)
-- [ ] T037 [US6] Implement `SettingsAiModelsController` + records in
+- [x] T037 [US6] Implement `SettingsAiModelsController` + records in
   `jordylab-be/src/main/java/dev/jordy/jordylab/settings/rest/controller/`
   per [contracts/settings-ai-models-api.md](contracts/settings-ai-models-api.md) — `GET /api/settings/ai-models` (
   registry + effective/default/fallback models + availability flag + last run), `GET …/catalog?search=&vendor=` (trimmed
   list + `fetchedAt`/`fresh`), `PUT …/{featureKey}` (`UNKNOWN_FEATURE`/`BLANK_MODEL`/`MODEL_UNAVAILABLE`
   -only-when-fresh); MockMvc tests in
   `jordylab-be/src/test/java/dev/jordy/jordylab/settings/rest/controller/SettingsAiModelsControllerTest.java`
-- [ ] T038 [P] [US6] Create the frontend AI-models surface in `jordylab-fe/libs/settings/api/src/lib/` — catalog +
+- [x] T038 [P] [US6] Create the frontend AI-models surface in `jordylab-fe/libs/settings/api/src/lib/` — catalog +
   feature models, `ai-models.store.ts` per `/angular-signal-store` (features, catalog with search/vendor filter, save
   action, stale metadata); mock factories + specs per `/angular-test`
-- [ ] T039 [US6] Build the AI Models page in `jordylab-fe/libs/settings/ui/src/lib/ai-models-page/` —
+- [x] T039 [US6] Build the AI Models page in `jordylab-fe/libs/settings/ui/src/lib/ai-models-page/` —
   container/presentation: one row per feature (current model, read-only fallback, last-run line, "model unavailable"
   flag), model picker dialog/panel (vendor-grouped, search, price/context per MTok), stale-catalog hint; specs with
   store mock
-- [ ] T040 [US6] Add the "AI Models" child route + nav item under Settings (
+- [x] T040 [US6] Add the "AI Models" child route + nav item under Settings (
   `jordylab-fe/libs/settings/ui/src/lib/settings.routes.ts` + `jordylab-fe/apps/jordylab/src/app/app.ts`/`app.spec.ts`);
   prove SC-003 in `SettingsModuleTest`: save a model via the API → next `ResilientAiService` call uses it without
   restart (mocked model beans, explicit captor)

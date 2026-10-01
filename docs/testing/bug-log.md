@@ -155,7 +155,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-010: 006 US4 missing — AI calls are not routed per feature (OpenRouter primary, Anthropic fallback)
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-settings-ai-routing`
 - Severity: S2
 - Area/spec: shared/ai / 006
 - Env found: both
@@ -164,9 +164,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   1. `grep -rn -E "AiFeature\b|OpenRouter" jordylab-be/src/main` → nothing; 006 tasks T024, T026–T030 open.
 - Expected (cite spec/story): 006 US4 / FR-011–FR-013 — OpenRouter primary, Anthropic fallback, configuration per AI feature.
 - Actual (logs/screenshot, secrets redacted): only the Anthropic path from 001 exists. `application.yaml` already carries `jordylab.ai.gateway.base-url` (OpenRouter) and `jordylab.ai.features.*` defaults, but no Java code reads them.
-- Root cause: story not implemented (011 FR-012a).
-- Fix (PR / commit / tag): planned batch `fix/e2e-settings-ai-routing` (T043).
-- Regression test added:
+- Root cause: 006 T024, T026–T030 never implemented. Also found while fixing: the `jordylab.ai.features` keys contain dots and never bound (now bracketed), and 006 research D2's `spring.ai.model.chat: openai` would have switched the Anthropic fallback bean off (each starter matches only its own value).
+- Fix (PR / commit / tag): branch `fix/e2e-settings-ai-routing` — Spring AI 2.0.1 GA (+ OpenAI starter; `spring-ai-advisors-vector-store` → `spring-ai-vector-store-advisor`), `AiFeature` registry, `AiModelResolver` port (config default), `ResilientAiService.call(AiFeature, …)`: OpenRouter first, one Anthropic retry on any failure (`MODEL_NOT_FOUND` mapped from OpenRouter's 400 "not a valid model ID", verified), `AiCallCompleted` event + `jordylab.ai.calls` counter, `metrics` actuator endpoint (admin).
+- Local E2E 2026-10-01: "Regenerate description" → gateway answered **402 "Insufficient credits. This account never purchased credits"** → one Anthropic retry succeeded (`provider=anthropic`). 402 is now `INSUFFICIENT_CREDITS`. Until the OpenRouter account has credits every call takes the fallback (HANDOFF-08).
+- Regression test added: `ResilientAiServiceTest` (11: each failure reason → one fallback retry, timeout, unhealthy/unconfigured gateway, both fail → explicit failure, event + metrics), `AiPropertiesTest` (real yaml binding), `AiGatewayWiringTest` (both chat beans without a selector; real HTTP call to `/api/v1/chat/completions`), call-site tests updated
 - Verified on prod:
 
 ### BUG-011: 006 US5 missing — no user menu to manage one's own login details
@@ -185,7 +186,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-012: 006 US6 missing — no per-feature AI model selection (AI Models page)
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-settings-ai-models` (stacked on `fix/e2e-settings-ai-routing`)
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: both
@@ -195,8 +196,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 006 US6 — choose a model per AI feature; applies on the next call.
 - Actual (logs/screenshot, secrets redacted): feature absent.
 - Root cause: story not implemented; depends on BUG-010.
-- Fix (PR / commit / tag): planned batch `fix/e2e-settings-ai-models` (T045) — includes a Flyway migration → deploy pauses for Jordy.
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-settings-ai-models` — `AiFeatureModelSetting`/`AiFeatureLastRun` entities on the existing `settings` tables (**no new migration** — `V20260928003` already created them, so no deploy pause), `AiModelSettingsService` (`@Primary AiModelResolver`, cache dropped on `AiFeatureModelSettingUpdated`, `AiCallCompleted` → last run in its own transaction), keyless `OpenRouterModelCatalogClient` (TTL cache, stale-on-outage, loud when empty), `/api/settings/ai-models` (list, catalog, PUT), Settings → AI Models page.
+- Regression test added: entity tests (11), `OpenRouterModelCatalogClientTest` (5), `AiModelSettingsServiceTest` (12), `SettingsAiModelsControllerTest` (5), `AiModelSelectionIntegrationTest` (SC-003 on Postgres: the next call uses the saved model, last run recorded), `ai-models.store.spec` (7), `ai-models-page.component.spec` (5); local E2E 2026-10-01 against the real catalog: list → picker → save → revert
 - Verified on prod:
 
 ### BUG-013: 006 US7 missing — no Ntfy push when someone signs up

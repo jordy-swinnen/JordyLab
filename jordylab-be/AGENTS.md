@@ -17,27 +17,18 @@ export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.P
 export TESTCONTAINERS_RYUK_DISABLED=true
 ```
 
-**Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.0-M2 — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
+**Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.1 (GA) — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
 
-## Accepted risk: Spring AI 2.0.0-M2 is a milestone release
+## Spring AI 2.0.1 GA
 
-`spring-ai-bom` is pinned to `2.0.0-M2` (a milestone, not a GA release) in `build.gradle.kts`.
-Accepted deliberately for MVP1 because `ResilientAiService`, `AnthropicApi`, and the pgvector
-vector-store starter all need APIs only available from the 2.0 line, and no GA release of that
-line existed when this was wired. Milestone releases can introduce breaking API changes between
-versions with no deprecation window, unlike GA releases under semantic versioning.
-
-Risk is bounded by two things already true of the module boundary: all Spring AI usage is routed
-through `ResilientAiService` (never `ChatClient` directly, per the rule below), so an upstream
-breaking change surfaces in one place, not scattered across modules; and the milestone version is
-pinned exactly (`2.0.0-M2`, not a range), so nothing changes underneath this build without an
-explicit version bump and a deliberate re-test.
-
-**Plan to move to GA**: once `spring-ai-bom` publishes a GA `2.x` release, bump the
-`springAiVersion` property in `build.gradle.kts`, re-run the full backend test suite (especially
-`ResilientAiServiceTest`, `AiModuleConfigTest`, and the module-level `GameCatalogModuleTest`,
-which exercises the AI-backed chat/enrichment paths), and check the Spring AI migration notes for
-that release before merging.
+`spring-ai-bom` moved from the `2.0.0-M2` milestone to the `2.0.1` GA release (spec 011 BUG-010, 006 D1). Both the
+OpenAI and the Anthropic modules now wrap the official vendor Java SDKs: errors arrive as
+`com.openai.errors.OpenAIServiceException` / `com.anthropic.errors.AnthropicServiceException` (both carry
+`statusCode()`, mapped in `ResilientAiService.reasonFor`), retries are the SDKs' own (`spring-ai-retry` is no longer on
+the classpath), and the OpenAI base URL keeps its `/v1` (the SDK appends `/chat/completions`). Renamed artifact:
+`spring-ai-advisors-vector-store` → `spring-ai-vector-store-advisor`. All Spring AI usage still goes through
+`ResilientAiService`, so a future bump surfaces in one place: re-run `ResilientAiServiceTest`, `AiGatewayWiringTest`,
+`AiPropertiesTest` and `GameCatalogModuleTest`, and read that release's migration notes.
 
 # Java Code Style
 
@@ -365,7 +356,7 @@ class SomeObjectTestBuilder {
 - **Library sync**: `SteamLibrarySyncService` (owned, `IPlayerService/GetOwnedGames` with `STEAM_WEB_API_KEY`/`STEAM_ID`) and `SteamFamilySyncService` (undocumented `IFamilyGroupsService`, short-lived user token, in-memory only). Both short-circuit identical content as `NO_CHANGE`, reject empty/suspicious responses without touching data, soft-remove missing entries, and record a `library_sync_run` with the metadata/AI call counts. The owned sync piggybacks inline on an applied Steam scan (`syncOwnedIfDue`, gated by `jordylab.gamecatalog.library.min-interval-minutes`) — **no scheduler**.
 - **Family titles excluded from sharing are omitted entirely**; owner Steam IDs are stored (display names are a follow-up). The family token is never stored, logged or returned.
 - **Tools/runtimes** (Proton, Steam Linux Runtime, Steamworks redistributables) are excluded via `ToolExclusion` (app-ID deny-list) and the appdetails `type != game` check; the 005 migration cleans up any already catalogued.
-- Endpoints: `GET /games?installStatus=&librarySource=&host=`, `POST /library/steam/sync`, `POST /library/steam-family/sync` (token in body), `GET /library/status`. `gamecatalog` AI enrichment runs on **Claude Haiku** (`jordylab.ai.modules.gamecatalog.model`).
+- Endpoints: `GET /games?installStatus=&librarySource=&host=`, `POST /library/steam/sync`, `POST /library/steam-family/sync` (token in body), `GET /library/status`. `gamecatalog` AI enrichment runs on **Claude Haiku** by default (`jordylab.ai.features."[gamecatalog.enrichment]".model`, changeable on Settings → AI Models).
 
 # Game catalog model (005 extension — local multiplayer metadata)
 

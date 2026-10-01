@@ -16,7 +16,7 @@ class ProviderHealthCacheTest {
 
     @Test
     void healthyWhenNoEntryExists() {
-        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
+        ProviderHealthCache cache = new ProviderHealthCache(AiPropertiesTestBuilder.aDefaultAiProperties(), fixedClock());
 
         boolean result = cache.isHealthy(PROVIDER);
 
@@ -25,7 +25,7 @@ class ProviderHealthCacheTest {
 
     @Test
     void healthyAfterSuccess() {
-        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
+        ProviderHealthCache cache = new ProviderHealthCache(AiPropertiesTestBuilder.aDefaultAiProperties(), fixedClock());
 
         cache.recordSuccess(PROVIDER);
         boolean result = cache.isHealthy(PROVIDER);
@@ -35,7 +35,7 @@ class ProviderHealthCacheTest {
 
     @Test
     void unhealthyAfterFailure() {
-        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
+        ProviderHealthCache cache = new ProviderHealthCache(AiPropertiesTestBuilder.aDefaultAiProperties(), fixedClock());
 
         cache.recordFailure(PROVIDER);
         boolean result = cache.isHealthy(PROVIDER);
@@ -46,7 +46,7 @@ class ProviderHealthCacheTest {
     @Test
     void reProbesAfterTtlExpiry() {
         MutableClock clock = fixedClock();
-        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.anAiModuleConfigWithTtl(TTL_SECONDS), clock);
+        ProviderHealthCache cache = new ProviderHealthCache(AiPropertiesTestBuilder.anAiPropertiesWithTtl(TTL_SECONDS), clock);
 
         cache.recordSuccess(PROVIDER);
         clock.setInstant(NOW.plusSeconds(TTL_SECONDS + 5));
@@ -57,7 +57,7 @@ class ProviderHealthCacheTest {
 
     @Test
     void failureInvalidatesCachedHealth() {
-        ProviderHealthCache cache = new ProviderHealthCache(AiModuleConfigTestBuilder.aDefaultAiModuleConfig(), fixedClock());
+        ProviderHealthCache cache = new ProviderHealthCache(AiPropertiesTestBuilder.aDefaultAiProperties(), fixedClock());
 
         cache.recordSuccess(PROVIDER);
         cache.recordFailure(PROVIDER);

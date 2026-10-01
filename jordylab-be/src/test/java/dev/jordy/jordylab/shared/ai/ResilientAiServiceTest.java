@@ -1,8 +1,12 @@
 package dev.jordy.jordylab.shared.ai;
 
-import org.junit.jupiter.api.BeforeEach;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,328 +18,222 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.net.ConnectException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ResilientAiServiceTest {
 
-    private static final String MODULE_NAME = "fna";
-    private static final String PROVIDER = "anthropic";
-    private static final String MODEL = "claude-sonnet-5";
+    private static final AiFeature FEATURE = AiFeature.GAMECATALOG_ENRICHMENT;
+    private static final String GATEWAY_MODEL = "anthropic/claude-haiku-4.5";
     private static final String SYSTEM_PROMPT = "system";
     private static final String USER_PROMPT = "user";
     private static final String AI_OUTPUT = "AI output";
-    private static final int CALL_TIMEOUT_SECONDS = 2;
+    private static final Instant NOW = Instant.parse("2026-10-01T12:00:00Z");
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
-    private static final Prompt EXPECTED_PROMPT = new Prompt(List.of(
-            new SystemMessage(SYSTEM_PROMPT),
-            new UserMessage(USER_PROMPT)
-    ), AnthropicChatOptions.builder().model(MODEL).build());
-
-    @Mock
-    private AnthropicChatModel anthropicChatModel;
-
-    @Mock
-    private ProviderHealthCache providerHealthCache;
+    private static final Prompt GATEWAY_PROMPT = new Prompt(
+            List.of(new SystemMessage(SYSTEM_PROMPT), new UserMessage(USER_PROMPT)),
+            OpenAiChatOptions.builder().model(GATEWAY_MODEL).build());
+    private static final Prompt FALLBACK_PROMPT = new Prompt(
+            List.of(new SystemMessage(SYSTEM_PROMPT), new UserMessage(USER_PROMPT)),
+            AnthropicChatOptions.builder().model(AiPropertiesTestBuilder.FALLBACK_MODEL).build());
 
     @Mock
-    private AiModuleConfig aiModuleConfig;
+    private OpenAiChatModel gatewayChatModel;
 
+    @Mock
+    private AnthropicChatModel fallbackChatModel;
+
+    @Mock
+    private AiModelResolver modelResolver;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+    private ProviderHealthCache healthCache;
     private ResilientAiService service;
 
-    @BeforeEach
-    void setUp() {
-        service = new ResilientAiService(aiModuleConfig, providerHealthCache, anthropicChatModel);
+    private void serviceWith(AiProperties properties) {
+        healthCache = new ProviderHealthCache(properties, CLOCK);
+        service = new ResilientAiService(properties, healthCache, modelResolver, gatewayChatModel, fallbackChatModel,
+                eventPublisher, meterRegistry, CLOCK);
     }
 
-    @Test
-    void returnsSuccessWithProviderAttribution() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isTrue();
-            softly.assertThat(result.module()).isEqualTo(MODULE_NAME);
-            softly.assertThat(result.provider()).isEqualTo(PROVIDER);
-            softly.assertThat(result.model()).isEqualTo(MODEL);
-            softly.assertThat(result.content()).isEqualTo(AI_OUTPUT);
-            softly.assertThat(result.failureReason()).isNull();
-        });
-    }
-
-    @Test
-    void returnsAnswerTextWhenThinkingGenerationPrecedesIt() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenReturn(new ChatResponse(List.of(
-                        new Generation(new AssistantMessage("")),
-                        new Generation(new AssistantMessage(AI_OUTPUT))
-                )));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isTrue();
-            softly.assertThat(result.content()).isEqualTo(AI_OUTPUT);
-        });
-    }
-
-    @Test
-    void returnsFailureWhenResponseCarriesNoText() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage("")))));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isFalse();
-            softly.assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.UNKNOWN);
-        });
-    }
-
-    @Test
-    void returnsFailureWhenHealthCacheUnhealthy() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(false);
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isFalse();
-            softly.assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.UNREACHABLE);
-        });
-    }
-
-    @Test
-    void returnsFailureWhenModuleUnknown() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(null);
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isFalse();
-            softly.assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.UNKNOWN);
-        });
-    }
-
-    @Test
-    void returnsFailureAndInvalidatesHealthOnRuntimeException() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT)).thenThrow(new RuntimeException("connection refused"));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isFalse();
-            softly.assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.UNKNOWN);
-        });
-        verify(providerHealthCache).recordFailure(PROVIDER);
-    }
-
-    @Test
-    void returnsUnreachableWhenCauseIsConnectException() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenThrow(new RuntimeException("wrapped", new ConnectException("refused")));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.UNREACHABLE);
-    }
-
-    @Test
-    void returnsRateLimitedOnHttp429() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenThrow(new HttpClientErrorException(HttpStatus.TOO_MANY_REQUESTS));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.RATE_LIMITED);
-    }
-
-    @Test
-    void returnsAuthFailedOnHttp401() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.AUTH_FAILED);
-    }
-
-    @Test
-    void returnsAuthFailedOnHttp403() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenThrow(new HttpClientErrorException(HttpStatus.FORBIDDEN));
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.AUTH_FAILED);
-    }
-
-    @Test
-    void returnsFailureAndCancelsFutureOnTimeout() throws InterruptedException {
-        AtomicBoolean workerInterrupted = new AtomicBoolean(false);
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(1);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT)).thenAnswer(invocation -> {
-            try {
-                Thread.sleep(1100);
-            } catch (InterruptedException exception) {
-                workerInterrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
-
-            return new ChatResponse(List.of(new Generation(new AssistantMessage("late"))));
-        });
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertSoftly(softly -> {
-            softly.assertThat(result.success()).isFalse();
-            softly.assertThat(result.failureReason()).isEqualTo(ProviderFailureReason.TIMEOUT);
-        });
-
-        long deadline = System.currentTimeMillis() + 500;
-        while (!workerInterrupted.get() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(10);
+    @AfterEach
+    void shutDown() {
+        if (service != null) {
+            service.shutdown();
         }
-        assertThat(workerInterrupted.get()).isTrue();
+    }
+
+    private static ChatResponse answer(String text) {
+        return new ChatResponse(List.of(new Generation(new AssistantMessage(text))));
+    }
+
+    private AiCallCompleted publishedEvent() {
+        ArgumentCaptor<AiCallCompleted> eventCaptor = ArgumentCaptor.forClass(AiCallCompleted.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        return eventCaptor.getValue();
+    }
+
+    private double calls(String provider, String outcome, boolean fallback) {
+        return meterRegistry.counter("jordylab.ai.calls", "feature", FEATURE.key(), "provider", provider,
+                "outcome", outcome, "fallback", String.valueOf(fallback)).count();
     }
 
     @Test
-    void consultsHealthCacheBeforeCall() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(false);
+    void answersFromTheGatewayWithTheFeaturesOwnModel() {
+        serviceWith(AiPropertiesTestBuilder.aDefaultAiProperties());
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(gatewayChatModel.call(GATEWAY_PROMPT)).thenReturn(answer(AI_OUTPUT));
 
-        service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
 
-        verify(providerHealthCache).isHealthy(PROVIDER);
+        assertThat(result).isEqualTo(AiCallResult.success(FEATURE, "openrouter", GATEWAY_MODEL, AI_OUTPUT, false));
+        assertThat(publishedEvent()).isEqualTo(
+                new AiCallCompleted(FEATURE, "openrouter", GATEWAY_MODEL, true, false, null, NOW));
+        assertThat(calls("openrouter", "success", false)).isEqualTo(1.0);
+        verifyNoInteractions(fallbackChatModel);
+    }
+
+    static Stream<Arguments> gatewayFailures() {
+        return Stream.of(
+                Arguments.of(new RuntimeException("connect", new ConnectException("refused")),
+                        ProviderFailureReason.UNREACHABLE),
+                Arguments.of(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "slow down", null, null,
+                        null), ProviderFailureReason.RATE_LIMITED),
+                Arguments.of(HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "bad key", null, null, null),
+                        ProviderFailureReason.AUTH_FAILED),
+                Arguments.of(HttpClientErrorException.create(HttpStatus.PAYMENT_REQUIRED, "Insufficient credits", null,
+                        null, null), ProviderFailureReason.INSUFFICIENT_CREDITS),
+                Arguments.of(HttpClientErrorException.create("x is not a valid model ID", HttpStatus.BAD_REQUEST,
+                        "Bad Request", null, null, null), ProviderFailureReason.MODEL_NOT_FOUND));
+    }
+
+    @ParameterizedTest
+    @MethodSource("gatewayFailures")
+    void retriesOnceOnTheFallbackWhenTheGatewayFails(RuntimeException failure, ProviderFailureReason reason) {
+        serviceWith(AiPropertiesTestBuilder.aDefaultAiProperties());
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(gatewayChatModel.call(GATEWAY_PROMPT)).thenThrow(failure);
+        when(fallbackChatModel.call(FALLBACK_PROMPT)).thenReturn(answer(AI_OUTPUT));
+
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertThat(ResilientAiService.reasonFor(failure)).isEqualTo(reason);
+        assertThat(result).isEqualTo(new AiCallResult(true, FEATURE, "anthropic",
+                AiPropertiesTestBuilder.FALLBACK_MODEL, AI_OUTPUT, null, true));
+        assertThat(calls("anthropic", "success", true)).isEqualTo(1.0);
     }
 
     @Test
-    void neverThrows() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT)).thenThrow(new RuntimeException("boom"));
+    void retriesOnTheFallbackWhenTheGatewayTimesOut() {
+        serviceWith(AiPropertiesTestBuilder.anAiProperties(30, 1, "gateway-key"));
+        CountDownLatch neverReleased = new CountDownLatch(1);
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(gatewayChatModel.call(GATEWAY_PROMPT)).thenAnswer(invocation -> {
+            neverReleased.await();
 
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        assertThat(result).isNotNull();
-    }
-
-    @Test
-    void recordsSuccessInHealthCache() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
-
-        service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        verify(providerHealthCache).recordSuccess(PROVIDER);
-    }
-
-    @Test
-    void recordsFailureInHealthCache() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT)).thenThrow(new RuntimeException("boom"));
-
-        service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        verify(providerHealthCache).recordFailure(PROVIDER);
-    }
-
-    @Test
-    void passesCorrectPromptContent() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
-        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
-
-        service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        verify(anthropicChatModel).call(promptCaptor.capture());
-        assertThat(promptCaptor.getValue()).isEqualTo(EXPECTED_PROMPT);
-    }
-
-    @Test
-    void sendsTheConfiguredModuleModelAsAPerCallOption() {
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, MODEL));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(EXPECTED_PROMPT))
-                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
-        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
-
-        service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        verify(anthropicChatModel).call(promptCaptor.capture());
-        AnthropicChatOptions options = (AnthropicChatOptions) promptCaptor.getValue().getOptions();
-        assertThat(options.getModel()).isEqualTo(MODEL);
-    }
-
-    @Test
-    void honoursADifferentModelPerModule() {
-        String otherModel = "claude-haiku-4-5-20251001";
-        Prompt otherPrompt = new Prompt(List.of(
-                new SystemMessage(SYSTEM_PROMPT),
-                new UserMessage(USER_PROMPT)
-        ), AnthropicChatOptions.builder().model(otherModel).build());
-        when(aiModuleConfig.getModuleConfig(MODULE_NAME)).thenReturn(new AiModuleConfig.ModuleProvider(PROVIDER, otherModel));
-        when(aiModuleConfig.callTimeoutSeconds()).thenReturn(CALL_TIMEOUT_SECONDS);
-        when(providerHealthCache.isHealthy(PROVIDER)).thenReturn(true);
-        when(anthropicChatModel.call(otherPrompt))
-                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage(AI_OUTPUT)))));
-        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
-
-        AiCallResult result = service.call(MODULE_NAME, SYSTEM_PROMPT, USER_PROMPT);
-
-        verify(anthropicChatModel).call(promptCaptor.capture());
-        AnthropicChatOptions options = (AnthropicChatOptions) promptCaptor.getValue().getOptions();
-        assertSoftly(softly -> {
-            softly.assertThat(options.getModel()).isEqualTo(otherModel);
-            softly.assertThat(result.model()).isEqualTo(otherModel);
+            return answer("too late");
         });
+        when(fallbackChatModel.call(FALLBACK_PROMPT)).thenReturn(answer(AI_OUTPUT));
+
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertSoftly(softly -> {
+            softly.assertThat(result.success()).isTrue();
+            softly.assertThat(result.provider()).isEqualTo("anthropic");
+            softly.assertThat(result.fallbackUsed()).isTrue();
+            softly.assertThat(healthCache.isHealthy("openrouter")).isFalse();
+        });
+    }
+
+    @Test
+    void anUnknownModelDoesNotMarkTheGatewayUnhealthyForOtherFeatures() {
+        serviceWith(AiPropertiesTestBuilder.aDefaultAiProperties());
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(gatewayChatModel.call(GATEWAY_PROMPT)).thenThrow(HttpClientErrorException.create(
+                "x is not a valid model ID", HttpStatus.BAD_REQUEST, "Bad Request", null, null, null));
+        when(fallbackChatModel.call(FALLBACK_PROMPT)).thenReturn(answer(AI_OUTPUT));
+
+        service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertThat(healthCache.isHealthy("openrouter")).isTrue();
+    }
+
+    @Test
+    void goesStraightToTheFallbackWithoutAGatewayKey() {
+        serviceWith(AiPropertiesTestBuilder.anAiProperties(30, 120, ""));
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(fallbackChatModel.call(FALLBACK_PROMPT)).thenReturn(answer(AI_OUTPUT));
+
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertThat(result.provider()).isEqualTo("anthropic");
+        verifyNoInteractions(gatewayChatModel);
+    }
+
+    @Test
+    void skipsAnUnhealthyGateway() {
+        serviceWith(AiPropertiesTestBuilder.aDefaultAiProperties());
+        healthCache.recordFailure("openrouter");
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(fallbackChatModel.call(FALLBACK_PROMPT)).thenReturn(answer(AI_OUTPUT));
+
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertThat(result.fallbackUsed()).isTrue();
+        verify(gatewayChatModel, never()).call(GATEWAY_PROMPT);
+    }
+
+    @Test
+    void failsExplicitlyWhenBothProvidersFail() {
+        serviceWith(AiPropertiesTestBuilder.aDefaultAiProperties());
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(gatewayChatModel.call(GATEWAY_PROMPT)).thenThrow(
+                HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "slow down", null, null, null));
+        when(fallbackChatModel.call(FALLBACK_PROMPT)).thenThrow(
+                HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "bad key", null, null, null));
+
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertThat(result).isEqualTo(AiCallResult.failure(FEATURE, "anthropic",
+                AiPropertiesTestBuilder.FALLBACK_MODEL, ProviderFailureReason.AUTH_FAILED, true));
+        assertThat(publishedEvent()).isEqualTo(new AiCallCompleted(FEATURE, "anthropic",
+                AiPropertiesTestBuilder.FALLBACK_MODEL, false, true, ProviderFailureReason.AUTH_FAILED, NOW));
+        assertThat(calls("anthropic", "failure", true)).isEqualTo(1.0);
+    }
+
+    @Test
+    void joinsEveryGenerationThatCarriesText() {
+        serviceWith(AiPropertiesTestBuilder.aDefaultAiProperties());
+        when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
+        when(gatewayChatModel.call(GATEWAY_PROMPT)).thenReturn(new ChatResponse(List.of(
+                new Generation(new AssistantMessage("")), new Generation(new AssistantMessage(AI_OUTPUT)))));
+
+        AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
+
+        assertThat(result.content()).isEqualTo(AI_OUTPUT);
     }
 }
