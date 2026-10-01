@@ -1,9 +1,14 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchBulkConfirmRequest;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchBulkConfirmResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchBulkPreviewRequest;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchBulkPreviewResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchGameUpdateRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SwitchSearchResult;
+import dev.jordy.jordylab.gamecatalog.service.SwitchBulkService;
 import dev.jordy.jordylab.gamecatalog.service.SwitchGameService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +33,7 @@ import java.util.UUID;
 public class SwitchGameController {
 
     private final SwitchGameService switchGameService;
+    private final SwitchBulkService switchBulkService;
 
     @GetMapping("/search")
     public List<SwitchSearchResult> search(@RequestParam String query) {
@@ -54,5 +60,17 @@ public class SwitchGameController {
         switchGameService.delete(id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    /** Matches every pasted line against IGDB; nothing is saved (spec 009 US3 AS1). */
+    @PostMapping("/bulk/preview")
+    public SwitchBulkPreviewResponse bulkPreview(@Valid @RequestBody SwitchBulkPreviewRequest request) {
+        return switchBulkService.preview(request.text());
+    }
+
+    /** Adds the ticked lines and reports added / already present / skipped (spec 009 US3 AS2). */
+    @PostMapping("/bulk/confirm")
+    public SwitchBulkConfirmResponse bulkConfirm(@Valid @RequestBody SwitchBulkConfirmRequest request) {
+        return switchBulkService.confirm(request);
     }
 }

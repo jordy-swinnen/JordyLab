@@ -106,12 +106,54 @@ entries remain.
 
 ## Future endpoints
 
-Bulk paste preview/confirm (`POST /api/gamecatalog/switch/bulk/preview` and `POST /api/gamecatalog/switch/bulk/confirm`)
-is planned but not implemented in this PR; it will be added in a follow-up.
+### `POST /api/gamecatalog/switch/bulk/preview`
+
+Match a pasted list against IGDB; **nothing is saved** (US3 AS1). Added by spec 011 BUG-016.
+
+**Request body**: `{"text": "Pikmin 4\nMario Kart 8 Deluxe"}` — one title per line. Lines are trimmed, `™®©` and list
+markers (`- `, `• `, `1. `) are removed, empty lines are ignored, case-insensitive duplicates collapse onto the first.
+More than **100** distinct lines → `400`.
+
+**Response** `200 OK`:
+
+```json
+{
+  "lines": [
+    {
+      "line": "Pikmin 4",
+      "status": "MATCH",
+      "candidates": [{"igdbGameId": 59843, "title": "Pikmin 4", "releaseYear": 2023, "coverUrl": "…"}],
+      "existingGameId": null,
+      "include": true
+    }
+  ]
+}
+```
+
+`status`: `MATCH` (best candidate has the same title, ticked), `NEEDS_REVIEW` (title differs → ticked; DLC/bundle
+wording → unticked), `NO_MATCH` (no candidate, unticked; can still be added by title), `ALREADY_PRESENT` (already on
+the Switch, `existingGameId` set, unticked). Up to 5 candidates, best first.
+
+### `POST /api/gamecatalog/switch/bulk/confirm`
+
+Add the ticked lines (US3 AS2). Each line runs the single-add flow in its own transaction.
+
+**Request body**: `{"items": [{"line": "Pikmin 4", "igdbGameId": 59843, "title": null, "format": "DIGITAL"}]}` —
+1–100 items; without `igdbGameId` the line is added by `title` (or `line`). `format` is required.
+
+**Response** `200 OK`: `{"added": [SwitchGameResponse…], "alreadyPresent": ["Splatoon 3"], "skipped": [{"line": "…",
+"reason": "IGDB game not found"}]}`.
+
+IGDB calls are paced to IGDB's 4 requests/second, so a 40-line preview takes roughly 10 seconds.
+
+### Search scope
+
+`/search` and the bulk preview return IGDB `game_type` main game, standalone expansion, remake, remaster, expanded
+game and port (spec 011 BUG-042); DLC, bundles, mods, episodes, seasons, packs and updates are excluded.
 
 ## Common error responses
 
-- `400 Bad Request` — malformed body, missing required field, invalid format enum
+- `400 Bad Request` — malformed body, missing required field, invalid format enum, unknown IGDB id, > 100 lines
 - `403 Forbidden` — caller is not admin
 - `404 Not Found` — game not found (for edit/delete)
 - `409 Conflict` — duplicate game

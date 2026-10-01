@@ -128,13 +128,14 @@
                 <label for="switch-detail-format" class="mono-label">Format</label>
                 <select
                   id="switch-detail-format"
-                  class="h-10 rounded-xl border border-input bg-background px-3"
-                  [value]="format"
+                  class="h-10 rounded-xl border border-input bg-background text-foreground px-3"
                   [disabled]="savingSwitch()"
                   (change)="onFormatChange($event)"
                 >
+                  <!-- [selected] per option, not [value] on the select: the options render after the select's value
+                       binding, so a DIGITAL game showed PHYSICAL (spec 011 BUG-043). -->
                   @for (option of switchFormats; track option) {
-                    <option [value]="option">{{ formatLabel(option) }}</option>
+                    <option [value]="option" [selected]="option === format">{{ formatLabel(option) }}</option>
                   }
                 </select>
               </div>

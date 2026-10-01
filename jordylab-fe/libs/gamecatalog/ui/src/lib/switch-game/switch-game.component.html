@@ -1,5 +1,8 @@
 <div class="p-6 max-w-3xl mx-auto">
-  <h1 class="text-2xl font-bold mb-4">Add Nintendo Switch Game</h1>
+  <div class="flex items-baseline justify-between gap-4 mb-4">
+    <h1 class="text-2xl font-bold">Add Nintendo Switch Game</h1>
+    <a routerLink="/games/switch/bulk" data-testid="switch-bulk-link" class="text-sm underline">Paste a list</a>
+  </div>
 
   <div class="flex gap-2 mb-4">
     <button
@@ -29,7 +32,7 @@
   } @else {
     <section class="mb-6">
       <label for="switch-format" class="block mb-1 font-medium">Format</label>
-      <select id="switch-format" [ngModel]="format()" (ngModelChange)="onFormat($event)" class="border rounded px-3 py-2">
+      <select id="switch-format" [ngModel]="format()" (ngModelChange)="onFormat($event)" class="h-10 rounded-xl border border-input bg-background text-foreground px-3">
         @for (f of formats; track f) {
           <option [value]="f">{{ f }}</option>
         }

@@ -38,6 +38,12 @@ export const gamecatalogRoutes: Route[] = [
           import('./switch-game/switch-game.component').then((m) => m.SwitchGameComponent),
       },
       {
+        path: 'switch/bulk',
+        canActivate: [roleGuard('admin')],
+        loadComponent: () =>
+          import('./switch-bulk/switch-bulk.component').then((m) => m.SwitchBulkComponent),
+      },
+      {
         path: ':id',
         loadComponent: () =>
           import('./game-detail/game-detail.component').then(

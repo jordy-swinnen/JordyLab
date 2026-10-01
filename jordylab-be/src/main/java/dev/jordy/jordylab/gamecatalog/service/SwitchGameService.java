@@ -61,6 +61,21 @@ public class SwitchGameService {
                 .toList();
     }
 
+    /**
+     * The catalog game already tracked on the Switch under this IGDB id or (case-insensitively) this title, if any.
+     * Used by the bulk-add review to flag lines as already present (spec 009 US3).
+     */
+    @Transactional(readOnly = true)
+    public Optional<UUID> findSwitchGameId(String title, Long igdbGameId) {
+        Optional<Game> byIgdb = igdbGameId == null ? Optional.empty()
+                : gameRepository.findByPlatformAndIgdbGameId(SWITCH_PLATFORM, String.valueOf(igdbGameId));
+        Optional<Game> candidate = byIgdb.isPresent() ? byIgdb
+                : gameRepository.findByPlatformAndLowercaseTitle(SWITCH_PLATFORM, title, PageRequest.of(0, 1)).stream()
+                        .findFirst();
+
+        return candidate.filter(game -> findSwitchInstallation(game).isPresent()).map(Game::getId);
+    }
+
     @Transactional
     public SwitchGameResponse addFromIgdb(SwitchGameRequest request) {
         if (request.igdbGameId() == null) {
@@ -110,9 +125,9 @@ public class SwitchGameService {
     @Transactional
     public SwitchGameResponse update(UUID gameId, SwitchGameUpdateRequest request) {
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+                .orElseThrow(() -> new SwitchGameNotFoundException("Game not found"));
         GameInstallation installation = findSwitchInstallation(game)
-                .orElseThrow(() -> new IllegalArgumentException("Switch installation not found"));
+                .orElseThrow(() -> new SwitchGameNotFoundException("Switch installation not found"));
 
         if (request.format() != null) {
             installation.setFormat(request.format());
@@ -135,9 +150,9 @@ public class SwitchGameService {
     @Transactional
     public void delete(UUID gameId) {
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+                .orElseThrow(() -> new SwitchGameNotFoundException("Game not found"));
         GameInstallation installation = findSwitchInstallation(game)
-                .orElseThrow(() -> new IllegalArgumentException("Switch installation not found"));
+                .orElseThrow(() -> new SwitchGameNotFoundException("Switch installation not found"));
 
         installationRepository.delete(installation);
 

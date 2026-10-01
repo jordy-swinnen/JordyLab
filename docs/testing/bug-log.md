@@ -246,7 +246,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-016: 009 US3 missing — bulk add by pasting a list
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -256,8 +256,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 009 FR-005 — paste a list, review matches, add the confirmed ones.
 - Actual (logs/screenshot, secrets redacted): feature absent.
 - Root cause: story not implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-switch-bulk-add` (T048).
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-switch-bulk-add` — `POST /switch/bulk/preview` + `/bulk/confirm` (`SwitchBulkService`, one transaction per line), page `/games/switch/bulk`, IGDB calls paced to 4/s.
+- Regression test added: `SwitchBulkServiceTest`, `SwitchGameControllerTest` (bulk), `SwitchGameControllerSecurityTest` (guest 403), `switch-bulk.store.spec.ts`, `switch-bulk.component.spec.ts`; local E2E 2026-10-01 (5 lines → 2 added, duplicate collapsed, DLC flagged, re-paste → already in catalog)
 - Verified on prod:
 
 ### BUG-017: 009 US5 incomplete — no edit/remove on the detail page; guest-403 tests missing
@@ -613,4 +613,64 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: PATCH missing from `allowedMethods`.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — PATCH added.
 - Regression test added: `SwitchGameControllerSecurityTest.corsPreflightAllowsPatchForTheSwitchEdit`
+- Verified on prod:
+
+### BUG-040: No navigation leads to the Switch add page
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S3
+- Area/spec: gamecatalog / 009
+- Env found: code reading + local (while adding 009 US3)
+- Coverage rows: 009-US1, 009-US3
+- Steps to reproduce:
+  1. Log in as admin; look for a way to add a Switch game in the sidebar, library or sources page.
+- Expected (cite spec/story): 009 US1 — the admin adds a Switch game from the app.
+- Actual (logs/screenshot, secrets redacted): `/games/switch` exists but nothing links to it; only typing the URL reaches it.
+- Root cause: route added without a nav entry.
+- Fix (PR / commit / tag): admin-only "Switch games" item in the sidebar; "Paste a list" ↔ "Add one game" links between the two Switch pages.
+- Regression test added: `app.spec.ts` (admin nav lists Switch games; guest doesn't)
+- Verified on prod:
+
+### BUG-041: Switch endpoints answer 500 for duplicates, bad input and unknown games
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S3
+- Area/spec: gamecatalog / 009
+- Env found: code reading
+- Coverage rows: 009-FR-009, 009 switch-api contract
+- Steps to reproduce:
+  1. `POST /api/gamecatalog/switch/games` for a game already on the Switch, or `DELETE /switch/games/{unknown id}`.
+- Expected (cite spec/story): 009 switch-api — `409` duplicate, `400` bad input, `404` unknown game.
+- Actual (logs/screenshot, secrets redacted): `IllegalStateException` / `IllegalArgumentException` are unhandled for `SwitchGameController` → `500`; the UI shows a generic error.
+- Root cause: no exception handler for the Switch controller.
+- Fix (PR / commit / tag): `SwitchGameExceptionHandler` (400/404/409 ProblemDetail), `SwitchGameNotFoundException`.
+- Regression test added: `SwitchGameControllerTest` (409, 404, 400)
+- Verified on prod:
+
+### BUG-042: Switch IGDB search misses ports and expanded games — "Mario Kart 8 Deluxe" finds nothing
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S2
+- Area/spec: gamecatalog / 009
+- Env found: local (2026-10-01, IGDB live)
+- Coverage rows: 009-US1, 009-US3, 009-SC-002
+- Steps to reproduce:
+  1. `/games/switch` → search "Mario Kart 8" → "No IGDB match".
+- Expected (cite spec/story): 009 SC-002 — ≥ 90% correct first matches for official titles.
+- Actual (logs/screenshot, secrets redacted): IGDB returns nothing: the query filters `game_type = 0` (main game) and IGDB files MK8 Deluxe as type 10 (expanded game); every port/remaster is excluded too.
+- Root cause: too narrow `game_type` filter.
+- Fix (PR / commit / tag): `game_type = (0,4,8,9,10,11)` — main, standalone expansion, remake, remaster, expanded game, port; DLC/bundles/mods/packs stay out.
+- Regression test added: `IgdbClientTest.searchSwitchGamesKeepsPortsAndExpandedGamesButNotDlcOrBundles`; verified locally (MK8 Deluxe → Match)
+- Verified on prod:
+
+### BUG-043: Detail page's admin format select always shows "Physical"
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S3
+- Area/spec: gamecatalog / 009
+- Env found: local (2026-10-01; shipped in v0.0.1-rc4 via PR #53)
+- Coverage rows: 009-US5
+- Steps to reproduce:
+  1. Admin opens a Switch game whose format is Digital.
+- Expected (cite spec/story): 009 US5 — the edit control shows the current format.
+- Actual (logs/screenshot, secrets redacted): "Format · Digital" is shown, but the select reads PHYSICAL.
+- Root cause: `[value]` on the `<select>` is applied before `@for` renders the options.
+- Fix (PR / commit / tag): `[selected]` per option.
+- Regression test added: `game-detail.component.spec.ts` (preselects the current format); verified locally
 - Verified on prod:
