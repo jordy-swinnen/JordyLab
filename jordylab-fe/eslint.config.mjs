@@ -19,7 +19,8 @@ export default [
         'error',
         {
           enforceBuildableLibDependency: true,
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
+          // Shared workspace-root configs that app configs import by relative path (nx 22.7 flags those).
+          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '^.*/tailwind\\.theme\\.js$'],
           depConstraints: [
             {
               sourceTag: 'type:api',
