@@ -755,6 +755,8 @@ _Not started._
 | HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ⏳ open |
 | HANDOFF-08 | Decide: buy OpenRouter credits (primary) or stay on Anthropic-direct | your browser | prod | 2026-10-01 | | after credits: backend log `AI call succeeded: … provider=openrouter` | 2 min | ⏳ open |
 | HANDOFF-09 | Change the `MEUD` portfolio ticker to `MEUD.PA` | your browser | prod | 2026-10-01 | | within 30 min the position shows a price; no more `Could not fetch price` warnings | 1 min | ⏳ open |
+| HANDOFF-11 | Rerun the EmuDeck scan on JordyBox with the new client | JordyBox | prod | 2026-10-01 | | EmuDeck games appear; rescan is a no-op | 10 min | ⏳ open (MRB-03) |
+| HANDOFF-12 | Signed-in pass on prod as admin (the agent never types your password) | browser | prod | 2026-10-01 | | the agent runs MRB-01 in the browser pane once signed in | 15 min | ⏳ open (MRB-01) |
 
 ### Batch 1 (sent with the approval request)
 
@@ -847,6 +849,15 @@ _Not started._
   Europe 600 ETF; `MEUD` alone returns 404) → save.
 - Expect: within 30 minutes the position shows a price (~309.7 today). Tell me "done".
 
+#### HANDOFF-11: Rerun the EmuDeck scan on JordyBox
+- Machine: JordyBox · Target env: prod · Why you: only JordyBox has the ROM library.
+- Steps: download the current client from `https://jordylab.be/api/gamecatalog/ingest/client` (admin login), run `python3 jordylab-scan-prod.py scan` for the EmuDeck library. Full steps: `manual-test-runbook.md` MRB-03.
+- Expect: `EMUDECK scan APPLIED: …` instead of "scan payload exceeds … bytes". Send me the last lines.
+
+#### HANDOFF-12: Sign in to prod in the browser pane
+- Machine: the Claude desktop app's browser pane · Target env: prod · Why you: I never enter your password.
+- Steps: open `https://jordylab.be` in the pane, sign in as admin, tell me "signed in". I then run the pass in `manual-test-runbook.md` MRB-01 (read-mostly; I add and remove one Switch game and change nothing else) and verify the BUG-011/012/014–017/038–043 rows on prod.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
@@ -854,7 +865,12 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 | # | Feature | Env | Purpose | Outcome |
 |---|---------|-----|---------|---------|
 
-**Total so far: 0**
+| 1 | gamecatalog.enrichment | local | "Regenerate description" (gateway 402 → Anthropic retry) | success via fallback (2 provider calls) |
+| 2–3 | gamecatalog.enrichment | local | descriptions for the 2 games added by the bulk-add E2E | success |
+| 4–6 | gamecatalog.chat.query/answer | local | grounded chat: racing games (2), "Do I own Cyberpunk 2077?" (1) | grounded answer; "no match" without inventing |
+
+Prod calls made by the agent: 0 (the prod chat/enrichment calls in the backend log are the owner's own use).
+**Total by the agent: 6 calls (7 provider calls), within the ≤ 30 budget.**
 
 ## 9. Deployments
 

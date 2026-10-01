@@ -177,7 +177,7 @@ matrix; every FAIL has a BUG.
   desktop, back/forward, double-submit on Switch add and Settings approve, throttled network, large lists
 - [ ] T037 [P] [US3] G-security: re-run `gitleaks`, verify no admin endpoint reachable as guest (from T022), CORS not
   `*`, dependency alerts via `gh api repos/jordy-swinnen/JordyLab/dependabot/alerts` (if permitted)
-- [ ] T038 [US3] Close every remaining row: PASS / FAIL (+BUG) / BLOCKED / NOT TESTABLE with reason; update the
+- [x] T038 [US3] Close every remaining row: PASS / FAIL (+BUG) / BLOCKED / NOT TESTABLE with reason; update the
   AI tally total in `docs/testing/e2e-test-plan.md` §8
 
 **Checkpoint**: full matrix status; bug log complete for the first pass.
@@ -278,10 +278,10 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 - [ ] T058 Commit `docs/testing/e2e-test-plan.md`, `docs/testing/bug-log.md` and `specs/011-prod-e2e-hardening/` on
   `011-prod-e2e-hardening`; open a PR to `main` (body ends with the Claude Code attribution line); T060 adds the
   manual runbook to this same PR
-- [ ] T059 Final report to Jordy (FR-026): tested scope, bugs found/fixed/remaining by severity, AI calls used, NOT
+- [x] T059 Final report to Jordy (FR-026): tested scope, bugs found/fixed/remaining by severity, AI calls used, NOT
   TESTABLE with reasons, recommended next steps (scheduled smoke-suite GitHub Action, Eufy 010 implementation,
   garmin sidecar)
-- [ ] T060 Final task (FR-027): write `docs/testing/manual-test-runbook.md` per
+- [x] T060 Final task (FR-027): write `docs/testing/manual-test-runbook.md` per
   `specs/011-prod-e2e-hardening/contracts/manual-runbook-entry.md` — one entry for every coverage row still
   `NOT TESTABLE` or `BLOCKED` after all handoffs (excluding `NOT BUILT` rows, which get a one-line pointer section);
   expected entries include native Android behavior (APK install/update, deep links, push notifications), anything
