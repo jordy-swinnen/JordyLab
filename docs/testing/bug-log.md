@@ -357,7 +357,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc2`: `/auth/realms/master/{.well-known/openid-configuration,account}` → SPA fallback (HTML); jordylab realm issuer still served
 
 ### BUG-023: No base backup exists yet and the restore drill was never performed
-- Status: FIXING — first base backup `manual-backup-20261001` completed 2026-10-01 (on-demand, approved by Jordy); restore drill still to do
+- Status: VERIFIED — base backups running (manual + daily 03:00 UTC); restore drill passed 2026-10-01
 - Severity: S2
 - Area/spec: database / 008
 - Env found: prod
@@ -368,9 +368,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 008 FR-015 — "A restore drill MUST be performed and documented before go-live"; FR-014 continuous backups.
 - Actual (logs/screenshot, secrets redacted): WAL archiving works but there is no base backup to restore from until 03:00 on 2026-10-01; no drill recorded (008 T073 open).
 - Root cause: `immediate: false` on the schedule and the drill deferred at go-live.
-- Fix (PR / commit / tag): needs Jordy's yes for a cluster mutation: an on-demand `Backup` now (or `immediate: true` via PR), then the restore drill (runbook §15) into a scratch cluster — candidate for the manual runbook if not done in-campaign.
+- Fix (PR / commit / tag): on-demand `manual-backup-20261001` (approved by Jordy); the scheduled daily backup ran at 03:00 UTC; restore-drill manifest + runbook §15 in PR #51; drill run 2026-10-01 (approved by Jordy).
 - Regression test added: none because infrastructure procedure
-- Verified on prod:
+- Verified on prod: 2026-10-01: `cnpg-restore-drill` recovered from the daily base backup + WAL, Ready in 1 min 55 s (SC-004: < 30 min); row counts identical to production (128 games, 6 Keycloak users, 20 Flyway migrations); drill cluster and volume deleted afterwards. Logged in runbook §15.
 
 ### BUG-024: `EnvironmentProfileGuard` does not fail first — missing profile surfaces as a datasource error
 - Status: FIXED-LOCAL (PR #43, `b7bc402`) — verified: bootRun without profile stops with the guard's message

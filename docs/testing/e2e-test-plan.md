@@ -530,8 +530,8 @@ Open tasks without a story label: T007 T052 T054 T055.
 | 008-US4-AS3 | Given a bad release, When I trigger a rollback, Then the previous version is running again within 5 | ↑ | prod |  | ↑ | TODO |  |
 | 008-US4-AS4 | Given the deploy credentials, When they're used, Then they can only change resources in the JordyLab | ↑ | prod |  | ↑ | TODO |  |
 | 008-US5 | Data is durable and restorable (Priority: P1) | CNPG backups; restore drill | prod (cluster) | tasks closed | high (005–010, no validation) | TODO |  |
-| 008-US5-AS1 | Given the production database, When a day passes, Then a backup exists in OVH Object Storage, | ↑ | prod (cluster) |  | ↑ | TODO |  |
-| 008-US5-AS2 | Given a backup, When I follow the restore runbook, Then I can restore the database to a point in | ↑ | prod (cluster) |  | ↑ | TODO |  |
+| 008-US5-AS1 | Given the production database, When a day passes, Then a backup exists in OVH Object Storage, | ↑ | prod (cluster) |  | ↑ | PASS | daily base backup `cnpg-daily-backup-20261001030000` completed 03:00 UTC, WAL archiving on (2026-10-01) |
+| 008-US5-AS2 | Given a backup, When I follow the restore runbook, Then I can restore the database to a point in | ↑ | prod (cluster) |  | ↑ | PASS | restore drill 2026-10-01: recovered to a fresh cluster, row counts match (runbook §15) |
 | 008-US5-AS3 | Given a pod restart or a VPS reboot, When it comes back, Then uploaded game artwork and database data | ↑ | prod (cluster) |  | ↑ | TODO |  |
 | 008-US5-AS4 | Given the VPS is lost entirely, When I follow the runbook, Then a fresh VPS can be rebuilt from git + | ↑ | prod (cluster) |  | ↑ | TODO |  |
 | 008-US6 | Learn Kubernetes and Podman on my own project (Priority: P2) | `docs/learn/` | neither (docs) | tasks closed | high (005–010, no validation) | TODO |  |
@@ -564,7 +564,7 @@ Open tasks without a story label: T007 T052 T054 T055.
 | 008-FR-012 | CI MUST scan for committed secrets and fail on findings. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-FR-013 | Push notifications used by the mobile app (spec 007) MUST be delivered through a self-hosted ntfy | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-FR-014 | PostgreSQL with pgvector MUST run in the cluster on node-local storage, with continuous backups | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
-| 008-FR-015 | A restore drill MUST be performed and documented before go-live, and repeated quarterly thereafter. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-FR-015 | A restore drill MUST be performed and documented before go-live, and repeated quarterly thereafter. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | PASS | drill performed and logged 2026-10-01 (runbook §15); quarterly repeat is Jordy's (manual runbook), next due 2027-01-01 |
 | 008-FR-016 | Game artwork (and 007 APK files) MUST be stored on persistent storage (k3s local-path) that survives | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-FR-017 | A learning guide MUST explain Kubernetes and Podman concepts using JordyLab's own files, with | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-FR-018 | A runbook MUST cover bootstrap (VPS hardening + k3s install), deploy, rollback, logs, DB | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
@@ -574,7 +574,7 @@ Open tasks without a story label: T007 T052 T054 T055.
 | 008-SC-001 | A friend on mobile data can open `https://<domain>`, log in and use the Game Catalog. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-SC-002 | From an approved deploy to a healthy new version takes under 10 minutes; a rollback takes under 5 | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-SC-003 | Zero secret values in git, images or ConfigMaps (CI secret scan green; manual image inspection in the | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
-| 008-SC-004 | A database restore to a point in time succeeds in a drill, in under 30 minutes by following the | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
+| 008-SC-004 | A database restore to a point in time succeeds in a drill, in under 30 minutes by following the | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | PASS | drill Ready in 1 min 55 s, < 30 min (2026-10-01) |
 | 008-SC-005 | Monthly infrastructure cost stays at or under about €13 excl. VAT (VPS-2 + Object Storage + domain), | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-SC-006 | Jordy can explain and do every runbook procedure alone after working through the learning guide. | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
 | 008-SC-007 | No MIT licence file or MIT licence declaration remains in the repo (excluding third-party files), and | https://jordylab.be; cluster; CI | prod |  | high (005–010, no validation, open tasks) | TODO |  |
@@ -696,7 +696,7 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | A10 | CORS | PASS | preflight `evil.example`/`null`/`http://localhost:4200` → 403; `https://localhost` → allowed w/ credentials; Keycloak token POST from `evil.example` → 403, from `jordylab.be` → ACAO set |
 | A11 | Pods / probes | PASS | 5/5 Running, 0 restarts; every Deployment has readiness+liveness and requests/limits (008 FR-010) |
 | A13 | Running images | PASS | backend/frontend/keycloak `sha-e167de8834a1…` = latest green Build |
-| — | CNPG / backups | FAIL | cluster healthy, WAL archiving OK; **no base backup yet, no restore drill** → BUG-023 |
+| — | CNPG / backups | FAIL → PASS | cluster healthy, WAL archiving OK; no base backup / drill at first (BUG-023); 2026-10-01 daily backup + restore drill passed |
 | — | `assetlinks.json` | NOTE | `package_name: ""`, fingerprint `""` — Android App Links can't verify until 007 T052 (keystore) is done → Q-06 |
 | A12 | Browser console per route | TODO | needs HANDOFF-01 (admin session) |
 
@@ -851,6 +851,14 @@ Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (ob
 - Contains Flyway migration: no · realm change: no · config change: yes (multipart limits, server.error, Keycloak route, nginx)
 - Running images: `:v0.0.1-rc2`
 - Prod re-verification: BUG-021 and BUG-022 verified (see bug log); OIDC issuer OK
+- Outcome: deployed; no regression
+
+#### DEPLOY-07
+- Release: `v0.0.1-rc3` on `439e56a` (PRs #49, #50), run 36839957592
+- Jobs: verify ✅ · retag ×3 ✅ · release (draft) ✅ · deploy ✅ (standing approval) · publish ✅ · apk ❌ at *Verify the APK signature*: the META-INF check proved the release APK has **no v1 signature** (AGP ignores `enableV1Signing` at minSdk 29) → backend reader switched to apksig (PR #52, BUG-037). Nothing was uploaded.
+- Contains Flyway migration: no · realm change: no · config change: no
+- Running images: `:v0.0.1-rc3`
+- Prod re-verification: BUG-033 (approve) verified; assetlinks served; daily + manual backups completed
 - Outcome: deployed; no regression
 
 ## 10. NOT TESTABLE
