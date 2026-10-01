@@ -1,6 +1,9 @@
 package dev.jordy.jordylab.mobile.util;
 
-/** Spec FR-003: an uploaded file is not a readable, signed APK — a client error, never a 500/403. */
+/**
+ * An upload to {@code POST /api/mobile/releases} is not a readable, signed APK, so its signing certificate
+ * can't be checked (spec 007 FR-001/FR-003, contracts/mobile-releases-api.md → {@code 400 INVALID_APK}).
+ */
 public class InvalidApkException extends IllegalArgumentException {
 
     public InvalidApkException(String message) {
