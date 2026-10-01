@@ -10,7 +10,7 @@ description: Scaffold a ResilientAiService integration for a module with model c
 Ask the user for:
 - **Target module** (e.g., `fna`, `gamecatalog`)
 - **AI task description** (e.g., "analyze portfolio risk", "generate recipe suggestions")
-- **Provider** (`anthropic` for MVP1 — `fna` is the only module wired; other modules are deferred to Ollama and not yet implemented, see `AGENTS.md` AI Routing table)
+- **Provider** (`anthropic` — the only provider wired today; see `AGENTS.md` AI Routing table)
 
 ## Scaffold
 
@@ -35,7 +35,7 @@ Ask the user for:
      ai:
        modules:
          <module>:
-           provider: <anthropic|ollama>
+           provider: anthropic
            model: <model-name>
    ```
 
@@ -54,8 +54,6 @@ Ask the user for:
 ## Rules
 
 - Never instantiate `ChatClient` directly — always use `ResilientAiService`
-- MVP1 wires exactly one provider (Anthropic) for the `fna` module — there is no fallback provider yet.
-  Other modules (`gamecatalog`, `recipe`) are documented as Ollama-routed in the AI Routing table but
-  are **deferred**; do not wire Ollama for them without checking the current AGENTS.md status first
-- If/when Ollama is wired: the health check only verifies Ollama is running, not that a model is
-  loaded in VRAM (see root AGENTS.md "Shared Gotchas")
+- One provider (Anthropic) is wired today, for `fna` and `gamecatalog` — there is no fallback provider yet
+  (OpenRouter-first routing is planned in spec 006). Local inference (Ollama) was removed (006 FR-017); don't
+  wire it.

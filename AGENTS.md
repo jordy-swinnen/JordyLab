@@ -76,13 +76,13 @@ the `Commit References` workflow on every pull-request commit. Never bypass it w
 
 ## AI Routing
 
-Per-module provider selection via `ResilientAiService` with health-check-and-cache pattern. MVP1 wires one provider (Anthropic) across the modules that need AI; local inference (Ollama) is deferred to a separate feature. The table below describes the target architecture — `fna` and `gamecatalog` are wired today.
+All AI calls go through `ResilientAiService` with a per-module model (`jordylab.ai.modules.<module>`). One provider (Anthropic) is wired today for the modules that need AI; OpenRouter-first routing with an Anthropic fallback is planned in spec 006 (AI Models page). Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
 
 | Module | Provider | Model | Rationale | MVP1 Status |
 |--------|----------|-------|-----------|-------------|
 | `fna` | Anthropic | Claude Sonnet | Financial analysis needs quality | **Wired** |
 | `gamecatalog` | Anthropic | Claude Haiku | Structured JSON + grounded chat share provider for prompt consistency; Haiku for cost | **Wired** |
-| `recipe` | Ollama | Llama 3.1 8B | Cost-effective for structured tasks | Deferred |
+| `recipe` | — | — | Module not built yet; picks a model through the AI Models settings (006) | Not built |
 
 ## Infrastructure
 
@@ -95,10 +95,8 @@ Per-module provider selection via `ResilientAiService` with health-check-and-cac
   pipeline, which reaches the firewalled k3s API over Tailscale (never a public port 6443). See
   `deploy/`, `docs/runbook.md` (operational procedures) and `docs/learn/` (the concepts, explained against these
   same files).
-- **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — Ollama inference host, `0.0.0.0:11434` (LAN only)
+- **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — development machine (macOS/Linux scanner runs)
 - **JordyBox**: i7-9700K, RTX 2070 Super — HTPC/gaming, NFS server for ROMs (where the downloaded scan client walks the libraries)
-- WireGuard connects the home LAN to Ollama for local-inference access (unrelated to prod's Tailscale link above,
-  which is CI-to-cluster only)
 - **Keycloak**: `start-dev` in local Podman Compose (port 8180), `start --optimized` in prod (behind Traefik,
   `deploy/containers/keycloak/Containerfile`). Stores its tables in the `keycloak` schema of the shared Postgres
   instance (Podman Compose locally, CloudNativePG in prod). Single `jordylab` realm with clients `jordylab-host`
@@ -116,7 +114,7 @@ Read these on-demand when working on related tasks — do not load all at once.
 
 | Doc | Read when... |
 |-----|-------------|
-| `jordylab-infrastructure-guide.md` | Working on NFS mounts, Ollama config, container networking, or AI fallback |
+| `jordylab-infrastructure-guide.md` | Working on NFS mounts, container networking, or AI fallback |
 | `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
 | `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
 
@@ -127,9 +125,6 @@ present in the repo.
 ## Shared Gotchas
 
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
-- Ollama on main desktop uses ROCm (AMD GPU), not CUDA — applies when local inference is wired
-- `ResilientAiService` health check only verifies Ollama is running, not that a model is loaded in VRAM — applies when local inference is wired
-- Containers need the desktop's LAN IP for Ollama — verify with `podman exec jordylab curl http://<desktop-ip>:11434/api/tags` (`docker exec` on a Docker host; applies when local inference is wired)
 - NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off
 
 ## Secrets

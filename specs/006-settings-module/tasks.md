@@ -210,7 +210,7 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `spring.ai.openai.base-url/api-key` (via yaml placeholders, research D2) in
   `jordylab-be/src/main/resources/application.yaml`; follow the AGENTS.md GA-move procedure (check 2.0.1 migration notes
   incl. the Anthropic-official-SDK change, re-run `ResilientAiServiceTest` + module tests, `./gradlew test` green)
-- [ ] T025 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): remove all Ollama support —
+- [x] T025 ⚠️ **STOP-AND-REPORT GATE** (pre-approved by Jordy 2026-09-30; done in spec 011 BUG-009) (halt and report to the user before executing): remove all Ollama support —
   `spring-ai-starter-model-ollama` + `org.testcontainers:testcontainers-ollama` from `jordylab-be/build.gradle.kts`, the
   `OllamaContainer` bean from `jordylab-be/src/test/java/dev/jordy/jordylab/TestcontainersConfiguration.java`, the
   commented Ollama service from `jordylab-be/compose.yaml` (keep pgvector + advisors deps); verify `./gradlew build`
@@ -352,7 +352,7 @@ email (quickstart scenario 11)
 - [ ] T044 [P] Regenerate the scan client template (`python tools/build_client.py` →
   `jordylab-be/src/main/resources/scripts/jordylab-scan-template.py`) so the client-download gate/error text says
   `admin` instead of `jordylab-user`; verify `GET /api/gamecatalog/ingest/client` as admin still serves it
-- [ ] T045 Verify SC-005: `grep -ri ollama jordylab-be/ jordylab-fe/` returns only historical mentions (AGENTS history
+- [x] T045 Verify SC-005: `grep -ri ollama jordylab-be/ jordylab-fe/` returns only historical mentions (AGENTS history
   notes, specs folders); zero hits in code, build files and compose
 - [ ] T046 Run the full [quickstart.md](quickstart.md) validation (13 scenarios, live stack incl. realm re-import, one
   real scanner run, fallback via dead-gateway override, guest limit with a lowered env limit); record outcomes

@@ -212,7 +212,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 - [ ] T041 [US4] After T040 is live: prove it once — Jordy (or the agent, if he agreed in T015's question) pushes
   `v0.0.1-rc1`; verify retag (no rebuild), release notes, approved deploy, running tags `v0.0.1-rc1`; then roll back
   once via *Run workflow* with the previous version and forward again; record in plan §9
-- [ ] T042 [US4] Ollama-removal bug (branch `fix/e2e-remove-ollama`, FR-012c, 006 T025 pre-approved): remove
+- [x] T042 [US4] Ollama-removal bug (branch `fix/e2e-remove-ollama`, FR-012c, 006 T025 pre-approved): remove
   `spring-ai-starter-model-ollama` and `testcontainers-ollama` from `jordylab-be/build.gradle.kts`, the
   `OllamaContainer` bean from `jordylab-be/src/test/java/dev/jordy/jordylab/TestcontainersConfiguration.java`, the
   commented service from `jordylab-be/compose.yaml`; rewrite `AGENTS.md` AI Routing (Anthropic only), Infrastructure

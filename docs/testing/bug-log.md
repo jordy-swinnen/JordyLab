@@ -140,7 +140,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-009: Ollama is still wired in build, tests, compose and AGENTS.md
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-remove-ollama`
 - Severity: S4
 - Area/spec: shared / 006, 008, 001
 - Env found: both
@@ -149,9 +149,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   1. `grep -rn -i ollama jordylab-be/build.gradle.kts jordylab-be/src/test jordylab-be/compose.yaml AGENTS.md`
 - Expected (cite spec/story): 006 FR-017 — "All local-LLM (Ollama) support MUST be removed…"; Jordy's decision 2026-09-30 (011 FR-012c).
 - Actual (logs/screenshot, secrets redacted): `spring-ai-starter-model-ollama` (build.gradle.kts:48), `testcontainers-ollama` (:73), `OllamaContainer` bean in `TestcontainersConfiguration.java`, commented service in `compose.yaml`, AGENTS.md routing table / infrastructure / gotchas rows.
-- Root cause: 006 T025/T043/T045 never executed.
-- Fix (PR / commit / tag): planned batch `fix/e2e-remove-ollama` (T042).
-- Regression test added:
+- Root cause: 006 T025/T043/T045 never executed. Removing the starter also exposed that it silently supplied the `EmbeddingModel` the (unused) pgvector `VectorStore` auto-configuration needs.
+- Fix (PR / commit / tag): branch `fix/e2e-remove-ollama` — both Ollama dependencies, the `OllamaContainer` test bean and the compose remnant removed; `PgVectorStoreAutoConfiguration` excluded until a feature uses a VectorStore; AGENTS.md (routing table, infrastructure, reference docs, gotchas), `.claude/README.md`, the `ai-endpoint` skill and the architect memory note updated. `opencode.json`'s local Qwen model (developer tooling, not product) is left alone.
+- Regression test added: `JordylabApplicationTests` + `GameCatalogModuleTest` start the full context without Ollama; `grep -ri ollama` outside specs/history/opencode.json returns only "removed" notes
 - Verified on prod:
 
 ### BUG-010: 006 US4 missing — AI calls are not routed per feature (OpenRouter primary, Anthropic fallback)
