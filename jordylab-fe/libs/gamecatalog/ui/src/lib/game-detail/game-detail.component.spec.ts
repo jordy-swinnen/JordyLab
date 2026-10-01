@@ -253,6 +253,13 @@ describe('GameDetailComponent', () => {
       );
     });
 
+    it('preselects the current format of the game in the admin select', () => {
+      isAdmin.set(true);
+      show({ ...switchGame, hostFormats: { 'Nintendo Switch': 'DIGITAL' } });
+
+      expect(spectator.query<HTMLSelectElement>('#switch-detail-format')?.value).toBe('DIGITAL');
+    });
+
     it('changes the format', () => {
       isAdmin.set(true);
       show(switchGame);

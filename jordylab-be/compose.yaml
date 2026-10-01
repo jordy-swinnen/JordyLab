@@ -3,17 +3,13 @@
 #
 # The artwork directory is a host filesystem path (no compose volume here) — in
 # dev, point `GAMECATALOG_ARTWORK_DIR` at a local dir like `/tmp/jordylab-artwork`.
-# In prod (Hetzner VPS), the same env var maps a bind-mounted volume on the
-# backend container so uploaded artwork survives restarts.
+# In prod (k3s on the OVH VPS), the same env var points at the backend's
+# PersistentVolumeClaim so uploaded artwork survives restarts.
 #
 # Keycloak stores its tables in a dedicated `keycloak` schema inside the shared
 # pgvector container (initialised by compose/keycloak-init.sql on first boot).
 # The dev realm is auto-imported from compose/keycloak-realm-export.json.
 services:
-#  ollama:
-#    image: 'ollama/ollama:latest'
-#    ports:
-#      - '11434'
   pgvector:
     image: 'pgvector/pgvector:pg16'
     environment:
@@ -27,7 +23,7 @@ services:
     volumes:
       - './compose/keycloak-init.sql:/docker-entrypoint-initdb.d/00-keycloak-schema.sql:ro'
   keycloak:
-    image: 'quay.io/keycloak/keycloak:26.3.2'
+    image: 'quay.io/keycloak/keycloak:26.7.4'
     command: ['start-dev', '--import-realm']
     environment:
       - 'KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN}'

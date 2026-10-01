@@ -140,7 +140,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-009: Ollama is still wired in build, tests, compose and AGENTS.md
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-remove-ollama`
 - Severity: S4
 - Area/spec: shared / 006, 008, 001
 - Env found: both
@@ -149,9 +149,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   1. `grep -rn -i ollama jordylab-be/build.gradle.kts jordylab-be/src/test jordylab-be/compose.yaml AGENTS.md`
 - Expected (cite spec/story): 006 FR-017 — "All local-LLM (Ollama) support MUST be removed…"; Jordy's decision 2026-09-30 (011 FR-012c).
 - Actual (logs/screenshot, secrets redacted): `spring-ai-starter-model-ollama` (build.gradle.kts:48), `testcontainers-ollama` (:73), `OllamaContainer` bean in `TestcontainersConfiguration.java`, commented service in `compose.yaml`, AGENTS.md routing table / infrastructure / gotchas rows.
-- Root cause: 006 T025/T043/T045 never executed.
-- Fix (PR / commit / tag): planned batch `fix/e2e-remove-ollama` (T042).
-- Regression test added:
+- Root cause: 006 T025/T043/T045 never executed. Removing the starter also exposed that it silently supplied the `EmbeddingModel` the (unused) pgvector `VectorStore` auto-configuration needs.
+- Fix (PR / commit / tag): branch `fix/e2e-remove-ollama` — both Ollama dependencies, the `OllamaContainer` test bean and the compose remnant removed; `PgVectorStoreAutoConfiguration` excluded until a feature uses a VectorStore; AGENTS.md (routing table, infrastructure, reference docs, gotchas), `.claude/README.md`, the `ai-endpoint` skill and the architect memory note updated. `opencode.json`'s local Qwen model (developer tooling, not product) is left alone.
+- Regression test added: `JordylabApplicationTests` + `GameCatalogModuleTest` start the full context without Ollama; `grep -ri ollama` outside specs/history/opencode.json returns only "removed" notes
 - Verified on prod:
 
 ### BUG-010: 006 US4 missing — AI calls are not routed per feature (OpenRouter primary, Anthropic fallback)
@@ -170,7 +170,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-011: 006 US5 missing — no user menu to manage one's own login details
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-settings-user-menu`; prod needs `UPDATE_EMAIL` enabled (HANDOFF-06)
 - Severity: S2
 - Area/spec: shared/auth, shell / 006
 - Env found: both
@@ -178,10 +178,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Steps to reproduce:
   1. 006 tasks T031–T033 open; no `UserMenuComponent` in `jordylab-fe/libs/shared/auth`.
 - Expected (cite spec/story): 006 US5 / FR-008 — every user can change password, name and email without admin help.
-- Actual (logs/screenshot, secrets redacted): static sign-out button only (to be confirmed in the UI during US2 testing).
-- Root cause: story not implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-settings-user-menu` (T044).
-- Regression test added:
+- Actual (logs/screenshot, secrets redacted): only a sign-out button (confirmed in the UI); no way to change password, name or email.
+- Root cause: 006 T031–T033 never implemented. Also found: the email field is not on Keycloak's profile page because email is the username; Keycloak (26.4+) changes it only through the `UPDATE_EMAIL` action, which is disabled on prod.
+- Fix (PR / commit / tag): `UserMenuComponent` (Angular CDK menu) replaces both sign-out buttons: Change password (`UPDATE_PASSWORD`), Edit name (`UPDATE_PROFILE`), Change email (`UPDATE_EMAIL`), Sign out; `AuthService.requestAction` (web: `keycloak.login({action})`, Android: `kc_action` on the system-browser authorize URL). Prod realm: enable `UPDATE_EMAIL` (logged in `deploy/keycloak/README.md`).
+- Regression test added: `user-menu.component.spec.ts` (6), `auth.service.spec.ts` (+2), `app.spec.ts` (menu for every signed-in user, signs out); local 2026-10-01: menu opens, Edit name → Keycloak "Update Account Information"
 - Verified on prod:
 
 ### BUG-012: 006 US6 missing — no per-feature AI model selection (AI Models page)
@@ -247,7 +247,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-016: 009 US3 missing — bulk add by pasting a list
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -257,8 +257,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): 009 FR-005 — paste a list, review matches, add the confirmed ones.
 - Actual (logs/screenshot, secrets redacted): feature absent.
 - Root cause: story not implemented.
-- Fix (PR / commit / tag): planned batch `fix/e2e-switch-bulk-add` (T048).
-- Regression test added:
+- Fix (PR / commit / tag): branch `fix/e2e-switch-bulk-add` — `POST /switch/bulk/preview` + `/bulk/confirm` (`SwitchBulkService`, one transaction per line), page `/games/switch/bulk`, IGDB calls paced to 4/s.
+- Regression test added: `SwitchBulkServiceTest`, `SwitchGameControllerTest` (bulk), `SwitchGameControllerSecurityTest` (guest 403), `switch-bulk.store.spec.ts`, `switch-bulk.component.spec.ts`; local E2E 2026-10-01 (5 lines → 2 added, duplicate collapsed, DLC flagged, re-paste → already in catalog)
 - Verified on prod:
 
 ### BUG-017: 009 US5 incomplete — no edit/remove on the detail page; guest-403 tests missing
@@ -293,7 +293,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a (local)
 
 ### BUG-019: Keycloak test container version drifts from production
-- Status: OPEN
+- Status: FIXING — PR `fix/e2e-keycloak-version`
 - Severity: S4
 - Area/spec: backend tests / 006, 008
 - Env found: local
@@ -303,8 +303,8 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): integration tests run against the same major/minor Keycloak as prod.
 - Actual (logs/screenshot, secrets redacted): 4 minor versions apart.
 - Root cause: image pin not updated with the prod upgrade.
-- Fix (PR / commit / tag):
-- Regression test added:
+- Fix (PR / commit / tag): `KeycloakIntegrationTest` and local `compose.yaml` on `quay.io/keycloak/keycloak:26.7.4`, the version prod builds from (`deploy/containers/keycloak/Containerfile`) and `KeycloakAdminClientRealmExportIntegrationTest` already uses.
+- Regression test added: none because version alignment; `RoleMatrixTest` (6) + `GuestChatLimitIntegrationTest` (1) pass on 26.7.4
 - Verified on prod: n/a
 
 ### BUG-020: Scanner client downloaded from production embeds `http://localhost:8180` as its Keycloak URL
@@ -615,6 +615,65 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — PATCH added.
 - Regression test added: `SwitchGameControllerSecurityTest.corsPreflightAllowsPatchForTheSwitchEdit`
 - Verified on prod:
+
+### BUG-040: No navigation leads to the Switch add page
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S3
+- Area/spec: gamecatalog / 009
+- Env found: code reading + local (while adding 009 US3)
+- Coverage rows: 009-US1, 009-US3
+- Steps to reproduce:
+  1. Log in as admin; look for a way to add a Switch game in the sidebar, library or sources page.
+- Expected (cite spec/story): 009 US1 — the admin adds a Switch game from the app.
+- Actual (logs/screenshot, secrets redacted): `/games/switch` exists but nothing links to it; only typing the URL reaches it.
+- Root cause: route added without a nav entry.
+- Fix (PR / commit / tag): admin-only "Switch games" item in the sidebar; "Paste a list" ↔ "Add one game" links between the two Switch pages.
+- Regression test added: `app.spec.ts` (admin nav lists Switch games; guest doesn't)
+- Verified on prod:
+
+### BUG-041: Switch endpoints answer 500 for duplicates, bad input and unknown games
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S3
+- Area/spec: gamecatalog / 009
+- Env found: code reading
+- Coverage rows: 009-FR-009, 009 switch-api contract
+- Steps to reproduce:
+  1. `POST /api/gamecatalog/switch/games` for a game already on the Switch, or `DELETE /switch/games/{unknown id}`.
+- Expected (cite spec/story): 009 switch-api — `409` duplicate, `400` bad input, `404` unknown game.
+- Actual (logs/screenshot, secrets redacted): `IllegalStateException` / `IllegalArgumentException` are unhandled for `SwitchGameController` → `500`; the UI shows a generic error.
+- Root cause: no exception handler for the Switch controller.
+- Fix (PR / commit / tag): `SwitchGameExceptionHandler` (400/404/409 ProblemDetail), `SwitchGameNotFoundException`.
+- Regression test added: `SwitchGameControllerTest` (409, 404, 400)
+- Verified on prod:
+
+### BUG-042: Switch IGDB search misses ports and expanded games — "Mario Kart 8 Deluxe" finds nothing
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S2
+- Area/spec: gamecatalog / 009
+- Env found: local (2026-10-01, IGDB live)
+- Coverage rows: 009-US1, 009-US3, 009-SC-002
+- Steps to reproduce:
+  1. `/games/switch` → search "Mario Kart 8" → "No IGDB match".
+- Expected (cite spec/story): 009 SC-002 — ≥ 90% correct first matches for official titles.
+- Actual (logs/screenshot, secrets redacted): IGDB returns nothing: the query filters `game_type = 0` (main game) and IGDB files MK8 Deluxe as type 10 (expanded game); every port/remaster is excluded too.
+- Root cause: too narrow `game_type` filter.
+- Fix (PR / commit / tag): `game_type = (0,4,8,9,10,11)` — main, standalone expansion, remake, remaster, expanded game, port; DLC/bundles/mods/packs stay out.
+- Regression test added: `IgdbClientTest.searchSwitchGamesKeepsPortsAndExpandedGamesButNotDlcOrBundles`; verified locally (MK8 Deluxe → Match)
+- Verified on prod:
+
+### BUG-043: Detail page's admin format select always shows "Physical"
+- Status: FIXING — PR `fix/e2e-switch-bulk-add`
+- Severity: S3
+- Area/spec: gamecatalog / 009
+- Env found: local (2026-10-01; shipped in v0.0.1-rc4 via PR #53)
+- Coverage rows: 009-US5
+- Steps to reproduce:
+  1. Admin opens a Switch game whose format is Digital.
+- Expected (cite spec/story): 009 US5 — the edit control shows the current format.
+- Actual (logs/screenshot, secrets redacted): "Format · Digital" is shown, but the select reads PHYSICAL.
+- Root cause: `[value]` on the `<select>` is applied before `@for` renders the options.
+- Fix (PR / commit / tag): `[selected]` per option.
+- Regression test added: `game-detail.component.spec.ts` (preselects the current format); verified locally
 
 ### BUG-044: Release APK check reads an empty certificate digest — apksigner's signer label isn't "Signer #1"
 - Status: FIXING — PR `fix/e2e-apk-digest-parse`

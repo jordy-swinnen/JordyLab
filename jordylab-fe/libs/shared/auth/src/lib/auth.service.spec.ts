@@ -174,6 +174,18 @@ describe('AuthService', () => {
     });
   });
 
+  it('sends the user to Keycloak to change their password and back to the current page', async () => {
+    keycloakInit.mockResolvedValueOnce(true);
+    await spectator.service.init();
+
+    await spectator.service.requestAction('UPDATE_PASSWORD');
+
+    expect(keycloakLogin).toHaveBeenCalledWith({
+      redirectUri: window.location.href,
+      action: 'UPDATE_PASSWORD',
+    });
+  });
+
   it('delegates logout to the Keycloak SDK', async () => {
     keycloakInit.mockResolvedValueOnce(true);
     await spectator.service.init();
@@ -244,6 +256,17 @@ describe('AuthService', () => {
       expect(openedUrl.searchParams.get('response_type')).toBe('code');
       expect(openedUrl.searchParams.get('code_challenge_method')).toBe('S256');
       expect(openedUrl.searchParams.get('state')).toBeTruthy();
+    });
+
+    it('asks Keycloak for the profile update through the same system-browser flow', async () => {
+      keycloakInit.mockResolvedValueOnce(false);
+
+      await spectator.service.requestAction('UPDATE_PROFILE');
+
+      expect(keycloakLogin).not.toHaveBeenCalled();
+      const openedUrl = new URL((browserOpen.mock.calls[0][0] as { url: string }).url);
+      expect(openedUrl.searchParams.get('kc_action')).toBe('UPDATE_PROFILE');
+      expect(openedUrl.searchParams.get('code_challenge_method')).toBe('S256');
     });
 
     it('exchanges the authorization code for tokens and updates the signal surface on a valid callback', async () => {

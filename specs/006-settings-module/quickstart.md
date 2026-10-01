@@ -8,7 +8,7 @@ Interfaces: [settings-users-api](contracts/settings-users-api.md) · [settings-a
 
 ## Prerequisites
 
-- Podman + the compose stack (`jordylab-be/compose.yaml`): pgvector + Keycloak 26.3.2
+- Podman + the compose stack (`jordylab-be/compose.yaml`): pgvector + Keycloak 26.7.4 (26.3.2 until spec 011 BUG-019)
 - Env for the backend: `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, plus the existing compose vars; optional
   `NTFY_BASE_URL`, `NTFY_TOPIC`, `NTFY_TOKEN` (US7); optional overrides: `JORDYLAB_GUEST_CHAT_DAILY_LIMIT`,
   `OPENROUTER_BASE_URL`
@@ -80,9 +80,10 @@ forces a password change before the app loads.
 
 ### 6. My account (US4, FR-008)
 
-As the friend: user menu → **Change password** (re-authenticate, set new password, land back in the app) and **Edit
-profile** (change name; email change is verified against Keycloak 26.3 per research §4.3 — if the login name does not
-follow the email, that finding is recorded in research.md and handled).
+As the friend: account menu → **Change password** (re-authenticate, set new password, land back in the app), **Edit
+name** (`UPDATE_PROFILE`) and **Change email** (`UPDATE_EMAIL`, re-authenticated; the realm must have that action
+enabled — `deploy/keycloak/README.md`). Email is the username here, so after the change you sign in with the new
+email.
 
 ### 7. Model catalog & per-feature model (US5, FR-013–FR-016, SC-003/SC-006)
 

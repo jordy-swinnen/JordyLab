@@ -210,11 +210,11 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `spring.ai.openai.base-url/api-key` (via yaml placeholders, research D2) in
   `jordylab-be/src/main/resources/application.yaml`; follow the AGENTS.md GA-move procedure (check 2.0.1 migration notes
   incl. the Anthropic-official-SDK change, re-run `ResilientAiServiceTest` + module tests, `./gradlew test` green)
-- [ ] T025 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): remove all Ollama support —
+- [x] T025 ⚠️ **STOP-AND-REPORT GATE** (halt and report to the user before executing): remove all Ollama support —
   `spring-ai-starter-model-ollama` + `org.testcontainers:testcontainers-ollama` from `jordylab-be/build.gradle.kts`, the
   `OllamaContainer` bean from `jordylab-be/src/test/java/dev/jordy/jordylab/TestcontainersConfiguration.java`, the
   commented Ollama service from `jordylab-be/compose.yaml` (keep pgvector + advisors deps); verify `./gradlew build`
-  green and `SC-005` grep clean (docs history allowed)
+  green and `SC-005` grep clean (docs history allowed) — pre-approved by Jordy 2026-09-30; done in spec 011 BUG-009
 - [ ] T026 [US4] Refactor `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/`: `AiFeature` enum (four keys with
   display name, module, description per [research.md](research.md) §2.1), `AiModelResolver` port (
   `resolveModel(AiFeature)` + `isModelKnown`), `AiCallCompleted` event record, replace `AiModuleConfig`/
@@ -256,16 +256,17 @@ modules).
 **Independent Test**: As a guest, change password and profile (name/email) from the user menu and log back in with the
 new details (quickstart scenario 6)
 
-- [ ] T031 [P] [US5] Create `UserMenuComponent` in `jordylab-fe/libs/shared/auth/src/lib/user-menu.component.ts` —
+- [x] T031 [P] [US5] Create `UserMenuComponent` (built on `@angular/cdk/menu` directly — spartan brain's menu reads private CDK overlay fields that CDK 21 no longer has; adds "Change email" via `UPDATE_EMAIL`, spec 011 BUG-011) in `jordylab-fe/libs/shared/auth/src/lib/user-menu.component.ts` —
   avatar/initial + dropdown (spartan menu helm added via `bunx @spartan-ng/cli@latest add menu` if no suitable local
   component exists) with Change password → `login({ action: 'UPDATE_PASSWORD' })`, Edit profile →
   `login({ action: 'UPDATE_PROFILE' })`, Sign out → existing logout; export from the barrel; spec with the AuthService
   mocked (`useValue` + `vi.fn`)
-- [ ] T032 [US5] Replace the static sign-out button with the user menu in the shell header (desktop + mobile) in
+- [x] T032 [US5] Replace the static sign-out button with the user menu in the shell header (desktop + mobile) in
   `jordylab-fe/apps/jordylab/src/app/app.html` + `app.ts`; update `jordylab-fe/apps/jordylab/src/app/app.spec.ts` (menu
   renders for any authenticated user — admin and guest)
-- [ ] T033 [US5] Verify AIA live against the real Keycloak 26.3 (quickstart scenario 6): `UPDATE_PASSWORD`
-  re-authentication flow, `UPDATE_PROFILE` name + email change, and the email-as-username username-sync caveat (keycloak
+- [ ] T033 [US5] Verify AIA live against the real Keycloak 26.7 (quickstart scenario 6): `UPDATE_PASSWORD`
+  re-authentication flow, `UPDATE_PROFILE` name change, `UPDATE_EMAIL` email change (needs the realm action enabled —
+  spec 011 BUG-011 / HANDOFF-06), and the email-as-username username-sync caveat (keycloak
   #13988/#16679 — research §4.3); record the verified outcome (and any workaround) in
   `specs/006-settings-module/research.md` §4
 
@@ -344,8 +345,8 @@ email (quickstart scenario 11)
 - [ ] T044 [P] Regenerate the scan client template (`python tools/build_client.py` →
   `jordylab-be/src/main/resources/scripts/jordylab-scan-template.py`) so the client-download gate/error text says
   `admin` instead of `jordylab-user`; verify `GET /api/gamecatalog/ingest/client` as admin still serves it
-- [ ] T045 Verify SC-005: `grep -ri ollama jordylab-be/ jordylab-fe/` returns only historical mentions (AGENTS history
-  notes, specs folders); zero hits in code, build files and compose
+- [x] T045 Verify SC-005: `grep -ri ollama jordylab-be/ jordylab-fe/` returns nothing (code, build files, compose and
+  configuration); only docs/specs keep history notes
 - [ ] T046 Run the full [quickstart.md](quickstart.md) validation (13 scenarios, live stack incl. realm re-import, one
   real scanner run, fallback via dead-gateway override, guest limit with a lowered env limit); record outcomes
 - [ ] T047 Final green run: `./gradlew build` (full backend suite, `ModularityTests`, JaCoCo ≥ 0.80) +

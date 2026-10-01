@@ -31,6 +31,9 @@ function realmRolesFrom(tokenParsed: KeycloakTokenParsed | undefined): string[] 
   return roles.filter((role): role is string => typeof role === 'string');
 }
 
+/** Keycloak application-initiated actions a user may start on their own account (006 US5). */
+export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL';
+
 /**
  * Wraps the official `keycloak-js` SDK behind Angular signals. Every deployable app
  * (`jordylab`, and the `fna`/`gamecatalog` standalone dev harnesses) provides its own
@@ -80,6 +83,22 @@ export class AuthService {
       return;
     }
     await this.#keycloak?.login({ redirectUri: window.location.origin });
+  }
+
+  /**
+   * Lets the signed-in user change their own password or profile (name, email) on Keycloak's own pages, then come
+   * back here — Keycloak application-initiated actions, no admin needed (006 US5, FR-008).
+   */
+  async requestAction(action: AccountAction): Promise<void> {
+    if (!this.#keycloak) {
+      await this.init();
+    }
+    if (Capacitor.isNativePlatform()) {
+      await this.#loginNative(action);
+
+      return;
+    }
+    await this.#keycloak?.login({ redirectUri: window.location.href, action });
   }
 
   async logout(): Promise<void> {
@@ -282,7 +301,7 @@ export class AuthService {
     }
   }
 
-  async #loginNative(): Promise<void> {
+  async #loginNative(action?: AccountAction): Promise<void> {
     if (!this.#keycloak || !this.#config.mobileCallbackUri) {
       console.error('Native login requires AUTH_CONFIG.mobileCallbackUri');
 
@@ -307,6 +326,9 @@ export class AuthService {
     authorizeUrl.searchParams.set('nonce', nonce);
     authorizeUrl.searchParams.set('code_challenge', codeChallenge);
     authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+    if (action) {
+      authorizeUrl.searchParams.set('kc_action', action);
+    }
 
     await Browser.open({ url: authorizeUrl.toString() });
   }

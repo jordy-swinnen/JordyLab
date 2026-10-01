@@ -59,6 +59,7 @@ describe('App', () => {
       'Library',
       'Chat',
       'Sources',
+      'Switch games',
       'Articles',
       'Portfolio',
       'Briefing',
@@ -78,6 +79,7 @@ describe('App', () => {
       '/games/grid',
       '/games/chat',
       '/games/sources',
+      '/games/switch',
       '/fna/articles',
       '/fna/portfolio',
       '/fna/briefing',
@@ -85,7 +87,7 @@ describe('App', () => {
     ]);
   });
 
-  it('shows a guest only the Game Catalog library and chat, with Sources, FNA and Settings hidden', () => {
+  it('shows a guest only the Game Catalog library and chat, with Sources, Switch games, FNA and Settings hidden', () => {
     const links = spectator
       .queryAll('nav a')
       .map((link) => link.textContent?.trim());
@@ -97,13 +99,16 @@ describe('App', () => {
     expect(spectator.query('router-outlet')).toBeTruthy();
   });
 
-  it('shows the signed-in user and signs out on click', async () => {
-    const button = spectator.query(
-      'button[aria-label="Sign out"]',
-    ) as HTMLElement;
+  it('gives every signed-in user an account menu, admin or guest, that signs out', async () => {
+    const triggers = spectator.queryAll('[data-testid="user-menu-trigger"]');
+    // One trigger per layout: compact in the mobile header, full in the desktop sidebar (CSS hides the other).
+    expect(triggers).toHaveLength(2);
+    expect(triggers[1]).toHaveText('jordy');
 
-    expect(button).toHaveText('jordy');
-    spectator.click(button);
+    spectator.click(triggers[1]);
+    const signOut = document.querySelector<HTMLElement>('[data-testid="user-menu-sign-out"]');
+    expect(signOut).not.toBeNull();
+    signOut?.click();
     // onLogout() awaits the (mocked) biometric-unlock wipe before auth.logout() — one microtask hop.
     await Promise.resolve();
 
