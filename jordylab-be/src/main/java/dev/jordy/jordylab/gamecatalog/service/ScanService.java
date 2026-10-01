@@ -64,6 +64,7 @@ public class ScanService {
     private final GameCatalogProperties properties;
     private final ObjectMapper objectMapper;
     private final Map<String, LibraryParser> parsers;
+    private final ScanLock scanLock;
 
     /**
      * Entry point for {@code POST /api/gamecatalog/ingest/scan}. Resolves or
@@ -79,6 +80,7 @@ public class ScanService {
             return rejected(SyncOutcome.REJECTED, "PAYLOAD_TOO_LARGE");
         }
 
+        scanLock.acquire(request.hostname(), request.libraryType());
         Instant receivedAt = Instant.now();
         ScanSource source = resolveSource(request.hostname(), request.libraryType(), request.machineId());
         clearStaleDigestOnPreCutoverScan(source, request);

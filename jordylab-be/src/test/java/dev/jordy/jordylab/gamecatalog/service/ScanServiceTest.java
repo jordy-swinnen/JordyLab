@@ -52,6 +52,9 @@ class ScanServiceTest {
     private static final GamePayload ZELDA = new GamePayload("snes/Zelda.sfc", "Zelda", "SNES", false);
 
     @Mock
+    private ScanLock scanLock;
+
+    @Mock
     private ScanSourceRepository scanSourceRepository;
 
     @Mock
@@ -466,7 +469,7 @@ class ScanServiceTest {
 
         return new ScanService(scanSourceRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
                 artworkService, steamMetadataService, enrichmentService, steamLibrarySyncService, multiplayerService, properties,
-                new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser));
+                new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser), scanLock);
     }
 
     private static ScanRequest aScanRequest(String machineId, boolean force, List<ClientGame> games) {
