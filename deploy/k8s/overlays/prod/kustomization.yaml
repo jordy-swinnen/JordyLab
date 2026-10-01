@@ -33,6 +33,9 @@ configMapGenerator:
       - MOBILE_APPLICATION_ID=be.jordylab.app
       - MOBILE_RELEASE_SIGNING_CERT_SHA256=1B0213851EAAA2D4069080AB548524EE08B038F545F91891A51C929D47DD77E8
       - NTFY_BASE_URL=https://jordylab.be/ntfy
+      # No API docs in prod: SpringDoc's defaults serve /v3/api-docs and /swagger-ui.html (spec 011 BUG-046).
+      - SPRINGDOC_API_DOCS_ENABLED=false
+      - SPRINGDOC_SWAGGER_UI_ENABLED=false
   - name: keycloak-config
     literals:
       - KC_HOSTNAME=https://jordylab.be/auth
