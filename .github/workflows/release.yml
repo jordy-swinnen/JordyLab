@@ -179,13 +179,26 @@ jobs:
           VERSION_CODE: ${{ needs.verify.outputs.version_code }}
           VERSION_NAME: ${{ needs.verify.outputs.version_name }}
         run: |
+          # Passwords reach Gradle as env vars (app/build.gradle signingConfigs.release), never as -P flags.
           ./gradlew assembleRelease \
             -PjordylabVersionCode="$VERSION_CODE" \
             -PjordylabVersionName="$VERSION_NAME" \
-            -Pandroid.injected.signing.store.file="$(pwd)/release.keystore" \
-            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+            -PjordylabKeystoreFile="$(pwd)/release.keystore"
+
+      # Same check the backend makes on upload (FR-003), done here first so a wrong key or a missing v1
+      # signature fails the build with a clear message (spec 011 BUG-037). The expected certificate is the
+      # public value from the prod backend-config, so there is one source of truth.
+      - name: Verify the APK signature
+        working-directory: jordylab-fe/apps/jordylab-mobile/android
+        run: |
+          apksigner="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+          [ -x "$apksigner" ] || { echo "::error::apksigner not found under \$ANDROID_HOME/build-tools — the runner image no longer ships the Android SDK"; exit 1; }
+          report="$("$apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk)"
+          grep -q "Verified using v1 scheme (JAR signing): true" <<<"$report" || { echo "::error::APK has no v1 (JAR) signature"; exit 1; }
+          actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$report" | tr '[:lower:]' '[:upper:]')"
+          expected="$(sed -n 's/^ *- MOBILE_RELEASE_SIGNING_CERT_SHA256=//p' "$GITHUB_WORKSPACE/deploy/k8s/overlays/prod/kustomization.yaml" | tr '[:lower:]' '[:upper:]')"
+          [ -n "$expected" ] && [ "$actual" = "$expected" ] || { echo "::error::APK signed with $actual, expected $expected (backend-config)"; exit 1; }
+          echo "APK signature OK: v1 + certificate $actual"
 
       - name: Remove the decoded keystore
         if: always()
