@@ -191,7 +191,8 @@ jobs:
       - name: Verify the APK signature
         working-directory: jordylab-fe/apps/jordylab-mobile/android
         run: |
-          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          apksigner="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+          [ -x "$apksigner" ] || { echo "::error::apksigner not found under \$ANDROID_HOME/build-tools — the runner image no longer ships the Android SDK"; exit 1; }
           report="$("$apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk)"
           grep -q "Verified using v1 scheme (JAR signing): true" <<<"$report" || { echo "::error::APK has no v1 (JAR) signature"; exit 1; }
           actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$report" | tr '[:lower:]' '[:upper:]')"
