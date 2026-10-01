@@ -36,6 +36,19 @@ describe('MarkdownPipe', () => {
     );
   });
 
+  it('keeps tables with column alignment and fenced code blocks intact', () => {
+    const output = render(
+      '| Ticker | Change |\n| :--- | ---: |\n| VWCE | +1.2% |\n\n```\nrebalance()\n```',
+    );
+
+    expect(output.querySelector('table td:last-child')).toHaveAttribute(
+      'align',
+      'right',
+    );
+    expect(output.querySelector('table td:last-child')).toHaveText('+1.2%');
+    expect(output.querySelector('pre code')).toHaveText('rebalance()');
+  });
+
   it('strips script tags embedded in the markdown', () => {
     const output = render('Intro\n\n<script>window.pwned = true</script>');
 
