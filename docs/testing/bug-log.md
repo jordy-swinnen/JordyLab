@@ -498,7 +498,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-032: OpenCode agents point at a model that doesn't exist — none of them can start
-- Status: FIXING — devops agent fixed (PR #33, merged); Jordy re-routed the remaining OpenCode agents himself (Q-08); verify they start
+- Status: VERIFIED — all four OpenCode agents start (PR `fix/e2e-opencode-agent-models`)
 - Severity: S4
 - Area/spec: dev tooling / —
 - Env found: local (OpenCode 1.18.32)
@@ -508,9 +508,9 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): `.opencode/agents/*` mirror `.claude/agents/*` and work (dual-agent-config).
 - Actual (logs/screenshot, secrets redacted): `Error: Model not found: anthropic/claude-sonnet-4-6`; all 4 files in `.opencode/agents/` use that model. `opencode/claude-sonnet-5-5` exists but returns "Insufficient account funds" (OpenCode Zen); the configured OpenCode Go models work.
 - Root cause: model id copied from Claude naming without checking `opencode models`.
-- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33, verified: subagent runs and loads the `jordylab-ops` skill). Others pending Jordy's routing choice.
+- Fix (PR / commit / tag): devops → `opencode-go/kimi-k2.7-code` (PR #33); architect and code-reviewer → `opencode-go/glm-5.2` (the `plan` model in `opencode.json`), test-writer → `opencode-go/deepseek-v4.1-flash` (the `build` model). The three still named the non-existent `anthropic/claude-sonnet-4-6` on `main`.
 - Regression test added: none because agent config (verified with `opencode run` / `claude -p`)
-- Verified on prod: n/a
+- Verified on prod: n/a (developer tooling). 2026-10-01: `opencode run "Use the <agent> subagent … reply ok"` → `ok` for architect, code-reviewer and test-writer (before: `Model not found: anthropic/claude-sonnet-4-6`)
 
 ### BUG-033: Approving a user fails on prod (503) — backend service account lacks `view-realm`
 - Status: VERIFIED-PROD

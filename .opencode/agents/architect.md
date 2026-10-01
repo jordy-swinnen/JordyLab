@@ -1,7 +1,7 @@
 ---
 description: Explores codebase to answer architecture questions, plan features, and map dependencies. Returns structured reports.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: opencode-go/glm-5.2
 permission:
   write: deny
   edit: deny
