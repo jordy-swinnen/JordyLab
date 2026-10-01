@@ -47,7 +47,7 @@ For `libraryType: "EMUDECK"` the `paths` array is the full recursive listing und
 | `paths[].size` | required, non-negative |
 | `paths[].mtime` | required, ISO-8601 instant |
 | `manifestContents` | optional, Steam only; key is the `relpath` of an `appmanifest_*.acf`, value is the raw VDF text |
-| `paths` + `manifestContents` combined size | ≤ 1 MB (configurable via `jordylab.gamecatalog.scan.max-payload-bytes`) |
+| `paths` + `manifestContents` combined size | ≤ 8 MiB (was 1 MB until spec 011 BUG-047; configurable via `jordylab.gamecatalog.scan.max-payload-bytes`) |
 
 ### Outcome: `200 OK`
 

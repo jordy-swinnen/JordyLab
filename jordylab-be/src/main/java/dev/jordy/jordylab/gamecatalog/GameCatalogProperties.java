@@ -89,10 +89,10 @@ public record GameCatalogProperties(
             double maxShrinkFraction) {
         public Scan {
             if (maxGamesPerSource <= 0) {
-                maxGamesPerSource = 10000;
+                maxGamesPerSource = 50000;
             }
             if (maxPayloadBytes <= 0) {
-                maxPayloadBytes = 1_048_576;
+                maxPayloadBytes = 8_388_608;
             }
             if (maxManifestBytesPerSource <= 0) {
                 maxManifestBytesPerSource = 262_144;

@@ -720,3 +720,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): `SPRINGDOC_API_DOCS_ENABLED=false` and `SPRINGDOC_SWAGGER_UI_ENABLED=false` in the prod `backend-config` ConfigMap.
 - Regression test added: none because deploy configuration; verify the startup warnings are gone after the next release
 - Verified on prod:
+
+### BUG-047: EmuDeck scan of a large ROM library fails with "scan payload exceeds 1048576 bytes"
+- Status: FIXING — PR `fix/e2e-scan-payload-cap`
+- Severity: S2
+- Area/spec: gamecatalog / 003
+- Env found: prod, JordyBox (reported by the owner, 2026-10-01; Steam scan on the same machine succeeded)
+- Coverage rows: 003-FR-scan, 002-FR-ingest-limits
+- Steps to reproduce:
+  1. On JordyBox: `python3 jordylab-scan-… scan` for the EmuDeck library with the downloaded client.
+- Expected (cite spec/story): the owner's real ROM library is scanned and catalogued.
+- Actual (logs/screenshot, secrets redacted): the client refuses before sending: `scan payload exceeds 1048576 bytes`.
+- Root cause: the 1 MiB cap (client `MAX_PAYLOAD_BYTES` and server `max-payload-bytes`) counts ~100 bytes per path, so it holds ~11,000 files; the server's `max-games-per-source` was 10,000. A big EmuDeck library (multi-file games) exceeds both.
+- Fix (PR / commit / tag): payload cap 8 MiB (client + server default + yaml), games per source 50,000; frozen client regenerated; ingest contract updated. A request is still bounded.
+- Regression test added: `GameCatalogPropertiesTest` (new defaults); client checked with 20,000 entries (accepted) and an oversize payload (still rejected). Verified on prod: after rc6 the owner reruns the EmuDeck scan (HANDOFF-11).
+- Verified on prod:

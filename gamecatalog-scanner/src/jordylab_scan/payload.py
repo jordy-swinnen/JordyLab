@@ -4,7 +4,8 @@ import datetime
 
 from .manifest import compute_digest, nfc
 
-MAX_PAYLOAD_BYTES = 1024 * 1024
+# Roughly 100 bytes per path row: 8 MiB carries ~80,000 files, matching the server's 50,000-game limit.
+MAX_PAYLOAD_BYTES = 8 * 1024 * 1024
 
 
 class PayloadTooLarge(Exception):
