@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -317,13 +315,15 @@ class ReconciliationServiceTest {
     void purgeNeverDeletesAManualInstallation() {
         GameInstallation manual = aManualInstallation(aSource(SourceType.SWITCH));
         manual.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
         when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                any(Instant.class))).thenReturn(List.of(manual));
+                cutoffCaptor.capture())).thenReturn(List.of(manual));
 
         reconciliationService.purgeUninstalledGames();
 
-        verify(gameInstallationRepository, never()).deleteAll(anyList());
-        verify(gameRepository, never()).delete(manual.getGame());
+        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
+        verifyNoInteractions(gameRepository);
+        verify(gameInstallationRepository, never()).deleteAll(List.of(manual));
     }
 
     private ScanSource aSource() {

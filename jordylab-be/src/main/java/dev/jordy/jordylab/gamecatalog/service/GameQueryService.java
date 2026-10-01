@@ -4,9 +4,9 @@ import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
-import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
 import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
+import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
 import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
@@ -30,13 +30,13 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
