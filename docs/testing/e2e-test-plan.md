@@ -28,9 +28,10 @@ Campaign spec: [specs/011-prod-e2e-hardening](../../specs/011-prod-e2e-hardening
 
 | SC | Result | Evidence |
 |----|--------|----------|
-| SC-001 no `TODO` rows | ✅ | the matrix has 0 `TODO` rows (the last one, A12, closed 2026-10-02); 544 rows are PASS / PASS-CI / FAIL-FIXED / NOT TESTABLE |
+| SC-001 no `TODO` rows | ✅ | the matrix has 0 `TODO` rows (the last one, A12, closed 2026-10-02); 544 rows (534 at recon + 10 added for bugs found along the way) are PASS / PASS-CI / FAIL-FIXED / NOT TESTABLE |
 | SC-002 every S1/S2 VERIFIED-PROD; S3/S4 fixed or deferred | ✅ for S1/S2 (19/19) · ⚠️ S3/S4 | 7 S3 + 1 S4 stay `DEPLOYED` and 7 are `FIXED-LOCAL` (tooling/test infra); the deployed ones wait on MRB-02/MRB-04 or are CI-level gates — listed in `final-report.md`, not silently dropped |
 | SC-003 regression test or reason per fixed bug | ✅ | every bug entry carries a "Regression test added" line (test name or the reason none applies) |
+| SC-004 final smoke zero errors | ✅ | smoke A re-run on rc8 and the signed-in admin pass: 0 console errors, 0 failed requests (§ Final smoke on rc8) |
 | SC-005 gitleaks clean, no secrets in `docs/testing/*` | ✅ | `gitleaks git --redact` → 223 commits, no leaks |
 | SC-006 no database seeded | ✅ | nothing was inserted by hand; prod data came from the real scanners (Steam on MacBookPro and JordyBox, EmuDeck on JordyBox) and the Switch UI; Pikmin 4 was added and removed through the UI. No `BLOCKED-no-real-data` rows |
 | SC-007 AI tally ≤ 30 per pass | ✅ | §8: 6 agent-triggered calls |
