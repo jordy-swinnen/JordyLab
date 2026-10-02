@@ -118,7 +118,7 @@ matrix; every FAIL has a BUG.
 - [X] T019 [P] [US2] Smoke A11 + A13 in-cluster (read-only): pod readiness/restarts, readiness/liveness status,
   running image tags vs latest green `Build` SHA; also CNPG cluster + backup status
   (`kubectl -n jordylab get cluster,backup,scheduledbackup`)
-- [ ] T020 [US2] Smoke A5 + A12 in the built-in browser pane: load `/`, reload a nested route for each lazy domain
+- [x] T020 [US2] Smoke A5 + A12 in the built-in browser pane: load `/`, reload a nested route for each lazy domain
   (fna, gamecatalog, settings), read console + network for errors/mixed content; screenshot evidence (redacted)
 - [X] T021 [US2] Keycloak prod config check: issuer, redirect URIs, web origins and client list in
   `deploy/keycloak/realm-prod.json` vs `jordylab-be/compose/keycloak-realm-export.json` vs the live
@@ -256,11 +256,11 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 
 **Independent Test**: every HANDOFF in plan §7 is `verified` or `failed` with a reason, and each took ≈ ≤ 10 min.
 
-- [ ] T053 [US5] Track HANDOFF batch 1 (sent in T016) while continuing other areas: keep plan §7 statuses
+- [x] T053 [US5] Track HANDOFF batch 1 (sent in T016) while continuing other areas: keep plan §7 statuses
   current (`sent → reported`), record how long each handoff took Jordy, and adjust/resend a block if a step fails
 - [ ] T054 [US5] Write HANDOFF batch 2 when needed: GitHub rulesets for `v*` tags and `main` (T040), first release
   tag (T041), APK install on the Android phone after any mobile fix, any pod-restart persistence test Jordy approves
-- [ ] T055 [US5] For each reported handoff, verify independently (API/UI/logs/cluster) and update plan §7 status;
+- [x] T055 [US5] For each reported handoff, verify independently (API/UI/logs/cluster) and update plan §7 status;
   never mark PASS on report alone when a check is possible
 
 ---
@@ -269,7 +269,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 
 - [x] T056 Full final smoke on `https://jordylab.be` after the last deploy: `contracts/smoke-suite.md` A + B, one full
   pass through C and D; zero console errors / failed requests (SC-004)
-- [ ] T057 [P] Verify every success criterion in `docs/testing/`: SC-001 (no `TODO` rows), SC-002 (all S1/S2
+- [x] T057 [P] Verify every success criterion in `docs/testing/`: SC-001 (no `TODO` rows), SC-002 (all S1/S2
   `VERIFIED-PROD`; each S3/S4 fixed or deferred with Jordy's recorded agreement), SC-003 (regression test or reason
   per fixed bug), SC-005 (`gitleaks` clean, no secrets in `docs/testing/*`), SC-006 (statement that no database was
   seeded, with any BLOCKED-no-real-data rows listed), SC-007 (AI tally ≤ 30 per pass), SC-008 (every rollback has an
