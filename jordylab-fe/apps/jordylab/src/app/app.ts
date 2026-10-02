@@ -28,6 +28,7 @@ import {
 } from '@jordylab-fe/shared/platform/api';
 import {
   AndroidAppQrEntryComponent,
+  InstallDownloadStatus,
   InstallPromptComponent,
   UpdateAvailableBannerComponent,
   UpdateRequiredComponent,
@@ -98,6 +99,7 @@ export class App {
   isAdmin = this.#auth.isAdmin;
 
   protected readonly showQrEntry = signal(false);
+  protected readonly installStatus = signal<InstallDownloadStatus>('idle');
   protected readonly latestRelease = this.#updateCheck.latest;
 
   constructor() {
@@ -109,7 +111,14 @@ export class App {
   }
 
   async onInstallDownload(): Promise<void> {
-    window.location.href = await this.#apkDownload.resolveLatestDownloadUrl();
+    this.installStatus.set('preparing');
+    try {
+      const downloadUrl = await this.#apkDownload.resolveLatestDownloadUrl();
+      window.location.assign(downloadUrl);
+      this.installStatus.set('started');
+    } catch {
+      this.installStatus.set('failed');
+    }
   }
 
   async onUpdateDownload(): Promise<void> {

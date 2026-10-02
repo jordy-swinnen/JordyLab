@@ -752,3 +752,20 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): PR #74, `v0.0.1-rc8` — `ScanLock` takes a Postgres transaction-scoped advisory lock per host + library type at the start of `submitScan`; the second scan blocks until the first commits, then sees the stored hash and answers `NO_CHANGE`.
 - Regression test added: `GameCatalogModuleTest.aSecondScanOfTheSameSourceWaitsForTheFirstInsteadOfFailingOnDuplicateKeys` (fails with `DataIntegrityViolationException` without the lock, passes with it); `ScanServiceTest` constructor updated.
 - Verified on prod:
+
+### BUG-049: Android install dialog is unstyled and gives no feedback — tapping Download "does nothing"
+- Status: FIXED locally — release pending (`fix/e2e-android-install-dialog`)
+- Severity: S3
+- Area/spec: mobile / 007 US1 (web install dialog, FR-005/FR-006)
+- Env found: prod, the owner's Android phone (Brave, reported 2026-10-02, MRB-04)
+- Coverage rows: 007-US1, 007-FR-005
+- Steps to reproduce:
+  1. Open `https://jordylab.be` signed in, in a mobile Android browser → the install dialog shows.
+  2. Tap Download.
+- Expected (cite spec/story): a styled dialog like the rest of the app; a tap on Download visibly starts the APK download.
+- Actual (logs/screenshot, secrets redacted): the dialog is plain unstyled text at the top of the page (`Download` and `Not now` run together as "DownloadNot now"); after the tap the dialog disappears and nothing visible happens. The APKs are present on the server (rc6–rc8) and the backend logged no error.
+- Root cause: `lib-install-prompt`, `lib-update-available-banner` and `lib-update-required` were written with bare elements and CSS class names that no stylesheet defines; the download handler reports nothing while it requests the signed link, and swallows failures.
+- Fix (PR / commit / tag): the three components use the app's Tailwind tokens (bottom sheet, 48 px buttons); the install dialog shows "Preparing the download…", "Download started — open the file from your notifications or Downloads" or an error with "Try again".
+- Regression test added: `install-prompt.component.spec.ts` (preparing / started / failed states)
+- Verified on prod:
+

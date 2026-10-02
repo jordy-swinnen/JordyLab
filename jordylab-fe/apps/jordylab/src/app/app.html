@@ -5,7 +5,7 @@
 />
 } @else {
 <div class="min-h-screen lg:flex">
-    <lib-install-prompt (download)="onInstallDownload()" />
+    <lib-install-prompt [status]="installStatus()" (download)="onInstallDownload()" />
     @if (latestRelease()?.updateAvailable) {
     <lib-update-available-banner
       [versionName]="latestRelease()!.versionName"
