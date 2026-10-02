@@ -118,7 +118,7 @@ matrix; every FAIL has a BUG.
 - [X] T019 [P] [US2] Smoke A11 + A13 in-cluster (read-only): pod readiness/restarts, readiness/liveness status,
   running image tags vs latest green `Build` SHA; also CNPG cluster + backup status
   (`kubectl -n jordylab get cluster,backup,scheduledbackup`)
-- [ ] T020 [US2] Smoke A5 + A12 in the built-in browser pane: load `/`, reload a nested route for each lazy domain
+- [X] T020 [US2] Smoke A5 + A12 in the built-in browser pane: load `/`, reload a nested route for each lazy domain
   (fna, gamecatalog, settings), read console + network for errors/mixed content; screenshot evidence (redacted)
 - [X] T021 [US2] Keycloak prod config check: issuer, redirect URIs, web origins and client list in
   `deploy/keycloak/realm-prod.json` vs `jordylab-be/compose/keycloak-realm-export.json` vs the live
@@ -222,28 +222,28 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 - [x] T043 [US4] 006 US4 bug (branch `fix/e2e-settings-ai-routing`): implement `specs/006-settings-module/tasks.md`
   T024, T026–T030 exactly as written there (Spring AI 2.0.1 GA, `AiFeature`, `ResilientAiService` rewrite with red
   test first, call sites, `AiModelResolver`); tick them in that file
-- [x] T044 [US4] 006 US5 bug (branch `fix/e2e-settings-user-menu`): implement 006 T031–T033 (`UserMenuComponent`,
+- [X] T044 [US4] 006 US5 bug (branch `fix/e2e-settings-user-menu`): implement 006 T031–T033 (`UserMenuComponent`,
   shell header, AIA password update verified against local Keycloak)
-- [x] T045 [US4] 006 US6 bug (branch `fix/e2e-settings-ai-models`, depends on T043): implement 006 T034–T040
+- [X] T045 [US4] 006 US6 bug (branch `fix/e2e-settings-ai-models`, depends on T043): implement 006 T034–T040
   (entities + repositories via `/entity`, Flyway migration via `/flyway-migration` in the `settings` schema,
   `AiModelSettingsService`, `OpenRouterModelCatalogClient`, controller, frontend store via `/angular-signal-store`,
   AI Models page + route). ⚠️ **GATE**: contains a Flyway migration → deploy pauses for Jordy; needs OpenRouter
   secret present in prod (handoff answer)
-- [x] T046 [US4] 006 US7 bug (branch `fix/e2e-settings-signup-notify`): implement 006 T041–T042 (`NtfyClient`,
+- [X] T046 [US4] 006 US7 bug (branch `fix/e2e-settings-signup-notify`): implement 006 T041–T042 (`NtfyClient`,
   `PendingSignupNotifierService`)
-- [x] T047 [US4] 009 US4 + US2 remainder bug (branch `fix/e2e-switch-detail`): implement 009 T027–T029, T032–T034,
+- [X] T047 [US4] 009 US4 + US2 remainder bug (branch `fix/e2e-switch-detail`): implement 009 T027–T029, T032–T034,
   T039–T040 as written in `specs/009-switch-games/tasks.md`
-- [x] T048 [US4] 009 US3 bulk add bug (branch `fix/e2e-switch-bulk-add`): implement 009 T041–T047
-- [x] T049 [US4] 009 US5 remainder bug (branch `fix/e2e-switch-edit-remove`): implement 009 T052–T053
-- [x] T050 [US4] Deploy + verify each merged batch per `contracts/deployment-record.md`: state the record; if any of
+- [X] T048 [US4] 009 US3 bulk add bug (branch `fix/e2e-switch-bulk-add`): implement 009 T041–T047
+- [X] T049 [US4] 009 US5 remainder bug (branch `fix/e2e-switch-edit-remove`): implement 009 T052–T053
+- [X] T050 [US4] Deploy + verify each merged batch per `contracts/deployment-record.md`: state the record; if any of
   migration/realm/secret-config is "yes" → ⚠️ **GATE**; else find the pending run (`gh run list --workflow deploy-prod.yml`,
   or `release.yml` after T041) and approve via `gh api …/pending_deployments` with a comment naming the BUG IDs; if
   approval is refused, report the exact error and stop; watch rollout of backend/frontend/keycloak; confirm running
   tags; re-run the bug's repro and `contracts/smoke-suite.md` on prod; set VERIFIED-PROD with evidence
-- [x] T051 [US4] Regression handling: on login break, 5xx, or failed rollout after a deploy, immediately redeploy the
+- [X] T051 [US4] Regression handling: on login break, 5xx, or failed rollout after a deploy, immediately redeploy the
   previous good SHA/version (`gh workflow run deploy-prod.yml -f sha=…` or `-f version=…` after T041), log an S1
   incident BUG with the `Incident:` line, and ⚠️ **GATE** for Jordy
-- [x] T052 [US4] Repeat T039–T051 for every bug discovered in US2/US3 until all S1/S2 are VERIFIED-PROD and each
+- [X] T052 [US4] Repeat T039–T051 for every bug discovered in US2/US3 until all S1/S2 are VERIFIED-PROD and each
   S3/S4 is fixed or deferred with Jordy's recorded agreement
 
 **Checkpoint**: bug log reflects final states; each deployment has a record in plan §9.
@@ -260,16 +260,16 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
   current (`sent → reported`), record how long each handoff took Jordy, and adjust/resend a block if a step fails
 - [ ] T054 [US5] Write HANDOFF batch 2 when needed: GitHub rulesets for `v*` tags and `main` (T040), first release
   tag (T041), APK install on the Android phone after any mobile fix, any pod-restart persistence test Jordy approves
-- [ ] T055 [US5] For each reported handoff, verify independently (API/UI/logs/cluster) and update plan §7 status;
+- [X] T055 [US5] For each reported handoff, verify independently (API/UI/logs/cluster) and update plan §7 status;
   never mark PASS on report alone when a check is possible
 
 ---
 
 ## Phase 8: Polish & Close-out
 
-- [x] T056 Full final smoke on `https://jordylab.be` after the last deploy: `contracts/smoke-suite.md` A + B, one full
+- [X] T056 Full final smoke on `https://jordylab.be` after the last deploy: `contracts/smoke-suite.md` A + B, one full
   pass through C and D; zero console errors / failed requests (SC-004)
-- [ ] T057 [P] Verify every success criterion in `docs/testing/`: SC-001 (no `TODO` rows), SC-002 (all S1/S2
+- [X] T057 [P] Verify every success criterion in `docs/testing/`: SC-001 (no `TODO` rows), SC-002 (all S1/S2
   `VERIFIED-PROD`; each S3/S4 fixed or deferred with Jordy's recorded agreement), SC-003 (regression test or reason
   per fixed bug), SC-005 (`gitleaks` clean, no secrets in `docs/testing/*`), SC-006 (statement that no database was
   seeded, with any BLOCKED-no-real-data rows listed), SC-007 (AI tally ≤ 30 per pass), SC-008 (every rollback has an

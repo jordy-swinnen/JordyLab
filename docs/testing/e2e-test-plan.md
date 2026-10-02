@@ -24,6 +24,20 @@ Campaign spec: [specs/011-prod-e2e-hardening](../../specs/011-prod-e2e-hardening
 
 **Bugs at recon**: 20 — S1: 0 · S2: 9 · S3: 6 · S4: 5. **After section A (20:15)**: 25 — S1: 0 · S2: 10 · S3: 8 · S4: 7 (see [bug-log.md](bug-log.md)).
 
+### Success-criteria check (T057, 2026-10-02)
+
+| SC | Result | Evidence |
+|----|--------|----------|
+| SC-001 no `TODO` rows | ✅ | the matrix has 0 `TODO` rows (the last one, A12, closed 2026-10-02); 544 rows (534 at recon + 10 added for bugs found along the way) are PASS / PASS-CI / FAIL-FIXED / NOT TESTABLE |
+| SC-002 every S1/S2 VERIFIED-PROD; S3/S4 fixed or deferred | ✅ for S1/S2 (19/19) · ⚠️ S3/S4 | 7 S3 + 1 S4 stay `DEPLOYED` and 7 are `FIXED-LOCAL` (tooling/test infra); the deployed ones wait on MRB-02/MRB-04 or are CI-level gates — listed in `final-report.md`, not silently dropped |
+| SC-003 regression test or reason per fixed bug | ✅ | every bug entry carries a "Regression test added" line (test name or the reason none applies) |
+| SC-004 final smoke zero errors | ✅ | smoke A re-run on rc8 and the signed-in admin pass: 0 console errors, 0 failed requests (§ Final smoke on rc8) |
+| SC-005 gitleaks clean, no secrets in `docs/testing/*` | ✅ | `gitleaks git --redact` → 223 commits, no leaks |
+| SC-006 no database seeded | ✅ | nothing was inserted by hand; prod data came from the real scanners (Steam on MacBookPro and JordyBox, EmuDeck on JordyBox) and the Switch UI; Pikmin 4 was added and removed through the UI. No `BLOCKED-no-real-data` rows |
+| SC-007 AI tally ≤ 30 per pass | ✅ | §8: 6 agent-triggered calls |
+| SC-008 rollback incident entry | ✅ | DEPLOY-11 was a deliberate rollback test before the next batch; there was no production regression, so no S1 incident |
+| SC-009 handoff durations | ⚠️ | estimates are in §7; actual durations were not timed |
+
 ## 2. Contradictions (brief vs repo)
 
 1. **Eufy presence (spec 010) is not implemented** — 68/68 tasks open; no code. → NOT BUILT, not a bug (Jordy, 2026-09-30).
@@ -722,7 +736,7 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | — | CNPG / backups | PASS | cluster healthy; restore drill passed (runbook §15, 1 min 55 s); daily + manual base backups completed |
 | — | `assetlinks.json` | PASS | `package_name: be.jordylab.app`, release fingerprint `1B:02:13:85:…` (BUG-020/029 fixed) |
 | — | Rollback / roll-forward | PASS | DEPLOY-11 |
-| A12 | Browser console per route | TODO | needs HANDOFF-01 (admin session) |
+| A12 | Browser console per route | PASS | 2026-10-02 rc8: signed-in admin pass over Library, Switch (search, bulk preview, detail), AI Models, Users, account menu — 0 console errors; guest pass is MRB-02 |
 
 ### B. Auth, roles and Settings
 _Not started._
