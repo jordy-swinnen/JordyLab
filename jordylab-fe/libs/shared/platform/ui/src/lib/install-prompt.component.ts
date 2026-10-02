@@ -39,7 +39,7 @@ const BUTTON =
             }
             @case ('started') {
               <p class="mt-3 text-[14px] text-foreground" role="status">
-                Download started. Open the file from your notifications or your Downloads folder.
+                Download requested. When it finishes, open the file from your notifications or your Downloads folder.
               </p>
             }
             @case ('failed') {

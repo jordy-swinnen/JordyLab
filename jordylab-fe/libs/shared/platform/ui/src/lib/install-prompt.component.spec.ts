@@ -82,11 +82,11 @@ describe('InstallPromptComponent', () => {
     expect(spectator.query<HTMLButtonElement>('.jordylab-install-dialog button')?.disabled).toBe(true);
   });
 
-  it('tells the user where to find the file once the download has started', () => {
+  it('tells the user where to find the file once the download has been requested', () => {
     promptKind.set('android');
     spectator.setInput('status', 'started');
 
-    expect(spectator.query('[role="status"]')?.textContent).toContain('Download started');
+    expect(spectator.query('[role="status"]')?.textContent).toContain('Download requested');
   });
 
   it('shows an error and offers Try again when the download could not be prepared', () => {

@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
 import { UsersStore } from '@jordylab-fe/settings/api';
+import { ApkDownloadService } from '@jordylab-fe/shared/platform/api';
 import { App } from './app';
 
 describe('App', () => {
@@ -13,6 +14,7 @@ describe('App', () => {
   const hasAppRole = signal(true);
   const isAdmin = signal(false);
   const pendingCount = signal(0);
+  const resolveLatestDownloadUrl = vi.fn();
   const createComponent = createComponentFactory({
     component: App,
     imports: [RouterModule.forRoot([])],
@@ -32,6 +34,10 @@ describe('App', () => {
         useValue: { pendingCount: pendingCount.asReadonly() },
       },
       {
+        provide: ApkDownloadService,
+        useValue: { resolveLatestDownloadUrl },
+      },
+      {
         provide: BiometricUnlockService,
         useValue: { disable: disableBiometricUnlock },
       },
@@ -44,6 +50,7 @@ describe('App', () => {
     hasAppRole.set(true);
     isAdmin.set(false);
     pendingCount.set(0);
+    resolveLatestDownloadUrl.mockReset();
     spectator = createComponent();
   });
 
@@ -163,6 +170,32 @@ describe('App', () => {
       expect(
         spectator.query('[data-testid="pending-count-badge"]'),
       ).toHaveText('2');
+    });
+  });
+
+  describe('install download', () => {
+    it('reports "started" once the signed download link has been resolved', async () => {
+      resolveLatestDownloadUrl.mockResolvedValue('#apk-download');
+
+      await spectator.component.onInstallDownload();
+
+      expect(spectator.component['installStatus']()).toBe('started');
+    });
+
+    it('reports "failed" when the signed download link cannot be requested', async () => {
+      resolveLatestDownloadUrl.mockRejectedValue(new Error('403'));
+
+      await spectator.component.onInstallDownload();
+
+      expect(spectator.component['installStatus']()).toBe('failed');
+    });
+
+    it('reports "preparing" while the link is being requested', () => {
+      resolveLatestDownloadUrl.mockReturnValue(new Promise<string>(() => undefined));
+
+      void spectator.component.onInstallDownload();
+
+      expect(spectator.component['installStatus']()).toBe('preparing');
     });
   });
 });
