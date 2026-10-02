@@ -222,28 +222,28 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 - [x] T043 [US4] 006 US4 bug (branch `fix/e2e-settings-ai-routing`): implement `specs/006-settings-module/tasks.md`
   T024, T026–T030 exactly as written there (Spring AI 2.0.1 GA, `AiFeature`, `ResilientAiService` rewrite with red
   test first, call sites, `AiModelResolver`); tick them in that file
-- [ ] T044 [US4] 006 US5 bug (branch `fix/e2e-settings-user-menu`): implement 006 T031–T033 (`UserMenuComponent`,
+- [x] T044 [US4] 006 US5 bug (branch `fix/e2e-settings-user-menu`): implement 006 T031–T033 (`UserMenuComponent`,
   shell header, AIA password update verified against local Keycloak)
-- [ ] T045 [US4] 006 US6 bug (branch `fix/e2e-settings-ai-models`, depends on T043): implement 006 T034–T040
+- [x] T045 [US4] 006 US6 bug (branch `fix/e2e-settings-ai-models`, depends on T043): implement 006 T034–T040
   (entities + repositories via `/entity`, Flyway migration via `/flyway-migration` in the `settings` schema,
   `AiModelSettingsService`, `OpenRouterModelCatalogClient`, controller, frontend store via `/angular-signal-store`,
   AI Models page + route). ⚠️ **GATE**: contains a Flyway migration → deploy pauses for Jordy; needs OpenRouter
   secret present in prod (handoff answer)
-- [ ] T046 [US4] 006 US7 bug (branch `fix/e2e-settings-signup-notify`): implement 006 T041–T042 (`NtfyClient`,
+- [x] T046 [US4] 006 US7 bug (branch `fix/e2e-settings-signup-notify`): implement 006 T041–T042 (`NtfyClient`,
   `PendingSignupNotifierService`)
-- [ ] T047 [US4] 009 US4 + US2 remainder bug (branch `fix/e2e-switch-detail`): implement 009 T027–T029, T032–T034,
+- [x] T047 [US4] 009 US4 + US2 remainder bug (branch `fix/e2e-switch-detail`): implement 009 T027–T029, T032–T034,
   T039–T040 as written in `specs/009-switch-games/tasks.md`
-- [ ] T048 [US4] 009 US3 bulk add bug (branch `fix/e2e-switch-bulk-add`): implement 009 T041–T047
-- [ ] T049 [US4] 009 US5 remainder bug (branch `fix/e2e-switch-edit-remove`): implement 009 T052–T053
-- [ ] T050 [US4] Deploy + verify each merged batch per `contracts/deployment-record.md`: state the record; if any of
+- [x] T048 [US4] 009 US3 bulk add bug (branch `fix/e2e-switch-bulk-add`): implement 009 T041–T047
+- [x] T049 [US4] 009 US5 remainder bug (branch `fix/e2e-switch-edit-remove`): implement 009 T052–T053
+- [x] T050 [US4] Deploy + verify each merged batch per `contracts/deployment-record.md`: state the record; if any of
   migration/realm/secret-config is "yes" → ⚠️ **GATE**; else find the pending run (`gh run list --workflow deploy-prod.yml`,
   or `release.yml` after T041) and approve via `gh api …/pending_deployments` with a comment naming the BUG IDs; if
   approval is refused, report the exact error and stop; watch rollout of backend/frontend/keycloak; confirm running
   tags; re-run the bug's repro and `contracts/smoke-suite.md` on prod; set VERIFIED-PROD with evidence
-- [ ] T051 [US4] Regression handling: on login break, 5xx, or failed rollout after a deploy, immediately redeploy the
+- [x] T051 [US4] Regression handling: on login break, 5xx, or failed rollout after a deploy, immediately redeploy the
   previous good SHA/version (`gh workflow run deploy-prod.yml -f sha=…` or `-f version=…` after T041), log an S1
   incident BUG with the `Incident:` line, and ⚠️ **GATE** for Jordy
-- [ ] T052 [US4] Repeat T039–T051 for every bug discovered in US2/US3 until all S1/S2 are VERIFIED-PROD and each
+- [x] T052 [US4] Repeat T039–T051 for every bug discovered in US2/US3 until all S1/S2 are VERIFIED-PROD and each
   S3/S4 is fixed or deferred with Jordy's recorded agreement
 
 **Checkpoint**: bug log reflects final states; each deployment has a record in plan §9.
@@ -267,7 +267,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 
 ## Phase 8: Polish & Close-out
 
-- [ ] T056 Full final smoke on `https://jordylab.be` after the last deploy: `contracts/smoke-suite.md` A + B, one full
+- [x] T056 Full final smoke on `https://jordylab.be` after the last deploy: `contracts/smoke-suite.md` A + B, one full
   pass through C and D; zero console errors / failed requests (SC-004)
 - [ ] T057 [P] Verify every success criterion in `docs/testing/`: SC-001 (no `TODO` rows), SC-002 (all S1/S2
   `VERIFIED-PROD`; each S3/S4 fixed or deferred with Jordy's recorded agreement), SC-003 (regression test or reason

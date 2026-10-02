@@ -125,7 +125,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: verified on the PR that carries it: the review reads the listed files (all exist)
 
 ### BUG-008: One-tag release flow (runbook §20) is not implemented
-- Status: DEPLOYED — first release `v0.0.1-rc1` went through verify → retag → draft release → approved deploy → publish (DEPLOY-05); only the APK publish failed (401 from Keycloak for mobile-release-ci, fix PR #46 + secret sync by Jordy)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: CI/CD / 008 (runbook §20, agreed 2026-09-29)
 - Env found: both
@@ -137,7 +137,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: planned work never done (Jordy classes it as a bug — spec 011 FR-012b).
 - Fix (PR / commit / tag): planned batch `fix/e2e-release-flow` (tasks T040/T041); deploy pauses for Jordy; rulesets + first tag are handoffs.
 - Regression test added:
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`: the tag-driven flow ran end to end for rc6, rc7 and rc8 (verify → retag → release → approved deploy → publish → apk, all green)
 
 ### BUG-009: Ollama is still wired in build, tests, compose and AGENTS.md
 - Status: VERIFIED-PROD
@@ -171,7 +171,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: prod backend log `AI call succeeded: feature=gamecatalog.chat.query/answer, provider=openrouter, model=anthropic/claude-haiku-4.5` after the owner added OpenRouter credits (before: 402 → one Anthropic retry)
 
 ### BUG-011: 006 US5 missing — no user menu to manage one's own login details
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session); email change needs `UPDATE_EMAIL` (enabled, HANDOFF-06)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: shared/auth, shell / 006
 - Env found: both
@@ -183,10 +183,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: 006 T031–T033 never implemented. Also found: the email field is not on Keycloak's profile page because email is the username; Keycloak (26.4+) changes it only through the `UPDATE_EMAIL` action, which is disabled on prod.
 - Fix (PR / commit / tag): `UserMenuComponent` (Angular CDK menu) replaces both sign-out buttons: Change password (`UPDATE_PASSWORD`), Edit name (`UPDATE_PROFILE`), Change email (`UPDATE_EMAIL`), Sign out; `AuthService.requestAction` (web: `keycloak.login({action})`, Android: `kc_action` on the system-browser authorize URL). Prod realm: enable `UPDATE_EMAIL` (logged in `deploy/keycloak/README.md`).
 - Regression test added: `user-menu.component.spec.ts` (6), `auth.service.spec.ts` (+2), `app.spec.ts` (menu for every signed-in user, signs out); local 2026-10-01: menu opens, Edit name → Keycloak "Update Account Information"
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: menu shows Change password / Edit name / Change email / Sign out; Change email reaches Keycloak with `kc_action=UPDATE_EMAIL` and asks to re-authenticate (the form itself was not submitted)
 
 ### BUG-012: 006 US6 missing — no per-feature AI model selection (AI Models page)
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: both
@@ -198,7 +198,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: story not implemented; depends on BUG-010.
 - Fix (PR / commit / tag): branch `fix/e2e-settings-ai-models` — `AiFeatureModelSetting`/`AiFeatureLastRun` entities on the existing `settings` tables (**no new migration** — `V20260928003` already created them, so no deploy pause), `AiModelSettingsService` (`@Primary AiModelResolver`, cache dropped on `AiFeatureModelSettingUpdated`, `AiCallCompleted` → last run in its own transaction), keyless `OpenRouterModelCatalogClient` (TTL cache, stale-on-outage, loud when empty), `/api/settings/ai-models` (list, catalog, PUT), Settings → AI Models page.
 - Regression test added: entity tests (11), `OpenRouterModelCatalogClientTest` (5), `AiModelSettingsServiceTest` (12), `SettingsAiModelsControllerTest` (5), `AiModelSelectionIntegrationTest` (SC-003 on Postgres: the next call uses the saved model, last run recorded), `ai-models.store.spec` (7), `ai-models-page.component.spec` (5); local E2E 2026-10-01 against the real catalog: list → picker → save → revert
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: Settings → AI Models lists all features with model, fallback and last-run line (OpenRouter calls today)
 
 ### BUG-013: 006 US7 missing — no Ntfy push when someone signs up
 - Status: VERIFIED-PROD
@@ -218,7 +218,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: backend log `Ntfy notifications enabled`, then `Ntfy notification sent: 'New JordyLab sign-up'` at startup for the pending test account; the ntfy server's `messages_published` rose from 0 to 2
 
 ### BUG-014: 009 US4 incomplete — Switch detail format and cross-view tests missing
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -230,10 +230,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: story partially implemented.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail`: `hostFormats` on the detail response, "Format · Physical/Digital" on the detail page; T034 (filter chips) checked in the browser after deploy.
 - Regression test added: `GameRepositoryTest` (grid, hosts, platforms, chat filter on PostgreSQL), `ReconciliationServiceTest` (manual installations never hidden or purged), `GameQueryServiceTest.detailMapsManualHostsToTheirFormatAndOmitsScannedHosts`, `game-detail.component.spec.ts`
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: detail page of a Digital game shows `Format · Digital` and the admin section
 
 ### BUG-015: 009 US2 incomplete — no manual-fallback add form or relink UI
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -245,10 +245,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: story partially implemented.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail`: "No IGDB match → Add manually" prompt on the add page; admin relink search on the detail page.
 - Regression test added: `switch-game.component.spec.ts`, `switch-game.store.spec.ts`, `game-detail.store.spec.ts`, `game-detail.component.spec.ts`
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: Switch page offers Search IGDB / Add Manually tabs and the detail page the relink-to-IGDB control
 
 ### BUG-016: 009 US3 missing — bulk add by pasting a list
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -260,10 +260,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: story not implemented.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-bulk-add` — `POST /switch/bulk/preview` + `/bulk/confirm` (`SwitchBulkService`, one transaction per line), page `/games/switch/bulk`, IGDB calls paced to 4/s.
 - Regression test added: `SwitchBulkServiceTest`, `SwitchGameControllerTest` (bulk), `SwitchGameControllerSecurityTest` (guest 403), `switch-bulk.store.spec.ts`, `switch-bulk.component.spec.ts`; local E2E 2026-10-01 (5 lines → 2 added, duplicate collapsed, DLC flagged, re-paste → already in catalog)
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: `Paste a list` → `Find matches` for `Mario Kart 8 Deluxe` returned `Match … (2017)` and `Add 1 games` (not submitted)
 
 ### BUG-017: 009 US5 incomplete — no edit/remove on the detail page; guest-403 tests missing
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: both
@@ -275,7 +275,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: story partially implemented.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail`: admin-only format change and two-step remove on the detail page.
 - Regression test added: `SwitchGameControllerSecurityTest` (guest 403 on search/add/edit/remove against the real `SecurityConfig`), `game-detail.component.spec.ts`
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: `Remove from catalog` → two-step confirm → the game left the catalog (213 → 212 titles)
 
 ### BUG-018: Full backend suite fails 7 tests on this Mac (Podman) — `RoleMatrixTest`, `GuestChatLimitIntegrationTest`
 - Status: FIXED-LOCAL (environment; README documents Podman ≥ 6 GiB, PR #43)
@@ -309,7 +309,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01: CI `test-backend` (RoleMatrixTest, GuestChatLimitIntegrationTest) green on Keycloak 26.7.4 — test-only change
 
 ### BUG-020: Scanner client downloaded from production embeds `http://localhost:8180` as its Keycloak URL
-- Status: DEPLOYED (`14fb86b`, DEPLOY-01) — prod re-download pending admin login (PR https://github.com/jordy-swinnen/JordyLab/pull/30) — **confirmed on prod 2026-09-30 20:37**
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog ingest / 003, 008
 - Env found: prod (config)
@@ -323,7 +323,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the scanner's Keycloak URL property was never bound to `${KEYCLOAK_URL}` for prod.
 - Fix (PR / commit / tag): candidate — `jordylab.script.keycloak-url: ${KEYCLOAK_URL}` in shared config (or prod profile) + test that the rendered client carries the configured URL. Config change → deploy pauses for Jordy.
 - Regression test added:
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`: the downloaded client has the prod Keycloak URL; the owner's device-code login and EmuDeck/Steam scans against prod worked (HANDOFF-10/11)
 
 ### BUG-021: Frontend nginx — no compression, no HSTS, version leak, `index.html` cacheable, headers lost on assets, wrong manifest MIME
 - Status: VERIFIED-PROD (CSP still open as follow-up)
@@ -405,7 +405,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-026: Settings → Users fails on prod (503) — Keycloak Admin REST called through the public URL
-- Status: DEPLOYED (`14fb86b`, DEPLOY-01) — admin calls now reach Keycloak's JSON API (next blocker: BUG-031) (PR https://github.com/jordy-swinnen/JordyLab/pull/30)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: settings / 006, 008
 - Env found: prod (reported by Jordy during HANDOFF-02)
@@ -417,7 +417,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `jordylab.settings.keycloak.server-url: ${KEYCLOAK_URL}` = public `https://jordylab.be/auth`; the Gateway does not route `/auth/admin/**` (by design, 008 FR-009), so the admin client parsed `index.html`. Local works because `KEYCLOAK_URL` there points straight at Keycloak.
 - Fix (PR / commit / tag): PR #30 (`1dc4375`) — prod uses `${KEYCLOAK_INTERNAL_URL}` = `http://keycloak:8080/auth` (backend-config).
 - Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/shared/config/ProdKeycloakUrlConfigurationTest.java`
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`: signed in as admin, Settings → Users loads the user lists (no 503/403)
 
 ### BUG-027: No documented way to give a local user the admin role
 - Status: FIXED-LOCAL (PR #43) — README "Your own local admin account"
@@ -435,7 +435,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-028: Nothing grants the `gamecatalog-scanner` role — only the seeded dev user can scan
-- Status: DEPLOYED (DEPLOY-02, `1b907f2`) + live realm patched — prod UI check pending admin login
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2 (provisional)
 - Area/spec: auth / 003, 006
 - Env found: local (HANDOFF-03)
@@ -448,7 +448,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Follow-up (21:11): after granting the role and `reauth`, the first `scan` still got 403; the next run passed — backend debug log shows `Granted Authorities=[ROLE_offline_access, …, ROLE_gamecatalog-scanner]` and `Secured POST /api/gamecatalog/ingest/check`. The first 403 was most likely an access token minted before the role change took effect; not reproducible.
 - Fix (PR / commit / tag): Jordy (Q-07): admin includes all JordyLab roles → `admin` composite of `guest` + `gamecatalog-scanner` in both realm files + kcadm on the live prod realm (realm change → Jordy confirms deploy).
 - Regression test added:
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`: the owner's device-code login on prod yields the scanner role: Steam and EmuDeck scans were accepted (148 + 5 installations)
 
 ### BUG-029: Local Settings → Users can't work — the dev realm has no fixed `jordylab-backend` secret
 - Status: FIXED-LOCAL (PR #43, guard test #44) — fixed dev secret; Jordy's local Keycloak aligned with the README command
@@ -482,7 +482,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-031: Backend service-account token carries no realm-management roles — Admin REST API 403
-- Status: DEPLOYED (DEPLOY-02, `1b907f2`) + live realm patched — prod UI check pending admin login
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: settings / 006
 - Env found: both (surfaced on prod after DEPLOY-01; reproduced locally)
@@ -495,7 +495,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: with `fullScopeAllowed=false` roles only reach the token when scope-mapped; the realm files never mapped them. `KeycloakIntegrationTest` uses `src/test/resources/keycloak/jordylab-test-realm.json`, which has `fullScopeAllowed=true`, so tests never saw it. Settings → Users has therefore never worked outside tests.
 - Fix (PR / commit / tag): PR #31 — `clientScopeMappings.realm-management` for `jordylab-backend` (least privilege) + kcadm for the live realm. Local Keycloak already patched via kcadm. (Agent's local token re-check after the patch was blocked by the permission classifier; verification will come from the prod Users page after deploy.)
 - Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/settings/RealmConfigurationTest.java`
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`: signed in as admin, Settings → Users lists Pending (1) and Approved (3) — the Admin REST API answers
 
 ### BUG-032: OpenCode agents point at a model that doesn't exist — none of them can start
 - Status: VERIFIED — all four OpenCode agents start (PR `fix/e2e-opencode-agent-models`)
@@ -528,7 +528,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 — Jordy approved a test account in Settings → Users on https://jordylab.be; kcadm (read-only) shows `jordylab.frown533@…` enabled with `guest`
 
 ### BUG-034: The admin's own account is listed as a pending sign-up
-- Status: DEPLOYED (DEPLOY-04, `c4e4788`, PR #35) — prod UI check pending Jordy's login
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S3
 - Area/spec: settings / 006
 - Env found: prod (Jordy, screenshot of Settings → Users)
@@ -540,7 +540,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `deriveStatus` returned APPROVED only for a direct `guest` mapping; admins hold `admin` (composite incl. guest, Q-07) but not `guest` directly.
 - Fix (PR / commit / tag): PR #35 (`7decf8d`) — `guest` or `admin` → APPROVED.
 - Regression test added: `KeycloakUserAdministrationServiceTest.anAdminWithoutADirectGuestRoleIsApprovedNotPending`
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`: signed in as admin, the admin's own account is under Approved, not Pending
 
 ### BUG-035: `src/test/resources/application.yaml` replaced the main `application.yaml` in every test
 - Status: FIXED-LOCAL (PR #47) — test infra, no prod component
@@ -558,7 +558,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-036: APK upload to `POST /api/mobile/releases` answers 403 — 1 MB multipart limit, errors masked by `/error` denyAll
-- Status: DEPLOYED (`v0.0.1-rc2`, PR #47) — upload limit + real error statuses live; end-to-end proof waits on a published APK (BUG-037)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: mobile / 007
 - Env found: prod (release `v0.0.1-rc1`, apk job: `curl: (22) … 403` after the token request succeeded)
@@ -570,7 +570,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: no `spring.servlet.multipart` limits → Spring's 1 MB default rejects the APK; the exception is forwarded to `/error`, which `SecurityConfig` denies (`anyRequest().denyAll()`), so every server-side error became a bare 403. A non-APK file also escaped as an unmapped `IllegalArgumentException`.
 - Fix (PR / commit / tag): multipart limits 200 MB / 210 MB; `DispatcherType.ERROR` permitted; `InvalidApkException` → 400 `INVALID_APK`.
 - Regression test added: `jordylab-be/src/test/java/dev/jordy/jordylab/MobileReleaseUploadIntegrationTest.java`
-- Verified on prod:
+- Verified on prod: 2026-10-02: the release workflow's `apk` job uploaded the signed APK to `POST /api/mobile/releases` on prod for rc6, rc7 and rc8 (all green, versionCodes 106–108)
 
 ### BUG-037: APK signing-certificate check only reads v1 (JAR) signatures; release builds are v2/v3-only
 - Status: VERIFIED-PROD
@@ -588,7 +588,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the `apk` job built, signed and verified the release APK and published it: `mobile.mobile_release` row `0.0.1-rc6` (versionCode 106, 12.8 MB); the backend read the v2 signing certificate with apksig and accepted it against the pin
 
 ### BUG-038: Guests see the admin-only "Refresh" / "Regenerate" buttons on the game detail page
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: DEPLOYED in `v0.0.1-rc6` — admin side verified on prod 2026-10-02 (admin sees the buttons); the guest-only check waits for MRB-02
 - Severity: S4
 - Area/spec: gamecatalog / 004, 006
 - Env found: code reading (while adding the Switch admin controls, 009 T052)
@@ -618,7 +618,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc4`: preflight `OPTIONS /api/gamecatalog/switch/games/x` with `Origin: https://localhost` answers `Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS`
 
 ### BUG-040: No navigation leads to the Switch add page
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: code reading + local (while adding 009 US3)
@@ -630,10 +630,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: route added without a nav entry.
 - Fix (PR / commit / tag): admin-only "Switch games" item in the sidebar; "Paste a list" ↔ "Add one game" links between the two Switch pages.
 - Regression test added: `app.spec.ts` (admin nav lists Switch games; guest doesn't)
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: `Switch games` is in the sidebar and leads to the add page
 
 ### BUG-041: Switch endpoints answer 500 for duplicates, bad input and unknown games
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: DEPLOYED in `v0.0.1-rc6` — covered by `SwitchGameControllerTest` (400/404/409) in CI; the one-time prod probe of the error codes is optional
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: code reading
@@ -648,7 +648,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-042: Switch IGDB search misses ports and expanded games — "Mario Kart 8 Deluxe" finds nothing
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S2
 - Area/spec: gamecatalog / 009
 - Env found: local (2026-10-01, IGDB live)
@@ -660,10 +660,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: too narrow `game_type` filter.
 - Fix (PR / commit / tag): `game_type = (0,4,8,9,10,11)` — main, standalone expansion, remake, remaster, expanded game, port; DLC/bundles/mods/packs stay out.
 - Regression test added: `IgdbClientTest.searchSwitchGamesKeepsPortsAndExpandedGamesButNotDlcOrBundles`; verified locally (MK8 Deluxe → Match)
-- Verified on prod:
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: IGDB search for `Mario Kart 8 Deluxe` finds it (2017, Nintendo)
 
 ### BUG-043: Detail page's admin format select always shows "Physical"
-- Status: DEPLOYED in `v0.0.1-rc6` — prod UI confirmation pending (MRB-01, needs the owner's signed-in session)
+- Status: VERIFIED-PROD (2026-10-02)
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: local (2026-10-01; shipped in v0.0.1-rc4 via PR #53)
@@ -675,6 +675,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `[value]` on the `<select>` is applied before `@for` renders the options.
 - Fix (PR / commit / tag): `[selected]` per option.
 - Regression test added: `game-detail.component.spec.ts` (preselects the current format); verified locally
+- Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: the detail page select shows `Digital` for a Digital game (not `Physical`)
 
 ### BUG-044: Release APK check reads an empty certificate digest — apksigner's signer label isn't "Signer #1"
 - Status: VERIFIED-PROD
