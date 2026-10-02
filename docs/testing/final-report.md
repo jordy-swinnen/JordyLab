@@ -1,9 +1,9 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-01 · production `https://jordylab.be` · last release `v0.0.1-rc8` (`5f4bc05`)
+2026-09-30 → 2026-10-01 · production `https://jordylab.be` · last release `v0.0.1-rc9` (`27d78af`)
 
 ## Verdict
-Production (rc8) is healthy and **every S1/S2 defect found (19) is fixed, deployed and verified on prod**. The signed-in
+Production (rc9) is healthy and **every S1/S2 defect found (19) is fixed, deployed and verified on prod**. The signed-in
 browser pass (MRB-01) and the EmuDeck rescan are done. What remains is only what needs hardware, a second account or an
 approval: the Android app, a guest pass, a VPS reboot and a point-in-time restore (see `manual-test-runbook.md`).
 Nothing known is broken.
@@ -12,7 +12,7 @@ Nothing known is broken.
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
   compression and caching, deep links, OIDC issuer, unauthenticated API, CORS, pods, image tags, app links — all PASS on
   rc6 (re-run in the plan §6).
-- **Releases and rollback:** eight release tags (rc1–rc8) through the tag-driven pipeline; rc6 and rc7 are the first with every job
+- **Releases and rollback:** nine release tags (rc1–rc9) through the tag-driven pipeline; rc6 and rc7 are the first with every job
   green (retag, release, deploy, publish, **APK built, signed, verified and published**). Rollback to rc5 and roll-forward
   to rc6 both succeeded (DEPLOY-11).
 - **Data durability:** base backups running; a restore drill recovered production into a scratch cluster in 1 min 55 s
@@ -26,11 +26,11 @@ Nothing known is broken.
 - **Coverage matrix:** 544 rows closed — 412 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
   than `PASS`, defined in §5), 55 `FAIL-FIXED`, 63 `NOT TESTABLE`, 4 `PASS`.
 
-## Bugs: 48 found
+## Bugs: 49 found
 | Severity | Count | State |
 |----------|-------|-------|
 | S2 | 19 | all 19 verified (18 on prod, 1 by the restore drill) |
-| S3 | 17 | 7 verified on prod; 7 deployed (4 CI-level lint/coverage gates, BUG-030 download link and BUG-041 error codes await the Android/guest passes, BUG-048 live double-scan optional); 3 fixed locally (tooling/test infra) |
+| S3 | 18 | 7 verified on prod; 8 deployed (BUG-049 install dialog, rc9; 4 CI-level lint/coverage gates, BUG-030 download link and BUG-041 error codes await the Android/guest passes, BUG-048 live double-scan optional); 3 fixed locally (tooling/test infra) |
 | S4 | 12 | 7 verified; 4 fixed locally (tooling); 1 deployed (BUG-038, guest-only check pending MRB-02) |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
@@ -46,6 +46,9 @@ and the EmuDeck scan cap, and two overlapping scans of one source (500 → seria
 - **Hardening follow-up:** a Content-Security-Policy (MRB-11) — deliberately not shipped blind.
 - **Developer tooling:** fixed — `opencode.json`'s default `model` now resolves (`opencode-go/deepseek-v4.1-flash`, verified with `opencode run`).
 - **Dependabot:** done — all 20 alerts were in Angular 21.1 and nx 22.5; #72 moved them to 21.2.25 / 22.7.12 and GitHub reports 0 open (rc7). #62 (briefing markdown sanitizer) also landed.
+
+## Incident
+On 2026-10-02 a read-only pod check I ran printed the `mobile-release-ci` client secret into the working session (the redaction filter matched on the wrong thing). Nothing was committed or pushed with it. Rotation is HANDOFF-15; the lesson is saved as a working rule (never list env values, check presence only).
 
 ## AI usage
 6 agent-triggered AI calls (all local; 0 on prod), well within the ≤ 30 budget. OpenRouter is now live as primary (you added

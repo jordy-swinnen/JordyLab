@@ -884,6 +884,23 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
 - Optional (BUG-049 candidate, cosmetic): on JordyBox run `ls ~/Emulation/roms/ps3 | head` (Fish-compatible) and paste it — the
   catalog shows platforms `Ps3` and `Usrdir` (raw EmuDeck folder names); I need the real layout before changing the mapping.
 
+#### HANDOFF-14: Sign in as the guest account in the browser pane
+- Machine: the Claude desktop app's browser pane (tab `seed`) · Target env: prod · Why you: I never enter passwords.
+- Context: the pane is logged out again (each deploy ends the session). You offered to log in as a guest account: that lets me run
+  MRB-02 (guest view, BUG-038) and check the new install dialog in a phone-sized viewport (BUG-049) myself.
+- Steps: sign in with the guest test account in the pane and tell me "guest signed in".
+
+#### HANDOFF-15: Rotate the `mobile-release-ci` client secret (it was printed in the session)
+- Machine: your Mac · Target env: prod · Why you: secrets are edited in your IntelliJ and a Keycloak client change needs your yes.
+- Context: on 2026-10-02 a pod-env check I ran printed `MOBILE_RELEASE_CI_CLIENT_SECRET` into the conversation (my redaction
+  filter failed). Impact is small — that client can only obtain a `mobile-release-publisher` token, and the backend still pins the
+  APK signing certificate — but treat it as exposed. Nothing else was printed.
+- Steps (in this order, from the repo root):
+  1. `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml` → replace the value of `MOBILE_RELEASE_CI_CLIENT_SECRET` with a fresh one (`openssl rand -base64 33 | tr -d '/+='`), save, clear IntelliJ Local History for the temp file.
+  2. Commit and push on a branch, tell me; I merge and deploy (the realm import does not touch the existing client).
+  3. Then tell me "secret deployed": I set the new value in the live Keycloak client with `kcadm` (needs your yes) and re-sync the GitHub secret from the cluster per `docs/runbook.md` §apk.
+- Expect: the next release's `apk` job logs in and publishes.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
@@ -1045,3 +1062,10 @@ Procedures for everything below, and for the checks that need your login or hard
 - Contains Flyway migration: no · realm change: no · secret change: no · config change: no
 - Prod re-verification: backend image `v0.0.1-rc8`, 5/5 pods Running, `/api/**` 401. The concurrent-scan race itself is covered by `GameCatalogModuleTest` (fails without the lock); a live double-scan on JordyBox is optional (MRB-03 step 5).
 - Outcome: deployed; no regression
+
+#### DEPLOY-14
+- Release: `v0.0.1-rc9` on `27d78af` (PR #79: install dialog restyle + download feedback, BUG-049), run 37025800381
+- Jobs: all ✅ including `apk` and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no (frontend bundle changed)
+- Outcome: deployed; prod look of the dialog pending HANDOFF-14/MRB-04
+

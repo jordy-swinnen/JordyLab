@@ -93,6 +93,7 @@ password manager or from the app, never from this file.
 - Pass when: login, role views and the update banner all work.
 - If it fails: add `BUG-<next>` with the phone model and Android version.
 - Record result: 007-US2 and 007-US3 rows → `PASS`.
+- **Result 2026-10-02 (owner, Brave on Android, rc8):** the install dialog rendered as plain unstyled text and Download appeared to do nothing → BUG-049, fixed in rc9. Re-check on the phone after rc9: styled bottom sheet; tapping Download shows "Preparing…" then "Download requested", and `jordylab-0.0.1-rc9.apk` lands in Downloads. Installing and the rest of the app are still untested.
 
 ### MRB-05: Android app: biometric unlock
 - Covers: 007-US4, 007-US4-AS1–AS3 | Area/spec: E / 007
