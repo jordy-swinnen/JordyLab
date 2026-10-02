@@ -46,6 +46,7 @@ password manager or from the app, never from this file.
 - Pass when: every step shows its expected result and the console stays clean.
 - If it fails: add `BUG-<next>` with the step number; set the matching 006/009 rows to `FAIL`.
 - Record result: 006-US5, 006-US6, 009-US2–US5 in `docs/testing/e2e-test-plan.md` §5 → `PASS` with the date.
+- **Result 2026-10-02 (agent, signed-in browser pane, rc8):** steps 1–4, 6 (preview only), 7, 8 passed; step 5 done earlier (Pikmin 4 added Digital, then removed through the two-step confirm; catalog 213 → 212). Not exercised: submitting the email/password change, adding via the bulk page. Console clean on every page visited.
 
 ### MRB-02: Guest view on production
 - Covers: 006-FR (access matrix), 006-US1–US3 (guest side) | Area/spec: B / 006
