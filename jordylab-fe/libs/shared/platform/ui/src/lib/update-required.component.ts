@@ -7,11 +7,23 @@ import { Component, input, output } from '@angular/core';
   selector: 'lib-update-required',
   standalone: true,
   template: `
-    <div class="jordylab-update-required" role="alertdialog" aria-label="Update required">
-      <h2>Update required</h2>
-      <p>This version of JordyLab is no longer supported. Install the latest version to continue.</p>
-      <p>Latest version: {{ latestVersionName() }}</p>
-      <button type="button" (click)="download.emit()">Update now</button>
+    <div
+      class="jordylab-update-required flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-8 text-center"
+      role="alertdialog"
+      aria-label="Update required"
+    >
+      <h2 class="text-2xl font-semibold text-foreground">Update required</h2>
+      <p class="max-w-sm text-[15px] text-muted-foreground">
+        This version of JordyLab is no longer supported. Install the latest version to continue.
+      </p>
+      <p class="text-[14px] text-muted-foreground">Latest version: {{ latestVersionName() }}</p>
+      <button
+        type="button"
+        class="mt-2 inline-flex h-12 items-center justify-center rounded-xl bg-primary px-8 text-[15px] font-semibold text-primary-foreground"
+        (click)="download.emit()"
+      >
+        Update now
+      </button>
     </div>
   `,
 })

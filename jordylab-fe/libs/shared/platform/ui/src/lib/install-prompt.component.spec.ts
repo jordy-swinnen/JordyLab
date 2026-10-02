@@ -73,4 +73,27 @@ describe('InstallPromptComponent', () => {
 
     expect(dismiss).toHaveBeenCalled();
   });
+
+  it('says it is preparing and disables Download while the link is requested', () => {
+    promptKind.set('android');
+    spectator.setInput('status', 'preparing');
+
+    expect(spectator.query('[role="status"]')?.textContent).toContain('Preparing');
+    expect(spectator.query<HTMLButtonElement>('.jordylab-install-dialog button')?.disabled).toBe(true);
+  });
+
+  it('tells the user where to find the file once the download has been requested', () => {
+    promptKind.set('android');
+    spectator.setInput('status', 'started');
+
+    expect(spectator.query('[role="status"]')?.textContent).toContain('Download requested');
+  });
+
+  it('shows an error and offers Try again when the download could not be prepared', () => {
+    promptKind.set('android');
+    spectator.setInput('status', 'failed');
+
+    expect(spectator.query('[role="alert"]')?.textContent).toContain('Could not prepare');
+    expect(spectator.query('.jordylab-install-dialog button')?.textContent).toContain('Try again');
+  });
 });
