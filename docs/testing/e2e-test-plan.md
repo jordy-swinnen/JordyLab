@@ -1068,4 +1068,3 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: all ✅ including `apk` and `publish`
 - Contains Flyway migration: no · realm change: no · secret change: no · config change: no (frontend bundle changed)
 - Outcome: deployed; prod look of the dialog pending HANDOFF-14/MRB-04
-

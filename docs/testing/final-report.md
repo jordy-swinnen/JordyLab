@@ -1,6 +1,6 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-01 · production `https://jordylab.be` · last release `v0.0.1-rc9` (`27d78af`)
+2026-09-30 → 2026-10-02 · production `https://jordylab.be` · last release `v0.0.1-rc9` (`27d78af`)
 
 ## Verdict
 Production (rc9) is healthy and **every S1/S2 defect found (19) is fixed, deployed and verified on prod**. The signed-in
