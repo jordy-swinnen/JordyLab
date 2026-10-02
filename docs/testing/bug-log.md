@@ -754,7 +754,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-049: Android install dialog is unstyled and gives no feedback — tapping Download "does nothing"
-- Status: FIXED locally — release pending (`fix/e2e-android-install-dialog`)
+- Status: DEPLOYED in `v0.0.1-rc9` (PR #79) — mobile look + download confirmation wait for the owner's phone (MRB-04) or the guest pane pass (HANDOFF-14)
 - Severity: S3
 - Area/spec: mobile / 007 US1 (web install dialog, FR-005/FR-006)
 - Env found: prod, the owner's Android phone (Brave, reported 2026-10-02, MRB-04)
@@ -765,6 +765,6 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): a styled dialog like the rest of the app; a tap on Download visibly starts the APK download.
 - Actual (logs/screenshot, secrets redacted): the dialog is plain unstyled text at the top of the page (`Download` and `Not now` run together as "DownloadNot now"); after the tap the dialog disappears and nothing visible happens. The APKs are present on the server (rc6–rc8) and the backend logged no error.
 - Root cause: `lib-install-prompt`, `lib-update-available-banner` and `lib-update-required` were written with bare elements and CSS class names that no stylesheet defines; the download handler reports nothing while it requests the signed link, and swallows failures.
-- Fix (PR / commit / tag): the three components use the app's Tailwind tokens (bottom sheet, 48 px buttons); the install dialog shows "Preparing the download…", "Download requested — open the file from your notifications or Downloads" or an error with "Try again".
+- Fix (PR / commit / tag): PR #79, `v0.0.1-rc9` — the three components use the app's Tailwind tokens (bottom sheet, 48 px buttons); the install dialog shows "Preparing the download…", "Download requested — open the file from your notifications or Downloads" or an error with "Try again".
 - Regression test added: `install-prompt.component.spec.ts` (preparing / requested / failed states) and `app.spec.ts` (the three handler outcomes)
 - Verified on prod:
