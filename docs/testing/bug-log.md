@@ -768,3 +768,49 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): PR #79, `v0.0.1-rc9` — the three components use the app's Tailwind tokens (bottom sheet, 48 px buttons); the install dialog shows "Preparing the download…", "Download requested — open the file from your notifications or Downloads" or an error with "Try again".
 - Regression test added: `install-prompt.component.spec.ts` (preparing / requested / failed states) and `app.spec.ts` (the three handler outcomes)
 - Verified on prod:
+
+### BUG-050: Native app shows the login page again after a successful login
+- Status: FIXED locally — release pending (`fix/mobile-icon-login-fingerprint`)
+- Severity: S2
+- Area/spec: mobile / 007 US2
+- Env found: prod, the owner's Android app (MRB-04, 2026-10-04)
+- Coverage rows: 007-US2, 007-US2-AS1
+- Steps to reproduce:
+  1. In the installed app tap Sign in, log in at Keycloak, return to the app.
+- Expected (cite spec/story): the app lands on the library.
+- Actual (logs/screenshot, secrets redacted): header and navigation show (the session is valid) but the page body is still the login card; tapping Library works.
+- Root cause: the native login completes in an App Link callback outside the router, so nothing navigates away from `/login`.
+- Fix (PR / commit / tag): `LoginComponent` navigates to `/` as soon as `AuthService.isAuthenticated()` turns true.
+- Regression test added: `login.component.spec.ts` (leaves the page once authenticated)
+- Verified on prod:
+
+### BUG-051: "Unlock with fingerprint" never unlocks — nothing asks for the fingerprint, and a failed enable looks enabled
+- Status: FIXED locally — release pending (`fix/mobile-icon-login-fingerprint`)
+- Severity: S3
+- Area/spec: mobile / 007 US4
+- Env found: prod, the owner's Android app (MRB-04, 2026-10-04)
+- Coverage rows: 007-US4, 007-US4-AS1, 007-FR-012
+- Steps to reproduce:
+  1. Log in, tick "Unlock with fingerprint", close and reopen the app.
+- Expected (cite spec/story): 007 US4-1 — reopening asks for the fingerprint and signs in without a password.
+- Actual (logs/screenshot, secrets redacted): the box shows ticked but the app opens on the login page and never asks for a fingerprint.
+- Root cause: `BiometricUnlockService.unlock()` is never called anywhere (US4 was only half wired: enable and wipe exist, unlock on start does not); and the checkbox keeps the browser-flipped tick when `enable()` fails, so a failure looks like success. The manifest also lacks `USE_BIOMETRIC`.
+- Fix (PR / commit / tag): on native start the app calls `unlock()` when unlock is enabled and there is no session; the login page offers an "Unlock with fingerprint" button as retry; a failed enable un-ticks the box and says so; `USE_BIOMETRIC` added to the manifest. The prompt itself and the Keystore storage still need the phone to confirm (MRB-04).
+- Regression test added: `login.component.spec.ts`, `biometric-unlock-toggle.component.spec.ts` (failed enable)
+- Verified on prod:
+
+### BUG-052: The Android app uses the placeholder launcher icon and splash screen
+- Status: FIXED locally — release pending (`fix/mobile-icon-login-fingerprint`)
+- Severity: S4
+- Area/spec: mobile / 007 US1
+- Env found: prod, the owner's phone (MRB-04, 2026-10-04)
+- Coverage rows: 007-FR-001
+- Steps to reproduce:
+  1. Install the APK and look at the home screen.
+- Expected (cite spec/story): the JordyLab "J" mark.
+- Actual (logs/screenshot, secrets redacted): the default Capacitor blue-cross icon (and splash).
+- Root cause: the generated Capacitor launcher/splash resources were never replaced.
+- Fix (PR / commit / tag): adaptive icon = orange background + vector "J" (same glyph as the favicon); splash = dark app background with the mark; old PNG/grid resources removed.
+- Regression test added: none because Android resources; verified by the release `apk` job building and by the owner's phone
+- Verified on prod:
+

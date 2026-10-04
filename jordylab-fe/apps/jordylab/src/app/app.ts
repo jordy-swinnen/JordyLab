@@ -108,6 +108,21 @@ export class App {
     this.#updateCheck.listenForResume();
     this.#appLink.listen();
     this.#shareTarget.listen();
+    void this.#restoreNativeSession();
+  }
+
+  /**
+   * Native cold start: there is no SSO cookie to restore a session from, so when the user opted into fingerprint
+   * unlock, ask for it straight away instead of leaving them on the login page (spec 007 US4-1).
+   */
+  async #restoreNativeSession(): Promise<void> {
+    if (!this.platform.isNative()) {
+      return;
+    }
+    const authenticated = await this.#auth.init();
+    if (!authenticated && (await this.#biometricUnlock.isEnabled())) {
+      await this.#biometricUnlock.unlock();
+    }
   }
 
   async onInstallDownload(): Promise<void> {

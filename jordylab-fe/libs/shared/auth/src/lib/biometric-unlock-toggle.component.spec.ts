@@ -84,4 +84,19 @@ describe('BiometricUnlockToggleComponent', () => {
     expect(disable).toHaveBeenCalledTimes(1);
     expect(spectator.query<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
   });
+
+  it('says so and un-ticks the box when enabling fails', async () => {
+    available.set(true);
+    enabled.set(false);
+    enable.mockResolvedValue(false);
+    spectator.detectChanges();
+
+    spectator.click('input[type="checkbox"]');
+    await Promise.resolve();
+    await Promise.resolve();
+    spectator.detectChanges();
+
+    expect(spectator.query<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
+    expect(spectator.query('[role="alert"]')?.textContent).toContain('Could not turn on fingerprint unlock');
+  });
 });

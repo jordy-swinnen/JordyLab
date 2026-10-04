@@ -23,10 +23,13 @@ import { BiometricUnlockService } from './biometric-unlock.service';
           type="checkbox"
           [checked]="enabled()"
           [disabled]="busy()"
-          (change)="onToggle()"
+          (change)="onToggle($event)"
         />
         Unlock with fingerprint
       </label>
+      @if (failure()) {
+        <p class="mt-1 text-xs text-destructive" role="alert">{{ failure() }}</p>
+      }
     }
   `,
 })
@@ -36,20 +39,25 @@ export class BiometricUnlockToggleComponent {
   protected readonly available = this.#biometric.available;
   protected readonly enabled = this.#biometric.enabled;
   protected readonly busy = signal(false);
+  protected readonly failure = signal<string | null>(null);
 
   constructor() {
     void this.#biometric.refresh();
   }
 
-  protected async onToggle(): Promise<void> {
+  protected async onToggle(event: Event): Promise<void> {
+    const checkbox = event.target as HTMLInputElement;
     this.busy.set(true);
+    this.failure.set(null);
     try {
       if (this.enabled()) {
         await this.#biometric.disable();
-      } else {
-        await this.#biometric.enable();
+      } else if (!(await this.#biometric.enable())) {
+        this.failure.set('Could not turn on fingerprint unlock. Check that a fingerprint is enrolled, then try again.');
       }
     } finally {
+      // The browser flips the box on click; put it back in step with the real state when enabling failed.
+      checkbox.checked = this.enabled();
       this.busy.set(false);
     }
   }
