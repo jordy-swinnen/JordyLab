@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   NavigationEnd,
@@ -104,8 +104,14 @@ export class App {
 
   constructor() {
     this.installPrompt.suppressBrowserInstallPrompt();
-    this.#updateCheck.checkForUpdate();
     this.#updateCheck.listenForResume();
+    // The release endpoint needs a signed-in admin/guest, so ask once the session exists (login, fingerprint
+    // unlock or restored session) — asking at start-up only ever got a 401 on a cold start.
+    effect(() => {
+      if (this.hasAppRole()) {
+        void this.#updateCheck.checkForUpdate();
+      }
+    });
     this.#appLink.listen();
     this.#shareTarget.listen();
     void this.#restoreNativeSession();

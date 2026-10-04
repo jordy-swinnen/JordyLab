@@ -23,13 +23,18 @@ export class UpdateCheckStore {
     if (!this.#platform.isNative()) {
       return;
     }
-    const info = await App.getInfo();
-    const response = await firstValueFrom(
-      this.#http.get<LatestReleaseResponse>('/api/mobile/releases/latest', {
-        params: { installedVersionCode: info.build },
-      }),
-    );
-    this.#latest.set(response);
+    try {
+      const info = await App.getInfo();
+      const response = await firstValueFrom(
+        this.#http.get<LatestReleaseResponse>('/api/mobile/releases/latest', {
+          params: { installedVersionCode: info.build },
+        }),
+      );
+      this.#latest.set(response);
+    } catch (error) {
+      // A missed check (offline, signed out) must not surface as an unhandled rejection; the next resume retries.
+      console.error('Update check failed', error);
+    }
   }
 
   listenForResume(): void {
