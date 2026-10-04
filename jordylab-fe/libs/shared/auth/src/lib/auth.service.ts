@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal, Signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import Keycloak, { KeycloakInstance, KeycloakTokenParsed } from 'keycloak-js';
@@ -43,6 +44,7 @@ export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   #config = inject(AUTH_CONFIG);
+  #router = inject(Router);
   #keycloak: KeycloakInstance | null = null;
   #init: Promise<boolean> | null = null;
   #authenticated = signal(false);
@@ -50,11 +52,14 @@ export class AuthService {
   #token = signal<string | null>(null);
   #roles = signal<string[]>([]);
   #pendingNativeLogin: PendingNativeLogin | null = null;
+  #nativeFailure = signal<string | null>(null);
 
   readonly isAuthenticated = this.#authenticated.asReadonly();
   readonly username: Signal<string | null> = this.#username.asReadonly();
   readonly token: Signal<string | null> = this.#token.asReadonly();
   readonly roles: Signal<string[]> = this.#roles.asReadonly();
+  /** Why the last native token exchange (login callback, fingerprint unlock, refresh) failed — shown, never silent. */
+  readonly nativeFailure: Signal<string | null> = this.#nativeFailure.asReadonly();
   readonly isAdmin = computed(() => this.#roles().includes('admin'));
   readonly isGuest = computed(() => this.#roles().includes('guest'));
   readonly hasAppRole = computed(() =>
@@ -225,11 +230,15 @@ export class AuthService {
       });
     } catch (fetchError) {
       console.error('Biometric unlock token refresh failed', fetchError);
+      this.#nativeFailure.set('Could not reach the server to restore your session. Check your connection.');
 
       return false;
     }
     if (!response.ok) {
       console.error('Biometric unlock token refresh rejected', response.status);
+      this.#nativeFailure.set(
+        `The server no longer accepts the stored fingerprint session (HTTP ${response.status}). Sign in once and turn fingerprint unlock on again.`,
+      );
 
       return false;
     }
@@ -239,6 +248,7 @@ export class AuthService {
       refresh_token?: string;
       id_token?: string;
     };
+    this.#nativeFailure.set(null);
     this.#applyNativeTokens(tokens.access_token, tokens.refresh_token, tokens.id_token);
 
     return true;
@@ -252,6 +262,17 @@ export class AuthService {
       await this.#keycloak.updateToken(30);
     } catch (error) {
       console.error('Token refresh failed', error);
+      if (Capacitor.isNativePlatform()) {
+        // Don't throw the user into a browser credentials page behind their back: drop the dead session and show
+        // the login page, which says what happened and offers fingerprint unlock again.
+        this.#nativeFailure.set('Your session could not be refreshed. Sign in again.');
+        this.#keycloak.clearToken();
+        this.#authenticated.set(false);
+        this.#applyToken();
+        await this.#router.navigateByUrl('/login');
+
+        return null;
+      }
       await this.login();
 
       return null;
@@ -362,6 +383,8 @@ export class AuthService {
     }
 
     const tokenParsed = decodeJwtPayload(accessToken) as KeycloakTokenParsed;
+    // keycloak-js treats a token as expired whenever timeSkew is unset, which forced a refresh on every request.
+    this.#keycloak.timeSkew = Math.floor(Date.now() / 1000) - (tokenParsed.iat ?? Math.floor(Date.now() / 1000));
     this.#keycloak.token = accessToken;
     this.#keycloak.tokenParsed = tokenParsed;
     this.#keycloak.authenticated = true;

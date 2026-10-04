@@ -4,13 +4,7 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
 import { UsersStore } from '@jordylab-fe/settings/api';
-import {
-  ApkDownloadService,
-  AppLinkService,
-  PlatformService,
-  ShareTargetService,
-  UpdateCheckStore,
-} from '@jordylab-fe/shared/platform/api';
+import { ApkDownloadService } from '@jordylab-fe/shared/platform/api';
 import { App } from './app';
 
 describe('App', () => {
@@ -217,5 +211,13 @@ describe('App', () => {
 
       expect(spectator.component['installStatus']()).toBe('preparing');
     });
+  });
+
+  it('keeps the native-only App settings entry out of the web navigation, even for an admin', () => {
+    isAdmin.set(true);
+
+    const settings = spectator.component['visibleGroups']().find((group) => group.label === 'Settings');
+
+    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/users', '/settings/ai-models']);
   });
 });

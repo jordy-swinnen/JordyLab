@@ -11,18 +11,23 @@ describe('LoginComponent', () => {
   let unlock: ReturnType<typeof vi.fn>;
   const isAuthenticated = signal(false);
   const biometricEnabled = signal(false);
+  const biometricFailure = signal<string | null>(null);
+  const nativeFailure = signal<string | null>(null);
 
   const createComponent = createComponentFactory({
     component: LoginComponent,
     providers: [
       {
         provide: AuthService,
-        useValue: { login: (...args: unknown[]) => login(...args), isAuthenticated: isAuthenticated.asReadonly() },
+        useValue: { login: (...args: unknown[]) => login(...args), isAuthenticated: isAuthenticated.asReadonly(),
+          nativeFailure: nativeFailure.asReadonly(),
+        },
       },
       {
         provide: BiometricUnlockService,
         useValue: {
           enabled: biometricEnabled.asReadonly(),
+          failure: biometricFailure.asReadonly(),
           refresh: () => Promise.resolve(),
           unlock: (...args: unknown[]) => unlock(...args),
         },
@@ -35,6 +40,8 @@ describe('LoginComponent', () => {
     unlock = vi.fn().mockResolvedValue(true);
     isAuthenticated.set(false);
     biometricEnabled.set(false);
+    biometricFailure.set(null);
+    nativeFailure.set(null);
     spectator = createComponent();
   });
 
@@ -66,5 +73,18 @@ describe('LoginComponent', () => {
     spectator.detectChanges();
 
     expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('tells the user why a fingerprint unlock or a session refresh failed', () => {
+    biometricFailure.set('The fingerprint check was cancelled.');
+    spectator.detectChanges();
+
+    expect(spectator.query('[role="alert"]')?.textContent).toContain('cancelled');
+
+    biometricFailure.set(null);
+    nativeFailure.set('Your session could not be refreshed. Sign in again.');
+    spectator.detectChanges();
+
+    expect(spectator.query('[role="alert"]')?.textContent).toContain('could not be refreshed');
   });
 });

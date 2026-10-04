@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
+import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
 
 export const appRoutes: Route[] = [
@@ -28,6 +29,12 @@ export const appRoutes: Route[] = [
     canActivate: [authGuard, roleGuard('admin', 'guest')],
     loadChildren: () =>
       import('@jordylab-fe/gamecatalog/ui').then((m) => m.gamecatalogRoutes),
+  },
+  {
+    // Declared before the admin-only `settings` area so guests can reach their own device setting too.
+    path: 'settings/app',
+    canActivate: [authGuard, roleGuard('admin', 'guest')],
+    component: AppSettingsPageComponent,
   },
   {
     path: 'settings',

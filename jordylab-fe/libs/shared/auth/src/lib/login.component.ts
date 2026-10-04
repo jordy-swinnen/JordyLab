@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { BiometricUnlockService } from './biometric-unlock.service';
@@ -34,6 +34,9 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
         <button hlmBtn variant="default" (click)="onLogin()" class="mt-7 h-11 w-full text-[15px] font-semibold">
           Sign in with Keycloak
         </button>
+        @if (failure()) {
+          <p class="mt-4 text-sm text-destructive" role="alert">{{ failure() }}</p>
+        }
         @if (biometricEnabled()) {
           <button
             hlmBtn
@@ -54,6 +57,7 @@ export class LoginComponent {
   #router = inject(Router);
 
   protected readonly biometricEnabled = this.#biometric.enabled;
+  protected readonly failure = computed(() => this.#biometric.failure() ?? this.#auth.nativeFailure());
 
   constructor() {
     void this.#biometric.refresh();

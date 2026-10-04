@@ -27,6 +27,7 @@ describe('BiometricUnlockToggleComponent', () => {
   });
 
   let spectator: Spectator<BiometricUnlockToggleComponent>;
+  const switchElement = (): HTMLButtonElement => spectator.query('button[role="switch"]') as HTMLButtonElement;
 
   beforeEach(() => {
     available.set(false);
@@ -37,23 +38,22 @@ describe('BiometricUnlockToggleComponent', () => {
     spectator = createComponent();
   });
 
-  it('renders nothing when biometrics are unavailable', () => {
-    expect(spectator.query('input')).toBeNull();
+  it('explains that unlock is unavailable and disables the switch when the phone has no biometrics', () => {
+    expect(spectator.query('section')?.textContent).toContain('no fingerprint');
+    expect(switchElement().disabled).toBe(true);
   });
 
-  it('shows the toggle, checked, when biometrics are available and already enabled', () => {
+  it('shows the switch on when biometrics are available and unlock is already enabled', () => {
     available.set(true);
     enabled.set(true);
     spectator.detectChanges();
 
-    const checkbox = spectator.query<HTMLInputElement>('input[type="checkbox"]');
-    expect(checkbox).not.toBeNull();
-    expect(checkbox?.checked).toBe(true);
+    expect(switchElement().getAttribute('aria-checked')).toBe('true');
+    expect(switchElement().disabled).toBe(false);
   });
 
-  it('enables biometric unlock when toggled on', async () => {
+  it('enables biometric unlock when switched on', async () => {
     available.set(true);
-    enabled.set(false);
     enable.mockImplementation(async () => {
       enabled.set(true);
 
@@ -61,15 +61,15 @@ describe('BiometricUnlockToggleComponent', () => {
     });
     spectator.detectChanges();
 
-    spectator.click('input[type="checkbox"]');
+    spectator.click(switchElement());
     await Promise.resolve();
     spectator.detectChanges();
 
     expect(enable).toHaveBeenCalledTimes(1);
-    expect(spectator.query<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(true);
+    expect(switchElement().getAttribute('aria-checked')).toBe('true');
   });
 
-  it('disables biometric unlock when toggled off', async () => {
+  it('disables biometric unlock when switched off', async () => {
     available.set(true);
     enabled.set(true);
     disable.mockImplementation(async () => {
@@ -77,26 +77,25 @@ describe('BiometricUnlockToggleComponent', () => {
     });
     spectator.detectChanges();
 
-    spectator.click('input[type="checkbox"]');
+    spectator.click(switchElement());
     await Promise.resolve();
     spectator.detectChanges();
 
     expect(disable).toHaveBeenCalledTimes(1);
-    expect(spectator.query<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
+    expect(switchElement().getAttribute('aria-checked')).toBe('false');
   });
 
-  it('says so and un-ticks the box when enabling fails', async () => {
+  it('stays off and says why when enabling fails', async () => {
     available.set(true);
-    enabled.set(false);
     enable.mockResolvedValue(false);
     spectator.detectChanges();
 
-    spectator.click('input[type="checkbox"]');
+    spectator.click(switchElement());
     await Promise.resolve();
     await Promise.resolve();
     spectator.detectChanges();
 
-    expect(spectator.query<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false);
+    expect(switchElement().getAttribute('aria-checked')).toBe('false');
     expect(spectator.query('[role="alert"]')?.textContent).toContain('Could not turn on fingerprint unlock');
   });
 });

@@ -845,3 +845,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `test_grouping.py` (extracted disc → one game; iso + folder; dots in the folder name; folder directly under the root skipped); frozen client selftest
 - Verified on prod:
 
+### BUG-055: After a successful fingerprint check the app still asks for the password; the fingerprint switch sits awkwardly in the sidebar
+- Status: FIXED locally — release pending (`fix/mobile-fingerprint-settings-tab`); root cause not proven (see below), needs the phone
+- Severity: S3
+- Area/spec: mobile / 007 US4
+- Env found: prod, the owner's Android app on rc10 (2026-10-04, after "signing in and the update work great")
+- Coverage rows: 007-US4, 007-US4-AS1, 007-FR-012
+- Steps to reproduce:
+  1. Sign in, switch fingerprint unlock on, close the app, reopen it, pass the fingerprint check.
+- Expected (cite spec/story): 007 US4-1 — the app opens signed in, no password.
+- Actual (logs/screenshot, secrets redacted): after the fingerprint the login (credentials) page is shown again, so unlock is useless.
+- Root cause: not reproducible without the device. Facts established: the realm grants `offline_access` (client optional scope, default role, offline idle 30 days), so the stored token is an offline token; the plugin stores without a prompt and prompts on read (so ticking never prompts). Code defects found: (1) a native token refresh failure called `login()`, which silently opens the Keycloak credentials page — the most likely source of the symptom; (2) keycloak-js treats the token as expired whenever `timeSkew` is unset, so natively every request forced a refresh with the stored token (more chances to fail, and token churn); (3) every unlock failure was silent.
+- Fix (PR / commit / tag): a failed native refresh now drops the dead session and shows the login page with the reason instead of opening Keycloak; `timeSkew` is set when native tokens are applied (no more forced refresh per request); every unlock failure (cancelled check / server rejected the stored session with its HTTP status / offline) is shown on the login page; the fingerprint switch moved off the sidebar to a native-only **Settings → App** page (a proper switch with explanation; reachable by admins and guests).
+- Regression test added: `auth.service.spec.ts` (no credentials page on refresh failure, status recorded, timeSkew set), `biometric-unlock.service.spec.ts` (failure reasons), `login.component.spec.ts` (reason shown), `biometric-unlock-toggle.component.spec.ts` (switch), `app.spec.ts` / `app-native-start.spec.ts` (nav)
+- Verified on prod:
+

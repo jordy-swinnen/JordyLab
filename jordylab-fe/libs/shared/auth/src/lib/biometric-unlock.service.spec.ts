@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import {
   createServiceFactory,
   SpectatorService,
@@ -28,11 +29,12 @@ describe('BiometricUnlockService', () => {
   let spectator: SpectatorService<BiometricUnlockService>;
   const getRefreshToken = vi.fn();
   const unlockWithRefreshToken = vi.fn();
+  const nativeFailure = signal<string | null>(null);
 
   const createService = createServiceFactory({
     service: BiometricUnlockService,
     providers: [
-      { provide: AuthService, useValue: { getRefreshToken, unlockWithRefreshToken } },
+      { provide: AuthService, useValue: { getRefreshToken, unlockWithRefreshToken, nativeFailure: nativeFailure.asReadonly() } },
     ],
   });
 
@@ -150,6 +152,31 @@ describe('BiometricUnlockService', () => {
       unlockWithRefreshToken.mockResolvedValueOnce(false);
 
       expect(await spectator.service.unlock()).toBe(false);
+    });
+
+    it('keeps the server reason when the stored session is rejected', async () => {
+      getSecureData.mockResolvedValueOnce({ value: 'revoked-refresh-token' });
+      unlockWithRefreshToken.mockResolvedValueOnce(false);
+      nativeFailure.set('The server no longer accepts the stored fingerprint session (HTTP 400).');
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toContain('HTTP 400');
+    });
+
+    it('says the fingerprint check failed when the prompt is cancelled, and clears the reason on success', async () => {
+      getSecureData.mockRejectedValueOnce(new Error('User canceled'));
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toContain('cancelled or did not match');
+
+      getSecureData.mockResolvedValueOnce({ value: 'good-refresh-token' });
+      unlockWithRefreshToken.mockResolvedValueOnce(true);
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toBeNull();
     });
   });
 });

@@ -1,3 +1,4 @@
+import { Router } from '@angular/router';
 import {
   createServiceFactory,
   SpectatorService,
@@ -85,11 +86,15 @@ function makeJwt(payload: Record<string, unknown>): string {
 }
 
 describe('AuthService', () => {
+  const navigateByUrl = vi.fn().mockResolvedValue(true);
   let spectator: SpectatorService<AuthService>;
 
   const createService = createServiceFactory({
     service: AuthService,
-    providers: [{ provide: AUTH_CONFIG, useValue: aTestAuthConfig }],
+    providers: [
+      { provide: AUTH_CONFIG, useValue: aTestAuthConfig },
+      { provide: Router, useValue: { navigateByUrl } },
+    ],
   });
 
   beforeEach(() => {
@@ -267,6 +272,55 @@ describe('AuthService', () => {
       const openedUrl = new URL((browserOpen.mock.calls[0][0] as { url: string }).url);
       expect(openedUrl.searchParams.get('kc_action')).toBe('UPDATE_PROFILE');
       expect(openedUrl.searchParams.get('code_challenge_method')).toBe('S256');
+    });
+
+    it('does not open a credentials page when the session cannot be refreshed: it shows the login page and says why', async () => {
+      keycloakInit.mockResolvedValueOnce(true);
+      keycloakUpdateToken.mockRejectedValueOnce(new Error('invalid_grant'));
+      await spectator.service.init();
+
+      const token = await spectator.service.getToken();
+
+      expect(token).toBeNull();
+      expect(browserOpen).not.toHaveBeenCalled();
+      expect(keycloakLogin).not.toHaveBeenCalled();
+      expect(navigateByUrl).toHaveBeenCalledWith('/login');
+      expect(spectator.service.isAuthenticated()).toBe(false);
+      expect(spectator.service.nativeFailure()).toContain('could not be refreshed');
+    });
+
+    it('records the server status when the stored fingerprint session is rejected', async () => {
+      keycloakInit.mockResolvedValueOnce(false);
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400 } as Response);
+
+      const unlocked = await spectator.service.unlockWithRefreshToken('stale-refresh-token');
+
+      expect(unlocked).toBe(false);
+      expect(spectator.service.nativeFailure()).toContain('HTTP 400');
+    });
+
+    it('tells keycloak-js the clock offset after a native sign-in, so it stops refreshing on every request', async () => {
+      keycloakInit.mockResolvedValueOnce(false);
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const accessToken = makeJwt({
+        sub: 'user-1',
+        iat: nowSeconds - 5,
+        exp: nowSeconds + 1795,
+        realm_access: { roles: ['guest'] },
+      });
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ access_token: accessToken, refresh_token: makeJwt({ sub: 'user-1' }) }),
+      } as Response);
+
+      await spectator.service.unlockWithRefreshToken('good-refresh-token');
+
+      const keycloakInstance = vi.mocked((await import('keycloak-js')).default).mock.results[0].value as {
+        timeSkew: number;
+      };
+      expect(keycloakInstance.timeSkew).toBeGreaterThanOrEqual(5);
+      expect(keycloakInstance.timeSkew).toBeLessThan(10);
+      expect(spectator.service.nativeFailure()).toBeNull();
     });
 
     it('exchanges the authorization code for tokens and updates the signal surface on a valid callback', async () => {

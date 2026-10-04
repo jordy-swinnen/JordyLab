@@ -23,6 +23,9 @@ export class BiometricUnlockService {
   readonly #enabled = signal(false);
   readonly available = this.#available.asReadonly();
   readonly enabled = this.#enabled.asReadonly();
+  readonly #failure = signal<string | null>(null);
+  /** Why the last unlock attempt did not sign the user in; `null` after a success or before any attempt. */
+  readonly failure = this.#failure.asReadonly();
 
   /** Refreshes {@link available}/{@link enabled} — call once when mounting the toggle UI. */
   async refresh(): Promise<void> {
@@ -103,10 +106,16 @@ export class BiometricUnlockService {
         reason: 'Unlock JordyLab',
       });
       refreshToken = result.value;
-    } catch {
+    } catch (error) {
+      console.error('Fingerprint check failed or was cancelled', error);
+      this.#failure.set('The fingerprint check was cancelled or did not match. Try again or sign in.');
+
       return false;
     }
 
-    return this.#auth.unlockWithRefreshToken(refreshToken);
+    const unlocked = await this.#auth.unlockWithRefreshToken(refreshToken);
+    this.#failure.set(unlocked ? null : (this.#auth.nativeFailure() ?? 'Could not restore your session. Sign in again.'));
+
+    return unlocked;
   }
 }
