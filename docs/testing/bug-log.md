@@ -846,7 +846,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-055: After a successful fingerprint check the app still asks for the password; the fingerprint switch sits awkwardly in the sidebar
-- Status: FIXED locally — release pending (`fix/mobile-fingerprint-settings-tab`); root cause not proven (see below), needs the phone
+- Status: DEPLOYED in `v0.0.1-rc12` (PR #88) — root cause not proven (see below); the phone re-test decides (HANDOFF-17)
 - Severity: S3
 - Area/spec: mobile / 007 US4
 - Env found: prod, the owner's Android app on rc10 (2026-10-04, after "signing in and the update work great")
