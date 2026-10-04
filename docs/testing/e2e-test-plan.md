@@ -890,7 +890,7 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
   MRB-02 (guest view, BUG-038) and check the new install dialog in a phone-sized viewport (BUG-049) myself.
 - Steps: sign in with the guest test account in the pane and tell me "guest signed in".
 
-#### HANDOFF-15: Rotate the `mobile-release-ci` client secret (it was printed in the session)
+#### HANDOFF-15: Rotate the `mobile-release-ci` client secret (it was printed in the session) — steps 1–2 done 2026-10-04 (rc12); step 3 is HANDOFF-19
 - Machine: your Mac · Target env: prod · Why you: secrets are edited in your IntelliJ and a Keycloak client change needs your yes.
 - Context: on 2026-10-02 a pod-env check I ran printed `MOBILE_RELEASE_CI_CLIENT_SECRET` into the conversation (my redaction
   filter failed). Impact is small — that client can only obtain a `mobile-release-publisher` token, and the backend still pins the
@@ -927,6 +927,15 @@ kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh co
 python3 jordylab-scan-emudeck.py scan
 ```
 - Expect: `EMUDECK scan APPLIED` (the game set changed); in the Library the `Usrdir` chip is gone, `Ps3` became `PlayStation 3` with your 3 extracted discs (Demon's Souls, London 2012, Rayman Legends) plus the ISO-based ones. Old `Ps3`/`Usrdir` rows disappear after the 30-day grace purge.
+
+#### HANDOFF-19: Finish the secret rotation (Keycloak client + GitHub secret)
+- Machine: your Mac (Tailscale on) · Target env: prod · Why you: it reads the new secret from the cluster and writes it to prod Keycloak; the agent's writes there are blocked and it must never see the value.
+- Context: rc12 deployed the new `MOBILE_RELEASE_CI_CLIENT_SECRET` to the cluster. The live Keycloak client and the GitHub `production` secret still hold the old one. Do both in one go (no release is running):
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_RELEASE_CI_CLIENT_SECRET}' | base64 -d) && [ -n "$V" ]  && printf '%s' "$V" | gh secret set MOBILE_RELEASE_CI_CLIENT_SECRET --env production --repo jordy-swinnen/JordyLab  && printf '%s' "$V" | kubectl -n jordylab exec -i deploy/keycloak -- sh -c 'read -r NEWSECRET; K=/opt/keycloak/bin/kcadm.sh; $K config credentials --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg >/dev/null 2>&1 && ID=$($K get clients -r jordylab -q clientId=mobile-release-ci --fields id --config /tmp/kc.cfg | sed -n "s/.*\"id\" : \"\(.*\)\".*/\1/p") && $K update clients/$ID -r jordylab -s "secret=$NEWSECRET" --config /tmp/kc.cfg && echo KEYCLOAK_CLIENT_UPDATED; rm -f /tmp/kc.cfg'; unset V
+```
+- Expect: `KEYCLOAK_CLIENT_UPDATED`. The next release's `apk` job then logs in with the new secret.
 
 ## 8. AI call tally
 
@@ -1108,4 +1117,10 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: all ✅ including `apk` and `publish`
 - Contains Flyway migration: no · realm change: no · secret change: no · config change: no
 - Outcome: deployed
+
+#### DEPLOY-17
+- Release: `v0.0.1-rc12` on `18e29f8` (PR #87 rotated `MOBILE_RELEASE_CI_CLIENT_SECRET` — SOPS edited by the owner, HANDOFF-15; PR #88 fingerprint failures + Settings → App page), run 37229532346
+- Jobs: all ✅ including `apk` (still the old CI secret, matching the unchanged live client) and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: yes (owner-made, one key, DECRYPT_OK, gitleaks clean) · config change: no
+- Outcome: deployed; the live client + GitHub secret switch is HANDOFF-19
 

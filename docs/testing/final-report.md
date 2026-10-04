@@ -1,18 +1,18 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-04 · production `https://jordylab.be` · last release `v0.0.1-rc11` (`04d5d4e`)
+2026-09-30 → 2026-10-04 · production `https://jordylab.be` · last release `v0.0.1-rc12` (`18e29f8`)
 
 ## Verdict
-Production (rc11) is healthy. Of the 20 S2 defects found, 19 are fixed, deployed and verified; the 20th (BUG-050, the app showing
+Production (rc12) is healthy. Of the 20 S2 defects found, 19 are fixed, deployed and verified; the 20th (BUG-050, the app showing
 the login card after a native login) is fixed in rc10 and waits for the owner's phone re-check (HANDOFF-17). The signed-in admin
 and guest browser passes (MRB-01, MRB-02) and the EmuDeck rescan are done. What remains is hardware or approval work: the Android
-re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), and rotating one exposed CI secret (HANDOFF-15).
+re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), and finishing the CI secret rotation (HANDOFF-19).
 
 ## What was tested
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
   compression and caching, deep links, OIDC issuer, unauthenticated API, CORS, pods, image tags, app links — all PASS on
   rc6 (re-run in the plan §6).
-- **Releases and rollback:** eleven release tags (rc1–rc11) through the tag-driven pipeline; rc6 and rc7 are the first with every job
+- **Releases and rollback:** twelve release tags (rc1–rc12) through the tag-driven pipeline; rc6 and rc7 are the first with every job
   green (retag, release, deploy, publish, **APK built, signed, verified and published**). Rollback to rc5 and roll-forward
   to rc6 both succeeded (DEPLOY-11).
 - **Data durability:** base backups running; a restore drill recovered production into a scratch cluster in 1 min 55 s
@@ -26,11 +26,11 @@ re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), 
 - **Coverage matrix:** 544 rows closed — 412 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
   than `PASS`, defined in §5), 55 `FAIL-FIXED`, 63 `NOT TESTABLE`, 4 `PASS`.
 
-## Bugs: 54 found
+## Bugs: 55 found
 | Severity | Count | State |
 |----------|-------|-------|
 | S2 | 20 | 19 verified (18 on prod, 1 by the restore drill); BUG-050 deployed, phone re-check pending |
-| S3 | 21 | 9 verified on prod; 9 deployed (4 CI-level lint/coverage gates, BUG-041 error codes CI-covered, BUG-048 live double-scan optional, BUG-051 fingerprint unlock and BUG-053 update banner awaiting the phone, BUG-054 PS3 grouping awaiting the JordyBox rescan); 3 fixed locally (tooling/test infra) |
+| S3 | 22 | 9 verified on prod; 10 deployed (BUG-055 fingerprint failures/Settings → App, rc12; 4 CI-level lint/coverage gates, BUG-041 error codes CI-covered, BUG-048 live double-scan optional, BUG-051 fingerprint unlock and BUG-053 update banner awaiting the phone, BUG-054 PS3 grouping awaiting the JordyBox rescan); 3 fixed locally (tooling/test infra) |
 | S4 | 13 | 8 verified; 4 fixed locally (tooling); 1 deployed (BUG-052 app icon, awaiting the phone) |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
@@ -62,7 +62,7 @@ guest pass (credentials), the JordyBox scan (hardware), Steam family sync (token
 (approval), colour contrast, a full VPS rebuild. **Not built:** 010 Eufy presence, `garmin-sync-service`.
 
 ## Recommended next steps
-1. Do HANDOFF-16 (live Keycloak session change), HANDOFF-15 (rotate the exposed secret), HANDOFF-17 (phone re-check) and HANDOFF-18 (EmuDeck rescan).
+1. Do HANDOFF-16 (live Keycloak session change), HANDOFF-19 (finish the secret rotation), HANDOFF-17 (phone re-check) and HANDOFF-18 (EmuDeck rescan).
 2. Send the `roms/ps3` listing (HANDOFF-13) so the `Ps3`/`Usrdir` platform labels can be fixed.
 3. A scheduled smoke-suite GitHub Action (the checks in `contracts/smoke-suite.md` need no login).
 4. Roll out the CSP in report-only mode first (MRB-11).
