@@ -54,6 +54,10 @@ PLAYLIST_EXTENSIONS = {".m3u"}
 DISC_IMAGE_EXTENSIONS = {".cue", ".gdi"}
 COMPONENT_EXTENSIONS = {".bin", ".img", ".iso", ".chd"}
 
+# RPCS3 keeps an extracted disc as `<game folder>/PS3_GAME/USRDIR/...` (EBOOT.BIN plus hundreds of data files, many of
+# them with ROM-like extensions). The folder above PS3_GAME is the game; nothing inside it is.
+PS3_GAME_DIRECTORY = "ps3_game"
+
 _DISC_PATTERN = re.compile(r"[\(\[]?\s*(?:disc|disk|cd|part)\s*(\d+)\s*[\)\]]?", re.IGNORECASE)
 _CUE_FILE_PATTERN = re.compile(r"FILE\s+(?:\"([^\"]+)\"|(\S+))", re.IGNORECASE)
 _QUOTED_PATTERN = re.compile(r"\"([^\"]+)\"")
@@ -309,6 +313,26 @@ def _game_tuple(relpath):
     return (relpath, title, platform)
 
 
+def _ps3_game_folder(relpath):
+    """The extracted-PS3-game folder a file lives in (the one holding ``PS3_GAME``), else ``None``."""
+    parts = relpath.split("/")
+    for index in range(1, len(parts) - 1):
+        if parts[index].lower() == PS3_GAME_DIRECTORY:
+            return "/".join(parts[:index])
+
+    return None
+
+
+def _ps3_folder_tuple(folder):
+    emulator = parent_directory(folder)
+    if not emulator:
+        return None
+    # The dummy extension keeps title_from_filename from cutting a folder name at a dot ("Mr. Driller").
+    title = sanitize_title(title_from_filename(folder + ".iso"))
+
+    return (folder, title, platform_for(emulator))
+
+
 def _walk_with_absolute(root):
     entries = walk_entries(root)
     absolute = {}
@@ -384,12 +408,21 @@ def build_emudeck(roots):
             consumed.add(relpath)
 
     games = []
+    ps3_folders = set()
     for entry in entries:
+        folder = _ps3_game_folder(entry.relpath)
+        if folder is not None:
+            ps3_folders.add(folder)
+            continue
         if extension(entry.relpath) not in ROM_EXTENSIONS:
             continue
         if entry.relpath in consumed:
             continue
         game = _game_tuple(entry.relpath)
+        if game is not None:
+            games.append(game)
+    for folder in ps3_folders:
+        game = _ps3_folder_tuple(folder)
         if game is not None:
             games.append(game)
 

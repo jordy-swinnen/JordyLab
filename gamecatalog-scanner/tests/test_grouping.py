@@ -199,3 +199,46 @@ def test_disc_info_returns_none_without_tag():
     from jordylab_scan.grouping import _disc_info
 
     assert _disc_info("Plain Game") is None
+
+
+def test_extracted_ps3_disc_is_one_game_named_after_its_folder(tmp_path):
+    root = tmp_path
+    game = root / "ps3" / "Demon's Souls (USA)" / "PS3_GAME"
+    _write(game / "USRDIR" / "EBOOT.BIN")
+    _write(game / "USRDIR" / "data" / "archive.bin")
+    _write(game / "PS3_DISC.SFB")
+
+    _, games = build_emudeck([root])
+
+    assert games == [("ps3/Demon's Souls (USA)", "Demon's Souls", "PlayStation 3")]
+
+
+def test_ps3_iso_and_extracted_folder_are_both_listed_without_junk_platforms(tmp_path):
+    root = tmp_path
+    _write(root / "ps3" / "Rayman Legends (USA)" / "PS3_GAME" / "USRDIR" / "EBOOT.BIN")
+    _write(root / "ps3" / "London 2012.iso")
+
+    _, games = build_emudeck([root])
+
+    assert sorted((game[0], game[2]) for game in games) == [
+        ("ps3/London 2012.iso", "PlayStation 3"),
+        ("ps3/Rayman Legends (USA)", "PlayStation 3"),
+    ]
+
+
+def test_ps3_folder_title_keeps_dots_in_the_name(tmp_path):
+    root = tmp_path
+    _write(root / "ps3" / "Mr. Driller" / "PS3_GAME" / "USRDIR" / "EBOOT.BIN")
+
+    _, games = build_emudeck([root])
+
+    assert [game[1] for game in games] == ["Mr. Driller"]
+
+
+def test_ps3_game_folder_directly_under_the_root_has_no_platform_and_is_skipped(tmp_path):
+    root = tmp_path
+    _write(root / "Loose Game" / "PS3_GAME" / "USRDIR" / "EBOOT.BIN")
+
+    _, games = build_emudeck([root])
+
+    assert games == []

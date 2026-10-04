@@ -25,6 +25,8 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 ## Architecture notes
 
+- Extracted PS3 discs (`<game>/PS3_GAME/...`) are grouped into one game in `grouping.py` (client-only; the server parser is
+  just the path-inference backstop and does not know that layout; spec 011 BUG-054).
 - `normalize.py` and `platforms.py` are **verbatim ports** of the server's
   `EmuDeckLibraryParser` / `TextSanitizer` rules. Do not "improve" them —
   identity continuity depends on exact parity.

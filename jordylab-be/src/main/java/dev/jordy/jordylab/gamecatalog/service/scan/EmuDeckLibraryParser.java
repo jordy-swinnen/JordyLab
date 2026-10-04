@@ -61,6 +61,7 @@ public class EmuDeckLibraryParser implements LibraryParser {
             Map.entry("psx", "PlayStation"),
             Map.entry("psp", "PSP"),
             Map.entry("ps2", "PlayStation 2"),
+            Map.entry("ps3", "PlayStation 3"),
             Map.entry("dreamcast", "Dreamcast"),
             Map.entry("dc", "Dreamcast"),
             Map.entry("saturn", "Saturn"),
