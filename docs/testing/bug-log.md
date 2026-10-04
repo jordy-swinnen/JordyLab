@@ -860,3 +860,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `auth.service.spec.ts` (no credentials page on refresh failure, status recorded, timeSkew set), `biometric-unlock.service.spec.ts` (failure reasons), `login.component.spec.ts` (reason shown), `biometric-unlock-toggle.component.spec.ts` (switch), `app.spec.ts` / `app-native-start.spec.ts` (nav)
 - Verified on prod:
 
+### BUG-056: rc12 shows a blank page on web and in the app — `AuthService` needed a router the pre-bootstrap injector does not have
+- Status: FIXED locally — release pending (`fix/app-boots-authservice-router`); prod rolled back to `v0.0.1-rc11` meanwhile (DEPLOY-18)
+- Severity: S1
+- Area/spec: mobile + auth / 007 US2, 006
+- Env found: prod, the owner's phone and desktop browser, minutes after rc12 (2026-10-04 ~22:25)
+- Coverage rows: 007-US2, A12
+- Steps to reproduce:
+  1. Open `https://jordylab.be` or the app on `v0.0.1-rc12`.
+- Expected (cite spec/story): the login page or the library.
+- Actual (logs/screenshot, secrets redacted): a blank (dark) page; the console shows `NG0201: No provider found for Router. Path: AuthService -> Router`.
+- Root cause: BUG-055's change gave `AuthService` a constructor-time `inject(Router)`. `apps/jordylab/src/main.ts` builds `AuthService` in a throwaway injector (only `AUTH_CONFIG`) for the early Keycloak check before `bootstrapApplication`, so construction threw and the app never started. Unit tests could not see it: they construct the service in a TestBed that has a router, and nothing booted the real start-up path.
+- Fix (PR / commit / tag): `AuthService` looks the router up lazily (only when a native refresh fails); the pre-bootstrap injector moved to `createPreBootstrapAuth()` so a spec exercises exactly what `main.ts` does.
+- Regression test added: `app.config.spec.ts` (the throwaway injector can build `AuthService`; the real app providers can build `AuthService` and `BiometricUnlockService`) — it fails with NG0201 on the rc12 code
+- Verified on prod:
+

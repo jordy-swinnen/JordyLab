@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal, Signal } from '@angular/core';
+import { computed, inject, Injectable, Injector, signal, Signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
@@ -44,7 +44,8 @@ export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   #config = inject(AUTH_CONFIG);
-  #router = inject(Router);
+  // Resolved lazily: the pre-bootstrap instance (apps/jordylab/src/main.ts) lives in an injector without a router.
+  #injector = inject(Injector);
   #keycloak: KeycloakInstance | null = null;
   #init: Promise<boolean> | null = null;
   #authenticated = signal(false);
@@ -269,7 +270,7 @@ export class AuthService {
         this.#keycloak.clearToken();
         this.#authenticated.set(false);
         this.#applyToken();
-        await this.#router.navigateByUrl('/login');
+        await this.#injector.get(Router).navigateByUrl('/login');
 
         return null;
       }
