@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Published when a daily briefing finishes generating (spec 007 FR-016, research D9). Declared
+ * Published when a briefing finishes generating (spec 007 FR-016, research D9). Declared
  * in the module root package (the public API) so other modules, such as {@code mobile}'s
  * {@code @ApplicationModuleListener}, can depend on the event type without reaching into
  * {@code fna}'s internals.

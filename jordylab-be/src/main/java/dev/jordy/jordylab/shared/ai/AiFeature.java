@@ -9,8 +9,8 @@ import java.util.Optional;
  */
 public enum AiFeature {
 
-    FNA_BRIEFING("fna.briefing", "Daily briefing", "fna",
-            "Writes the morning investment briefing from the day's news and the portfolio."),
+    FNA_BRIEFING("fna.briefing", "Monthly briefing", "fna",
+            "Writes the monthly investment briefing from the latest news and the portfolio."),
     GAMECATALOG_ENRICHMENT("gamecatalog.enrichment", "Game descriptions", "gamecatalog",
             "Writes each game's description and fills in genre and play modes."),
     GAMECATALOG_CHAT_QUERY("gamecatalog.chat.query", "Chat: understanding the question", "gamecatalog",

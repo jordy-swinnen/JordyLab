@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 
 /**
- * Queues a shared link as an article candidate for the next daily briefing (spec 007 FR-017,
+ * Queues a shared link as an article candidate for the next briefing (spec 007 FR-017,
  * research D6) — the Android app's "Save to FNA" share destination calls this directly; there is
  * no {@code mobile}-module involvement, since queuing an article has nothing mobile-specific
  * about it (research D6). Every manually-submitted article attaches to a single, disabled

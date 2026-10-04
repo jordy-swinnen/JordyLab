@@ -20,7 +20,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.support.CronExpression;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -159,5 +163,17 @@ class BriefingGeneratorServiceTest {
                 .isInstanceOf(BriefingGenerationException.class);
 
         assertThat(userPromptCaptor.getAllValues()).hasSize(1);
+    }
+
+    @Test
+    void isScheduledOnTheFirstOfEveryMonthAtHalfPastSix() throws NoSuchMethodException {
+        Scheduled scheduled = BriefingGeneratorService.class.getMethod("generateBriefing")
+                .getAnnotation(Scheduled.class);
+        String defaultCron = scheduled.cron().replaceFirst("^\\$\\{[^:]+:(.*)}$", "$1");
+        ZonedDateTime afterFirstRun = ZonedDateTime.of(2026, 10, 1, 7, 0, 0, 0, ZoneId.of("Europe/Brussels"));
+
+        ZonedDateTime nextRun = CronExpression.parse(defaultCron).next(afterFirstRun);
+
+        assertThat(nextRun).isEqualTo(ZonedDateTime.of(2026, 11, 1, 6, 30, 0, 0, ZoneId.of("Europe/Brussels")));
     }
 }
