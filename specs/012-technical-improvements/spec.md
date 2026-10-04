@@ -27,8 +27,9 @@ sees; all of them are judged by how early they let a coding agent (Claude Code o
 
 | Part | What it delivers | Order |
 |------|------------------|-------|
-| **A. Fast lint feedback** | The frontend workspace on the current Nx 23 release (behaviour-neutral, own change), then Oxlint as a fast first pass next to ESLint, and an agent hook that reports lint errors right after an edit | Nx upgrade first, before anything else in this feature |
+| **A. Fast lint feedback** | The frontend workspace on the current Nx 23 release (behaviour-neutral, own change), then on Angular 22 (own change, if the toolchain allows), then Oxlint as a fast first pass next to ESLint, and an agent hook that reports lint errors right after an edit | Nx upgrade first, before anything else in this feature |
 | **B. AI integration conventions** | The Spring AI research report filed as a corrected reference doc, short repo-specific rules that both agent tools load next to the shared AI code, a written gap analysis, and the checklist in `/ai-endpoint` and `code-reviewer` | Independent |
+| **Platform currency** | Spring Boot, Spring AI, Spring Modulith and Gradle checked for upgrades; upgraded if safe (small, independent) | Independent |
 | **C. E2E testing** | Automated web journeys (Playwright) and a small Android suite (Appium) for what only breaks inside the installed app, each run on its own throwaway Postgres + Keycloak that is always removed | After the Nx upgrade (its tooling is added on the new Nx version) |
 
 Two cross-cutting rules apply to all parts:
@@ -49,6 +50,9 @@ Two cross-cutting rules apply to all parts:
 - Q: When should the Android E2E job run in CI? → A: On releases only, plus a manual run on demand (not on every merge to main).
 - Q: Where should the Android (Appium) test project live? → A: As its own Nx project inside `jordylab-fe`, so Nx caching and affected runs apply.
 - Q: Should AI gaps that only matter for modules that don't exist yet be drafted now or marked defer? → A: Marked defer, naming the future module that would trigger them; only gaps relevant to today's code get drafts.
+- Directive (2026-10-05, after planning): Angular is upgraded to 22 in this feature if the toolchain allows it, as its own
+  change after the Nx 23 upgrade (this reverses the earlier "Angular stays on 21.2" scope); and the Spring Boot,
+  Spring AI, Spring Modulith and Gradle versions are checked for an upgrade (User Story 16).
 - Q: What exact result counts as "no change" after the Nx 23 upgrade? → A: The same tests pass with the same coverage-gate result, production and mobile builds succeed, and the dependency graph is identical; bundle sizes may differ by up to 5%.
 
 ---
@@ -57,7 +61,7 @@ Two cross-cutting rules apply to all parts:
 
 ### Part A: Fast lint feedback
 
-### User Story 1 - Upgrade Nx without changing behaviour (Priority: P1)
+### User Story 1 - Upgrade Nx and Angular without changing behaviour (Priority: P1)
 
 As the developer, I want the frontend workspace on the current Nx 23 release, in its own reviewable change, so that the
 Oxlint integration and the new E2E tooling can land on a current, patched toolchain, with nothing else changing.
@@ -75,13 +79,18 @@ violation still fails lint.
    TypeScript 6 migration is compatible with Angular 21.2; Analog, spartan and the Vitest integration work; Node 22 or
    newer locally, in CI and in the images that build the frontend), **Then** the findings are reported to the developer
    and the target versions are confirmed by them before anything is installed.
-2. **Given** a prerequisite fails in a way that would require an Angular upgrade, **When** the upgrade is attempted,
-   **Then** work stops and the finding is reported; Angular is never upgraded silently.
-3. **Given** the TypeScript 6 migration is offered and Angular 21.2 does not support it, **When** migrations are run,
-   **Then** that migration is declined and the decision is recorded.
+2. **Given** the Nx upgrade is done and green, **When** the Angular 22 prerequisites are checked (Angular 22 accepted by
+   Nx 23, TypeScript 6.0 as Angular 22 requires, Node version Angular 22 requires, and the matching versions of the
+   Analog, spartan, angular-eslint, Spectator and Capacitor-related packages), **Then** the findings are reported to
+   the developer and the exact versions are confirmed before anything is installed.
+3. **Given** Angular 22 requires TypeScript 6.0, **When** Angular is upgraded, **Then** TypeScript moves to 6.0 in that
+   same change and not before; if any tool in the chain cannot run on it, work stops and the finding is reported, and
+   the workspace stays on Nx 23 with Angular 21.2 and TypeScript 5.9.
 4. **Given** the upgraded workspace, **When** lint, unit tests (with the coverage gate), the production build, the mobile
    build and the dependency graph are run, **Then** each result matches the pre-upgrade baseline.
 5. **Given** the upgraded workspace, **When** a deliberate module-boundary violation is introduced, **Then** lint fails.
+6. **Given** each of the two upgrade steps (Nx, then Angular), **When** it is merged, **Then** it was reviewed and green
+   on its own, so a regression can be attributed to one step.
 
 ---
 
@@ -374,10 +383,37 @@ prefer agent-browser instead.
 
 ---
 
+### Platform currency
+
+### User Story 16 - Check whether the backend platform can move up (Priority: P3)
+
+As the developer, I want to know whether Spring Boot, Spring AI, Spring Modulith and Gradle can be upgraded, and have
+them upgraded if it is safe, so that the backend stays patched and the Boot/Spring AI version question in Part B is
+settled by facts.
+
+**Why this priority**: security and currency value with no product change; independent of everything else.
+
+**Independent Test**: on the upgraded backend, the full backend check (tests, module-boundary tests and the coverage
+gate) passes as before and the application starts against the local stack.
+
+**Acceptance Scenarios**:
+
+1. **Given** the current backend versions, **When** the newest compatible versions are looked up, **Then** a short
+   report lists current and available versions of Spring Boot, Spring AI, Spring Modulith, Gradle and the Java
+   toolchain with what each upgrade would change, and the developer confirms the target versions.
+2. **Given** confirmed targets, **When** the backend is upgraded in its own change, **Then** the backend check passes
+   with unchanged behaviour and the dependency tree shows no mix of two Spring Boot minor versions.
+3. **Given** an upgrade fails the backend check in a way that is not a small fix, **When** it is reported, **Then** the
+   backend stays on the last working versions and the failure is recorded for a later decision.
+
+---
+
 ### Edge Cases
 
-- **Nx upgrade drags in Angular**: work stops and is reported; Angular is not upgraded as part of this feature.
-- **TypeScript 6 migration incompatible**: declined and recorded.
+- **Angular 22 cannot run on the current toolchain** (a tool in the chain rejects TypeScript 6 or the Node version):
+  work stops, the finding is reported, and the workspace stays on Nx 23 with Angular 21.2.
+- **Local Node is older than Angular 22 allows**: the preflight reports the required Node version before the upgrade
+  starts; the developer upgrades Node, and CI and the frontend image are pinned to an accepted version.
 - **Hook on a file Oxlint cannot parse** (unusual syntax, template in a decorator): silent skip, never a blocking error.
 - **Hook while the formatter is still writing**: never lints a partial file.
 - **Hook on a very large file or a slow machine**: the hard time limit ends it silently.
@@ -412,16 +448,20 @@ prefer agent-browser instead.
   CI) MUST be measured and recorded before anything changes.
 - **FR-006**: The frontend workspace MUST be upgraded from Nx 22.7.12 to the current Nx 23 release in its own reviewable
   change, merged before any other Part A or Part C change.
-- **FR-007**: Before upgrading, compatibility MUST be verified and reported for: Angular 21.2 on Nx 23, the TypeScript 6
-  migration against Angular 21.2, Analog, spartan, the Vitest integration, Node 22 or newer (local, CI, frontend build
-  images), Bun as package manager, and the Capacitor/mobile build.
-- **FR-008**: The TypeScript 6 migration MUST be declined if Angular 21.2 does not support it; Angular MUST NOT be
-  upgraded as part of this feature.
-- **FR-009**: After the upgrade, lint, unit tests with the coverage gate, the production build, the mobile build and the
+- **FR-007**: Before each upgrade step, compatibility MUST be verified and reported for: Angular 21.2 (then 22) on Nx 23,
+  the TypeScript version the target Angular requires, Analog, spartan, angular-eslint, Spectator, the Vitest
+  integration, the Node version required (local, CI, frontend build images), Bun as package manager, and the
+  Capacitor/mobile build.
+- **FR-008**: Angular MUST then be upgraded to 22 in its own reviewable change after the Nx upgrade is merged, together
+  with the TypeScript version Angular 22 requires and the matching versions of the Angular-coupled dev tooling. It MUST
+  stop and report, not force through, if any tool in the chain cannot run on it. Angular MUST NOT be upgraded in the same
+  change as Nx.
+- **FR-009**: After each upgrade step (Nx, then Angular), lint, unit tests with the coverage gate, the production build, the mobile build and the
   dependency graph MUST give the same results as before, meaning: the same tests pass with the same coverage-gate
   result, both builds succeed, the dependency graph is identical, and bundle sizes differ by at most 5%. A deliberate
   module-boundary violation MUST still fail lint.
-- **FR-010**: The constitution's tooling-currency principle (which names Nx 22) MUST be amended to the new Nx version.
+- **FR-010**: The constitution's tooling-currency principle (which names Angular 21 and Nx 22) MUST be amended to the new
+  versions in the change that makes them true.
 
 **Part A: Oxlint and the agent hook**
 
@@ -501,6 +541,15 @@ prefer agent-browser instead.
   agent-browser checks.
 - **FR-047**: New docs MUST NOT contain the phrase the `licence-check` job rejects.
 
+**Platform currency**
+
+- **FR-048**: The newest compatible Spring Boot, Spring AI, Spring Modulith and Gradle versions MUST be looked up and
+  reported, with the developer confirming the targets before any change (FR-002).
+- **FR-049**: The backend upgrade MUST be its own reviewable change, independent of Parts A to C, and MUST leave the
+  full backend check (tests, module-boundary tests, coverage gate) passing with no behaviour change.
+- **FR-050**: After the backend upgrade, the resolved dependency tree MUST be recorded in the AI reference doc as the
+  answer to whether the Boot and Spring AI combination has the starter-dependency problem (FR-024).
+
 ### Key Entities
 
 - **Lint rule ownership list**: for each rule, which linter owns it; the single place that settles overlaps.
@@ -535,6 +584,8 @@ prefer agent-browser instead.
 - **SC-011**: Zero leftover containers, volumes or networks after passed, failed and interrupted runs, locally and in CI.
 - **SC-012**: A pull request with a deliberately broken covered journey cannot merge.
 - **SC-013**: The dev database row counts are unchanged by any number of E2E runs.
+- **SC-014**: The backend check passes after the platform upgrade, and the resolved dependency tree contains one Spring
+  Boot minor version.
 
 ## Assumptions
 
@@ -542,6 +593,11 @@ prefer agent-browser instead.
   Part B can proceed in parallel at any time.
 - **Nx target**: the latest Nx 23 release at the time of work, unless the Oxlint plugin needs a specific one; final
   versions are confirmed with the developer before installing (FR-002).
+- **Angular 22**: feasible by registry metadata on 2026-10-05 (Nx 23.2.1 accepts it; Angular 22 requires TypeScript
+  6.0 and Node 22.22.3+ or 24.15+; the Mac currently has Node 24.13.1, so Node must be raised first). Done as a second
+  change after the Nx upgrade.
+- **Backend**: Spring Boot, Spring AI, Spring Modulith and Gradle have newer releases (see User Story 16); the target
+  versions are decided with the developer after the lookup.
 - **Hook mode**: advisory only; CI is the blocking gate. A type-aware lint pass stays in CI only, the hook stays untyped
   for speed.
 - **Web journeys**: fixed by clarification (see FR-035); further journeys can be added later as separate work.
@@ -561,6 +617,7 @@ prefer agent-browser instead.
 ## Out of Scope
 
 - Vite+, Oxfmt, Oxlint on the Java or Python code, custom Oxlint rules.
-- Upgrading Angular itself (reported, not done, if Nx 23 requires it).
+- Moving to a newer Angular than 22, Capacitor upgrades, Python sidecar dependency upgrades, Java toolchain changes
+  (reported only).
 - Building any AI gap, changing models or routing, adding AI features.
 - iOS, biometric automation, visual regression testing, load testing, running E2E against production.

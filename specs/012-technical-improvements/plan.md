@@ -8,13 +8,16 @@
 
 Three independently releasable parts, none changing product behaviour:
 
-- **A. Fast lint feedback.** Upgrade `jordylab-fe` from Nx 22.7.12 to Nx 23.2.1 as its own pull request (Angular stays
-  on 21.2, which Nx 23 supports; TypeScript 6 migration declined by default). Then add Oxlint next to ESLint with one
+- **A. Fast lint feedback.** Upgrade `jordylab-fe` from Nx 22.7.12 to Nx 23.2.1 as its own pull request (Angular 21.2
+  and TypeScript 5.9 unchanged), then Angular 22.2.1 with the TypeScript 6.0 it requires as a second pull request
+  (needs Node 24.15+ locally). Then add Oxlint next to ESLint with one
   owner per rule, one shared lint command, a Claude Code post-edit hook (advisory, time-limited, serialised with the
   Prettier hook), an OpenCode instruction, and an Oxlint step before ESLint in CI.
 - **B. AI integration conventions.** Move the corrected Spring AI report to `docs/research/`, add a short rules file in
   `shared/ai` (with the `CLAUDE.md` import), write the gap analysis, draft the worth-building gaps, and add the
   checklist to `/ai-endpoint` and both `code-reviewer` copies.
+- **Platform currency.** Check Spring Boot, Spring AI, Spring Modulith and Gradle for upgrades; recommended: Boot 4.1.1,
+  Modulith 2.1.1, Gradle 9.8.0 (Spring AI 2.0.1 is already latest), validated by the full backend check.
 - **C. E2E testing.** Playwright web suite (five agreed journeys) and a small Appium Android suite, each run on its own
   throwaway Postgres + Keycloak that is always removed and verified clean; a merge-gating web CI job and an Android job
   on releases and manual start.
@@ -23,8 +26,9 @@ Technical approach and rejected alternatives are in [research.md](research.md).
 
 ## Technical Context
 
-**Language/Version**: TypeScript ~5.9 (kept), Angular ~21.2, Nx 22.7.12 → 23.2.1, Node 22+ (CI pinned; Mac has 24), Bun
-1.3, Bash for hooks/runner, Java 25 + Spring Boot 4.0.3 / Spring AI 2.0.1 (docs and rules only, no code change)
+**Language/Version**: TypeScript ~5.9 → ~6.0 (with Angular 22), Angular ~21.2 → 22.2.1, Nx 22.7.12 → 23.2.1, Node
+22.22.3+ or 24.15+ (CI pinned; Mac has 24.13.1 and must be raised), Bun 1.3, Bash for hooks/runner, Java 25, Spring Boot
+4.0.3 → 4.1.1, Spring AI 2.0.1 (unchanged), Spring Modulith 2.0.3 → 2.1.1, Gradle 9.3.1 → 9.8.0
 
 **Primary Dependencies**: `@nx/oxlint` 23.2.1 + `oxlint` (latest 1.86.0, exact pin), `@nx/playwright` +
 `@playwright/test` (latest 1.63.0), `appium` 3.x (latest 3.8.0) + UiAutomator2 driver + `webdriverio` 9.x +
@@ -67,7 +71,7 @@ dependency question, WebView version of the chosen emulator image, mixed-content
 | II. Fail fast, no silent failures | Pass with a deliberate exception: the *advisory hook* skips silently when Oxlint is missing or times out (FR-016, spec requirement). The runner and CI jobs fail loudly (readiness timeouts, leftover check, WebView mismatch) |
 | III. Immutable, builder-first | N/A (no Java production code) |
 | IV. Testing discipline | Pass: unit-test conventions unchanged; E2E uses different tools at a different layer; hook scripts get fixture tests |
-| V. Language & tooling currency | **Amendment required**: names "Nx 22". FR-010 updates it to the new Nx version as part of the upgrade PR, with the "Last Amended" note |
+| V. Language & tooling currency | **Amendment required**: names "Angular 21 / Nx 22". FR-010 updates it in the upgrade PR that makes each true, with the "Last Amended" note |
 
 No unjustified violations; Complexity Tracking is empty.
 
@@ -137,11 +141,14 @@ dev compose file stays untouched.
 
 ## Delivery order and branches
 
-Parts are releasable alone. Part A step 1 merges first; everything that adds frontend tooling builds on it.
+Parts are releasable alone. Steps 1a then 1b merge first; everything that adds frontend tooling builds on them. 1c and
+step 4 are independent (4's starter-dependency answer uses 1c's result if 1c lands first).
 
 | # | Change | Branch / PR | Needs before start |
 |---|--------|-------------|--------------------|
-| 1 | Baseline measurement + prerequisite check + Nx 23.2.1 upgrade + constitution amendment + `npx`→`bunx` fix (separate commit) | own branch, own PR | **Developer confirms target versions** (Nx 23.2.1, TS stays 5.9) |
+| 1a | Baseline measurement + prerequisite check + Nx 23.2.1 upgrade (Angular 21.2, TS 5.9) + constitution amendment (Nx) + `npx`→`bunx` fix (separate commit) | own branch, own PR | **Developer confirms target versions** |
+| 1b | Angular 22.2.1 + TypeScript 6.0 + `angular-eslint` 22, Analog 2.8, `ng-packagr` 22, CI Node pin, constitution amendment (Angular) | own PR after 1a | Developer confirms versions; **Mac Node raised to 24.15+** |
+| 1c | Backend: Spring Boot 4.1.1 + Modulith 2.1.1 + Gradle 9.8.0 (fallback 4.0.8 / 2.0.8), dependency-tree record for the report | independent PR, any time | Developer confirms versions |
 | 2 | Oxlint, `.oxlintrc.json`, shared command, ownership check, CI Oxlint step, docs | own PR after 1 | Developer confirms the Oxlint version; baseline decision (Oxlint or ESLint in the command) |
 | 3 | Agent hook + lock in the format hook + fixtures + OpenCode instruction (all via `/dual-agent-config`) | own PR after 2 (or with 2) | none |
 | 4 | Part B: doc move + corrections, rules file, gap analysis, drafts, skill/agent checklist, loading verification | independent PR, any time | none |
@@ -153,21 +160,27 @@ builds and the dependency graph unchanged (FR-009 definition from clarification)
 
 ## Version approval gate (FR-002)
 
-Before steps 1, 2, 5 and 6 install anything, the exact versions and what they pull in are presented in chat and
+Before steps 1a, 1b, 1c, 2, 5 and 6 install anything, the exact versions and what they pull in are presented in chat and
 confirmed. Current proposals (re-resolved on the day):
 
 | Tool | Proposed | Note |
 |------|----------|------|
 | Nx family | 23.2.1 | Angular 21.2 in range; no Angular change |
-| TypeScript | stay `~5.9` | 6.0 is allowed by Angular 21.2.25 but unverified for the rest of the toolchain |
+| Angular | 22.2.1 (step 1b) | requires TypeScript `>=6.0 <6.1` and Node 22.22.3+ / 24.15+ |
+| TypeScript | `~5.9` in 1a, `~6.0` in 1b | `typescript-eslint` 8.71.0 supports `<6.1` |
+| angular-eslint / Analog / ng-packagr | 22.5.0 / 2.8.0 / 22.2.4 | Angular-coupled, move with 1b |
+| Spring Boot / Modulith / Gradle | 4.1.1 / 2.1.1 / 9.8.0 (fallback 4.0.8 / 2.0.8) | Spring AI stays 2.0.1 (latest) |
 | oxlint / @nx/oxlint | 1.86.0 / 23.2.1 | plugin peer `^1.43`; docs say 1.70+ |
 | Playwright | 1.63.0 | browser binaries download |
 | Appium / WebdriverIO | 3.8.0 / 9.32.0 | driver and chromedriver pinned to the WebView |
 
 ## Risks
 
-- Nx 23 migration changes more than expected (generated config, cache inputs): reviewed in its own PR; stop and report if
-  Angular would need to move.
+- Nx 23 migration changes more than expected (generated config, cache inputs): reviewed in its own PR (1a).
+- Angular 22 / TypeScript 6 may break a tool in the chain (spartan alpha, Analog, Spectator, generated code): 1b is its
+  own PR; if it cannot be made green it is reported and the workspace stays on Nx 23 + Angular 21.2.
+- Mac Node 24.13.1 is below Angular 22's requirement: raising it is a developer handoff before 1b.
+- Spring Boot 4.1 may break the backend check (Modulith pairing, Spring AI 2.0.1 on Boot 4.1): fallback to 4.0.8.
 - `@nx/oxlint` is experimental: pin it; the hook and shared command do not depend on the plugin.
 - The two linters double-report: the ownership check fails the build on any overlap.
 - Hooks run in parallel: lock-directory serialisation plus a concurrent fixture case.

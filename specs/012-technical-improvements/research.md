@@ -11,7 +11,7 @@ drafts: `specs/_drafts/oxlint-fast-lint/`, `specs/_drafts/ai-integration-convent
 | Question | Finding | Source |
 |---|---|---|
 | Does Nx 23 support Angular 21.2? | **Yes.** `@nx/angular` 23.2.1 accepts `@angular/build`, `@schematics/angular`, `@angular-devkit/*` `>= 20 < 23`. The repo is on `~21.2`. No Angular upgrade is needed. | npm registry, `@nx/angular@23.2.1` peer deps |
-| Is the TypeScript 6 migration compatible? | **Partly known.** Angular 21.2.25's compiler accepts TypeScript `>=5.9 <6.1`, so TS 6.0 is *allowed*. Not yet known: `typescript-eslint` 8.x, Analog, spartan and the Nx plugins under TS 6. The upgrade is meant to be behaviour-neutral, so **default: decline the migration and stay on `~5.9`**; propose TS 6 as its own later change. | npm registry, `@angular/compiler-cli@21.2.25` |
+| Is the TypeScript 6 migration compatible? | Angular 21.2.25 accepts TypeScript `>=5.9 <6.1`, so TS 6.0 is allowed there too. `typescript-eslint` 8.71.0 accepts `>=4.8.4 <6.1.0`; `@nx/eslint-plugin` has no TS peer. Because the Angular 22 step *requires* TS 6.0 (see A6), **Nx step (PR 1a): stay on `~5.9`** to keep it behaviour-neutral; **Angular step (PR 1b): move to 6.0 with Angular**. | npm registry |
 | Analog | `@analogjs/vite-plugin-angular` latest 2.8.0 accepts Vite 6–8 and `@angular/build` 18–22. Repo is on `~2.1.2` with Vite 7. No Analog bump is required by Nx 23; a bump is optional and separate. | npm registry |
 | spartan | `@spartan-ng/nx` (latest `0.0.1-alpha.322`, same as the repo range) has only `tslib` as peer. No Nx coupling. **VERIFY** its generators still run after migration (not exercised by lint/test/build). | npm registry |
 | Vitest integration | `@nx/vitest` 23.2.1 accepts Vite 5–8 and Vitest 3–4 (repo: Vite 7, Vitest 4). | npm registry |
@@ -23,6 +23,41 @@ Target: **Nx 23.2.1** (latest 23.x today; `nx`, `@nx/angular`, `@nx/eslint`, `@n
 `@nx/vitest`, `@nx/web`, `@nx/workspace` move together). Confirmed with the developer before installing (FR-002).
 `@nx/vite` is still listed in `package.json` although the executor in use is `@nx/vitest:test`; whether it can be
 dropped is a finding for the PR, not a goal.
+
+### A6. Angular 22 (directive after planning)
+
+Feasible by registry metadata (2026-10-05); done as its own PR **after** the Nx upgrade (PR 1b):
+
+| Package | Repo now | Needed / available | Note |
+|---|---|---|---|
+| `@angular/*` | `~21.2.25` | `22.2.1` (latest) | `@angular/build` 22 peers `typescript >=6.0 <6.1`, Vitest `^4.0.8 \|\| ^5` (repo: Vitest 4 ok) |
+| TypeScript | `~5.9.2` | `~6.0` | forced by Angular 22 (`>=6.0 <6.1`); `typescript-eslint` 8.71.0 supports it |
+| Node | Mac 24.13.1 | `^22.22.3 \|\| ^24.15.0 \|\| >=26` | **Mac Node is too old**: raise to 24.15+ before the upgrade; pin CI to 22.22.3+ or 24.15+ and check the `oven/bun:1` image provides an accepted Node |
+| `angular-eslint` | 21.3.0 | 22.5.0 | bump with Angular |
+| `@analogjs/*` | 2.1.x | 2.8.0 (accepts `@angular/build` 22, Vitest 5) | bump with Angular |
+| `@ngneat/spectator` | 22.1.0 | peers `@angular/* >= 20` | no change needed |
+| `@angular/cdk` | `>=21 <23` | 22.2.1 fits | no change needed |
+| `@spartan-ng/brain` | alpha.380 | peers `>=18` (also 1.5.0 exists, `>=21 <23`) | stay on the alpha line; moving to 1.x is a separate decision |
+| `ng-packagr` | `~21.2.7` | 22.2.4 | bump with Angular |
+| `@nx/angular` | 22.7.12 | 23.2.1 accepts `<23` | satisfied by PR 1a |
+| Capacitor 8 plugins | | no Angular peers | unaffected; `mobile` build verified |
+
+Mechanism: `nx migrate latest` (PR 1a) brings Nx; the Angular bump is applied by the Angular migrations Nx runs for
+`@nx/angular`, or `nx migrate @angular/core@22` if `latest` does not move it (**VERIFY**). Every migration reviewed.
+Stop-and-report conditions are in the spec's Edge Cases.
+
+### A7. Backend platform check (User Story 16)
+
+Current: Spring Boot `4.0.3`, Spring AI `2.0.1`, Spring Modulith `2.0.3` (pinned), Gradle wrapper `9.3.1`, Java 25
+(installed 25.0.2). Newest on Maven Central / Gradle today: Boot **4.1.1** (4.0 line: 4.0.8), Spring AI **2.0.1**
+(already latest), Modulith **2.1.1** (2.0 line: 2.0.8), Gradle **9.8.0**.
+
+Options, smallest first: (a) patch only: Boot 4.0.8 + Modulith 2.0.8 + Gradle 9.8.0; (b) Boot 4.1.1 + Modulith 2.1.1 +
+Gradle 9.8.0, with Spring AI 2.0.1 unchanged (its announcement says it targets Boot 4.0 and 4.1). **Recommendation: (b)**,
+because it removes the Boot 4.0 / Spring AI 4.1-dependency mismatch the report warns about, and falls back to (a)
+if the backend check fails. Validation: `./gradlew check` (tests, `ModularityTests`, JaCoCo 80% gate), a dependency
+tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs with Boot 4.1 and what Boot 4.1 changed
+(release notes) are checked at the start of the task. The result also answers the starter-dependency question in B2.
 
 ### A2. Oxlint
 
@@ -215,7 +250,7 @@ pointer from the root `AGENTS.md`.
 
 | # | Decision | Rationale | Alternative rejected |
 |---|---|---|---|
-| D1 | Nx target 23.2.1; decline TS 6; no Angular change | Behaviour-neutral upgrade; Angular 21.2 is in range | Taking TS 6 now (unverified toolchain, not needed) |
+| D1 | PR 1a: Nx 23.2.1 on Angular 21.2 + TS 5.9. PR 1b: Angular 22.2.1 + TS 6.0 + Angular-coupled tooling. Backend: Boot 4.1.1 / Modulith 2.1.1 / Gradle 9.8.0 (fallback 4.0.8 / 2.0.8) | Two small reviewable steps; Angular 22 forces TS 6; each step attributable | One big `nx migrate latest` PR (hard to bisect) |
 | D2 | Oxlint rules = ESLint-off list; one-owner check script | Guarantees SC-004 mechanically | Hand-maintained ownership table only |
 | D3 | `tools/lint-changed.sh` shared command, linter-agnostic name | Hook, OpenCode rule and CI call one thing; ESLint fallback needs no rename | Linter-named script |
 | D4 | Lock-directory serialisation between format and lint hooks | Parallel hooks; keeps scripts separate | Merging hooks; sleeping |
