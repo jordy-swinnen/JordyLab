@@ -3,7 +3,7 @@
 2026-09-30 → 2026-10-05 · production `https://jordylab.be` · last release `v0.0.1-rc15` (`5167ca2`)
 
 ## Verdict
-Production (rc15) is healthy and every S1/S2 defect found is fixed and deployed. 21 of the 24 S1/S2 bugs are verified on prod or by a drill; the other three (BUG-050 login screen after native login, BUG-056 blank page — web verified, BUG-059 portfolio symbol resolution) wait only for the owner's check on his phone or in the portfolio. Nothing known is broken. What remains after that is the manual runbook (VPS reboot, point-in-time restore, contrast, rebuild), which the owner does last.
+Production (rc15) is healthy and every S1/S2 defect found is fixed and deployed. 21 of the 24 S1/S2 bugs are verified on prod or by a drill; the other three (BUG-050 login screen after native login, BUG-056 blank page — web verified, BUG-059 portfolio symbol resolution) wait only for the owner's check on the owner's phone or in the portfolio. Nothing known is broken. What remains after that is the manual runbook (VPS reboot, point-in-time restore, contrast, rebuild), which the owner does last.
 
 ## What was tested
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
