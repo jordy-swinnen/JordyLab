@@ -937,6 +937,22 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 ```
 - Expect: `KEYCLOAK_CLIENT_UPDATED`. The next release's `apk` job then logs in with the new secret.
 
+#### HANDOFF-20: Diagnose the 401 on the APK upload (rc13 `apk` job)
+- Machine: your Mac (Tailscale on) · Target env: prod · Why you: it uses the CI client secret, which only you and the cluster may hold; it prints no secret.
+- Context: rc13 (the blank-page fix) deployed, but its `apk` job got HTTP 401 from `POST /api/mobile/releases` right after the Keycloak login for `mobile-release-ci` succeeded. Until the APK is published your phone cannot update off the broken rc12.
+- Run (prints status codes and non-secret token claims only):
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_RELEASE_CI_CLIENT_SECRET}' | base64 -d)
+R=$(curl -s -w '\n%{http_code}' -d grant_type=client_credentials -d client_id=mobile-release-ci --data-urlencode "client_secret=$V" https://jordylab.be/auth/realms/jordylab/protocol/openid-connect/token); unset V
+echo "token endpoint: $(echo "$R" | tail -1)"
+T=$(echo "$R" | sed '$d' | jq -r '.access_token // empty')
+echo "$T" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq '{iss, azp, exp, iat, roles: .realm_access.roles}'
+echo "backend with that token: $(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $T" https://jordylab.be/api/mobile/releases/latest) (403 = token accepted, 401 = rejected)"
+unset T R
+```
+- Paste the output. Expected if healthy: token endpoint `200`, `iss` = `https://jordylab.be/auth/realms/jordylab`, roles contain `mobile-release-publisher`, backend `403`.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
@@ -1123,4 +1139,15 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: all ✅ including `apk` (still the old CI secret, matching the unchanged live client) and `publish`
 - Contains Flyway migration: no · realm change: no · secret change: yes (owner-made, one key, DECRYPT_OK, gitleaks clean) · config change: no
 - Outcome: deployed; the live client + GitHub secret switch is HANDOFF-19
+
+#### DEPLOY-18 — rollback (S1, BUG-056)
+- `deploy-prod.yml -f version=v0.0.1-rc11` (run 37233190841) after rc12 showed a blank page on web and in the app (`AuthService` needed a router in the pre-bootstrap injector). All jobs ✅; the login page loaded again on rc11; no data touched (no migration in either).
+- Outcome: service restored ~10 min after the first report.
+
+#### DEPLOY-19
+- Release: `v0.0.1-rc13` on `c387aac` (PR #91, BUG-056 fix), run 37234200670
+- Jobs: verify, retag ×3, release, deploy, publish ✅ · `apk` ❌ (401 from `POST /api/mobile/releases` after a successful `mobile-release-ci` login — HANDOFF-20)
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
+- Prod re-verification: `https://jordylab.be/` shows the login page again (web); the APK of rc13 is not published, so phones still have the broken rc12 until it is
+- Outcome: web deployed; APK pending
 
