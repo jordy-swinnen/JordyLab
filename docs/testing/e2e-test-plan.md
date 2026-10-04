@@ -739,22 +739,22 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | A12 | Browser console per route | PASS | 2026-10-02 rc8: signed-in admin pass over Library, Switch (search, bulk preview, detail), AI Models, Users, account menu — 0 console errors; guest pass is MRB-02 |
 
 ### B. Auth, roles and Settings
-_Not started._
+Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
 
 ### C. Game Catalog
-_Not started._
+Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
 
 ### D. FNA
-_Not started._
+Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
 
 ### E. Mobile (web side)
-_Not started._
+Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
 
 ### F. Eufy presence
 NOT BUILT — only check that no presence endpoint is exposed (`/api/**` falls through to `denyAll`).
 
 ### G. Cross-cutting
-_Not started._
+Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
 
 ### Final smoke on rc8 (T056, 2026-10-02)
 Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → https · A4 HSTS, nosniff, SAMEORIGIN, `server: nginx` (no version) · A5 deep link 200 · A6 gzip · A7 `favicon.svg` linked (`/favicon.ico` 404, harmless), manifest 200 · A8 issuer correct · A9 401 · A10 evil origin gets no ACAO, `https://localhost` allowed · A11/A13 5/5 pods Running, 0 restarts, all three images `v0.0.1-rc8`, 0 backend errors in the last hour. B1 login works (re-sign-in via HANDOFF-13). A12 admin pass over Library, Switch (search, bulk preview), AI Models, Users, account menu: 0 console errors. Guest pass (B2) stays MRB-02.
@@ -920,7 +920,7 @@ kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh co
   4. Close the app fully and reopen → expect the fingerprint prompt, then the library without a password. If you cancel, the login page shows an "Unlock with fingerprint" button.
 - Tell me what happened at each step.
 
-#### HANDOFF-18: Rescan EmuDeck on JordyBox with the PS3 fix
+#### HANDOFF-18: Rescan EmuDeck on JordyBox with the PS3 fix — done 2026-10-05 (`APPLIED`: 161 submitted, 18 added, 4 updated, 5 removed)
 - Machine: JordyBox (Fish) · Target env: prod · Why you: only JordyBox has the ROM library.
 - Steps: sign in to `https://jordylab.be` as admin, Sources page → download the EmuDeck client (or `GET /api/gamecatalog/ingest/client`) over your old `jordylab-scan-emudeck.py`, then:
 ```fish
@@ -937,7 +937,7 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 ```
 - Expect: `KEYCLOAK_CLIENT_UPDATED`. The next release's `apk` job then logs in with the new secret.
 
-#### HANDOFF-20: Diagnose the 401 on the APK upload (rc13 `apk` job) — round 1 done: token endpoint 200, backend accepts the token (403 on /latest); round 2 below
+#### HANDOFF-20: Diagnose the 401 on the APK upload (rc13 `apk` job) — closed 2026-10-05, cause found in HANDOFF-21 (stale repository secret); round 1 done: token endpoint 200, backend accepts the token (403 on /latest); round 2 below
 - Machine: your Mac (Tailscale on) · Target env: prod · Why you: it uses the CI client secret, which only you and the cluster may hold; it prints no secret.
 - Context: rc13 (the blank-page fix) deployed, but its `apk` job got HTTP 401 from `POST /api/mobile/releases` right after the Keycloak login for `mobile-release-ci` succeeded. Until the APK is published your phone cannot update off the broken rc12.
 - Run (prints status codes and non-secret token claims only):
@@ -964,7 +964,7 @@ echo "publish endpoint, no file: $(curl -s -o /dev/null -w '%{http_code}' -X POS
 unset T
 ```
 
-#### HANDOFF-21: Set the GitHub secret where the apk job reads it (repository level)
+#### HANDOFF-21: Set the GitHub secret where the apk job reads it (repository level) — done 2026-10-05; rc14's `apk` job published (HTTP 201)
 - Machine: your Mac (Tailscale on) · Target env: GitHub · Why you: it copies the secret from the cluster without showing it.
 - Why: HANDOFF-19 (my command) stored the new value on the `production` *environment*, but the `apk` job has no environment and reads the *repository* secret, which still holds the old value → Keycloak refuses it. This fixes my mistake.
 ```bash
@@ -1177,4 +1177,10 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: verify, retag ×3, release, deploy, publish ✅ · `apk` ❌ (Keycloak refused the stale repository secret, BUG-057 → HANDOFF-21)
 - Contains Flyway migration: **yes** — `V20261004001` widens `finance.portfolio_position.share_count` to `NUMERIC(20,10)` (non-destructive, requested by the owner) · realm change: no · secret change: no · config change: no
 - Outcome: backend/frontend deployed; APK of rc14 pending HANDOFF-21
+
+#### DEPLOY-21
+- Release: `v0.0.1-rc15` on `5167ca2` (PR #99 symbol resolution, BUG-059), run 37243296458
+- Jobs: all ✅ including `apk` (APK versionCode 115 published) and `publish`
+- Contains Flyway migration: yes — `V20261005001` adds the nullable `finance.portfolio_position.price_symbol` (applied cleanly at startup) · realm change: no · secret change: no · config change: no
+- Outcome: deployed; owner check of BTC/MEUD pending
 

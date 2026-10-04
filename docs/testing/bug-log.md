@@ -861,7 +861,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-056: rc12 shows a blank page on web and in the app — `AuthService` needed a router the pre-bootstrap injector does not have
-- Status: DEPLOYED in `v0.0.1-rc13` (PR #91) — web verified (login page loads); phones need the rc13 APK, blocked by the apk-job 401 (HANDOFF-20). Prod was rolled back to rc11 in between (DEPLOY-18)
+- Status: DEPLOYED in `v0.0.1-rc13` (PR #91) — web verified; the phone app needs a re-install of the current APK (rc15) and the owner's check (HANDOFF-17)
 - Severity: S1
 - Area/spec: mobile + auth / 007 US2, 006
 - Env found: prod, the owner's phone and desktop browser, minutes after rc12 (2026-10-04 ~22:25)
@@ -878,7 +878,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 
 
 ### BUG-057: rc13 `apk` job: `POST /api/mobile/releases` answers 401 although the CI token is valid — no phone can get the fixed app
-- Status: FIX PENDING (owner action: HANDOFF-21, then rerun the rc14 `apk` job); diagnostics + a safer retry are in the publish step
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S2
 - Area/spec: mobile / 007 FR-001, release flow
 - Env found: prod release pipeline, rc13 run (2026-10-04 ~21:03Z), both the first attempt and a rerun
@@ -890,10 +890,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the rotated secret was set on the GitHub `production` *environment* (HANDOFF-19, my command used `--env production`), but the `apk` job has no `environment:` and reads the *repository* secret, which still held the old (exposed) value — Keycloak, now on the new value, refused it. The runbook already said `--repo`; my handoff was wrong. The probes that "proved" the token path used the cluster value, not the GitHub one.
 - Fix (PR / commit / tag): the owner sets the **repository** secret from the cluster value (HANDOFF-21, runbook text now says repository-level in bold) and the failed `apk` job is rerun; separately the publish step prints the HTTP status, `WWW-Authenticate`/`Content-Type` and the first 600 bytes of the body, and retries up to 3 times (30 s apart); a final failure names the status.
 - Regression test added: none because CI workflow; verified by the next release's `apk` job
-- Verified on prod:
+- Verified on prod: 2026-10-05: with the repository secret replaced (HANDOFF-21) the rc14 `apk` job answered `publish attempt 1: HTTP 201` and the rc15 run was green end to end, including `apk`
 
 ### BUG-058: A crypto position cannot be entered — shares are cut to 4 decimals; its value looks wrong
-- Status: FIXED locally — release pending (`fix/portfolio-share-precision`; contains a Flyway migration)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S2
 - Area/spec: fna / 001 (portfolio)
 - Env found: prod, the owner adding 0.002106 BTC (2026-10-04)
@@ -905,10 +905,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: two separate things. (1) `finance.portfolio_position.share_count` was `NUMERIC(12,4)` and the table displayed `1.0-4` digits, so 0.002106 became 0.0021 (the number input also had no `step`, so browsers flagged fractions). (2) The €0.08 is correct arithmetic on the wrong instrument: Yahoo's symbol `BTC` is the Grayscale Bitcoin Mini Trust ETF (~38 USD), not Bitcoin; 0.0021 × 38.25 = 0.08. Bitcoin in euro is `BTC-EUR` (76,318.08 EUR at the time; 0.0021 → 160.27, matching the owner's Google check).
 - Fix (PR / commit / tag): migration `V20261004001` widens `share_count` to `NUMERIC(20,10)` (existing values unchanged); the table shows up to 10 decimals and the shares input takes `step="any"`; the add-position form now says to use euro-priced Yahoo symbols (`BTC-EUR`, not `BTC`). The owner replaces the `BTC` row by `BTC-EUR` with 0.002106 (no hand-editing of data).
 - Regression test added: `FnaRepositoryTest.shareCountKeepsTheDigitsOfASmallCryptoPosition` (fails with `0.0021` without the migration), `portfolio-manager.component.spec.ts` (digits shown, value €160.73, `step=any`)
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc14`: the owner re-entered 0.002106 and the position keeps the digits ("the shares is correct now"); its value is now handled by BUG-059
 
 ### BUG-059: A position needs the exact Yahoo symbol (BTC-EUR, MEUD.PA) to get a value
-- Status: FIXED locally — release pending (`feat/portfolio-resolve-symbols`; contains a Flyway migration)
+- Status: DEPLOYED in `v0.0.1-rc15` (PR #99) — owner check pending: remove the `BTC-EUR` row, add `BTC` with 0.002106 and `MEUD`, expect euro values at once
 - Severity: S2
 - Area/spec: fna / 001 (portfolio)
 - Env found: prod, the owner replacing the `BTC` row (2026-10-05)

@@ -133,7 +133,7 @@ matrix; every FAIL has a BUG.
   past access-token lifetime), unauthenticated deep link → Keycloak, no redirect loop
 - [ ] T024 [US2] Self-registration → admin approval into `guest` → guest sees only Game Catalog; pending and rejected
   users get nothing (depends on HANDOFF for approval and a second browser profile)
-- [ ] T025 [US2] Settings user-management UI on prod (list/approve/reject/revoke) against the guest test account only;
+- [X] T025 [US2] Settings user-management UI on prod (list/approve/reject/revoke) against the guest test account only;
   per-AI-feature model selection rows stay `FAIL` → linked to the 006 US6 bug from T014
 
 **Checkpoint**: site, TLS, routing, identity and authz verified or logged.
@@ -164,7 +164,7 @@ matrix; every FAIL has a BUG.
 - [ ] T032 [P] [US3] D-FNA (001, ≤ 3 briefing calls): RSS ingestion schedule + dedup (observe two cycles), scraping
   edge cases from logs, `.BR`/`.AS` pricing, the three views, empty/error states; compare actual provider/fallback
   in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/` with the AGENTS.md routing table → mismatches logged
-- [ ] T033 [P] [US3] E-mobile (007 web side): `/api/mobile/releases/latest` authz, download-link issue as approved
+- [X] T033 [P] [US3] E-mobile (007 web side): `/api/mobile/releases/latest` authz, download-link issue as approved
   user, expiry and signature tampering on `/api/mobile/download/**`, Ntfy dispatch (observe on the ntfy topic),
   review `.github/workflows/android-release.yml`; native behavior → `NOT TESTABLE — hardware`
 - [ ] T034 [P] [US3] F-eufy: confirm no presence endpoints are exposed (`/api/**` denyAll catches them); rows already
@@ -197,7 +197,7 @@ Spectator per `/angular-test`) → fix → relevant tests only (+ `/modularity-c
 real-flow check → `gitleaks detect --redact` → conventional commit → PR → wait for `Build` + `claude-pr-review` →
 address comments → merge → T050 deploy + verify. One batch in flight at a time.
 
-- [ ] T039 [US4] Triage `docs/testing/bug-log.md`: order S1 → S4; S1s first, then T040, then S2s in already-built
+- [X] T039 [US4] Triage `docs/testing/bug-log.md`: order S1 → S4; S1s first, then T040, then S2s in already-built
   flows, then T041–T048, then S3/S4 (research R11, plan Phase 2)
 - [x] T040 [US4] Release-flow bug (branch `fix/e2e-release-flow`, research R11): add
   `.github/workflows/release.yml` (on `v*`: verify commit on `main` + green Build, retag `sha-<sha>` → `vX.Y.Z`,
@@ -258,7 +258,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 
 - [ ] T053 [US5] Track HANDOFF batch 1 (sent in T016) while continuing other areas: keep plan §7 statuses
   current (`sent → reported`), record how long each handoff took Jordy, and adjust/resend a block if a step fails
-- [ ] T054 [US5] Write HANDOFF batch 2 when needed: GitHub rulesets for `v*` tags and `main` (T040), first release
+- [X] T054 [US5] (no separate batch 2 was needed — every later handoff was sent as it arose, see plan §7) Write HANDOFF batch 2 when needed: GitHub rulesets for `v*` tags and `main` (T040), first release
   tag (T041), APK install on the Android phone after any mobile fix, any pod-restart persistence test Jordy approves
 - [X] T055 [US5] For each reported handoff, verify independently (API/UI/logs/cluster) and update plan §7 status;
   never mark PASS on report alone when a check is possible
