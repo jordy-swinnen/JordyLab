@@ -1,18 +1,15 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-04 · production `https://jordylab.be` · last release `v0.0.1-rc12` (`18e29f8`)
+2026-09-30 → 2026-10-05 · production `https://jordylab.be` · last release `v0.0.1-rc15` (`5167ca2`)
 
 ## Verdict
-Production (rc12) is healthy. Of the 20 S2 defects found, 19 are fixed, deployed and verified; the 20th (BUG-050, the app showing
-the login card after a native login) is fixed in rc10 and waits for the owner's phone re-check (HANDOFF-17). The signed-in admin
-and guest browser passes (MRB-01, MRB-02) and the EmuDeck rescan are done. What remains is hardware or approval work: the Android
-re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), and the CI secret rotation, which is done and only awaits proof from the next release (HANDOFF-19).
+Production (rc15) is healthy and every S1/S2 defect found is fixed and deployed. 21 of the 24 S1/S2 bugs are verified on prod or by a drill; the other three (BUG-050 login screen after native login, BUG-056 blank page — web verified, BUG-059 portfolio symbol resolution) wait only for the owner's check on his phone or in the portfolio. Nothing known is broken. What remains after that is the manual runbook (VPS reboot, point-in-time restore, contrast, rebuild), which the owner does last.
 
 ## What was tested
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
   compression and caching, deep links, OIDC issuer, unauthenticated API, CORS, pods, image tags, app links — all PASS on
   rc6 (re-run in the plan §6).
-- **Releases and rollback:** twelve release tags (rc1–rc12) through the tag-driven pipeline; rc6 and rc7 are the first with every job
+- **Releases and rollback:** fifteen release tags (rc1–rc15; rc12 was rolled back within minutes) through the tag-driven pipeline; rc6 and rc7 are the first with every job
   green (retag, release, deploy, publish, **APK built, signed, verified and published**). Rollback to rc5 and roll-forward
   to rc6 both succeeded (DEPLOY-11).
 - **Data durability:** base backups running; a restore drill recovered production into a scratch cluster in 1 min 55 s
@@ -26,12 +23,13 @@ re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), 
 - **Coverage matrix:** 544 rows closed — 412 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
   than `PASS`, defined in §5), 55 `FAIL-FIXED`, 63 `NOT TESTABLE`, 4 `PASS`.
 
-## Bugs: 55 found
+## Bugs: 59 found
 | Severity | Count | State |
 |----------|-------|-------|
-| S2 | 20 | 19 verified (18 on prod, 1 by the restore drill); BUG-050 deployed, phone re-check pending |
-| S3 | 22 | 9 verified on prod; 10 deployed (BUG-055 fingerprint failures/Settings → App, rc12; 4 CI-level lint/coverage gates, BUG-041 error codes CI-covered, BUG-048 live double-scan optional, BUG-051 fingerprint unlock and BUG-053 update banner awaiting the phone, BUG-054 PS3 grouping awaiting the JordyBox rescan); 3 fixed locally (tooling/test infra) |
-| S4 | 13 | 8 verified; 4 fixed locally (tooling); 1 deployed (BUG-052 app icon, awaiting the phone) |
+| S1 | 1 | BUG-056 (rc12 blank page, rolled back in minutes, fixed in rc13): web verified, phone check pending |
+| S2 | 23 | 21 verified (20 on prod, 1 by the restore drill); BUG-050 and BUG-059 deployed, owner check pending |
+| S3 | 22 | 9 verified on prod; 10 deployed (4 CI-level lint/coverage gates, BUG-041 CI-covered, BUG-048 optional live check, BUG-051/053 phone, BUG-054 rescan done — view check, BUG-055 phone); 3 fixed locally (tooling/test infra) |
+| S4 | 13 | 8 verified; 4 fixed locally (tooling); 1 deployed (BUG-052 app icon, phone) |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
 the whole release flow (tag → release → deploy → APK), APK signing verification (v1-only reader vs v2/v3-only signing),
@@ -49,7 +47,9 @@ and the EmuDeck scan cap, and two overlapping scans of one source (500 → seria
 - **Developer tooling:** fixed — `opencode.json`'s default `model` now resolves (`opencode-go/deepseek-v4.1-flash`, verified with `opencode run`).
 - **Dependabot:** done — all 20 alerts were in Angular 21.1 and nx 22.5; #72 moved them to 21.2.25 / 22.7.12 and GitHub reports 0 open (rc7). #62 (briefing markdown sanitizer) also landed.
 
-## Incident
+## Incidents
+- **rc12 blank page (BUG-056).** A change to `AuthService` needed a router in the pre-bootstrap injector; the app never started on web or phone. Detected by the owner, rolled back to rc11 in about 10 minutes, fixed in rc13 with a test that reproduces it. Process lesson: nothing booted the real start-up path in CI; a check that does is still on the list.
+- **Exposed secret.**
 On 2026-10-02 a read-only pod check I ran printed the `mobile-release-ci` client secret into the working session (the redaction filter matched on the wrong thing). Nothing was committed or pushed with it. Rotation is HANDOFF-15; the lesson is saved as a working rule (never list env values, check presence only).
 
 ## AI usage
