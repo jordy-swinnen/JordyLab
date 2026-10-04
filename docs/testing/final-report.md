@@ -49,8 +49,7 @@ and the EmuDeck scan cap, and two overlapping scans of one source (500 → seria
 
 ## Incidents
 - **rc12 blank page (BUG-056).** A change to `AuthService` needed a router in the pre-bootstrap injector; the app never started on web or phone. Detected by the owner, rolled back to rc11 in about 10 minutes, fixed in rc13 with a test that reproduces it. Process lesson: nothing booted the real start-up path in CI; a check that does is still on the list.
-- **Exposed secret.**
-On 2026-10-02 a read-only pod check I ran printed the `mobile-release-ci` client secret into the working session (the redaction filter matched on the wrong thing). Nothing was committed or pushed with it. Rotation is HANDOFF-15; the lesson is saved as a working rule (never list env values, check presence only).
+- **Exposed secret (2026-10-02).** A read-only pod check I ran printed the `mobile-release-ci` client secret into the working session (my redaction filter matched on the wrong thing). Nothing was committed or pushed with it. The secret was rotated (new value in SOPS, on the live Keycloak client and in the GitHub *repository* secret) and proven by the green `apk` job of rc14/rc15. My first rotation command targeted the environment secret instead of the repository one, which cost two failed APK jobs (BUG-057). The working rule (never list env values, check presence only) is saved.
 
 ## AI usage
 6 agent-triggered AI calls (all local; 0 on prod), well within the ≤ 30 budget. OpenRouter is now live as primary (you added
