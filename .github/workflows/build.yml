@@ -60,6 +60,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      # Nx 23 needs Node 22+; pin it instead of relying on the runner image's default (spec 012 FR-007).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Install dependencies
         working-directory: jordylab-fe
         run: bun install --frozen-lockfile
