@@ -890,7 +890,7 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
   MRB-02 (guest view, BUG-038) and check the new install dialog in a phone-sized viewport (BUG-049) myself.
 - Steps: sign in with the guest test account in the pane and tell me "guest signed in".
 
-#### HANDOFF-15: Rotate the `mobile-release-ci` client secret (it was printed in the session) — steps 1–2 done 2026-10-04 (rc12); step 3 is HANDOFF-19
+#### HANDOFF-15: Rotate the `mobile-release-ci` client secret (it was printed in the session) — done 2026-10-04 (rc12 + HANDOFF-19); verified by the next release's `apk` job
 - Machine: your Mac · Target env: prod · Why you: secrets are edited in your IntelliJ and a Keycloak client change needs your yes.
 - Context: on 2026-10-02 a pod-env check I ran printed `MOBILE_RELEASE_CI_CLIENT_SECRET` into the conversation (my redaction
   filter failed). Impact is small — that client can only obtain a `mobile-release-publisher` token, and the backend still pins the
@@ -901,7 +901,7 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
   3. Then tell me "secret deployed": I set the new value in the live Keycloak client with `kcadm` (needs your yes) and re-sync the GitHub secret from the cluster per `docs/runbook.md` §apk.
 - Expect: the next release's `apk` job logs in and publishes.
 
-#### HANDOFF-16: Apply the longer Keycloak session to the live realm
+#### HANDOFF-16: Apply the longer Keycloak session to the live realm — done 2026-10-04 (live realm prints 2592000 / 7776000)
 - Machine: your Mac (Tailscale on) · Target env: prod · Why you: a live `kcadm` write to prod Keycloak needs your own run (the agent's attempt was blocked, as for HANDOFF-06).
 - What it changes: the realm's SSO session idle timeout 30 min → 30 days and max lifespan → 90 days (access token stays 30 min and refreshes silently). No user, role or client is touched; existing sessions pick up the new idle timeout on their next refresh.
 - Steps:
@@ -928,7 +928,7 @@ python3 jordylab-scan-emudeck.py scan
 ```
 - Expect: `EMUDECK scan APPLIED` (the game set changed); in the Library the `Usrdir` chip is gone, `Ps3` became `PlayStation 3` with your 3 extracted discs (Demon's Souls, London 2012, Rayman Legends) plus the ISO-based ones. Old `Ps3`/`Usrdir` rows disappear after the 30-day grace purge.
 
-#### HANDOFF-19: Finish the secret rotation (Keycloak client + GitHub secret)
+#### HANDOFF-19: Finish the secret rotation (Keycloak client + GitHub secret) — done 2026-10-04 (`KEYCLOAK_CLIENT_UPDATED`; GitHub secret set); proven by the next release's `apk` job
 - Machine: your Mac (Tailscale on) · Target env: prod · Why you: it reads the new secret from the cluster and writes it to prod Keycloak; the agent's writes there are blocked and it must never see the value.
 - Context: rc12 deployed the new `MOBILE_RELEASE_CI_CLIENT_SECRET` to the cluster. The live Keycloak client and the GitHub `production` secret still hold the old one. Do both in one go (no release is running):
 ```bash
