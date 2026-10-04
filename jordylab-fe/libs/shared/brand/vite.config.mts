@@ -6,7 +6,7 @@ import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 
 export default defineConfig(() => ({
-  root: __dirname,
+  root: import.meta.dirname,
   cacheDir: '../../../node_modules/.vite/libs/shared/brand',
   plugins: [angular(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
   test: {
@@ -23,7 +23,10 @@ export default defineConfig(() => ({
       },
     },
     coverage: {
-      reportsDirectory: resolve(__dirname, '../../../coverage/libs/shared/brand'),
+      reportsDirectory: resolve(
+        import.meta.dirname,
+        '../../../coverage/libs/shared/brand',
+      ),
       provider: 'v8' as const,
       thresholds: {
         lines: 80,
