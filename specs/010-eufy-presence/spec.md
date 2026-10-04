@@ -28,7 +28,7 @@ in-app checklist for location 'allow all the time', notifications, battery 'not 
 and the OxygenOS optimisation toggles, warning me when an update resets them; the same advice applies to the Eufy app.
 Out of scope: other residents, camera streams/events in JordyLab, other Eufy devices, automations beyond arm/disarm,
 iOS."
-(full description in `specs/_drafts/009-eufy-presence/speckit-prompts.md` §1)
+(full description in `specs/_drafts/eufy-presence/speckit-prompts.md` §1)
 
 ---
 

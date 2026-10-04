@@ -1,20 +1,20 @@
-# 008 Deployment (self-managed k3s on an OVH VPS-2): SpecKit Prompts
+# Deployment (self-managed k3s on an OVH VPS-2): SpecKit Prompts
 
 Background is in `research.md`. `spec-draft.md` shows the expected spec, and `plan-draft.md` the expected plan shape.
 
-> **Numbering:** force 008 (the script accepts `--number 8`). Check that the folder is `specs/008-ovh-k8s-deployment`.
-> **Order:** 008 can be specified any time. Implementation phase 1 (the environment split) and phase 2 (Containerfiles) don't need a server. Go-live should come after 006 (roles/secrets). 007 needs 008 live to be tested on a real phone.
+> **Numbering:** none. SpecKit assigns the next free number when this draft is specified, so drafts can be taken in any order.
+> **Order:** deployment can be specified any time. Implementation phase 1 (the environment split) and phase 2 (Containerfiles) don't need a server. Go-live should come after Settings (roles/secrets). The mobile app needs deployment live to be tested on a real phone.
 
 ---
 
 ## 1. `/speckit-specify`
 
 ```
-Use feature number 008 (short name: ovh-k8s-deployment).
+Short name: ovh-k8s-deployment.
 
-Make JordyLab production-ready and deployed on a self-managed single-node k3s Kubernetes cluster running on one OVH VPS-2 (4 vCores / 8 GB RAM / 75 GB NVMe), reachable on one public HTTPS domain (bought at OVHcloud) for the web app, the 007 mobile app and the JordyBox game-catalog scanner. OVH Managed Kubernetes was considered and rejected on cost (MKS nodes + a separately billed load balancer ≈ €40–55/month vs ≈ €8.50–13 for k3s on a VPS-2); keep that reasoning in research.md.
+Make JordyLab production-ready and deployed on a self-managed single-node k3s Kubernetes cluster running on one OVH VPS-2 (4 vCores / 8 GB RAM / 75 GB NVMe), reachable on one public HTTPS domain (bought at OVHcloud) for the web app, the mobile app mobile app and the JordyBox game-catalog scanner. OVH Managed Kubernetes was considered and rejected on cost (MKS nodes + a separately billed load balancer ≈ €40–55/month vs ≈ €8.50–13 for k3s on a VPS-2); keep that reasoning in research.md.
 
-WHY: friends (spec 006 guests) and my phone (spec 007) need JordyLab on the internet. Today it only runs locally (Podman compose for Postgres + Keycloak, backend from the IDE, frontend via nx serve), there are no container images, and local defaults (localhost URLs, dev Keycloak) are mixed into the shared config.
+WHY: friends (the Settings spec guests) and my phone (the mobile app spec) need JordyLab on the internet. Today it only runs locally (Podman compose for Postgres + Keycloak, backend from the IDE, frontend via nx serve), there are no container images, and local defaults (localhost URLs, dev Keycloak) are mixed into the shared config.
 
 ENVIRONMENTS: exactly two — local and prod. Nothing else. Shared config holds no hosts, origins or credentials; the app refuses to start without one of the two profiles. One document lists every setting that differs and where its value comes from. Local keeps Podman + compose + a gitignored .env.
 
@@ -38,7 +38,7 @@ Out of scope: staging/other environments, multi-node high availability, autoscal
 ---
 
 ## 2. `/speckit-clarify`: expected questions and suggested answers
-1. Ntfy for 007 notifications → deploy ntfy in the cluster (tiny).
+1. Ntfy for mobile app notifications → deploy ntfy in the cluster (tiny).
 2. Backup retention → 7 daily + 4 weekly, plus a restore drill before go-live and then quarterly.
 3. Deploy trigger → build on every push to `main`; deploy only on manual approval.
 4. VPS datacenter → the closest EU location offered at checkout, ideally the same region as the Object Storage bucket.
@@ -51,7 +51,7 @@ Out of scope: staging/other environments, multi-node high availability, autoscal
 ## 3. `/speckit-plan`
 
 ```
-Tech context for 008 (read AGENTS.md, the constitution, and specs/_drafts/008-deployment/research.md + plan-draft.md first; carry their findings into this feature's research.md; verify every version, Helm value and YAML field against live docs before committing — report instead of guessing on mismatches):
+Tech context for deployment (read AGENTS.md, the constitution, and specs/_drafts/deployment/research.md + plan-draft.md first; carry their findings into this feature's research.md; verify every version, Helm value and YAML field against live docs before committing — report instead of guessing on mismatches):
 
 - Follow the repo layout and phase order in plan-draft.md (deploy/containers, deploy/host, deploy/k8s/{base,overlays/prod,cluster}, deploy/keycloak/realm-prod.json, .sops.yaml, docs/learn, docs/runbook.md, docs/environments.md, .github/workflows/{build,deploy-prod}.yml).
 - Backend: Spring profiles `local` and `prod`; move all localhost/dev values out of application.yaml into application-local.yaml; application-prod.yaml driven by env vars; enable actuator readiness/liveness probe groups; forward-headers behind Traefik; fail fast when no valid profile is active (test it). Artwork dir on a PVC (storageClassName local-path); Deployment replicas 1 with Recreate.
@@ -65,7 +65,7 @@ Tech context for 008 (read AGENTS.md, the constitution, and specs/_drafts/008-de
 - CI: build.yml (tests, gitleaks secret scan, build 3 images linux/amd64, push to ghcr.io/jordy-swinnen/jordylab-* tagged with SHA). deploy-prod.yml (GitHub Environment `production` with me as required reviewer; namespace-scoped ServiceAccount token as the only cluster credential — never the k3s admin kubeconfig; API access method per clarify; SOPS decrypt step; kustomize edit set image; kubectl apply -k; rollout status; documented rollback).
 - Docs: the learning guide chapters and exercises listed in plan-draft.md, written for someone with basic k8s and no Podman experience, each concept linked to the real file; the runbook with exact commands (Fish-shell compatible — no bash heredocs); AGENTS.md infra section rewritten.
 - Licensing (do this first — it's a small standalone commit): root LICENSE "all rights reserved, viewing only" replacing the 4 MIT files; package.json `"license": "UNLICENSED"` and matching Gradle/pyproject metadata; README licence section; OCI label org.opencontainers.image.licenses on all images; CI grep check against MIT. Don't touch third-party licence files. Show me the LICENSE text for approval before committing.
-- Include 006/007 hooks: secrets for OPENROUTER_API_KEY and the Keycloak service-account client secret; CORS for https://localhost; assetlinks.json route; APK storage.
+- Include Settings/mobile app hooks: secrets for OPENROUTER_API_KEY and the Keycloak service-account client secret; CORS for https://localhost; assetlinks.json route; APK storage.
 
 Stop and report before: anything that creates billable OVH resources, running commands on the VPS, changing DNS, generating/storing any key or credential. I run those steps myself from the runbook.
 ```

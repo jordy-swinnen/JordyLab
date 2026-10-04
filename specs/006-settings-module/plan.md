@@ -3,7 +3,7 @@
 **Branch**: `006-settings-module` | **Date**: 2026-09-27 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/006-settings-module/spec.md`; tech context from
-`specs/_drafts/006-settings/speckit-prompts.md` §3, verified against the live codebase and vendor docs
+`specs/_drafts/settings/speckit-prompts.md` §3, verified against the live codebase and vendor docs
 in [research.md](research.md) (decisions D1–D12).
 
 ## Summary

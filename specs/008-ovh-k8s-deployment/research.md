@@ -1,8 +1,8 @@
 # Research: Production Deployment on Self-Managed k3s (OVH VPS)
 
-Date: 2026-09-28. Builds on `specs/_drafts/008-deployment/research.md` (the cost/architecture case for k3s over
+Date: 2026-09-28. Builds on `specs/_drafts/deployment/research.md` (the cost/architecture case for k3s over
 OVH MKS, sizing rationale, and the open questions later resolved in `/speckit-clarify`) and
-`specs/_drafts/008-deployment/plan-draft.md` (the intended repo layout and phase order). Every version and field
+`specs/_drafts/deployment/plan-draft.md` (the intended repo layout and phase order). Every version and field
 below was checked against live sources on 2026-09-28 by two research passes; items sourced from a search-cache
 rather than a direct fetch (because `docs.k3s.io`, `doc.traefik.io`, `cert-manager.io`, `keycloak.org`, `nx.dev` and
 `quay.io` were blocked by this session's egress proxy) are marked **(cache)** and should get one direct doc check
@@ -14,7 +14,7 @@ before the corresponding manifests are written in `/speckit-implement`.
 via the official install script with `INSTALL_K3S_VERSION` pinned (never track `stable` unpinned, so upgrades are a
 deliberate runbook step).
 
-**Rationale**: Matches `specs/_drafts/008-deployment/research.md`'s decision to self-host k3s instead of OVH MKS
+**Rationale**: Matches `specs/_drafts/deployment/research.md`'s decision to self-host k3s instead of OVH MKS
 (≈€8.50–13/mo vs ≈€40–55/mo — see that file for the full cost breakdown, unchanged by this plan). Pinning avoids an
 unplanned control-plane upgrade during a routine `k3s` restart.
 
@@ -64,7 +64,7 @@ not an Ingress.
 
 ## 4. Exposure: k3s ServiceLB (no cloud load balancer)
 
-**Decision**: Unchanged from `specs/_drafts/008-deployment/research.md` — k3s's built-in ServiceLB (Klipper) binds
+**Decision**: Unchanged from `specs/_drafts/deployment/research.md` — k3s's built-in ServiceLB (Klipper) binds
 the Traefik Service's ports 80/443 as hostPorts on the VPS's own public IPv4. No OVH Load Balancer product.
 
 **Rationale**: Confirmed by the k3s architecture research above; this is what makes the ≈€8.50–13/mo cost work
@@ -216,7 +216,7 @@ Nx-managed Angular 21 app via the `@nx/angular:application` executor. Search-cor
 fetch (proxy-blocked) — low risk, since this is an existing, already-working command in the repo today, not a new
 one being introduced.
 
-## Carried-forward decisions (unchanged from `specs/_drafts/008-deployment/research.md`)
+## Carried-forward decisions (unchanged from `specs/_drafts/deployment/research.md`)
 
 These were already researched and are not re-litigated here; see that file for full detail:
 - **k3s on a VPS-2 instead of OVH MKS** — cost (§2 of that file: ≈€8.50–13/mo vs ≈€40–55/mo) and sizing (§3: why

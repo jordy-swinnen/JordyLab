@@ -1,4 +1,4 @@
-# 010 Plan Draft: How We'll Build It
+# Plan Draft: How We'll Build It
 
 A reference for `/speckit-plan`. Every library, gateway endpoint and Android API must be checked against live docs and
 the real hardware during the spike and plan.
@@ -6,14 +6,14 @@ the real hardware during the spike and plan.
 ## 1. Architecture
 
 ```
-OnePlus (JordyLab Android app, 007)
+OnePlus (JordyLab Android app, mobile app)
  ├─ Custom Capacitor plugin (Kotlin): GeofencingClient + Wi-Fi NetworkCallback
  │    └─ BroadcastReceiver → WorkManager → POST /api/presence/events  (signed with ARM key, no biometric)
  ├─ Local notification "Disarm Eufy?" → tap → BiometricPrompt → sign with DISARM key
  │    └─ POST /api/presence/disarm  (signed, nonce + timestamp)
  └─ Quick Settings tile: Arm (Away) / Home (Home needs biometric)
 
-k3s (008)                                  internal only, NetworkPolicy: backend → gateway
+k3s (deployment)                                  internal only, NetworkPolicy: backend → gateway
  backend: module `presence` ──────────────► eufy-gateway (eufy-mega-security, Node) ──► Eufy cloud (Mega) / PPCS ──► HomeBase 2
    state machine, debounce, audit log         bearer token (SOPS), guest Eufy account,
    GuardModePort → EufyGatewayAdapter         session cache on a PVC
@@ -44,7 +44,7 @@ WireGuard. The adapter only needs its URL to change.
         - `GET /api/presence/status` (real Eufy mode + recent events)
     - Signature verification: Android Keystore keys are EC P-256 (ECDSA). Store nonces for replay protection.
     - Audit logging and Micrometer counters (arm success/fail, latency).
-2. **Gateway deployment (008 cluster):** Deployment + ClusterIP Service (no HTTPRoute), a PVC for the session cache, the
+2. **Gateway deployment (deployment cluster):** Deployment + ClusterIP Service (no HTTPRoute), a PVC for the session cache, the
    token and Eufy guest credentials in `secrets.sops.yaml`, a NetworkPolicy allowing only backend pods (verify that
    k3s's bundled network policy controller enforces it), and resource limits.
 3. **Android plugin (Kotlin) in `apps/jordylab-mobile/android`:**

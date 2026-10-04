@@ -1,6 +1,6 @@
-# 006 Settings Module: Research & Sanity Check
+# Settings Module: Research & Sanity Check
 
-Date: 2026-09-27. Checked against the repo on branch `004-gamecatalog-refinements` and the live vendor docs.
+Date: 2026-09-27. Checked against the repo on the catalog refinements branch and the live vendor docs.
 
 ## TL;DR
 
@@ -85,7 +85,7 @@ What's needed:
 ## 4. Open questions for `/speckit-clarify`
 1. Guest chat budget: how many chat messages per guest per day? (Draft: 30/day, admin exempt.)
 2. Rejecting a sign-up: delete the Keycloak account, or disable it so the email can't sign up again? (Draft: delete.)
-3. Should a new sign-up notify you by Ntfy push? You already run Ntfy. (Draft: yes, P3.)
+3. Should a new sign-up notify you by Ntfy push? You already run Ntfy. (Draft: yes, low priority.)
 4. Settings-module name: `settings` (draft) or `config`?
 
 ## Sources

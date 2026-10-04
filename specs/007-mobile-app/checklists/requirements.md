@@ -43,7 +43,7 @@
   distribution model (sideloaded APK, no Play Store, no native iOS build), not an internal implementation
   choice. Specific plugins, libraries, and code structure (e.g. which biometric or share-target plugin,
   the Keycloak adapter approach, Nx app layout) are deliberately left out of the spec and live in
-  `specs/_drafts/007-mobile-app/research.md` and the plan artifacts.
+  `specs/_drafts/mobile-app/research.md` and the plan artifacts.
 - Depends on spec 006 (admin/guest roles, approval/revocation) and on spec 008, a public HTTPS production
   deployment that does not yet exist — recorded under Assumptions and in the header's **Depends On** line.
   007 can be specified and planned now but cannot be validated end-to-end on a real device until 008 ships.

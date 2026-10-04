@@ -35,9 +35,9 @@
   deliberate exception**, not an oversight. This feature *is* an infrastructure deployment, and the specific
   technology choices (self-managed k3s vs. OVH Managed Kubernetes, k3s's bundled Traefik/ServiceLB/local-path,
   CloudNativePG, SOPS + age, GHCR, GitHub Actions) are themselves the already-researched, already-decided scope of
-  the feature — see `specs/_drafts/008-deployment/research.md` — not incidental implementation choices to defer to
+  the feature — see `specs/_drafts/deployment/research.md` — not incidental implementation choices to defer to
   planning. Deeper implementation detail (directory layout, exact Helm/Kustomize values, Spring profile wiring) was
-  intentionally left out of this spec and belongs in `specs/_drafts/008-deployment/plan-draft.md` for
+  intentionally left out of this spec and belongs in `specs/_drafts/deployment/plan-draft.md` for
   `/speckit-plan`. The sole "user" of this feature is Jordy himself operating his own infrastructure, so
   "non-technical stakeholders" does not apply in the usual sense.
 - **`/speckit-clarify` ran on 2026-09-28** and resolved 5 of the original 6 open questions from `research.md`: CI's

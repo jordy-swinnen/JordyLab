@@ -1,10 +1,10 @@
 # Feature Specification: Nintendo Switch Games in the Game Catalog (manual)
 
-**Feature Branch**: `009-switch-games`
+**Feature Branch**: assigned by SpecKit when specified
 **Created**: 2026-09-28
 **Status**: Draft (reference for `/speckit-specify`; see `research.md`)
 **Module**: `gamecatalog`
-**Builds on**: 004 (multi-host model, artwork slots, metadata), 005 (library sources, "link, don't rebuild"), 006 (
+**Builds on**: catalog refinements (multi-host model, artwork slots, metadata), Steam sync (library sources, "link, don't rebuild"), Settings (
 admin/guest roles)
 
 ---
@@ -20,7 +20,7 @@ Switch game behaves like every other game: grid, detail page, filters, AI descri
 
 ## User Scenarios & Testing
 
-### User Story 1: Add a Switch game by searching (Priority: P1)
+### User Story: Add a Switch game by searching (Priority: High)
 
 As the admin, I want to type a few letters of a Switch game, pick it from the results and add it, so that it appears in
 my catalog with proper artwork and details in seconds.
@@ -41,7 +41,7 @@ local-multiplayer info.
 4. **Given** the game is already in the catalog (same Switch game), **When** the admin tries to add it again, **Then**
    they're told it's already there, and no duplicate is created.
 
-### User Story 2: Add a game the search can't find (Priority: P2)
+### User Story: Add a game the search can't find (Priority: Medium)
 
 **Acceptance Scenarios**:
 
@@ -50,7 +50,7 @@ local-multiplayer info.
 2. **Given** a manually entered game, **When** the admin later searches and links it to a match, **Then** metadata and
    artwork are filled in without creating a second game.
 
-### User Story 3: Add many games at once (Priority: P2)
+### User Story: Add many games at once (Priority: Medium)
 
 As the admin, I want to paste a list of titles (e.g. copied from the Nintendo Store app's Play Activity or my eShop
 purchase history), so that I don't have to add 40 games one by one.
@@ -63,7 +63,7 @@ purchase history), so that I don't have to add 40 games one by one.
    or for all), and confirms, **Then** only the ticked games are added, with a summary (added / skipped / already
    present).
 
-### User Story 4: Switch games behave like any other game (Priority: P1)
+### User Story: Switch games behave like any other game (Priority: High)
 
 **Acceptance Scenarios**:
 
@@ -76,7 +76,7 @@ purchase history), so that I don't have to add 40 games one by one.
 4. **Given** a scan or library sync runs, **When** it finishes, **Then** Switch games are never removed or renamed by
    it.
 
-### User Story 5: Edit and remove (Priority: P2)
+### User Story: Edit and remove (Priority: Medium)
 
 **Acceptance Scenarios**:
 
@@ -89,9 +89,9 @@ purchase history), so that I don't have to add 40 games one by one.
 
 ### Edge Cases
 
-- The search service is unavailable or unconfigured: the admin can still add manually (US2), with a clear message.
+- The search service is unavailable or unconfigured: the admin can still add manually (the add-a-game-the-search-cannot-find story), with a clear message.
 - The same game exists as an EmuDeck Switch
-  ROM: [NEEDS CLARIFICATION: link to the existing game (005 "link, don't rebuild") or keep separate].
+  ROM: [NEEDS CLARIFICATION: link to the existing game (Steam sync "link, don't rebuild") or keep separate].
 - A Switch 1 game played on a Switch 2: its platform stays "Nintendo Switch".
 - Regional title differences (e.g. EU vs US names): the search matches alternative names, and the title shown is the one
   the admin picked.
@@ -105,29 +105,29 @@ purchase history), so that I don't have to add 40 games one by one.
 
 ### Functional
 
-- **FR-001**: The admin MUST be able to search Switch and Switch 2 games by title and add one as owned, choosing
+- The admin MUST be able to search Switch and Switch 2 games by title and add one as owned, choosing
   physical or digital.
-- **FR-002**: Adding a searched game MUST fill title, platform, cover, banner, genres, developer, publisher, release
+- Adding a searched game MUST fill title, platform, cover, banner, genres, developer, publisher, release
   year and local-multiplayer facts from the search source, using the existing metadata/artwork/multiplayer pipelines.
-- **FR-003**: A Switch game MUST be uniquely identified (per platform and search-source ID, or by platform + normalised
+- A Switch game MUST be uniquely identified (per platform and search-source ID, or by platform + normalised
   title for manual entries). Adding an existing one MUST NOT create a duplicate.
-- **FR-004**: The admin MUST be able to add a game manually when search has no match, and link it to a match later.
-- **FR-005**: The admin MUST be able to paste a list of titles, review the proposed matches, and add the confirmed ones
+- The admin MUST be able to add a game manually when search has no match, and link it to a match later.
+- The admin MUST be able to paste a list of titles, review the proposed matches, and add the confirmed ones
   in one action.
-- **FR-006**: Switch games MUST appear in all catalog views, filters and chat like other games, and MUST be filterable
+- Switch games MUST appear in all catalog views, filters and chat like other games, and MUST be filterable
   by platform and library source.
-- **FR-007**: Manually added titles MUST NOT be renamed or removed by scans, library syncs or grace-period purges. Only
+- Manually added titles MUST NOT be renamed or removed by scans, library syncs or grace-period purges. Only
   the admin removes them.
-- **FR-008**: The AI description MUST be generated once per new game and MUST NOT be regenerated for edits to personal
+- The AI description MUST be generated once per new game and MUST NOT be regenerated for edits to personal
   fields.
-- **FR-009**: Add, edit and remove MUST be admin-only (006 roles). Guests have read and chat access only.
-- **FR-010**: No Nintendo account, login or credential is used or stored.
+- Add, edit and remove MUST be admin-only (Settings roles). Guests have read and chat access only.
+- No Nintendo account, login or credential is used or stored.
 
 ### Key Entities
 
 - **Game** (existing): gains platform values "Nintendo Switch" / "Nintendo Switch 2", and an external search-source ID
   for Switch games.
-- **Library entry** (existing, 005): Switch games are owned entries marked as manually added, with a **format** (
+- **Library entry** (existing, Steam sync): Switch games are owned entries marked as manually added, with a **format** (
   physical/digital).
 - **Bulk add review** (transient): pasted line, proposed match, status (match / no match / already present / needs
   review), include flag.
@@ -136,13 +136,13 @@ purchase history), so that I don't have to add 40 games one by one.
 
 ## Success Criteria
 
-- **SC-001**: Adding one Switch game via search takes under 30 seconds.
-- **SC-002**: A pasted list of 40 titles is reviewed and added in under 5 minutes, with ≥ 90% correct first matches for
+- Adding one Switch game via search takes under 30 seconds.
+- A pasted list of 40 titles is reviewed and added in under 5 minutes, with ≥ 90% correct first matches for
   official titles.
-- **SC-003**: 100% of added Switch games show a cover (or the placeholder when none exists), and appear under the Switch
+- 100% of added Switch games show a cover (or the placeholder when none exists), and appear under the Switch
   platform filter.
-- **SC-004**: Re-adding or re-pasting an existing game never creates a duplicate (automated test).
-- **SC-005**: No scan, sync or purge ever changes or removes a manually added game (automated test).
+- Re-adding or re-pasting an existing game never creates a duplicate (automated test).
+- No scan, sync or purge ever changes or removes a manually added game (automated test).
 
 ---
 

@@ -42,5 +42,5 @@
   quotes the description verbatim (which mentions the backend module structure) — it is a record of
   what was asked, not spec prose.
 - Implementation-heavy material (Spring Modulith wiring, Flyway schema, the Keycloak Admin API
-  client choice, route patterns, model-catalog caching) lives in `specs/_drafts/006-settings/research.md`
+  client choice, route patterns, model-catalog caching) lives in `specs/_drafts/settings/research.md`
   and the plan artifacts, not in this spec.

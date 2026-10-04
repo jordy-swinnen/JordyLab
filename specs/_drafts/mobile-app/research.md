@@ -1,4 +1,4 @@
-# 007 Mobile App: Research & Sanity Check
+# Mobile App: Research & Sanity Check
 
 Date: 2026-09-27. Checked against the `jordylab-fe` repo state and the live vendor docs.
 
@@ -6,7 +6,7 @@ Date: 2026-09-27. Checked against the `jordylab-fe` repo state and the live vend
 - Framework: **Capacitor** (current stable **v8**; v9 is in pre-release).
 - Native features wanted: **push notifications, biometric unlock, share to JordyLab**.
 - Web UI updates: **bundled in the APK**. CI builds a signed APK per release, and the app prompts to update.
-- APK download: **approved users only** (admin + guest from spec 006).
+- APK download: **approved users only** (admin + guest from the Settings spec).
 - iPhone: **PWA "Add to Home Screen"** only. No native iOS build.
 
 ## TL;DR: sanity check
@@ -56,12 +56,12 @@ Inside the app, the page origin is `https://localhost` (Capacitor's default `and
 | **B. FCM** (`@capacitor/push-notifications`) | Firebase project, `google-services.json`, backend sends through the FCM HTTP v1 API | Standard, works for friends out of the box | Google dependency (conflicts with your de-Googled goals); doesn't work on de-Googled phones |
 | **C. UnifiedPush plugin (own)** | Write a small Capacitor plugin around the UnifiedPush Android connector. Ntfy acts as the distributor | Google-free, native in-app push | Custom native Kotlin work. Users still need a distributor app (ntfy) |
 
-Which notifications? The candidates found so far are admin-only: "FNA briefing ready" and "new sign-up pending" (spec 006). Guests have no notification use case yet. **Suggestion: A for now.** It meets the need with near-zero app code, and B or C can follow once guests need pushes.
+Which notifications? The candidates found so far are admin-only: "FNA briefing ready" and "new sign-up pending" (the Settings spec). Guests have no notification use case yet. **Suggestion: A for now.** It meets the need with near-zero app code, and B or C can follow once guests need pushes.
 
 ## 5. Biometric unlock
 - Plugin: `@capgo/capacitor-native-biometric` (maintained for Capacitor 8; stores credentials in the Android Keystore behind a biometric prompt). Alternative: `@aparajita/capacitor-biometric-auth`.
 - Pattern: after the first login, store a **Keycloak offline token** (`offline_access` scope) behind biometrics. Opening the app → fingerprint → refresh → access token. Without an offline token, Keycloak's default SSO session (30 min idle / 10 h max) would force a password login most days.
-- Realm changes: allow `offline_access` for `jordylab-mobile` and set an offline-session idle time (the Keycloak default is 30 days). Logout and revoke (spec 006) must also revoke offline sessions.
+- Realm changes: allow `offline_access` for `jordylab-mobile` and set an offline-session idle time (the Keycloak default is 30 days). Logout and revoke (the Settings spec) must also revoke offline sessions.
 
 ## 6. Share to JordyLab
 - Plugin: `@capgo/capacitor-share-target` (releases 8.0.x, Capacitor 8) or Capawesome's Share Target. It registers an Android `ACTION_SEND` intent filter for text/URLs.
@@ -76,8 +76,8 @@ Which notifications? The candidates found so far are admin-only: "FNA briefing r
 - There is no frontend Dockerfile and no build CI yet. The APK pipeline is the first frontend build workflow.
 
 ## 8. Dependencies on other specs
-- **006 Settings/Users:** the `admin`/`guest` roles and approved-only access are needed for the gated APK download and role-based share destinations.
-- **Production deployment (OVHcloud):** a public HTTPS domain is required for API calls from the phone, the Keycloak redirect, App Links (`assetlinks.json`) and the APK download. Not in scope of 007, but a prerequisite for testing on a real phone outside the LAN.
+- **Settings/Users:** the `admin`/`guest` roles and approved-only access are needed for the gated APK download and role-based share destinations.
+- **Production deployment (OVHcloud):** a public HTTPS domain is required for API calls from the phone, the Keycloak redirect, App Links (`assetlinks.json`) and the APK download. Not in scope of mobile app, but a prerequisite for testing on a real phone outside the LAN.
 
 ## Sources
 - [Capacitor docs](https://capacitorjs.com/docs) · [Environment setup](https://capacitorjs.com/docs/getting-started/environment-setup) · [Config (`server.url` "not intended for production")](https://capacitorjs.com/docs/config) · [Push Notifications plugin](https://capacitorjs.com/docs/apis/push-notifications)

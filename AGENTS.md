@@ -40,6 +40,7 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 
 - After implementing a feature or fix, immediately run relevant tests to verify only the changed code works — no full test suite runs unless explicitly requested.
 - After completing a plan or task, always test the end-to-end flow of the features built or changed. Test only the scope that was touched — avoid full-suite integration tests unless the change warrants it.
+- Drafts live in `specs/_drafts/<short-name>/` and carry **no numbers or codes** — not in folder names, titles, requirement or priority labels (use High/Medium/Low), and no references to other features by number. Drafts are written in any order; SpecKit assigns the spec number when a draft is specified. Name other features by what they are.
 
 ## Commits
 

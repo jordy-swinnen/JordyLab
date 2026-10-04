@@ -30,7 +30,7 @@ and upgrades. The four existing MIT licence files are replaced with one root all
 go-live. The VPS is self-hardened (SSH key-only, automatic updates, minimal firewall). Target cost ≤ ~€13/month
 excl. AI usage. Out of scope: staging, multi-node HA, autoscaling, MKS, managed secret stores, Terraform, central
 logging/metrics, and the garmin-sync-service." (full description in
-`specs/_drafts/008-deployment/speckit-prompts.md` §1)
+`specs/_drafts/deployment/speckit-prompts.md` §1)
 
 ---
 
