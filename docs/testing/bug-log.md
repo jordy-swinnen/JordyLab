@@ -815,7 +815,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-053: The app only learns about a new release after being backgrounded — the update check runs before login
-- Status: FIXED locally — release pending (`fix/mobile-update-check-after-login`)
+- Status: DEPLOYED in `v0.0.1-rc11` (PR #84) — phone check: after rc12+ is published, opening the app and signing in shows the Update banner (HANDOFF-17)
 - Severity: S3
 - Area/spec: mobile / 007 US3
 - Env found: code review while answering "how do I update the app?" (2026-10-04)
@@ -830,7 +830,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-054: Extracted PS3 games show up as dozens of "EBOOT"/data-file games on platform "Usrdir"; PS3 is labelled "Ps3"
-- Status: FIXED locally — release pending (`fix/scanner-ps3-folders`); needs a client download + rescan on JordyBox
+- Status: DEPLOYED in `v0.0.1-rc11` (PR #85) — needs a client re-download + EmuDeck rescan on JordyBox (HANDOFF-18)
 - Severity: S3
 - Area/spec: gamecatalog / 003
 - Env found: prod catalog (platform chips `Ps3` and `Usrdir`, 2026-10-02); layout confirmed by the owner's `ls ~/Emulation/roms/ps3` (2026-10-04)
