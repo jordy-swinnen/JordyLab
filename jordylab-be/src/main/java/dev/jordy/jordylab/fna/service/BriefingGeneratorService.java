@@ -62,7 +62,7 @@ public class BriefingGeneratorService {
         String userPrompt = "Recent financial news:\n" + articleContext
                 + "\n\nMy portfolio:\n" + portfolioContext
                 + "\n\nAnalyse how the recent news affects my portfolio positions, summarise the broader European market themes, "
-                + "and suggest one ticker I don't currently hold that looks interesting based on today's news.";
+                + "and suggest one ticker I don't currently hold that looks interesting based on the recent news.";
 
         AiCallResult result = aiService.call(AiFeature.FNA_BRIEFING, systemPrompt, userPrompt);
 
