@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +40,9 @@ class FnaServiceTest {
 
     @Mock
     private BriefingGeneratorService briefingGeneratorService;
+
+    @Mock
+    private StockPriceService stockPriceService;
 
     @InjectMocks
     private FnaService fnaService;
@@ -70,6 +74,7 @@ class FnaServiceTest {
 
         PortfolioPositionDto result = fnaService.upsertPosition("ACKB.BR", BigDecimal.valueOf(25));
 
+        verify(stockPriceService).refresh(captor.getValue());
         assertSoftly(softly -> {
             softly.assertThat(captor.getValue().getTicker()).isEqualTo("ACKB.BR");
             softly.assertThat(captor.getValue().getShareCount()).isEqualByComparingTo(BigDecimal.valueOf(25));
@@ -143,5 +148,16 @@ class FnaServiceTest {
 
         assertThatThrownBy(() -> fnaService.triggerBriefing())
                 .isInstanceOf(BriefingGenerationException.class);
+    }
+
+    @Test
+    void upsertPositionNormalisesWhatTheUserTyped() {
+        when(positionRepository.findByTicker("BTC")).thenReturn(Optional.empty());
+        ArgumentCaptor<PortfolioPosition> captor = ArgumentCaptor.forClass(PortfolioPosition.class);
+        when(positionRepository.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        fnaService.upsertPosition("  btc ", new BigDecimal("0.002106"));
+
+        assertThat(captor.getValue().getTicker()).isEqualTo("BTC");
     }
 }

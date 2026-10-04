@@ -29,11 +29,18 @@ public class PortfolioPosition extends BaseEntity<PortfolioPosition> {
 
     private BigDecimal lastPrice;
 
+    /** The Yahoo symbol this position is priced with; may differ from the ticker the user typed. */
+    private String priceSymbol;
+
     private Instant lastPriceFetchedAt;
 
     public void updateShareCount(BigDecimal newShareCount) {
         Preconditions.checkArgument(newShareCount != null, "shareCount must not be null");
         this.shareCount = newShareCount;
+    }
+
+    public void updatePriceSymbol(String newPriceSymbol) {
+        this.priceSymbol = newPriceSymbol;
     }
 
     public void updateLastPrice(BigDecimal newLastPrice, Instant fetchedAt) {
@@ -47,7 +54,7 @@ public class PortfolioPosition extends BaseEntity<PortfolioPosition> {
             Preconditions.checkArgument(shareCount != null, "shareCount is required");
             if (id == null) id = UUID.randomUUID();
 
-            return new PortfolioPosition(id, ticker, shareCount, lastPrice, lastPriceFetchedAt);
+            return new PortfolioPosition(id, ticker, shareCount, lastPrice, priceSymbol, lastPriceFetchedAt);
         }
     }
 }

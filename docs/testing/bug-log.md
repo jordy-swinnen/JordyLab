@@ -907,3 +907,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `FnaRepositoryTest.shareCountKeepsTheDigitsOfASmallCryptoPosition` (fails with `0.0021` without the migration), `portfolio-manager.component.spec.ts` (digits shown, value €160.73, `step=any`)
 - Verified on prod:
 
+### BUG-059: A position needs the exact Yahoo symbol (BTC-EUR, MEUD.PA) to get a value
+- Status: FIXED locally — release pending (`feat/portfolio-resolve-symbols`; contains a Flyway migration)
+- Severity: S2
+- Area/spec: fna / 001 (portfolio)
+- Env found: prod, the owner replacing the `BTC` row (2026-10-05)
+- Coverage rows: 001-US (portfolio manager)
+- Steps to reproduce:
+  1. Add `BTC` (or `MEUD`) with its shares; or add `BTC-EUR` and wait.
+- Expected (cite spec/story): typing the plain name is enough; the position is valued in euro.
+- Actual (logs/screenshot, secrets redacted): `BTC` is valued with a US-dollar ETF (€0.08); the exact `BTC-EUR` is right but shows no value until the half-hourly refresh.
+- Root cause: prices were fetched for the symbol exactly as typed and only by a 30-minute job; nothing knew that the same letters mean different instruments on different markets.
+- Fix (PR / commit / tag): `StockPriceService.resolve` tries crypto (`-EUR`) and European listings (`.PA .AS .BR .DE .MI`) for a plain name, takes the first quoted in EUR, falls back to the plain symbol converted to EUR (USD, GBP and pence handled), and the position remembers the resolved symbol (`price_symbol`, migration `V20261005001`); adding a position prices it immediately; typed names are trimmed and upper-cased; exact symbols (with `.`, `-`, `^`, `=`) are used as typed.
+- Regression test added: `StockPriceServiceTest` (BTC → BTC-EUR, MEUD → MEUD.PA, exact symbol as typed, USD and pence conversion, no match, resolve-once-then-reuse), `FnaServiceTest` (upsert prices at once, normalises input)
+- Verified on prod:
+

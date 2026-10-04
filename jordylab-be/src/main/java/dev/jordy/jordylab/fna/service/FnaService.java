@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,6 +25,7 @@ public class FnaService {
     private final PortfolioPositionRepository positionRepository;
     private final BriefingRepository briefingRepository;
     private final BriefingGeneratorService briefingGeneratorService;
+    private final StockPriceService stockPriceService;
 
     public List<ArticleSummaryDto> getRecentArticles() {
         return articleRepository.findTop50ByOrderByPublishedAtDesc().stream()
@@ -43,7 +45,8 @@ public class FnaService {
                 .toList();
     }
 
-    public PortfolioPositionDto upsertPosition(String ticker, BigDecimal shareCount) {
+    public PortfolioPositionDto upsertPosition(String typedTicker, BigDecimal shareCount) {
+        String ticker = typedTicker.trim().toUpperCase(Locale.ROOT);
         PortfolioPosition position = positionRepository.findByTicker(ticker)
                 .map(existing -> {
                     existing.updateShareCount(shareCount);
@@ -56,6 +59,9 @@ public class FnaService {
                         .build());
 
         PortfolioPosition saved = positionRepository.save(position);
+        // Price it right away (resolving BTC -> BTC-EUR, MEUD -> MEUD.PA) so the value shows without waiting for the
+        // half-hourly refresh.
+        stockPriceService.refresh(saved);
 
         return toPositionDto(saved);
     }
