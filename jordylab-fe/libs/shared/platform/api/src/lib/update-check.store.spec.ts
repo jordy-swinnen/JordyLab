@@ -69,4 +69,22 @@ describe('UpdateCheckStore', () => {
 
     expect(spectator.service.latest()).toEqual(RESPONSE);
   });
+
+  it('swallows a failed check (offline or signed out) and keeps the previous result', async () => {
+    create(true);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const checkPromise = spectator.service.checkForUpdate();
+    await Promise.resolve();
+    await Promise.resolve();
+    httpMock.expectOne((request) => request.url === '/api/mobile/releases/latest').flush('no', {
+      status: 401,
+      statusText: 'Unauthorized',
+    });
+    await checkPromise;
+
+    expect(spectator.service.latest()).toBeNull();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
 });

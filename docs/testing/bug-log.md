@@ -814,3 +814,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: none because Android resources; verified by the release `apk` job building and by the owner's phone
 - Verified on prod:
 
+### BUG-053: The app only learns about a new release after being backgrounded — the update check runs before login
+- Status: FIXED locally — release pending (`fix/mobile-update-check-after-login`)
+- Severity: S3
+- Area/spec: mobile / 007 US3
+- Env found: code review while answering "how do I update the app?" (2026-10-04)
+- Coverage rows: 007-US3, 007-FR-011
+- Steps to reproduce:
+  1. Release a newer APK; open the installed app from scratch and sign in.
+- Expected (cite spec/story): 007 FR-011 — the app checks for a newer release on start and resume and offers the update.
+- Actual (logs/screenshot, secrets redacted): the check fires in the app constructor, before any session exists; `/api/mobile/releases/latest` needs an admin/guest token, so it answers 401, the rejection is unhandled, and no banner appears until the app is sent to the background and brought back (the resume listener).
+- Root cause: `checkForUpdate()` was called unconditionally at construction instead of once the user holds an application role; failures were not contained.
+- Fix (PR / commit / tag): the shell runs the check as soon as the user has an application role (login, fingerprint unlock or restored session); a failed check is logged and retried on the next resume.
+- Regression test added: `app-native-start.spec.ts` (checks once signed in), `update-check.store.spec.ts` (a failed check is swallowed)
+- Verified on prod:
+

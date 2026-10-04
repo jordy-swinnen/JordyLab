@@ -16,6 +16,7 @@ describe('App on a native cold start', () => {
   const authInit = vi.fn();
   const biometricIsEnabled = vi.fn();
   const biometricUnlock = vi.fn();
+  const checkForUpdate = vi.fn();
 
   const createComponent = createComponentFactory({
     component: App,
@@ -50,7 +51,7 @@ describe('App on a native cold start', () => {
       { provide: ShareTargetService, useValue: { listen: vi.fn() } },
       {
         provide: UpdateCheckStore,
-        useValue: { latest: signal(null).asReadonly(), checkForUpdate: vi.fn(), listenForResume: vi.fn() },
+        useValue: { latest: signal(null).asReadonly(), checkForUpdate, listenForResume: vi.fn() },
       },
     ],
   });
@@ -61,6 +62,7 @@ describe('App on a native cold start', () => {
     authInit.mockReset().mockResolvedValue(false);
     biometricIsEnabled.mockReset().mockResolvedValue(false);
     biometricUnlock.mockReset().mockResolvedValue(true);
+    checkForUpdate.mockReset();
   });
 
   it('asks for the fingerprint when unlock is enabled and there is no session', async () => {
@@ -99,5 +101,12 @@ describe('App on a native cold start', () => {
 
     expect(consoleError).toHaveBeenCalled();
     consoleError.mockRestore();
+  });
+
+  it('checks for an app update once the user has an application role', async () => {
+    createComponent({ detectChanges: true });
+    await settle();
+
+    expect(checkForUpdate).toHaveBeenCalled();
   });
 });
