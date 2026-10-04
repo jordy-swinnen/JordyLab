@@ -17,7 +17,10 @@ case "$EXTENSION" in
     ruff check --fix "$FILE_PATH" 2>/dev/null || true
     ;;
   ts|html|css|scss|json)
-    npx prettier --write "$FILE_PATH" 2>/dev/null || true
+    # Prettier is installed in jordylab-fe only; the repo rule is bun/bunx, never npx.
+    if [[ "$FILE_PATH" == */jordylab-fe/* ]]; then
+      (cd "${FILE_PATH%%/jordylab-fe/*}/jordylab-fe" && bunx prettier --write "$FILE_PATH" 2>/dev/null) || true
+    fi
     ;;
   java)
     # Only run spotless if it's configured in the project
