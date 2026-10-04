@@ -467,7 +467,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-030: Prod has no download-link signing secret — APK download links can't be issued
-- Status: DEPLOYED (DEPLOY-03, `19b6e2d`) — `MOBILE_DOWNLOAD_LINK_SECRET` in `jordylab-secrets`; download-link issuance to be exercised with the first APK
+- Status: VERIFIED-PROD (2026-10-04)
 - Severity: S3
 - Area/spec: mobile / 007
 - Env found: prod
@@ -479,7 +479,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: secret never added at go-live.
 - Fix (PR / commit / tag): Jordy adds `MOBILE_DOWNLOAD_LINK_SECRET` to `secrets.sops.yaml` (manual step in the Android setup instructions).
 - Regression test added: none because secret provisioning
-- Verified on prod:
+- Verified on prod: 2026-10-04: from the owner's Android phone the signed download link was issued and the APK downloaded and installed (MRB-04)
 
 ### BUG-031: Backend service-account token carries no realm-management roles — Admin REST API 403
 - Status: VERIFIED-PROD (2026-10-02)
@@ -588,7 +588,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-01 on `v0.0.1-rc6`: the `apk` job built, signed and verified the release APK and published it: `mobile.mobile_release` row `0.0.1-rc6` (versionCode 106, 12.8 MB); the backend read the v2 signing certificate with apksig and accepted it against the pin
 
 ### BUG-038: Guests see the admin-only "Refresh" / "Regenerate" buttons on the game detail page
-- Status: DEPLOYED in `v0.0.1-rc6` — admin side verified on prod 2026-10-02 (admin sees the buttons); the guest-only check waits for MRB-02
+- Status: VERIFIED-PROD (2026-10-04)
 - Severity: S4
 - Area/spec: gamecatalog / 004, 006
 - Env found: code reading (while adding the Switch admin controls, 009 T052)
@@ -600,7 +600,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the buttons were never gated on the admin role.
 - Fix (PR / commit / tag): branch `fix/e2e-switch-detail` — buttons gated on `AuthService.isAdmin`.
 - Regression test added: `game-detail.component.spec.ts` (guest sees no refresh/regenerate)
-- Verified on prod:
+- Verified on prod: 2026-10-04 on `v0.0.1-rc9`, signed in as the guest account in the browser pane: the game detail page shows no Refresh/Regenerate/Remove/Relink controls; admin-only routes (`/settings/users`, `/fna/**`, `/games/switch`) redirect a guest to the library; the sidebar offers only Library and Chat; 0 console errors
 
 ### BUG-039: CORS allow-list has no PATCH — the Switch edit fails from the Android app
 - Status: VERIFIED-PROD
@@ -754,7 +754,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-049: Android install dialog is unstyled and gives no feedback — tapping Download "does nothing"
-- Status: DEPLOYED in `v0.0.1-rc9` (PR #79) — mobile look + download confirmation wait for the owner's phone (MRB-04) or the guest pane pass (HANDOFF-14)
+- Status: VERIFIED-PROD (2026-10-04)
 - Severity: S3
 - Area/spec: mobile / 007 US1 (web install dialog, FR-005/FR-006)
 - Env found: prod, the owner's Android phone (Brave, reported 2026-10-02, MRB-04)
@@ -767,10 +767,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `lib-install-prompt`, `lib-update-available-banner` and `lib-update-required` were written with bare elements and CSS class names that no stylesheet defines; the download handler reports nothing while it requests the signed link, and swallows failures.
 - Fix (PR / commit / tag): PR #79, `v0.0.1-rc9` — the three components use the app's Tailwind tokens (bottom sheet, 48 px buttons); the install dialog shows "Preparing the download…", "Download requested — open the file from your notifications or Downloads" or an error with "Try again".
 - Regression test added: `install-prompt.component.spec.ts` (preparing / requested / failed states) and `app.spec.ts` (the three handler outcomes)
-- Verified on prod:
+- Verified on prod: 2026-10-04 on `v0.0.1-rc9`: styled bottom sheet seen in a phone-sized pane (guest session) and on the owner's phone ("looks much better"); "Not now" dismisses it; Download fetched and installed the APK
 
 ### BUG-050: Native app shows the login page again after a successful login
-- Status: FIXED locally — release pending (`fix/mobile-icon-login-fingerprint`)
+- Status: DEPLOYED in `v0.0.1-rc10` (PR #82) — phone re-check pending (HANDOFF-17)
 - Severity: S2
 - Area/spec: mobile / 007 US2
 - Env found: prod, the owner's Android app (MRB-04, 2026-10-04)
@@ -785,7 +785,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-051: "Unlock with fingerprint" never unlocks — nothing asks for the fingerprint, and a failed enable looks enabled
-- Status: FIXED locally — release pending (`fix/mobile-icon-login-fingerprint`)
+- Status: DEPLOYED in `v0.0.1-rc10` (PR #82) — phone re-check pending (HANDOFF-17)
 - Severity: S3
 - Area/spec: mobile / 007 US4
 - Env found: prod, the owner's Android app (MRB-04, 2026-10-04)
@@ -800,7 +800,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-052: The Android app uses the placeholder launcher icon and splash screen
-- Status: FIXED locally — release pending (`fix/mobile-icon-login-fingerprint`)
+- Status: DEPLOYED in `v0.0.1-rc10` (PR #82) — phone re-check pending (HANDOFF-17)
 - Severity: S4
 - Area/spec: mobile / 007 US1
 - Env found: prod, the owner's phone (MRB-04, 2026-10-04)
