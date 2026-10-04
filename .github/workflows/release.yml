@@ -235,6 +235,7 @@ jobs:
           # backend that is still settling right after the deploy; every other answer (201, 4xx incl. 409 after an
           # upload that actually went through) ends the loop so it is never retried into a misleading error.
           for attempt in 1 2 3; do
+            rm -f "$RUNNER_TEMP/publish-response.txt" "$RUNNER_TEMP/publish-headers.txt"
             status="$(curl -sS -o "$RUNNER_TEMP/publish-response.txt" -D "$RUNNER_TEMP/publish-headers.txt" -w '%{http_code}' \
               -X POST "$API_BASE_URL/api/mobile/releases" \
               -H "Authorization: Bearer $token" \
@@ -244,9 +245,8 @@ jobs:
               -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive")" || status=000
             echo "publish attempt $attempt: HTTP $status"
             case "$status" in 201) break ;; 000|5??) ;; *) break ;; esac
-            [ -f "$RUNNER_TEMP/publish-headers.txt" ] && grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" || true
-            [ -f "$RUNNER_TEMP/publish-response.txt" ] && { head -c 600 "$RUNNER_TEMP/publish-response.txt"; echo; }
-            [ "$attempt" = "3" ] || sleep 30
+            [ "$attempt" = "3" ] && break
+            sleep 30
           done
           if [ "$status" != "201" ]; then
             grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" 2>/dev/null || true
