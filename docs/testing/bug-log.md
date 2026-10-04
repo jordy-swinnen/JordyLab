@@ -770,7 +770,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-04 on `v0.0.1-rc9`: styled bottom sheet seen in a phone-sized pane (guest session) and on the owner's phone ("looks much better"); "Not now" dismisses it; Download fetched and installed the APK
 
 ### BUG-050: Native app shows the login page again after a successful login
-- Status: DEPLOYED in `v0.0.1-rc10` (PR #82) — phone re-check pending (HANDOFF-17)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S2
 - Area/spec: mobile / 007 US2
 - Env found: prod, the owner's Android app (MRB-04, 2026-10-04)
@@ -782,10 +782,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the native login completes in an App Link callback outside the router, so nothing navigates away from `/login`.
 - Fix (PR / commit / tag): `LoginComponent` navigates to `/` as soon as `AuthService.isAuthenticated()` turns true.
 - Regression test added: `login.component.spec.ts` (leaves the page once authenticated)
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc15`, owner's phone: with the current APK the app starts, sign-in lands on the library, the fingerprint unlock and Settings → App work (owner: "it works now")
 
 ### BUG-051: "Unlock with fingerprint" never unlocks — nothing asks for the fingerprint, and a failed enable looks enabled
-- Status: DEPLOYED in `v0.0.1-rc10` (PR #82) — phone re-check pending (HANDOFF-17)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S3
 - Area/spec: mobile / 007 US4
 - Env found: prod, the owner's Android app (MRB-04, 2026-10-04)
@@ -797,10 +797,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `BiometricUnlockService.unlock()` is never called anywhere (US4 was only half wired: enable and wipe exist, unlock on start does not); and the checkbox keeps the browser-flipped tick when `enable()` fails, so a failure looks like success. The manifest also lacks `USE_BIOMETRIC`.
 - Fix (PR / commit / tag): on native start the app calls `unlock()` when unlock is enabled and there is no session; the login page offers an "Unlock with fingerprint" button as retry; a failed enable un-ticks the box and says so; `USE_BIOMETRIC` added to the manifest. The prompt itself and the Keystore storage still need the phone to confirm (MRB-04).
 - Regression test added: `app-native-start.spec.ts` (asks on a native cold start only when enabled and signed out; a failing unlock is contained), `login.component.spec.ts`, `biometric-unlock-toggle.component.spec.ts` (failed enable)
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc15`, owner's phone: with the current APK the app starts, sign-in lands on the library, the fingerprint unlock and Settings → App work (owner: "it works now")
 
 ### BUG-052: The Android app uses the placeholder launcher icon and splash screen
-- Status: DEPLOYED in `v0.0.1-rc10` (PR #82) — phone re-check pending (HANDOFF-17)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S4
 - Area/spec: mobile / 007 US1
 - Env found: prod, the owner's phone (MRB-04, 2026-10-04)
@@ -812,7 +812,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the generated Capacitor launcher/splash resources were never replaced.
 - Fix (PR / commit / tag): adaptive icon = orange background + vector "J" (same glyph as the favicon); splash = dark app background with the mark; old PNG/grid resources removed.
 - Regression test added: none because Android resources; verified by the release `apk` job building and by the owner's phone
-- Verified on prod:
+- Verified on prod: 2026-10-05: the orange J launcher icon is on the owner's phone (screenshots of the install dialog and home screen)
 
 ### BUG-053: The app only learns about a new release after being backgrounded — the update check runs before login
 - Status: DEPLOYED in `v0.0.1-rc11` (PR #84) — phone check: after rc12+ is published, opening the app and signing in shows the Update banner (HANDOFF-17)
@@ -846,7 +846,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-055: After a successful fingerprint check the app still asks for the password; the fingerprint switch sits awkwardly in the sidebar
-- Status: DEPLOYED in `v0.0.1-rc12` (PR #88) — root cause not proven (see below); the phone re-test decides (HANDOFF-17)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S3
 - Area/spec: mobile / 007 US4
 - Env found: prod, the owner's Android app on rc10 (2026-10-04, after "signing in and the update work great")
@@ -858,10 +858,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: not reproducible without the device. Facts established: the realm grants `offline_access` (client optional scope, default role, offline idle 30 days), so the stored token is an offline token; the plugin stores without a prompt and prompts on read (so ticking never prompts). Code defects found: (1) a native token refresh failure called `login()`, which silently opens the Keycloak credentials page — the most likely source of the symptom; (2) keycloak-js treats the token as expired whenever `timeSkew` is unset, so natively every request forced a refresh with the stored token (more chances to fail, and token churn); (3) every unlock failure was silent.
 - Fix (PR / commit / tag): a failed native refresh now drops the dead session and shows the login page with the reason instead of opening Keycloak; `timeSkew` is set when native tokens are applied (no more forced refresh per request); every unlock failure (cancelled check / server rejected the stored session with its HTTP status / offline) is shown on the login page; the fingerprint switch moved off the sidebar to a native-only **Settings → App** page (a proper switch with explanation; reachable by admins and guests).
 - Regression test added: `auth.service.spec.ts` (no credentials page on refresh failure, status recorded, timeSkew set), `biometric-unlock.service.spec.ts` (failure reasons), `login.component.spec.ts` (reason shown), `biometric-unlock-toggle.component.spec.ts` (switch), `app.spec.ts` / `app-native-start.spec.ts` (nav)
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc15`, owner's phone: with the current APK the app starts, sign-in lands on the library, the fingerprint unlock and Settings → App work (owner: "it works now")
 
 ### BUG-056: rc12 shows a blank page on web and in the app — `AuthService` needed a router the pre-bootstrap injector does not have
-- Status: DEPLOYED in `v0.0.1-rc13` (PR #91) — web verified; the phone app needs a re-install of the current APK (rc15) and the owner's check (HANDOFF-17)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S1
 - Area/spec: mobile + auth / 007 US2, 006
 - Env found: prod, the owner's phone and desktop browser, minutes after rc12 (2026-10-04 ~22:25)
@@ -873,7 +873,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: BUG-055's change gave `AuthService` a constructor-time `inject(Router)`. `apps/jordylab/src/main.ts` builds `AuthService` in a throwaway injector (only `AUTH_CONFIG`) for the early Keycloak check before `bootstrapApplication`, so construction threw and the app never started. Unit tests could not see it: they construct the service in a TestBed that has a router, and nothing booted the real start-up path.
 - Fix (PR / commit / tag): `AuthService` looks the router up lazily (only when a native refresh fails); the pre-bootstrap injector moved to `createPreBootstrapAuth()` so a spec exercises exactly what `main.ts` does.
 - Regression test added: `app.config.spec.ts` (the throwaway injector can build `AuthService`; the real app providers can build `AuthService` and `BiometricUnlockService`) — it fails with NG0201 on the rc12 code
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc15`, owner's phone: with the current APK the app starts, sign-in lands on the library, the fingerprint unlock and Settings → App work (owner: "it works now")
 
 
 
@@ -920,5 +920,20 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: prices were fetched for the symbol exactly as typed and only by a 30-minute job; nothing knew that the same letters mean different instruments on different markets.
 - Fix (PR / commit / tag): `StockPriceService.resolve` tries crypto (`-EUR`) and European listings (`.PA .AS .BR .DE .MI`) for a plain name, takes the first quoted in EUR, falls back to the plain symbol converted to EUR (USD, GBP and pence handled), and the position remembers the resolved symbol (`price_symbol`, migration `V20261005001`); adding a position prices it immediately; typed names are trimmed and upper-cased; exact symbols (with `.`, `-`, `^`, `=`) are used as typed.
 - Regression test added: `StockPriceServiceTest` (BTC → BTC-EUR, MEUD → MEUD.PA, exact symbol as typed, USD and pence conversion, no match, resolve-once-then-reuse), `FnaServiceTest` (upsert prices at once, normalises input)
+- Verified on prod:
+
+### BUG-060: No portfolio price is fetched any more — Yahoo answers 429 to the backend's HTTP client
+- Status: FIXED locally — release pending (`fix/yahoo-user-agent`)
+- Severity: S2
+- Area/spec: fna / 001 (portfolio prices)
+- Env found: prod backend log after rc15 (2026-10-05): `No euro price found for BTC-EUR / MEUD.PA / BTC / MEUD`
+- Coverage rows: 001 portfolio prices
+- Steps to reproduce:
+  1. `curl -A curl/8 https://query1.finance.yahoo.com/v8/finance/chart/BTC-EUR` → `429 Edge: Too Many Requests`; the same with `Mozilla/5.0 (compatible; JordyLab/1.0)` → 200 with the quote.
+- Expected (cite spec/story): positions are priced in euro (HANDOFF-09 showed MEUD.PA priced on 2026-10-01).
+- Actual (logs/screenshot, secrets redacted): every Yahoo call from the backend (Java HTTP client user agent) is refused with 429, so no position gets a price, new or old; the failure was logged at debug level only.
+- Root cause: Yahoo now rejects non-browser user agents (it accepted the default one a few days earlier); nothing in the app set a user agent, and fetch failures other than 404 were invisible.
+- Fix (PR / commit / tag): quote requests send `Mozilla/5.0 (compatible; JordyLab/1.0)`; 429/5xx/timeouts are logged at WARN (404 while probing candidates stays debug).
+- Regression test added: `StockPriceServiceTest.sendsABrowserCompatibleUserAgentBecauseYahooRejectsCurlAndJava` (a stub answers 429 unless the agent is browser-compatible)
 - Verified on prod:
 

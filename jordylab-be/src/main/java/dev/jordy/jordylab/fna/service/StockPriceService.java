@@ -7,9 +7,11 @@ import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriUtils;
 
@@ -36,6 +38,9 @@ public class StockPriceService {
 
     /** European listings tried, in order, for a plain name; crypto pairs (-EUR) come first. */
     private static final List<String> EURO_SUFFIXES = List.of("-EUR", ".PA", ".AS", ".BR", ".DE", ".MI");
+
+    /** Yahoo answers 429 to clients that call themselves curl or Java; a browser-compatible agent gets the data. */
+    private static final String QUOTE_USER_AGENT = "Mozilla/5.0 (compatible; JordyLab/1.0)";
 
     private static final String EURO = "EUR";
     private static final String PENCE = "GBp";
@@ -144,6 +149,7 @@ public class StockPriceService {
             String responseBody = restClient.mutate().requestFactory(QUOTE_REQUEST_FACTORY).build().get()
                     .uri(URI.create(yahooFinanceBaseUrl + "/v8/finance/chart/"
                             + UriUtils.encodePathSegment(symbol, StandardCharsets.UTF_8) + "?interval=1d&range=1d"))
+                    .header(HttpHeaders.USER_AGENT, QUOTE_USER_AGENT)
                     .retrieve()
                     .body(String.class);
             JsonNode meta = objectMapper.readTree(responseBody).path("chart").path("result").get(0).path("meta");
@@ -155,8 +161,14 @@ public class StockPriceService {
             }
 
             return Optional.of(new Quote(priceNode.decimalValue(), currencyNode.asText()));
+        } catch (HttpClientErrorException.NotFound exception) {
+            // Normal while probing candidate listings.
+            log.debug("No quote for {}: not found", symbol);
+
+            return Optional.empty();
         } catch (Exception exception) {
-            log.debug("No quote for {}: {}", symbol, exception.getMessage());
+            // Anything else (429, 5xx, timeout, bad payload) is a real problem with the price source: make it visible.
+            log.warn("Could not fetch a quote for {}: {}", symbol, exception.getMessage());
 
             return Optional.empty();
         }
