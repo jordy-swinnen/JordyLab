@@ -1,4 +1,4 @@
-# 006 Settings Module: SpecKit Prompts
+# Settings Module: SpecKit Prompts
 
 Run these in order. Step 1 is the **what/why** and goes to `/speckit-specify`. Step 3 is the **how** and goes to `/speckit-plan`. Background is in `research.md`, and `spec-draft.md` is a reference for what the output should look like.
 
@@ -6,10 +6,10 @@ Run these in order. Step 1 is the **what/why** and goes to `/speckit-specify`. S
 
 ## 1. `/speckit-specify`
 
-> **Numbering:** spec 005 is in development elsewhere and isn't in this checkout's `specs/`, so SpecKit would auto-number this as 005. Force 006: the prompt below starts with that instruction (the script accepts `--number 6`). Check the created folder/branch is `006-settings-module` before continuing.
+> **Numbering:** none. SpecKit assigns the next free number when this draft is specified, so drafts can be taken in any order.
 
 ```
-Use feature number 006 (short name: settings-module). 005 is taken by a feature in development on another branch.
+Short name: settings-module.
 
 Add a new Settings module to JordyLab, structured like FNA and Game Catalog (its own backend Spring Modulith module, its own frontend domain libs, its own top-level nav tab), with two sub-pages like FNA's Portfolio or Game Catalog's Chat: "Users" and "AI Models".
 
@@ -37,14 +37,14 @@ Out of scope: Kubernetes/OVHcloud deployment manifests, SMTP/email flows, per-gu
 
 ## 2. `/speckit-clarify`
 
-Let it ask. The expected questions and my suggested answers are in `research.md` §4: chat limit 30/day, reject = delete, Ntfy notification on sign-up as P3, module name `settings`.
+Let it ask. The expected questions and my suggested answers are in `research.md` §4: chat limit 30/day, reject = delete, Ntfy notification on sign-up as low priority, module name `settings`.
 
 ---
 
 ## 3. `/speckit-plan`
 
 ```
-Tech context for the Settings module (read AGENTS.md, the constitution, and specs/_drafts/006-settings/research.md first, and carry its findings into this feature's research.md; verify every library claim against live docs before committing to it, and report rather than guess if something doesn't match):
+Tech context for the Settings module (read AGENTS.md, the constitution, and specs/_drafts/settings/research.md first, and carry its findings into this feature's research.md; verify every library claim against live docs before committing to it, and report rather than guess if something doesn't match):
 
 Backend (jordylab-be, Spring Boot 4.0.3, Java 25, Spring Modulith, Spring AI 2.0.0-M2):
 - New module `dev.jordy.jordylab.settings` with its own Flyway schema `settings`. Use /new-module, /entity, /flyway-migration, /test-builder. Run /modularity-check at the end.

@@ -1,4 +1,4 @@
-# 008 Plan Draft: How We'll Build It (k3s on an OVH VPS-2)
+# Plan Draft: How We'll Build It (k3s on an OVH VPS-2)
 
 A reference for `/speckit-plan`. Versions and YAML fields must be checked against live docs during planning. The snippets are shape examples, not final files.
 

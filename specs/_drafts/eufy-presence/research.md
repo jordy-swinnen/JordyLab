@@ -1,4 +1,4 @@
-# 010 Eufy Presence (JordyLab geofencing): Research & Feasibility
+# Eufy Presence (JordyLab geofencing): Research & Feasibility
 
 Date: 2026-09-27. Checked against the live docs and community projects. Nothing here has been tested against Jordy's
 hardware yet; that's what the Phase 0 spike is for.
@@ -10,7 +10,7 @@ hardware yet; that's what the Phase 0 spike is for.
 - Policy: **arm automatically on leaving; on arrival, ask to disarm** (notification → tap → fingerprint).
 - Phone: **OnePlus** (stated as "OnePlus 12 Pro"; OnePlus sells a *OnePlus 12* and *12R*, not a 12 Pro, so confirm the
   model in clarify; it only matters for settings paths).
-- Scope: **mobile only, admin only** (Jordy lives alone). Builds on 007 (Android app) and 008 (production).
+- Scope: **mobile only, admin only** (Jordy lives alone). Builds on mobile app (Android app) and deployment (production).
 
 ## Verdict: possible, with conditions
 
@@ -31,11 +31,11 @@ HomeBase 2 from Away to Home and back through the gateway, running where it will
   aggressively, and **battery settings reportedly revert after firmware updates**.
 - dontkillmyapp.com's OnePlus steps: set the app's battery optimisation to *"not optimized"*, **lock the app in Recents
   **, turn off *Advanced/Deep optimisation* and *Sleep standby optimisation*, and check the auto-launch settings.
-- **Try this on the Eufy app first; it costs nothing.** If Eufy geofencing starts working, 010 may be unnecessary. If it
-  doesn't (or reverts), 010 still helps, because JordyLab adds redundancy and visibility that Eufy's app doesn't have.
-  The same OS limits apply to the JordyLab app, so the 010 design must not depend on the app staying alive.
+- **Try this on the Eufy app first; it costs nothing.** If Eufy geofencing starts working, Eufy presence may be unnecessary. If it
+  doesn't (or reverts), Eufy presence still helps, because JordyLab adds redundancy and visibility that Eufy's app doesn't have.
+  The same OS limits apply to the JordyLab app, so the Eufy presence design must not depend on the app staying alive.
 
-## 2. Phone side (Android via the 007 Capacitor app)
+## 2. Phone side (Android via the mobile app Capacitor app)
 
 - **OS-managed geofences** (Android `GeofencingClient`, Google Play Services; the OnePlus has them): Play Services
   watches the region and wakes the app with a broadcast. The JordyLab app **doesn't need to keep running**, which is the
@@ -73,7 +73,7 @@ HomeBase 2 from Away to Home and back through the gateway, running where it will
       role and freshness (timestamp/nonce), and only then asks the gateway to switch to Home/Disarmed.
 - **The gateway is the crown jewel.** It holds the Eufy session and can disarm on its own, so it:
     - runs cluster-internal only (no Service exposed via Traefik);
-    - has its own bearer token (SOPS secret from 008);
+    - has its own bearer token (SOPS secret from deployment);
     - is reachable only from the backend (a NetworkPolicy, verified in plan for k3s);
     - logs every mode change.
 - **Dedicated Eufy account:** the gateway docs say to create **a separate Eufy guest account**, share only the needed
@@ -95,7 +95,7 @@ HomeBase 2 from Away to Home and back through the gateway, running where it will
 - **Notifications:**
     - Arrival confirmation is a **local notification raised on the phone itself** when it detects arrival, so no server
       push is needed.
-    - Server → phone messages ("armed ✓", "arm failed") use 007's push channel (Ntfy suggestion) or a response to the
+    - Server → phone messages ("armed ✓", "arm failed") use mobile app's push channel (Ntfy suggestion) or a response to the
       phone's own request.
 - **Turn off Eufy's own geofencing** (use Home/Away/Disarmed modes) so the two systems don't fight.
 
@@ -110,13 +110,13 @@ HomeBase 2 from Away to Home and back through the gateway, running where it will
    manual tile, but not eliminated.
 4. **Gateway location:** if it turns out to need the home LAN (P2P to the HomeBase), it has to run at home (e.g. on
    JordyBox) and connect to the cluster, likely over WireGuard. The spike decides.
-5. **Dependency on 007 and 008:** needs the Android app (Capacitor, biometric, local notifications) and the production
+5. **Dependency on mobile app and deployment:** needs the Android app (Capacitor, biometric, local notifications) and the production
    cluster.
 
 ## Open questions for `/speckit-clarify`
 
 1. Is the spike's go/no-go result binding? (Suggestion: yes. If the gateway can't switch modes reliably over a 7-day
-   trial, 010 stops at Phase 0 and only the Eufy-app phone-settings checklist is delivered.)
+   trial, Eufy presence stops at Phase 0 and only the Eufy-app phone-settings checklist is delivered.)
 2. Geofence radius and debounce: 200 m and 3 minutes to start?
 3. Where does the gateway run if the cloud route fails: at home on JordyBox (via WireGuard), or drop the feature?
 4. Custom Kotlin geofence plugin (free, suggested) vs Capawesome Insiders ($99/month)?

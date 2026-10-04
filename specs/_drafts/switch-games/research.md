@@ -1,6 +1,6 @@
-# 009 Nintendo Switch Games in the Catalog: Research
+# Nintendo Switch Games in the Catalog: Research
 
-Date: 2026-09-28. Checked against the repo (`main` after the 005 merge) and live sources.
+Date: 2026-09-28. Checked against the repo (`main` after the Steam sync merge) and live sources.
 
 ## Verdict: no usable API, so add games manually (with smart search)
 
@@ -23,22 +23,22 @@ no Nintendo login, and turns 40 games into one screen.
 
 ## What the repo already has (so this is mostly reuse)
 
-- **`IgdbClient`** (from 004/005, Twitch OAuth client-credentials, degrades gracefully) is already used for ROM
+- **`IgdbClient`** (from catalog refinements/Steam sync, Twitch OAuth client-credentials, degrades gracefully) is already used for ROM
   multiplayer facts. IGDB has Switch and Switch 2 as platforms, portrait **covers** (
   `images.igdb.com/…/t_cover_big/<image_id>.jpg`) and **artworks/screenshots** for banners, genres, developer/publisher,
   release date and game modes. So search, metadata, artwork and local-multiplayer facts all come from one source that's
   already configured (`IGDB_CLIENT_ID/SECRET`).
-- **Game model after 005:**
+- **Game model after Steam sync:**
     - A host-independent `game` (platform, title + `TitleSource` authority, metadata, artwork slots,
       `MultiplayerSource`, AI enrichment).
     - Per-host `game_installation`.
     - `GameLibraryEntry` with `LibrarySource` (`OWNED`/`FAMILY` stored, `LOCAL` derived).
     - Filters for host, platform, install status and library source.
-    - The 005 rule applies here too: **"a game's data is produced once and reused by every source."**
-- **Roles (006):** guests can read + chat only, so **adding, editing and removing Switch games is admin-only**. Guests
+    - The Steam sync rule applies here too: **"a game's data is produced once and reused by every source."**
+- **Roles (Settings):** guests can read + chat only, so **adding, editing and removing Switch games is admin-only**. Guests
   see them like any other game.
-- **004 artwork rule:** "no API-key-requiring provider". IGDB needs a key, but it's already a configured dependency
-  since 005, so there's nothing new to register. *Plan must confirm the rule was relaxed for IGDB or that IGDB image
+- **catalog refinements artwork rule:** "no API-key-requiring provider". IGDB needs a key, but it's already a configured dependency
+  since Steam sync, so there's nothing new to register. *Plan must confirm the rule was relaxed for IGDB or that IGDB image
   URLs (public CDN, no key) count as deterministic.*
 
 ## Design points to settle
@@ -53,7 +53,7 @@ no Nintendo login, and turns 40 games into one screen.
 4. **Title authority:** manual entry should outrank scans (new `TitleSource.MANUAL`), so an EmuDeck scan can never
    rename it.
 5. **EmuDeck overlap:** Switch ROMs through an emulator in EmuDeck may already exist as ROM games. Should a manual
-   Switch game with the same normalised title **link** to that game instead of creating a duplicate? The 005 "link,
+   Switch game with the same normalised title **link** to that game instead of creating a duplicate? The Steam sync "link,
    don't rebuild" rule suggests yes. **Clarify.**
 6. **AI description:** runs once per new game, as usual, using IGDB facts as grounding. Never re-run on edits of
    personal fields (format, notes).
@@ -67,7 +67,7 @@ no Nintendo login, and turns 40 games into one screen.
 2. Link manual Switch games to existing EmuDeck Switch ROM entries with the same title?
 3. Per-game personal fields: physical/digital, notes, "played/completed" flag? (Suggestion: physical/digital only for
    MVP.)
-4. Is paste-a-list bulk add in scope (suggested P2) or a follow-up?
+4. Is paste-a-list bulk add in scope (suggested medium priority) or a follow-up?
 5. Do you own a Switch 2 (it affects the default platform in the form)?
 
 ## Sources

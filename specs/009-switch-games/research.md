@@ -1,4 +1,4 @@
-> Carried from `specs/_drafts/009-switch-games/research.md` on branch `009-010-drafts`, then expanded with
+> Carried from `specs/_drafts/switch-games/research.md` on branch `009-010-drafts`, then expanded with
 > repository findings and live IGDB verification.
 
 # 009 Nintendo Switch Games in the Catalog: Research

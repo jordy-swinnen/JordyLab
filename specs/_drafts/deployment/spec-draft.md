@@ -1,22 +1,22 @@
 # Feature Specification: Production Deployment on Self-Managed k3s (OVH VPS)
 
-**Feature Branch**: `008-ovh-k8s-deployment`
+**Feature Branch**: assigned by SpecKit when specified
 **Created**: 2026-09-27
 **Status**: Draft (reference for `/speckit-specify`; see `research.md` and `plan-draft.md`)
-**Related**: 006 Settings (new secrets, prod realm), 007 Mobile app (public domain, APK download, App Links)
+**Related**: Settings (new secrets, prod realm), Mobile app (public domain, APK download, App Links)
 **Infrastructure decision (2026-09-27)**: self-managed k3s on an OVH VPS-2 instead of OVH MKS; see research.md §2
 
 ---
 
 ## Overview
 
-Make JordyLab deployable and running in production on a self-managed single-node **k3s** Kubernetes cluster on one **OVH VPS-2** (4 vCores / 8 GB / 75 GB NVMe), reachable at one public HTTPS domain for the web app, the 007 mobile app and the JordyBox scanner. There are exactly two environments, `local` and `prod`, with a clear boundary between them. Secrets are encrypted with SOPS + age. Only ciphertext is committed, and CI decrypts it at deploy time. No plaintext secret touches git or images. (OVH Managed Kubernetes was evaluated and rejected on cost; see research.md §2.) Jordy has basic Kubernetes knowledge and is new to Podman, so the feature also ships a learning guide and a runbook tied to JordyLab's own files.
+Make JordyLab deployable and running in production on a self-managed single-node **k3s** Kubernetes cluster on one **OVH VPS-2** (4 vCores / 8 GB / 75 GB NVMe), reachable at one public HTTPS domain for the web app, the mobile app mobile app and the JordyBox scanner. There are exactly two environments, `local` and `prod`, with a clear boundary between them. Secrets are encrypted with SOPS + age. Only ciphertext is committed, and CI decrypts it at deploy time. No plaintext secret touches git or images. (OVH Managed Kubernetes was evaluated and rejected on cost; see research.md §2.) Jordy has basic Kubernetes knowledge and is new to Podman, so the feature also ships a learning guide and a runbook tied to JordyLab's own files.
 
 ---
 
 ## User Scenarios & Testing
 
-### User Story 1: JordyLab is live on a public HTTPS domain (Priority: P1)
+### User Story: JordyLab is live on a public HTTPS domain (Priority: High)
 
 As Jordy, I want the web app, API and login served from one domain with a valid certificate, so that my friends and my phone can use JordyLab from anywhere.
 
@@ -28,9 +28,9 @@ As Jordy, I want the web app, API and login served from one domain with a valid 
 3. **Given** the login flow, **When** a user logs in, **Then** Keycloak is served under `https://<domain>/auth` and redirects back correctly.
 4. **Given** anyone on the internet, **When** they request `/auth/admin`, Keycloak metrics/health, or any internal port, **Then** it isn't reachable.
 5. **Given** the JordyBox scanner, **When** it pushes a scan to the prod URL, **Then** ingestion works exactly as it does locally.
-6. **Given** the 007 mobile app, **When** it calls the API, logs in, verifies App Links or downloads the APK, **Then** the prod setup supports it (CORS for the app origin, `/.well-known/assetlinks.json`, APK storage).
+6. **Given** the mobile app mobile app, **When** it calls the API, logs in, verifies App Links or downloads the APK, **Then** the prod setup supports it (CORS for the app origin, `/.well-known/assetlinks.json`, APK storage).
 
-### User Story 2: Two clearly separated environments (Priority: P1)
+### User Story: Two clearly separated environments (Priority: High)
 
 As Jordy, I want exactly two environments, local and prod, so that I always know which config is in effect and local defaults can never leak into prod.
 
@@ -41,7 +41,7 @@ As Jordy, I want exactly two environments, local and prod, so that I always know
 4. **Given** prod, **When** the app runs, **Then** Keycloak runs in production mode with a prod realm (no dev user, no localhost redirects).
 5. **Given** the repo, **When** anyone reads the environment docs, **Then** one table lists every setting that differs between local and prod, and where each value comes from.
 
-### User Story 3: Secrets are injected, never committed (Priority: P1)
+### User Story: Secrets are injected, never committed (Priority: High)
 
 **Acceptance Scenarios**:
 1. **Given** a secret (API keys, DB and Keycloak credentials, client secrets, backup keys), **When** prod runs, **Then** the value comes from a SOPS-encrypted file in git, decrypted by the deploy pipeline with an age key that only CI and Jordy hold.
@@ -50,7 +50,7 @@ As Jordy, I want exactly two environments, local and prod, so that I always know
 4. **Given** git history, the published container images and the ConfigMaps, **When** they're scanned, **Then** no plaintext secret values are found. CI runs a secret scan on every push.
 5. **Given** local development, **When** I run the app, **Then** secrets come from the gitignored `.env`, as today.
 
-### User Story 4: One-click, approved deployments with rollback (Priority: P1)
+### User Story: One-click, approved deployments with rollback (Priority: High)
 
 **Acceptance Scenarios**:
 1. **Given** a push to `main`, **When** CI runs, **Then** it builds and tests the backend, frontend and Keycloak images and publishes them tagged with the commit SHA.
@@ -58,7 +58,7 @@ As Jordy, I want exactly two environments, local and prod, so that I always know
 3. **Given** a bad release, **When** I trigger a rollback, **Then** the previous version is running again within 5 minutes.
 4. **Given** the deploy credentials, **When** they're used, **Then** they can only change resources in the JordyLab namespace, not the whole cluster.
 
-### User Story 5: Data is durable and restorable (Priority: P1)
+### User Story: Data is durable and restorable (Priority: High)
 
 **Acceptance Scenarios**:
 1. **Given** the production database, **When** a day passes, **Then** a backup exists in OVH Object Storage, including continuous write-ahead logs.
@@ -66,7 +66,7 @@ As Jordy, I want exactly two environments, local and prod, so that I always know
 3. **Given** a pod restart or a VPS reboot, **When** it comes back, **Then** uploaded game artwork and database data are still there (node-local storage on the VPS disk).
 4. **Given** the VPS is lost entirely, **When** I follow the runbook, **Then** a fresh VPS can be rebuilt from git + the SOPS files + the Object Storage backups.
 
-### User Story 6: Learn Kubernetes and Podman on my own project (Priority: P2)
+### User Story: Learn Kubernetes and Podman on my own project (Priority: Medium)
 
 As someone who knows Kubernetes basics and is new to Podman, I want a learning guide built on JordyLab's own files, so that I understand and can operate what's running, not just copy it.
 
@@ -78,7 +78,7 @@ As someone who knows Kubernetes basics and is new to Podman, I want a learning g
 5. **Given** hands-on exercises, **When** I do them, **Then** I have built an image locally, sandboxed a manifest with `podman kube play`, port-forwarded to the Keycloak admin console, read pod logs, rotated a SOPS secret, and done a rollback on prod.
 6. **Given** the runbook, **When** something happens (deploy, rollback, logs, DB restore, secret rotation, certificate issue, k3s/OS upgrade, VPS rebuild), **Then** there's a step-by-step procedure with the exact commands.
 
-### User Story 8: The public code is readable but not reusable (Priority: P1)
+### User Story: The public code is readable but not reusable (Priority: High)
 
 As Jordy, I want the public repo and public images licensed "all rights reserved, viewing only", so that people can read my code but not use, copy, modify or redistribute it until I decide otherwise.
 
@@ -91,7 +91,7 @@ As Jordy, I want the public repo and public images licensed "all rights reserved
 4. **Given** the published container images, **When** they're inspected, **Then** their `org.opencontainers.image.licenses` label matches the repo licence (no MIT).
 5. **Given** third-party code in the repo (e.g. copied snippets or vendored files), **When** it keeps its own licence, **Then** that licence is preserved and not overwritten.
 
-### User Story 7: First-time setup from zero (Priority: P2)
+### User Story: First-time setup from zero (Priority: Medium)
 
 **Acceptance Scenarios**:
 1. **Given** an empty OVH account, **When** I follow the bootstrap guide, **Then** I end with: a domain + DNS, a hardened VPS-2 (SSH keys only, firewall, automatic security updates), k3s installed at a pinned version with its bundled Traefik customised, cert-manager + CloudNativePG installed, an Object Storage bucket, an age key + SOPS-encrypted secrets, and the first successful deploy.
@@ -113,34 +113,34 @@ As Jordy, I want the public repo and public images licensed "all rights reserved
 ## Requirements
 
 ### Functional: Environments
-- **FR-001**: There MUST be exactly two runtime environments, `local` and `prod`, expressed as Spring profiles, Angular build configurations and Keycloak modes.
-- **FR-002**: Shared configuration MUST contain no environment-specific hosts, origins or credentials. Starting without a valid profile MUST fail fast.
-- **FR-003**: A single document MUST list every setting that differs between the environments and where its value comes from.
+- There MUST be exactly two runtime environments, `local` and `prod`, expressed as Spring profiles, Angular build configurations and Keycloak modes.
+- Shared configuration MUST contain no environment-specific hosts, origins or credentials. Starting without a valid profile MUST fail fast.
+- A single document MUST list every setting that differs between the environments and where its value comes from.
 
 ### Functional: Packaging & delivery
-- **FR-004**: The backend, frontend and Keycloak (including the jordylab theme) MUST each be packaged as a container image, built reproducibly in CI for linux/amd64.
-- **FR-005**: Images MUST be tagged with the commit SHA. Prod MUST only run SHA-tagged images, never `latest`.
-- **FR-006**: Deployment to prod MUST require manual approval, MUST wait for a healthy rollout, and MUST support rollback to the previous version.
-- **FR-007**: CI deploy credentials MUST be limited to the JordyLab namespace.
+- The backend, frontend and Keycloak (including the jordylab theme) MUST each be packaged as a container image, built reproducibly in CI for linux/amd64.
+- Images MUST be tagged with the commit SHA. Prod MUST only run SHA-tagged images, never `latest`.
+- Deployment to prod MUST require manual approval, MUST wait for a healthy rollout, and MUST support rollback to the previous version.
+- CI deploy credentials MUST be limited to the JordyLab namespace.
 
 ### Functional: Exposure & security
-- **FR-008**: One public domain with automatic TLS MUST serve `/` (web), `/api` (backend), `/auth` (Keycloak public endpoints only) and the mobile App Links file.
-- **FR-009**: The Keycloak admin console, metrics, health and management ports MUST NOT be publicly reachable.
-- **FR-010**: Every workload MUST declare readiness/liveness probes and resource requests/limits.
-- **FR-011**: Prod secrets MUST be stored in git only as SOPS + age ciphertext and decrypted by the deploy pipeline. The age private key MUST exist only in the GitHub `production` environment and Jordy's offline store.
-- **FR-012**: CI MUST scan for committed secrets and fail on findings.
+- One public domain with automatic TLS MUST serve `/` (web), `/api` (backend), `/auth` (Keycloak public endpoints only) and the mobile App Links file.
+- The Keycloak admin console, metrics, health and management ports MUST NOT be publicly reachable.
+- Every workload MUST declare readiness/liveness probes and resource requests/limits.
+- Prod secrets MUST be stored in git only as SOPS + age ciphertext and decrypted by the deploy pipeline. The age private key MUST exist only in the GitHub `production` environment and Jordy's offline store.
+- CI MUST scan for committed secrets and fail on findings.
 
 ### Functional: Data
-- **FR-013**: PostgreSQL with pgvector MUST run in the cluster on node-local storage, with continuous backups to OVH Object Storage and point-in-time restore.
-- **FR-014**: A restore drill MUST be performed and documented before go-live.
-- **FR-015**: Game artwork (and 007 APK files) MUST be stored on persistent storage (k3s local-path) that survives pod restarts and VPS reboots.
+- PostgreSQL with pgvector MUST run in the cluster on node-local storage, with continuous backups to OVH Object Storage and point-in-time restore.
+- A restore drill MUST be performed and documented before go-live.
+- Game artwork (and mobile app APK files) MUST be stored on persistent storage (k3s local-path) that survives pod restarts and VPS reboots.
 
 ### Functional: Education & operations
-- **FR-016**: A learning guide MUST explain Kubernetes and Podman concepts using JordyLab's own files, with hands-on exercises.
-- **FR-017**: A runbook MUST cover bootstrap (VPS hardening + k3s install), deploy, rollback, logs, DB backup/restore, secret rotation, certificate troubleshooting, k3s/OS upgrades and full VPS rebuild.
-- **FR-020**: The VPS MUST be hardened: SSH key-only access, no root password login, automatic security updates, and a firewall exposing only SSH (restricted), 80 and 443. Kubelet and flannel ports MUST NOT be public. Kubernetes API (6443) exposure follows the clarify decision on how CI reaches the cluster.
-- **FR-019**: The repository MUST carry a single root `LICENSE` with "all rights reserved, source available for viewing only" terms, replacing all four MIT licence files; package manifests, the README and image labels MUST match, and third-party licences MUST be preserved. This MUST land before go-live.
-- **FR-018**: AGENTS.md MUST be updated: Hetzner/Compose/Watchtower/Ollama prod references replaced with the k3s-on-OVH-VPS setup.
+- A learning guide MUST explain Kubernetes and Podman concepts using JordyLab's own files, with hands-on exercises.
+- A runbook MUST cover bootstrap (VPS hardening + k3s install), deploy, rollback, logs, DB backup/restore, secret rotation, certificate troubleshooting, k3s/OS upgrades and full VPS rebuild.
+- The VPS MUST be hardened: SSH key-only access, no root password login, automatic security updates, and a firewall exposing only SSH (restricted), 80 and 443. Kubelet and flannel ports MUST NOT be public. Kubernetes API (6443) exposure follows the clarify decision on how CI reaches the cluster.
+- The repository MUST carry a single root `LICENSE` with "all rights reserved, source available for viewing only" terms, replacing all four MIT licence files; package manifests, the README and image labels MUST match, and third-party licences MUST be preserved. This MUST land before go-live.
+- AGENTS.md MUST be updated: Hetzner/Compose/Watchtower/Ollama prod references replaced with the k3s-on-OVH-VPS setup.
 
 ### Key Entities (deployment artifacts, not domain data)
 - Container images (backend, frontend, keycloak), K8s manifests (base + prod overlay), host + k3s configuration (Traefik HelmChartConfig, firewall), cluster add-on configuration, SOPS-encrypted secret files + `.sops.yaml`, database cluster definition, CI workflows, docs (learning guide, runbook, environments table).
@@ -148,14 +148,14 @@ As Jordy, I want the public repo and public images licensed "all rights reserved
 ---
 
 ## Success Criteria
-- **SC-001**: A friend on mobile data can open `https://<domain>`, log in and use the Game Catalog.
-- **SC-002**: From an approved deploy to a healthy new version takes under 10 minutes; a rollback takes under 5 minutes.
-- **SC-003**: Zero secret values in git, images or ConfigMaps (CI secret scan green; manual image inspection in the runbook).
-- **SC-004**: A database restore to a point in time succeeds in a drill, in under 30 minutes by following the runbook.
-- **SC-005**: Monthly infrastructure cost stays at or under about €13 excl. VAT (VPS-2 + Object Storage + domain), excluding AI usage.
-- **SC-006**: Jordy can explain and do every runbook procedure alone after working through the learning guide.
-- **SC-008**: No MIT licence file or MIT licence declaration remains in the repo (excluding third-party files), and a CI check (e.g. a grep in build.yml) keeps it that way.
-- **SC-007**: A public port scan of the VPS shows only 80, 443 and (restricted) SSH, plus 6443 only if clarify chose that. `/auth/admin` is not reachable.
+- A friend on mobile data can open `https://<domain>`, log in and use the Game Catalog.
+- From an approved deploy to a healthy new version takes under 10 minutes; a rollback takes under 5 minutes.
+- Zero secret values in git, images or ConfigMaps (CI secret scan green; manual image inspection in the runbook).
+- A database restore to a point in time succeeds in a drill, in under 30 minutes by following the runbook.
+- Monthly infrastructure cost stays at or under about €13 excl. VAT (VPS-2 + Object Storage + domain), excluding AI usage.
+- Jordy can explain and do every runbook procedure alone after working through the learning guide.
+- No MIT licence file or MIT licence declaration remains in the repo (excluding third-party files), and a CI check (e.g. a grep in build.yml) keeps it that way.
+- A public port scan of the VPS shows only 80, 443 and (restricted) SSH, plus 6443 only if clarify chose that. `/auth/admin` is not reachable.
 
 ---
 

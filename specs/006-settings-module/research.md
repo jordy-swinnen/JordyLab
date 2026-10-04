@@ -3,7 +3,7 @@
 Date: 2026-09-27. Baseline: branch `006-settings-module` at `5f6feff` (main after PR #16), verified against live vendor
 docs and the actual codebase (backend and frontend maps below).
 
-This file **carries forward and supersedes** `specs/_drafts/006-settings/research.md`: its provider comparison (§1), the
+This file **carries forward and supersedes** `specs/_drafts/settings/research.md`: its provider comparison (§1), the
 four AI call sites (§2), and the auth gap analysis (§3) remain the foundation; everything below adds what was verified
 during planning and records the design decisions.
 
@@ -286,5 +286,5 @@ Verified against the live dev stack on 2026-09-27 while implementing Setup + Fou
 - Keycloak Server Admin guide: AIA (`kc_action`), Update Email workflow (requires verification), required actions
 - Keycloak GitHub issues #13988/#16679 (email-as-username username sync)
 - dasniko/testcontainers-keycloak: releases v4.3.1, quickstart (TC 2.x line, image pinning, realm import)
-- Carried forward from `specs/_drafts/006-settings/research.md`: OpenCode Go vs OpenRouter comparison, `claude-sonnet-5`
+- Carried forward from `specs/_drafts/settings/research.md`: OpenCode Go vs OpenRouter comparison, `claude-sonnet-5`
   verification, Keycloak current-state analysis

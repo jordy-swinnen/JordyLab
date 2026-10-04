@@ -13,7 +13,7 @@ backend Spring Modulith module, its own frontend domain libs, its own top-level 
 Portfolio or Game Catalog's Chat: 'Users' and 'AI Models'. Context: I want to deploy JordyLab so my friends can use the
 Game Catalog. Today there is one user (me) and every logged-in user can reach every API. Once self-sign-up is on, that
 stops being safe. […] Out of scope: Kubernetes/OVHcloud deployment manifests, SMTP/email flows, per-guest model choice,
-cost dashboards, local/Ollama inference." (full description in `specs/_drafts/006-settings/speckit-prompts.md` §1)
+cost dashboards, local/Ollama inference." (full description in `specs/_drafts/settings/speckit-prompts.md` §1)
 
 ---
 
@@ -300,7 +300,7 @@ user's name and email.
   aside).
 - Keycloak remains the identity provider. There is no SMTP, so there are no verification or forgot-password emails; a
   forgotten password means the admin resets it from Settings → Users.
-- OpenRouter is the chosen primary gateway (decision and comparison in `specs/_drafts/006-settings/research.md` §1); the
+- OpenRouter is the chosen primary gateway (decision and comparison in `specs/_drafts/settings/research.md` §1); the
   base URL and key stay configurable, so any OpenAI-compatible gateway can be swapped in without code changes.
 - The fallback is Anthropic direct — a different vendor from the gateway — so it survives a gateway outage.
 - The OpenCode Go subscription stays in use for coding agents only, not for app traffic.

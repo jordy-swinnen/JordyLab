@@ -1,26 +1,26 @@
-# 007 Mobile App: SpecKit Prompts
+# Mobile App: SpecKit Prompts
 
 Run these in order. Background is in `research.md`, and `spec-draft.md` shows the expected shape.
 
-> **Numbering:** 005 is on another branch and 006 (Settings) may not exist in `specs/` yet, so SpecKit could pick the wrong number. The prompt below forces 007 (the script accepts `--number 7`). Check that the created folder/branch is `007-mobile-app` before continuing.
+> **Numbering:** none. SpecKit assigns the next free number when this draft is specified, so drafts can be taken in any order.
 >
-> **Order:** 007 depends on 006 (roles, approved users) and on a public HTTPS deployment. Specifying now is fine. Implement after 006.
+> **Order:** mobile app depends on Settings (roles, approved users) and on a public HTTPS deployment. Specifying now is fine. Implement after Settings.
 
 ---
 
 ## 1. `/speckit-specify`
 
 ```
-Use feature number 007 (short name: mobile-app). 005 and 006 are taken by other features.
+Short name: mobile-app.
 
 Add an Android app for JordyLab built with Capacitor, installable without the Play Store, plus an install experience in the web app. iPhone gets a home-screen web app instead of a native app.
 
-WHY: I and my approved friends (spec 006 roles admin/guest) want JordyLab as a real app on our phones, with a few things the website can't do: notifications, fingerprint unlock, and sharing links from other apps into JordyLab.
+WHY: I and my approved friends (the Settings spec roles admin/guest) want JordyLab as a real app on our phones, with a few things the website can't do: notifications, fingerprint unlock, and sharing links from other apps into JordyLab.
 
 THE APP
 - The Android app is the existing JordyLab web UI (same features, same role rules as the website: guests only see the Game Catalog, admin sees everything). The UI is bundled inside the app, not loaded from the website.
 - Login uses the same Keycloak accounts. The login screen opens in the phone's browser and returns to the app afterwards. Pending (unapproved) users see the same "awaiting approval" screen as on the web.
-- Fingerprint/face unlock: after the first successful login, the user can turn on biometric unlock, so they don't need to type their password every time they open the app. Turning it off, logging out, or the admin revoking the user (spec 006) removes the stored session from the phone.
+- Fingerprint/face unlock: after the first successful login, the user can turn on biometric unlock, so they don't need to type their password every time they open the app. Turning it off, logging out, or the admin revoking the user (the Settings spec) removes the stored session from the phone.
 - Share to JordyLab: from any Android app's share menu, a user can share a link or text to JordyLab and choose a destination they're allowed to use: "Ask the catalog" (chat opens with the shared text prefilled, everyone) and, for the admin only, "Save to FNA" (the link is queued as an article for the next briefing).
 - Notifications: the admin gets notified when a new sign-up is pending and when the daily FNA briefing is ready. Tapping a notification opens the matching screen in the app. [NEEDS CLARIFICATION: delivery channel — existing Ntfy with deep links (Google-free, needs ntfy app), Firebase Cloud Messaging, or a custom UnifiedPush plugin]
 - Updates: when a newer app version is published, the app shows "Update available" with the version and release notes. Tapping it downloads and installs the new APK. Old versions below a minimum supported version are blocked with a mandatory-update screen.
@@ -43,7 +43,7 @@ Out of scope: Play Store / F-Droid publishing, a native iOS app, TestFlight, ove
 
 ## 2. `/speckit-clarify`: expected questions and suggested answers
 1. Push channel → **Ntfy + App Link deep links** for now (see research §4). FCM or UnifiedPush later if guests need pushes.
-2. "Save to FNA" needs a new FNA endpoint for manual article URLs. Keep it in 007, or cut to "Ask the catalog" only? → Suggest keep, P3.
+2. "Save to FNA" needs a new FNA endpoint for manual article URLs. Keep it in mobile app, or cut to "Ask the catalog" only? → Suggest keep, low priority.
 3. Minimum Android version → Capacitor 8's floor (API 24 / Android 7) is fine. Or raise it to API 29 (Android 10) to cut the test matrix.
 4. Where APK files are stored in production (object storage vs. backend volume) → plan phase.
 5. The Android developer verification Limited Distribution account (20 devices) needs to be registered before the 2027 global rollout → note as an operational task.
@@ -53,7 +53,7 @@ Out of scope: Play Store / F-Droid publishing, a native iOS app, TestFlight, ove
 ## 3. `/speckit-plan`
 
 ```
-Tech context for 007 mobile app (read AGENTS.md, the constitution, and specs/_drafts/007-mobile-app/research.md first, carry its findings into this feature's research.md, and verify every library/version claim against live docs before committing — report rather than guess on mismatches):
+Tech context for the mobile app (read AGENTS.md, the constitution, and specs/_drafts/mobile-app/research.md first, carry its findings into this feature's research.md, and verify every library/version claim against live docs before committing — report rather than guess on mismatches):
 
 Frontend (jordylab-fe, Angular 21 zoneless, Nx 22.5, Bun):
 - Capacitor 8 (verify latest 8.x; do NOT adopt v9 pre-release). New Nx app `apps/jordylab-mobile` holding capacitor.config.ts + android/ (commit android/, gitignore build outputs). webDir = output of a new `jordylab:build:mobile` configuration. App id: pick a reverse-DNS id on the real production domain and record it; it can never change after the first release.
@@ -68,7 +68,7 @@ Backend (jordylab-be): new Modulith module `mobile` (use /new-module, /entity, /
 - MobileRelease entity (versionName, versionCode, releaseNotes, sha256, sizeBytes, minSupportedVersionCode, publishedAt, storageKey).
 - GET /api/mobile/releases/latest (admin|guest); POST /api/mobile/releases/{id}/download-link → short-lived signed URL (e.g. HMAC token, 5 min) served by an unauthenticated GET that validates the token and streams the APK with Content-Type application/vnd.android.package-archive and Content-Disposition attachment; POST /api/mobile/releases (CI only, via a dedicated Keycloak service-account role, like gamecatalog-scanner).
 - Serve /.well-known/assetlinks.json (package name + release cert SHA-256 from config) at the public domain.
-- CORS + Keycloak Web Origins: allow https://localhost for jordylab-mobile. Realm export: new public client jordylab-mobile (PKCE S256, redirect URI = App Link callback, offline_access allowed), offline session idle configured; revoke in spec 006 must also revoke offline sessions.
+- CORS + Keycloak Web Origins: allow https://localhost for jordylab-mobile. Realm export: new public client jordylab-mobile (PKCE S256, redirect URI = App Link callback, offline_access allowed), offline session idle configured; revoke in the Settings spec must also revoke offline sessions.
 - Notifications (if clarify picks Ntfy): publish to the existing Ntfy with a Click header = App Link URL for sign-up-pending and briefing-ready events (listen to Modulith events; no direct cross-module calls).
 
 CI (.github/workflows/android-release.yml): on tag `mobile-v*` — setup Bun/Node 22+, JDK, Android SDK; nx build jordylab --configuration=mobile; npx cap sync android; ./gradlew assembleRelease with keystore from GitHub secrets (base64); compute sha256; publish via POST /api/mobile/releases. Document keystore creation + offline backup in quickstart.md.

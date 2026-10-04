@@ -1,4 +1,4 @@
-# 008 Production Deployment: Self-Managed k3s on an OVH VPS: Research
+# Production Deployment: Self-Managed k3s on an OVH VPS: Research
 
 Date: 2026-09-27, revised the same day. Checked against the repo and the live vendor docs. Prices come from ovhcloud.com (EUR, excl. VAT unless stated). Confirm them at checkout.
 
@@ -19,10 +19,10 @@ Internet ─► VPS-2 public IPv4 :80/:443
              └─ k3s ServiceLB (hostPort) ─► bundled Traefik v3 ─┬─ /      → frontend (nginx, Angular build)
                 TLS: cert-manager + Let's Encrypt               ├─ /api   → backend (Spring Boot)
                                                                 ├─ /auth  → Keycloak (/admin not routed)
-                                                                └─ /.well-known/assetlinks.json → backend (007)
+                                                                └─ /.well-known/assetlinks.json → backend (mobile app)
 Namespace "jordylab": backend ─► CloudNativePG (pgvector) on local-path storage ─► backups ─► OVH Object Storage (S3)
 Secrets: *.sops.yaml in git ──(age key in GitHub Actions)──► decrypted in CI ─► kubectl apply ─► K8s Secrets
-JordyBox scanner / phones (007) ──HTTPS──► same public domain
+JordyBox scanner / phones (mobile app) ──HTTPS──► same public domain
 ```
 
 **Estimated cost: about €8.50–13 a month (excl. VAT)**
@@ -48,7 +48,7 @@ With 21% Belgian VAT, VPS-2 comes to about €8.72.
 | CI/CD | Only PR-review and hook-test workflows | Build + push images to GHCR; deploy with approval |
 | Docs | AGENTS.md still says "Hetzner VPS + Compose + Watchtower" | Rewrite the infra section for k3s on OVH VPS; learning guide |
 | `garmin-sync-service` | No code | **Out of scope** |
-| Ntfy (007 notifications) | Not in the repo | Clarify: run ntfy in the cluster or use ntfy.sh |
+| Ntfy (mobile app notifications) | Not in the repo | Clarify: run ntfy in the cluster or use ntfy.sh |
 
 ## 2. Why MKS was rejected (kept for the record)
 - **Cost.** MKS needs OVH Public Cloud instances as nodes, plus a separately billed Public Cloud Load Balancer:
@@ -102,7 +102,7 @@ With 21% Belgian VAT, VPS-2 comes to about €8.72.
 - **Decryption happens in CI:** the age **private** key is a GitHub Actions secret in the `production` environment. The deploy job runs `sops -d … | kubectl apply -f -` (or a kustomize/ksops plugin, chosen in plan) just before `apply -k`.
 - **Key custody:** keep a second copy of the age private key offline, in your password manager. **Losing it means you can't decrypt any prod secret.** Keep the public key in the repo so anyone (you, CI) can *encrypt*.
 - **Rotation:** edit with `sops secrets.sops.yaml`, commit, deploy. Pods need a restart to pick up new env values (a runbook step).
-- Secrets covered: Postgres app and Keycloak DB credentials (or CNPG-generated), Keycloak admin bootstrap, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY` (006), Keycloak service-account client secret (006), S3 keys for backups, ntfy token (if used). The APK signing key (007) stays in GitHub Actions secrets.
+- Secrets covered: Postgres app and Keycloak DB credentials (or CNPG-generated), Keycloak admin bootstrap, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY` (Settings), Keycloak service-account client secret (Settings), S3 keys for backups, ntfy token (if used). The APK signing key (mobile app) stays in GitHub Actions secrets.
 - **Local stays `.env`** (gitignored). The rule: no plaintext secret in git, images or ConfigMaps.
 
 ## 7. Podman: its actual role
@@ -138,9 +138,9 @@ With 21% Belgian VAT, VPS-2 comes to about €8.72.
 - Not chosen: PolyForm Strict 1.0.0 (still allows non-commercial *use*). Later options for loosening: PolyForm Noncommercial, Business Source License 1.1, or MIT/AGPL.
 - Public GHCR images carry compiled code, so they get the same licence label.
 
-## 12. Dependencies with 006 and 007
-- 006: new secrets (OpenRouter key, Keycloak service-account secret) and prod realm changes. They go into the SOPS files.
-- 007: needs the public domain, `/.well-known/assetlinks.json`, the APK download path, APK storage (a PVC on local-path, or an Object Storage bucket), and CORS for `https://localhost`.
+## 12. Dependencies with Settings and mobile app
+- Settings: new secrets (OpenRouter key, Keycloak service-account secret) and prod realm changes. They go into the SOPS files.
+- mobile app: needs the public domain, `/.well-known/assetlinks.json`, the APK download path, APK storage (a PVC on local-path, or an Object Storage bucket), and CORS for `https://localhost`.
 - The **gamecatalog-scanner** on JordyBox points at the prod URL.
 
 ## Open questions for `/speckit-clarify`
@@ -149,7 +149,7 @@ With 21% Belgian VAT, VPS-2 comes to about €8.72.
    - (b) Keep 6443 firewalled, with GitHub Actions joining a WireGuard/Tailscale network for the deploy step.
    - (c) Deploy over SSH (the runner SSHes to the VPS and runs `kubectl` there).
    - This is a direct consequence of self-hosting; MKS exposed the API for you.
-2. Ntfy for 007 notifications: in the cluster, or ntfy.sh?
+2. Ntfy for mobile app notifications: in the cluster, or ntfy.sh?
 3. Backup retention: 7 daily + 4 weekly? Restore drill before go-live, then quarterly?
 4. Deploy trigger: build on every push to `main`, deploy only on manual approval?
 5. VPS datacenter: pick the closest EU location offered at checkout (e.g. Gravelines/Strasbourg), in the same region as the Object Storage bucket if possible.

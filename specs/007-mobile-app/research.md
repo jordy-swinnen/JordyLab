@@ -1,7 +1,7 @@
 # Research — Mobile App (Android via Capacitor, iOS Home-Screen Web App)
 
 Date: 2026-09-28. Baseline: branch `007-mobile-app`, verified against live vendor docs and the actual codebase
-(backend and frontend maps below). This carries forward `specs/_drafts/007-mobile-app/research.md` (the sanity-check
+(backend and frontend maps below). This carries forward `specs/_drafts/mobile-app/research.md` (the sanity-check
 draft) — its Android-sideloading, iOS, and library findings are re-verified here rather than repeated; §1 below only
 records what changed or was newly confirmed during planning.
 
@@ -298,7 +298,7 @@ Each: Decision / Rationale / Alternatives considered.
   environment)
 - Google Digital Asset Links / `assetlinks.json` format docs (developers.google.com, developer.android.com)
 - Keycloak forum + docs on offline token behavior vs. logout/session revocation
-- Carried forward from `specs/_drafts/007-mobile-app/research.md`: Android sideloading/developer-verification
+- Carried forward from `specs/_drafts/mobile-app/research.md`: Android sideloading/developer-verification
   timeline, iOS EU Web Distribution analysis, the original library shortlist
 - Codebase baseline: live exploration of `jordylab-fe` and `jordylab-be` on 2026-09-28 (apps/libs structure, realm
   export, `SecurityConfig.java`, `application.yaml`, entity/module patterns, Ntfy config scaffold, artwork storage

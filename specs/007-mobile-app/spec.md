@@ -20,7 +20,7 @@ install dialog for the APK to approved Android users, a one-time Add-to-Home-Scr
 QR-code entry on desktop; the APK is only downloadable by approved users via a short-lived link. Releases are built,
 signed once and for good, and published by CI. Out of scope: Play Store/F-Droid publishing, a native iOS app,
 TestFlight, over-the-air web-bundle updates, offline mode, tablet/foldable-specific layouts, notifications for guests."
-(full description in `specs/_drafts/007-mobile-app/speckit-prompts.md` §1)
+(full description in `specs/_drafts/mobile-app/speckit-prompts.md` §1)
 
 ---
 

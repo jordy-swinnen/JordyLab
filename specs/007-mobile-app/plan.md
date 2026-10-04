@@ -3,7 +3,7 @@
 **Branch**: `007-mobile-app` | **Date**: 2026-09-28 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/007-mobile-app/spec.md`; tech context from
-`specs/_drafts/007-mobile-app/speckit-prompts.md` §3, verified against the live codebase and vendor docs in
+`specs/_drafts/mobile-app/speckit-prompts.md` §3, verified against the live codebase and vendor docs in
 [research.md](research.md) (decisions D1–D14).
 
 ## Summary

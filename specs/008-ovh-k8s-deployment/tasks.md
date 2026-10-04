@@ -12,7 +12,7 @@ testing of each story.
 
 ## ⚠️ Operator-executed steps — read before starting
 
-Per the feature's own constraints (`specs/_drafts/008-deployment/speckit-prompts.md` §3): **anything that creates a
+Per the feature's own constraints (`specs/_drafts/deployment/speckit-prompts.md` §3): **anything that creates a
 billable OVH resource, runs a command on the live VPS, changes DNS, or generates/stores a real key or credential is
 Jordy's to execute himself from the runbook — never something `/speckit-implement` or an agent does.** Tasks below
 that touch this boundary are marked **(operator step)** — their deliverable is the *written, exact-commands
