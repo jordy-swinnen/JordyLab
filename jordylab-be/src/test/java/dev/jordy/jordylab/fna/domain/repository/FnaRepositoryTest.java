@@ -2,9 +2,9 @@ package dev.jordy.jordylab.fna.domain.repository;
 
 import dev.jordy.jordylab.fna.domain.*;
 import dev.jordy.jordylab.shared.config.JpaConfiguration;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
