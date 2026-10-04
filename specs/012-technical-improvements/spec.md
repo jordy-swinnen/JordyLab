@@ -49,6 +49,7 @@ Two cross-cutting rules apply to all parts:
 - Q: When should the Android E2E job run in CI? → A: On releases only, plus a manual run on demand (not on every merge to main).
 - Q: Where should the Android (Appium) test project live? → A: As its own Nx project inside `jordylab-fe`, so Nx caching and affected runs apply.
 - Q: Should AI gaps that only matter for modules that don't exist yet be drafted now or marked defer? → A: Marked defer, naming the future module that would trigger them; only gaps relevant to today's code get drafts.
+- Q: What exact result counts as "no change" after the Nx 23 upgrade? → A: The same tests pass with the same coverage-gate result, production and mobile builds succeed, and the dependency graph is identical; bundle sizes may differ by up to 5%.
 
 ---
 
@@ -417,7 +418,9 @@ prefer agent-browser instead.
 - **FR-008**: The TypeScript 6 migration MUST be declined if Angular 21.2 does not support it; Angular MUST NOT be
   upgraded as part of this feature.
 - **FR-009**: After the upgrade, lint, unit tests with the coverage gate, the production build, the mobile build and the
-  dependency graph MUST give the same results as before, and a deliberate module-boundary violation MUST still fail lint.
+  dependency graph MUST give the same results as before, meaning: the same tests pass with the same coverage-gate
+  result, both builds succeed, the dependency graph is identical, and bundle sizes differ by at most 5%. A deliberate
+  module-boundary violation MUST still fail lint.
 - **FR-010**: The constitution's tooling-currency principle (which names Nx 22) MUST be amended to the new Nx version.
 
 **Part A: Oxlint and the agent hook**
@@ -516,7 +519,8 @@ prefer agent-browser instead.
 ### Measurable Outcomes
 
 - **SC-001**: After the Nx upgrade, lint, unit test (including coverage gate), production build, mobile build and
-  dependency graph results are identical to the pre-upgrade baseline on the same commit: zero regressions.
+  dependency graph results match the pre-upgrade baseline on the same commit as defined in FR-009: zero regressions,
+  bundle sizes within 5%.
 - **SC-002**: A lint error introduced by an agent edit reaches the agent within about one second of the edit (target
   under one second on the developer machine, confirmed against the measured baseline), in 100% of fixture cases.
 - **SC-003**: The hook never adds more than its time limit to an edit and never blocks one, across all fixture cases.
