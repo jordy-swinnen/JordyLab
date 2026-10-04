@@ -230,9 +230,21 @@ jobs:
           echo "::add-mask::$token"
           # From a file: curl -F would treat notes starting with @ or < as a file reference.
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body | head -c 4000 > "$RUNNER_TEMP/release-notes.txt"
-          curl -sS -f -X POST "$API_BASE_URL/api/mobile/releases" \
-            -H "Authorization: Bearer $token" \
-            -F "versionName=$VERSION_NAME" \
-            -F "versionCode=$VERSION_CODE" \
-            -F "releaseNotes=<$RUNNER_TEMP/release-notes.txt" \
-            -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive"
+          # Not `curl -f`: that hides why the backend refused (spec 011 BUG-057). Print the status, the auth challenge
+          # and the error body (none of which carry secrets) and retry a few times for a backend that is still settling
+          # right after the deploy.
+          for attempt in 1 2 3; do
+            status="$(curl -sS -o "$RUNNER_TEMP/publish-response.txt" -D "$RUNNER_TEMP/publish-headers.txt" -w '%{http_code}' \
+              -X POST "$API_BASE_URL/api/mobile/releases" \
+              -H "Authorization: Bearer $token" \
+              -F "versionName=$VERSION_NAME" \
+              -F "versionCode=$VERSION_CODE" \
+              -F "releaseNotes=<$RUNNER_TEMP/release-notes.txt" \
+              -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive")"
+            echo "publish attempt $attempt: HTTP $status"
+            [ "$status" = "201" ] && break
+            grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" || true
+            head -c 600 "$RUNNER_TEMP/publish-response.txt"; echo
+            [ "$attempt" = "3" ] || sleep 30
+          done
+          [ "$status" = "201" ] || { echo "::error::the backend refused the APK upload (HTTP $status), see the lines above"; exit 1; }
