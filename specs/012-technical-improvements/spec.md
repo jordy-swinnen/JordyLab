@@ -47,6 +47,7 @@ Two cross-cutting rules apply to all parts:
 
 - Q: Which user journeys should the first automated web tests cover? → A: Core set: sign-in with session reuse, game catalog grid and detail, admin Settings (including approving a user), FNA briefing view (read-only, no AI generation), and catalog chat only up to the model call.
 - Q: When should the Android E2E job run in CI? → A: On releases only, plus a manual run on demand (not on every merge to main).
+- Q: Where should the Android (Appium) test project live? → A: As its own Nx project inside `jordylab-fe`, so Nx caching and affected runs apply.
 
 ---
 
@@ -473,8 +474,8 @@ prefer agent-browser instead.
 - **FR-035**: The web suite MUST cover these journeys from the manual E2E campaign: sign-in with session reuse, game
   catalog grid and detail, admin Settings (including approving a user), the FNA briefing view (read-only, no AI
   generation), and catalog chat only up to the model call. No journey in the merge gate MAY trigger a paid model call.
-- **FR-036**: The Android suite MUST use Appium 3, WebdriverIO and UiAutomator2 in TypeScript, run on an emulator against
-  a debug build, and switch between native and WebView contexts.
+- **FR-036**: The Android suite MUST use Appium 3, WebdriverIO and UiAutomator2 in TypeScript, live as its own Nx project
+  in the frontend workspace, run on an emulator against a debug build, and switch between native and WebView contexts.
 - **FR-037**: The Android suite MUST cover native Keycloak login (Custom Tab then App Link), the install prompt, the
   update check and the share target, and nothing that the web layer already covers.
 - **FR-038**: Biometric unlock MUST stay a manual device checklist.
@@ -538,7 +539,7 @@ prefer agent-browser instead.
   for speed.
 - **Web journeys**: fixed by clarification (see FR-035); further journeys can be added later as separate work.
 - **Android CI trigger**: fixed by clarification (releases plus manual start). A local emulator run on the Mac is documented but not required, because the Mac has no Android SDK yet.
-- **Android suite location**: its own project in the frontend workspace, so caching and affected runs apply.
+- **Android suite location**: fixed by clarification (own Nx project in the frontend workspace).
 - **E2E realm**: a dedicated throwaway realm import with a test user, derived from the dev realm export; the dev and
   prod realms are not changed.
 - **Gaps for future modules** (RAG, chat memory, tools, HITL for tools): marked defer, naming the module that would make
