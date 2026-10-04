@@ -85,6 +85,34 @@ Record the numbers in this file. Decision rule: if single-file ESLint is within 
 2 s, the shared command calls ESLint (FR-020) and Oxlint is limited to the CI first step. Decision is the developer's
 if the numbers are borderline.
 
+#### Measured baseline (2026-10-05, Mac, Node 24.13.1, Bun 1.3.10, Nx 22.7.12, `NX_DAEMON=false`, branch = main + spec files)
+
+| Measurement | Result |
+|---|---|
+| Full `nx run-many -t lint` (14 projects), `--skip-nx-cache` | 7.3 s, all green |
+| Same, second run (cache; Nx Cloud prints a 401 "not connected" notice, harmless) | 6.3 s |
+| Single-file `bunx eslint libs/shared/auth/src/lib/pkce.ts` | 1.1 s first run, **0.6 s** warm |
+| Single-file ESLint, three game-grid files together | 0.6 s |
+| Single-file Oxlint | not measured yet (T025) |
+| `nx run-many -t test --all --coverage` (14 projects) | 90 s, 441 tests, all green, every project passes its 80% line gate (workspace "All files" rows 34.1%–100% lines; the 34% row is a project without a gate hit in the output, record per-project in the PR) |
+| `nx build jordylab --configuration=production` | 64 s; initial total 599.28 kB (152.01 kB transfer); budget warning (+99.28 kB over 500 kB) and the `qrcode` CommonJS warning exist today; `dist/apps/jordylab/browser` 984 kB |
+| `nx build jordylab --configuration=mobile` | 64 s; initial total 599.37 kB (152.06 kB transfer); same two warnings; 984 kB |
+| `nx graph` | 20 nodes, 32 dependency edges (snapshot saved outside the repo for the diff) |
+
+**Finding for the decision in T025 (FR-020):** single-file ESLint is already about 0.6 s warm, inside the 1 s target.
+Oxlint will be faster in absolute terms (tens of milliseconds expected) but the agent gain over ESLint may be small.
+The decision rule in A3 (within about 2x and under about 2 s means use ESLint) points to ESLint for the hook unless the
+Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast value. To be decided with the numbers.
+
+#### Node in CI and the frontend image (T003)
+
+- `oven/bun:1` (pulled today) has **no Node binary**: `bunx nx` already runs on Bun's runtime there, so Nx's Node
+  engine requirement does not apply inside that image; the image build in T013 proves it for Nx 23 and Angular 22.
+- CI `test-frontend` uses only `oven-sh/setup-bun` and relies on the runner's preinstalled Node; no version is pinned.
+  An explicit `actions/setup-node` pin is added in T008 (Node 22.22.3 or newer) so Nx and Angular 22 never depend on
+  the runner image's default.
+- Mac Node is 24.13.1: fine for Nx 23, **below** Angular 22's `^24.15.0` (handoff in T016).
+
 ### A4. Agent hook mechanics
 
 - Claude Code runs all hooks matching one event **in parallel**, so the existing `post-edit-format.sh` (Prettier) and a

@@ -20,9 +20,9 @@
 
 **Purpose**: measure before touching anything; settle the version gate.
 
-- [ ] T001 Time the lint baseline (full `bunx nx run-many -t lint` cold and cached; single-file `bunx eslint libs/shared/auth/src/lib/pkce.ts`; single-file Oxlint is added later) in `jordylab-fe/`, and record the numbers in `specs/012-technical-improvements/research.md` section A3 (FR-005)
-- [ ] T002 [P] Record the test/build baseline in `specs/012-technical-improvements/research.md`: `bunx nx run-many -t test --all --coverage` result per project (pass count and coverage-gate result), production build and `--configuration=mobile` build bundle sizes, and `bunx nx graph --file=` output saved outside the repo for later diffs (FR-009)
-- [ ] T003 [P] Check the Node versions that matter: what CI's `test-frontend` job runs, what `deploy/containers/frontend/Containerfile` (`oven/bun:1`) provides for `bunx nx`, and the Mac's `node -v`; record in `research.md` section A1 (FR-007)
+- [X] T001 Time the lint baseline (full `bunx nx run-many -t lint` cold and cached; single-file `bunx eslint libs/shared/auth/src/lib/pkce.ts`; single-file Oxlint is added later) in `jordylab-fe/`, and record the numbers in `specs/012-technical-improvements/research.md` section A3 (FR-005)
+- [X] T002 [P] Record the test/build baseline in `specs/012-technical-improvements/research.md`: `bunx nx run-many -t test --all --coverage` result per project (pass count and coverage-gate result), production build and `--configuration=mobile` build bundle sizes, and `bunx nx graph --file=` output saved outside the repo for later diffs (FR-009)
+- [X] T003 [P] Check the Node versions that matter: what CI's `test-frontend` job runs, what `deploy/containers/frontend/Containerfile` (`oven/bun:1`) provides for `bunx nx`, and the Mac's `node -v`; record in `research.md` section A1 (FR-007)
 - [ ] T004 [HANDOFF] Post HANDOFF-## asking Jordy to confirm target versions for steps 1a/1b/1c from the plan's Version approval gate table (Nx 23.2.1, Angular 22.2.1 + TypeScript 6.0, angular-eslint 22.5.0, Analog 2.8.0, ng-packagr 22.2.4, Boot 4.1.1 / Modulith 2.1.1 / Gradle 9.8.0), re-resolved on the day (FR-002)
 
 ---
