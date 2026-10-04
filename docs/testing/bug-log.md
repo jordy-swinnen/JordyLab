@@ -891,3 +891,19 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): the publish step prints the HTTP status, `WWW-Authenticate`/`Content-Type` and the first 600 bytes of the body, and retries up to 3 times (30 s apart); a final failure names the status. The next release (rc14) shows the cause or simply publishes.
 - Regression test added: none because CI workflow; verified by the next release's `apk` job
 - Verified on prod:
+
+### BUG-058: A crypto position cannot be entered — shares are cut to 4 decimals; its value looks wrong
+- Status: FIXED locally — release pending (`fix/portfolio-share-precision`; contains a Flyway migration)
+- Severity: S2
+- Area/spec: fna / 001 (portfolio)
+- Env found: prod, the owner adding 0.002106 BTC (2026-10-04)
+- Coverage rows: 001-US (portfolio manager)
+- Steps to reproduce:
+  1. Portfolio → ticker `BTC`, shares `0.002106` → Add position.
+- Expected (cite spec/story): the position keeps 0.002106 and is worth about €160.7 at €76,318 per BTC.
+- Actual (logs/screenshot, secrets redacted): the row shows `0.0021` shares and a value of €0.08.
+- Root cause: two separate things. (1) `finance.portfolio_position.share_count` was `NUMERIC(12,4)` and the table displayed `1.0-4` digits, so 0.002106 became 0.0021 (the number input also had no `step`, so browsers flagged fractions). (2) The €0.08 is correct arithmetic on the wrong instrument: Yahoo's symbol `BTC` is the Grayscale Bitcoin Mini Trust ETF (~38 USD), not Bitcoin; 0.0021 × 38.25 = 0.08. Bitcoin in euro is `BTC-EUR` (76,318.08 EUR at the time; 0.0021 → 160.27, matching the owner's Google check).
+- Fix (PR / commit / tag): migration `V20261004001` widens `share_count` to `NUMERIC(20,10)` (existing values unchanged); the table shows up to 10 decimals and the shares input takes `step="any"`; the add-position form now says to use euro-priced Yahoo symbols (`BTC-EUR`, not `BTC`). The owner replaces the `BTC` row by `BTC-EUR` with 0.002106 (no hand-editing of data).
+- Regression test added: `FnaRepositoryTest.shareCountKeepsTheDigitsOfASmallCryptoPosition` (fails with `0.0021` without the migration), `portfolio-manager.component.spec.ts` (digits shown, value €160.73, `step=any`)
+- Verified on prod:
+

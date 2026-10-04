@@ -87,7 +87,7 @@
             <td
               class="px-4 py-5 text-right font-mono text-[15px] tabular-nums text-secondary-foreground"
             >
-              {{ position.shareCount | number: '1.0-4' }}
+              {{ position.shareCount | number: '1.0-10' }}
             </td>
             <td class="px-4 py-5 text-right">
               @if (position.lastPrice !== null) {
@@ -149,6 +149,7 @@
     />
     <input
       type="number"
+      step="any"
       aria-label="Shares"
       class="h-[46px] w-32 rounded-xl border border-input bg-background px-4 font-mono text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       placeholder="Shares"
@@ -158,5 +159,10 @@
     <button hlmBtn class="h-[46px] px-5" (click)="onAddPosition()">
       Add position
     </button>
+    <p class="basis-full text-xs text-muted-foreground">
+      Use Yahoo Finance symbols whose price is in euro, e.g. <span class="font-mono">KBC.BR</span>,
+      <span class="font-mono">MEUD.PA</span> or <span class="font-mono">BTC-EUR</span> for Bitcoin (plain
+      <span class="font-mono">BTC</span> is a US-dollar ETF, not Bitcoin).
+    </p>
   </div>
 </div>
