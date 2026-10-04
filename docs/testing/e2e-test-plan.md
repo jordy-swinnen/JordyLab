@@ -937,7 +937,7 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 ```
 - Expect: `KEYCLOAK_CLIENT_UPDATED`. The next release's `apk` job then logs in with the new secret.
 
-#### HANDOFF-20: Diagnose the 401 on the APK upload (rc13 `apk` job)
+#### HANDOFF-20: Diagnose the 401 on the APK upload (rc13 `apk` job) — round 1 done: token endpoint 200, backend accepts the token (403 on /latest); round 2 below
 - Machine: your Mac (Tailscale on) · Target env: prod · Why you: it uses the CI client secret, which only you and the cluster may hold; it prints no secret.
 - Context: rc13 (the blank-page fix) deployed, but its `apk` job got HTTP 401 from `POST /api/mobile/releases` right after the Keycloak login for `mobile-release-ci` succeeded. Until the APK is published your phone cannot update off the broken rc12.
 - Run (prints status codes and non-secret token claims only):
@@ -952,6 +952,17 @@ echo "backend with that token: $(curl -s -o /dev/null -w '%{http_code}' -H "Auth
 unset T R
 ```
 - Paste the output. Expected if healthy: token endpoint `200`, `iss` = `https://jordylab.be/auth/realms/jordylab`, roles contain `mobile-release-publisher`, backend `403`.
+
+#### HANDOFF-20b: Does the publish endpoint accept that token?
+- Same machine/safety as HANDOFF-20 (prints status codes and non-secret claims only; the POST sends no file, so it publishes nothing).
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_RELEASE_CI_CLIENT_SECRET}' | base64 -d)
+T=$(curl -s -d grant_type=client_credentials -d client_id=mobile-release-ci --data-urlencode "client_secret=$V" https://jordylab.be/auth/realms/jordylab/protocol/openid-connect/token | jq -r '.access_token // empty'); unset V
+echo "$T" | python3 -c 'import sys,json,base64; p=sys.stdin.read().strip().split(".")[1]; c=json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))); print({k:c.get(k) for k in ("iss","azp","exp","iat")}, "roles:", c.get("realm_access",{}).get("roles"))'
+echo "publish endpoint, no file: $(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" -F versionName=probe -F versionCode=1 -F releaseNotes=probe https://jordylab.be/api/mobile/releases) (400/409 = token + role accepted; 403 = role missing; 401 = token rejected)"
+unset T
+```
 
 ## 8. AI call tally
 
