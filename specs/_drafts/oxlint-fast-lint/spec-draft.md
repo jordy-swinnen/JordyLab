@@ -69,6 +69,10 @@ As the developer, I want to remove Oxlint again without touching ESLint if it tu
   rules and module-boundary enforcement.
 - A TypeScript file edited by an agent MUST be checked by Oxlint right after the edit and the result MUST reach the agent.
 - Both Claude Code and OpenCode MUST get this feedback, each through its own mechanism, with one shared command.
+- The Claude Code mechanism MUST be a post-edit hook for TypeScript files in `jordylab-fe`, registered next to the existing
+  post-edit hooks, advisory by default, and silent when it has nothing to check or the tool is not installed.
+- The hook MUST have fixture tests that run in the existing hook-test workflow.
+- The hook MUST NOT stall the agent: it has a hard time limit and skips instead of hanging.
 - CI MUST run Oxlint before ESLint and MUST still fail when either one reports an error.
 - No rule MAY be owned by both linters at once.
 - Formatting stays with Prettier. Vite+ and Oxfmt are out of scope.

@@ -18,7 +18,7 @@ WHY: lint errors in TypeScript show up late. The edit hook only runs Prettier; E
 
 UPGRADE: move jordylab-fe from Nx 22.7.12 to the current Nx 23 release in its own reviewable change, with no behaviour change: lint, unit tests with the coverage gate, the production build, the mobile build and the dependency graph give the same results, and a deliberate module-boundary violation still fails lint. Verify first that Nx 23 supports Angular 21.2, that the TypeScript 6 migration is compatible (decline it if not), and that Analog, spartan and Node 22 (local and CI) are fine. Report instead of silently upgrading Angular.
 
-OXLINT: Oxlint runs next to ESLint, never instead of it. ESLint keeps Angular template rules, Angular rules and @nx/enforce-module-boundaries (Oxlint cannot lint templates, and its JS plugin API is alpha). Each rule has exactly one owner so agents never get conflicting feedback. A TypeScript file an agent just edited is checked within about a second and the result reaches the agent: through a hook in Claude Code, through an instruction (and a plugin only if needed) in OpenCode, both calling one shared command. CI runs Oxlint before ESLint and still fails when either reports an error. Formatting stays with Prettier.
+OXLINT: Oxlint runs next to ESLint, never instead of it. ESLint keeps Angular template rules, Angular rules and @nx/enforce-module-boundaries (Oxlint cannot lint templates, and its JS plugin API is alpha). Each rule has exactly one owner so agents never get conflicting feedback. A TypeScript file an agent just edited is checked within about a second and the result reaches the agent: through a post-edit hook in Claude Code (a new script registered next to the existing post-edit hooks, advisory, silent when there is nothing to check, with a time limit and fixture tests in the existing hook-test workflow), through an instruction (and a plugin only if needed) in OpenCode, both calling one shared command. If measurement shows a single-file ESLint run is nearly as fast, the same hook calls ESLint instead. CI runs Oxlint before ESLint and still fails when either reports an error. Formatting stays with Prettier.
 
 REMOVABLE: dropping Oxlint again is one commit and leaves lint, tests and builds working.
 
@@ -43,7 +43,7 @@ Tech context (read AGENTS.md, jordylab-fe/AGENTS.md, the constitution, and specs
 
 - Frontend: Nx 22.7.12 to Nx 23.x, Angular ~21.2, ESLint 9 flat config, @nx/eslint:lint, root eslint.config.mjs with the boundary constraints, Bun (use bun/bunx, never npm/npx).
 - Oxlint 1.70.0 or later with @nx/oxlint (experimental), root .oxlintrc.json, task name oxlint (the lint target stays ESLint).
-- Agents: Claude Code PostToolUse hook in .claude/hooks plus settings.json; OpenCode through an AGENTS.md instruction first. One shared script. Follow /dual-agent-config: hooks are authored separately for each tool, never translated.
+- Agents: Claude Code PostToolUse hook (.claude/hooks/post-oxlint-check.sh, same Write|Edit|MultiEdit matcher and stdin/jq pattern as the other post-edit hooks, fixtures in .claude/hooks/tests run by hook-tests.yml; verify the hook output/exit-code behaviour against current docs; check for races with the Prettier hook); OpenCode through an AGENTS.md instruction first. One shared script. Follow /dual-agent-config: hooks are authored separately for each tool, never translated.
 - CI: build.yml frontend job, Oxlint step before ESLint.
 - Do the upgrade as its own pull request first; measure the ESLint baseline before changing anything.
 ```

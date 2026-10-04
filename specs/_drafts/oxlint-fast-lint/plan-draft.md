@@ -22,11 +22,32 @@ Two separately reviewable pieces, in this order. The first must be merged and gr
 - **Config:** one root `.oxlintrc.json`. Rules ESLint already owns are switched off in Oxlint (or the other way round),
   so each rule has exactly one owner. ESLint keeps Angular rules, template rules and `@nx/enforce-module-boundaries`.
   Do not register the boundary rule in Oxlint (its JS plugin API is alpha).
-- **Shared command:** one script that runs Oxlint on a list of files and prints diagnostics in a readable form.
-- **Claude Code:** a PostToolUse hook for TypeScript edits calls the script; diagnostics go back to the agent.
-- **OpenCode:** hooks are a different mechanism (plugins). Start with a rule in the frontend `AGENTS.md` telling agents
-  to run the shared script after editing TypeScript; add a plugin only if that proves unreliable. Do not try to
-  translate the Claude Code hook (see the dual-agent-config notes on why hooks stay separate).
+- **Shared command:** `jordylab-fe/tools/oxlint-changed.sh <files...>` runs Oxlint (through `bunx`) on the given files
+  and prints diagnostics in a readable form. It knows nothing about any agent tool, so both tools can call it.
+
+## The agent hook
+
+- **Claude Code hook:** a new `.claude/hooks/post-oxlint-check.sh`, registered in `.claude/settings.json` as a
+  PostToolUse hook with the same `Write|Edit|MultiEdit` matcher as the existing post-edit hooks. It follows their
+  pattern: read the tool input from stdin with `jq`, take `file_path`, exit quietly when there is nothing to do.
+- **What it checks:** only TypeScript files under `jordylab-fe/` (specs included), skipping what ESLint also ignores
+  (`dist`, `out-tsc`, `libs/ui/helm`, `node_modules`). It calls the shared command on that one file.
+- **What the agent sees:** the diagnostics, in a form Claude Code feeds back to the agent after the edit. Verify the
+  exact exit-code and output behavior against the current Claude Code hook docs while planning. Advisory first, like
+  the test-convention hook; whether it should ever block is a clarify question.
+- **Stays out of the way:** no Oxlint installed, no match, or a parse failure means a silent skip with exit code zero.
+  A hard time limit keeps a slow run from stalling the agent.
+- **Ordering with the formatter:** hooks on the same event may run side by side, so check that linting cannot read a
+  file while Prettier is rewriting it; chain them in one script if it can.
+- **Tested like the other hooks:** a fixture script `.claude/hooks/tests/oxlint-cases.sh` (an error file, a clean file,
+  an ignored path, a non-TypeScript file, a missing binary), run by the existing Hook Tests workflow, which already
+  triggers on changes under `.claude/hooks`.
+- **Fallback:** if the baseline measurement shows a single-file ESLint run is nearly as fast, the same hook calls
+  ESLint instead and the rest of the feature (Nx upgrade, CI order, docs) is unaffected.
+- **OpenCode:** hooks are a different mechanism (plugins) and are not translated from the Claude Code one. Start with a
+  rule in `jordylab-fe/AGENTS.md` telling agents to run the shared command on each TypeScript file they edit; add a
+  plugin that calls the same command only if the instruction proves unreliable.
+
 - **CI:** an Oxlint step before the ESLint step in the frontend job, so a plain error fails fast.
 - **Docs:** commands in the frontend `AGENTS.md`, the division of labor in one short paragraph, a pointer from the root
   `AGENTS.md`. Commit trailers follow the usual rules.
