@@ -13,7 +13,9 @@ import { BiometricUnlockToggleComponent } from '@jordylab-fe/shared/auth';
     <div class="flex flex-col gap-3.5">
       <div class="eyebrow">Settings · App</div>
       <h2 class="page-title">App</h2>
-      <p class="max-w-2xl text-sm text-muted-foreground">Options for the JordyLab Android app on this phone.</p>
+      <p class="max-w-2xl text-sm text-muted-foreground">
+        Options for the JordyLab Android app on this phone.
+      </p>
     </div>
     <div class="mt-10 max-w-2xl">
       <lib-biometric-unlock-toggle />

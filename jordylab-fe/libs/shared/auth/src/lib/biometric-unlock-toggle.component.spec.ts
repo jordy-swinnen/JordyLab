@@ -27,7 +27,8 @@ describe('BiometricUnlockToggleComponent', () => {
   });
 
   let spectator: Spectator<BiometricUnlockToggleComponent>;
-  const switchElement = (): HTMLButtonElement => spectator.query('button[role="switch"]') as HTMLButtonElement;
+  const switchElement = (): HTMLButtonElement =>
+    spectator.query('button[role="switch"]') as HTMLButtonElement;
 
   beforeEach(() => {
     available.set(false);
@@ -96,6 +97,8 @@ describe('BiometricUnlockToggleComponent', () => {
     spectator.detectChanges();
 
     expect(switchElement().getAttribute('aria-checked')).toBe('false');
-    expect(spectator.query('[role="alert"]')?.textContent).toContain('Could not turn on fingerprint unlock');
+    expect(spectator.query('[role="alert"]')?.textContent).toContain(
+      'Could not turn on fingerprint unlock',
+    );
   });
 });

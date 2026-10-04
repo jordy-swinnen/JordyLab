@@ -24,7 +24,9 @@ const {
   keycloakLogin: vi.fn(),
   keycloakLogout: vi.fn(),
   keycloakUpdateToken: vi.fn(),
-  keycloakCreateLogoutUrl: vi.fn().mockReturnValue('https://keycloak.example/logout'),
+  keycloakCreateLogoutUrl: vi
+    .fn()
+    .mockReturnValue('https://keycloak.example/logout'),
   // Real keycloak-js's `clearToken()` deletes `token`/`tokenParsed` and sets `authenticated =
   // false` on the same instance (verified against its source) — replicated here so the logout
   // test below can assert on the resulting signal state, not just that the mock was called.
@@ -252,12 +254,16 @@ describe('AuthService', () => {
       expect(keycloakLogin).not.toHaveBeenCalled();
       expect(browserOpen).toHaveBeenCalledTimes(1);
 
-      const openedUrl = new URL((browserOpen.mock.calls[0][0] as { url: string }).url);
+      const openedUrl = new URL(
+        (browserOpen.mock.calls[0][0] as { url: string }).url,
+      );
       expect(openedUrl.origin + openedUrl.pathname).toBe(
         'http://localhost:8180/realms/jordylab/protocol/openid-connect/auth',
       );
       expect(openedUrl.searchParams.get('client_id')).toBe('jordylab-host');
-      expect(openedUrl.searchParams.get('redirect_uri')).toBe(aTestAuthConfig.mobileCallbackUri);
+      expect(openedUrl.searchParams.get('redirect_uri')).toBe(
+        aTestAuthConfig.mobileCallbackUri,
+      );
       expect(openedUrl.searchParams.get('response_type')).toBe('code');
       expect(openedUrl.searchParams.get('code_challenge_method')).toBe('S256');
       expect(openedUrl.searchParams.get('state')).toBeTruthy();
@@ -269,7 +275,9 @@ describe('AuthService', () => {
       await spectator.service.requestAction('UPDATE_PROFILE');
 
       expect(keycloakLogin).not.toHaveBeenCalled();
-      const openedUrl = new URL((browserOpen.mock.calls[0][0] as { url: string }).url);
+      const openedUrl = new URL(
+        (browserOpen.mock.calls[0][0] as { url: string }).url,
+      );
       expect(openedUrl.searchParams.get('kc_action')).toBe('UPDATE_PROFILE');
       expect(openedUrl.searchParams.get('code_challenge_method')).toBe('S256');
     });
@@ -286,14 +294,21 @@ describe('AuthService', () => {
       expect(keycloakLogin).not.toHaveBeenCalled();
       expect(navigateByUrl).toHaveBeenCalledWith('/login');
       expect(spectator.service.isAuthenticated()).toBe(false);
-      expect(spectator.service.nativeFailure()).toContain('could not be refreshed');
+      expect(spectator.service.nativeFailure()).toContain(
+        'could not be refreshed',
+      );
     });
 
     it('records the server status when the stored fingerprint session is rejected', async () => {
       keycloakInit.mockResolvedValueOnce(false);
-      vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400 } as Response);
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+      } as Response);
 
-      const unlocked = await spectator.service.unlockWithRefreshToken('stale-refresh-token');
+      const unlocked = await spectator.service.unlockWithRefreshToken(
+        'stale-refresh-token',
+      );
 
       expect(unlocked).toBe(false);
       expect(spectator.service.nativeFailure()).toContain('HTTP 400');
@@ -310,12 +325,17 @@ describe('AuthService', () => {
       });
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ access_token: accessToken, refresh_token: makeJwt({ sub: 'user-1' }) }),
+        json: () =>
+          Promise.resolve({
+            access_token: accessToken,
+            refresh_token: makeJwt({ sub: 'user-1' }),
+          }),
       } as Response);
 
       await spectator.service.unlockWithRefreshToken('good-refresh-token');
 
-      const keycloakInstance = vi.mocked((await import('keycloak-js')).default).mock.results[0].value as {
+      const keycloakInstance = vi.mocked((await import('keycloak-js')).default)
+        .mock.results[0].value as {
         timeSkew: number;
       };
       expect(keycloakInstance.timeSkew).toBeGreaterThanOrEqual(5);
@@ -326,7 +346,9 @@ describe('AuthService', () => {
     it('exchanges the authorization code for tokens and updates the signal surface on a valid callback', async () => {
       keycloakInit.mockResolvedValueOnce(false);
       await spectator.service.login();
-      const state = new URL((browserOpen.mock.calls[0][0] as { url: string }).url).searchParams.get('state');
+      const state = new URL(
+        (browserOpen.mock.calls[0][0] as { url: string }).url,
+      ).searchParams.get('state');
       const accessToken = makeJwt({
         sub: 'user-1',
         preferred_username: 'jordy-native',
@@ -335,7 +357,11 @@ describe('AuthService', () => {
       const refreshToken = makeJwt({ sub: 'user-1' });
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ access_token: accessToken, refresh_token: refreshToken }),
+        json: () =>
+          Promise.resolve({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          }),
       } as Response);
 
       await spectator.service.completeNativeLogin(
@@ -380,7 +406,9 @@ describe('AuthService', () => {
       await spectator.service.logout();
 
       expect(keycloakClearToken).toHaveBeenCalledTimes(1);
-      expect(browserOpen).toHaveBeenCalledWith({ url: 'https://keycloak.example/logout' });
+      expect(browserOpen).toHaveBeenCalledWith({
+        url: 'https://keycloak.example/logout',
+      });
       expect(spectator.service.isAuthenticated()).toBe(false);
     });
   });

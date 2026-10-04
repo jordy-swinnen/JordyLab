@@ -19,7 +19,9 @@ describe('LoginComponent', () => {
     providers: [
       {
         provide: AuthService,
-        useValue: { login: (...args: unknown[]) => login(...args), isAuthenticated: isAuthenticated.asReadonly(),
+        useValue: {
+          login: (...args: unknown[]) => login(...args),
+          isAuthenticated: isAuthenticated.asReadonly(),
           nativeFailure: nativeFailure.asReadonly(),
         },
       },
@@ -67,7 +69,9 @@ describe('LoginComponent', () => {
   });
 
   it('leaves the login page as soon as the session becomes authenticated (native callback)', () => {
-    const navigateByUrl = vi.spyOn(spectator.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const navigateByUrl = vi
+      .spyOn(spectator.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
 
     isAuthenticated.set(true);
     spectator.detectChanges();
@@ -79,12 +83,16 @@ describe('LoginComponent', () => {
     biometricFailure.set('The fingerprint check was cancelled.');
     spectator.detectChanges();
 
-    expect(spectator.query('[role="alert"]')?.textContent).toContain('cancelled');
+    expect(spectator.query('[role="alert"]')?.textContent).toContain(
+      'cancelled',
+    );
 
     biometricFailure.set(null);
     nativeFailure.set('Your session could not be refreshed. Sign in again.');
     spectator.detectChanges();
 
-    expect(spectator.query('[role="alert"]')?.textContent).toContain('could not be refreshed');
+    expect(spectator.query('[role="alert"]')?.textContent).toContain(
+      'could not be refreshed',
+    );
   });
 });

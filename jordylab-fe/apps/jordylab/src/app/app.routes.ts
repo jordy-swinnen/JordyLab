@@ -1,8 +1,14 @@
-import { Route } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Route, Router } from '@angular/router';
+import { PlatformService } from '@jordylab-fe/shared/platform/api';
 import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
+
+/** Settings → App only exists inside the native app; on the web the URL goes home. */
+const nativeOnlyGuard: CanActivateFn = () =>
+  inject(PlatformService).isNative() || inject(Router).parseUrl('/');
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
@@ -33,7 +39,7 @@ export const appRoutes: Route[] = [
   {
     // Declared before the admin-only `settings` area so guests can reach their own device setting too.
     path: 'settings/app',
-    canActivate: [authGuard, roleGuard('admin', 'guest')],
+    canActivate: [nativeOnlyGuard, authGuard, roleGuard('admin', 'guest')],
     component: AppSettingsPageComponent,
   },
   {
