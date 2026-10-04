@@ -41,6 +41,14 @@ Two cross-cutting rules apply to all parts:
 
 ---
 
+## Clarifications
+
+### Session 2026-10-05
+
+- Q: Which user journeys should the first automated web tests cover? → A: Core set: sign-in with session reuse, game catalog grid and detail, admin Settings (including approving a user), FNA briefing view (read-only, no AI generation), and catalog chat only up to the model call.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### Part A: Fast lint feedback
@@ -461,8 +469,9 @@ prefer agent-browser instead.
 - **FR-033**: Web E2E tests MUST use Playwright, run against a freshly built app, log in once through Keycloak as a test
   user and reuse that session.
 - **FR-034**: Web tests MUST select elements by test id or accessible role/name only.
-- **FR-035**: The web suite MUST cover the agreed journeys from the manual E2E campaign (initial set in Assumptions,
-  confirmed in clarify).
+- **FR-035**: The web suite MUST cover these journeys from the manual E2E campaign: sign-in with session reuse, game
+  catalog grid and detail, admin Settings (including approving a user), the FNA briefing view (read-only, no AI
+  generation), and catalog chat only up to the model call. No journey in the merge gate MAY trigger a paid model call.
 - **FR-036**: The Android suite MUST use Appium 3, WebdriverIO and UiAutomator2 in TypeScript, run on an emulator against
   a debug build, and switch between native and WebView contexts.
 - **FR-037**: The Android suite MUST cover native Keycloak login (Custom Tab then App Link), the install prompt, the
@@ -526,10 +535,7 @@ prefer agent-browser instead.
   versions are confirmed with the developer before installing (FR-002).
 - **Hook mode**: advisory only; CI is the blocking gate. A type-aware lint pass stays in CI only, the hook stays untyped
   for speed.
-- **Initial web journeys** (from the manual campaign, to be confirmed or changed in clarify): sign-in and session reuse,
-  game catalog grid and detail, game catalog chat, FNA briefing view, and admin Settings. Journeys that call AI models
-  either use the app's normal path with the throwaway environment's configuration or assert only up to the model call;
-  how is decided in planning, without real paid model calls in the merge gate.
+- **Web journeys**: fixed by clarification (see FR-035); further journeys can be added later as separate work.
 - **Android CI trigger**: on merge to main and on releases (the description says "on merge and/or releases"; both are
   assumed). A local emulator run on the Mac is documented but not required, because the Mac has no Android SDK yet.
 - **Android suite location**: its own project in the frontend workspace, so caching and affected runs apply.
