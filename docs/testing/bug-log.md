@@ -878,7 +878,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 
 
 ### BUG-057: rc13 `apk` job: `POST /api/mobile/releases` answers 401 although the CI token is valid — no phone can get the fixed app
-- Status: FIXED locally — the repository secret still has to be replaced by the owner (HANDOFF-21); diagnostics + retry are in the publish step since rc14
+- Status: FIX PENDING (owner action: HANDOFF-21, then rerun the rc14 `apk` job); diagnostics + a safer retry are in the publish step
 - Severity: S2
 - Area/spec: mobile / 007 FR-001, release flow
 - Env found: prod release pipeline, rc13 run (2026-10-04 ~21:03Z), both the first attempt and a rerun
@@ -888,7 +888,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Expected (cite spec/story): `201 Created`; the release is published.
 - Actual (logs/screenshot, secrets redacted): `curl: (22) 401` and exit 1 — rc13's log looked like an upload failure only because I filtered the log with `grep -v secret`, which hid the line "Keycloak refused the mobile-release-ci credentials"; rc14's log (no filter) shows it was the Keycloak login that returned 401 (rc12's identical step passed before the rotation). Probes by the owner (HANDOFF-20/20b): token endpoint 200, `iss`/`azp` correct, role `mobile-release-publisher` present, the backend accepts the token on `/latest` (403 = authenticated) and answers 400 (not 401/403) to a file-less POST of the publish endpoint. Backend logs show no error; disk has 58 GB free; the controller has no 401 path.
 - Root cause: the rotated secret was set on the GitHub `production` *environment* (HANDOFF-19, my command used `--env production`), but the `apk` job has no `environment:` and reads the *repository* secret, which still held the old (exposed) value — Keycloak, now on the new value, refused it. The runbook already said `--repo`; my handoff was wrong. The probes that "proved" the token path used the cluster value, not the GitHub one.
-- Fix (PR / commit / tag): the owner sets the **repository** secret from the cluster value (HANDOFF-21, runbook text now says repository-level in bold) and the failed `apk` job is rerun; separately the publish step prints the HTTP status, `WWW-Authenticate`/`Content-Type` and the first 600 bytes of the body, and retries up to 3 times (30 s apart); a final failure names the status. The next release (rc14) shows the cause or simply publishes.
+- Fix (PR / commit / tag): the owner sets the **repository** secret from the cluster value (HANDOFF-21, runbook text now says repository-level in bold) and the failed `apk` job is rerun; separately the publish step prints the HTTP status, `WWW-Authenticate`/`Content-Type` and the first 600 bytes of the body, and retries up to 3 times (30 s apart); a final failure names the status.
 - Regression test added: none because CI workflow; verified by the next release's `apk` job
 - Verified on prod:
 

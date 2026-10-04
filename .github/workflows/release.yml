@@ -231,8 +231,9 @@ jobs:
           # From a file: curl -F would treat notes starting with @ or < as a file reference.
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body | head -c 4000 > "$RUNNER_TEMP/release-notes.txt"
           # Not `curl -f`: that hides why the backend refused (spec 011 BUG-057). Print the status, the auth challenge
-          # and the error body (none of which carry secrets) and retry a few times for a backend that is still settling
-          # right after the deploy.
+          # and the error body (none of which carry secrets). Only a transport failure (000) or a 5xx is retried, for a
+          # backend that is still settling right after the deploy; every other answer (201, 4xx incl. 409 after an
+          # upload that actually went through) ends the loop so it is never retried into a misleading error.
           for attempt in 1 2 3; do
             status="$(curl -sS -o "$RUNNER_TEMP/publish-response.txt" -D "$RUNNER_TEMP/publish-headers.txt" -w '%{http_code}' \
               -X POST "$API_BASE_URL/api/mobile/releases" \
@@ -240,11 +241,15 @@ jobs:
               -F "versionName=$VERSION_NAME" \
               -F "versionCode=$VERSION_CODE" \
               -F "releaseNotes=<$RUNNER_TEMP/release-notes.txt" \
-              -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive")"
+              -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive")" || status=000
             echo "publish attempt $attempt: HTTP $status"
-            [ "$status" = "201" ] && break
-            grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" || true
-            head -c 600 "$RUNNER_TEMP/publish-response.txt"; echo
+            case "$status" in 201) break ;; 000|5??) ;; *) break ;; esac
+            [ -f "$RUNNER_TEMP/publish-headers.txt" ] && grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" || true
+            [ -f "$RUNNER_TEMP/publish-response.txt" ] && { head -c 600 "$RUNNER_TEMP/publish-response.txt"; echo; }
             [ "$attempt" = "3" ] || sleep 30
           done
+          if [ "$status" != "201" ]; then
+            grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" 2>/dev/null || true
+            head -c 600 "$RUNNER_TEMP/publish-response.txt" 2>/dev/null || true; echo
+          fi
           [ "$status" = "201" ] || { echo "::error::the backend refused the APK upload (HTTP $status), see the lines above"; exit 1; }
