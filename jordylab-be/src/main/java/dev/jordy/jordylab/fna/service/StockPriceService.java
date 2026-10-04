@@ -7,13 +7,18 @@ import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriUtils;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +40,9 @@ public class StockPriceService {
     private static final String EURO = "EUR";
     private static final String PENCE = "GBp";
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
+
+    /** Quote lookups are cheap and best-effort: give up quickly so a slow Yahoo never stalls adding a position. */
+    private static final JdkClientHttpRequestFactory QUOTE_REQUEST_FACTORY = quoteRequestFactory();
 
     private final RestClient restClient;
     private final PortfolioPositionRepository positionRepository;
@@ -61,14 +69,22 @@ public class StockPriceService {
      * converting its currency. Empty when nothing answers.
      */
     public Optional<ResolvedQuote> resolve(String typedName) {
-        for (String candidate : candidateSymbols(typedName)) {
+        List<String> candidates = candidateSymbols(typedName);
+        Optional<Quote> typedQuote = Optional.empty();
+        for (String candidate : candidates) {
             Optional<Quote> quote = fetchQuote(candidate);
             if (quote.isPresent() && EURO.equals(quote.get().currency())) {
                 return Optional.of(new ResolvedQuote(candidate, quote.get().price()));
             }
+            if (candidate.equals(typedName)) {
+                typedQuote = quote;
+            }
+        }
+        if (!candidates.contains(typedName)) {
+            typedQuote = fetchQuote(typedName);
         }
 
-        return fetchPrice(typedName).map(price -> new ResolvedQuote(typedName, price));
+        return typedQuote.flatMap(this::toEuro).map(price -> new ResolvedQuote(typedName, price));
     }
 
     /** Resolves (when needed) and prices one position; keeps the cached price when nothing answers. */
@@ -125,21 +141,32 @@ public class StockPriceService {
 
     private Optional<Quote> fetchQuote(String symbol) {
         try {
-            String responseBody = restClient.get()
-                    .uri(URI.create(yahooFinanceBaseUrl + "/v8/finance/chart/" + symbol + "?interval=1d&range=1d"))
+            String responseBody = restClient.mutate().requestFactory(QUOTE_REQUEST_FACTORY).build().get()
+                    .uri(URI.create(yahooFinanceBaseUrl + "/v8/finance/chart/"
+                            + UriUtils.encodePathSegment(symbol, StandardCharsets.UTF_8) + "?interval=1d&range=1d"))
                     .retrieve()
                     .body(String.class);
             JsonNode meta = objectMapper.readTree(responseBody).path("chart").path("result").get(0).path("meta");
             JsonNode priceNode = meta.path("regularMarketPrice");
-            if (priceNode.isMissingNode()) {
+            JsonNode currencyNode = meta.path("currency");
+            if (priceNode.isMissingNode() || !currencyNode.isTextual()) {
+                // An answer without a price or without a currency cannot be valued in euro: treat it as unknown.
                 return Optional.empty();
             }
 
-            return Optional.of(new Quote(priceNode.decimalValue(), meta.path("currency").asText(EURO)));
+            return Optional.of(new Quote(priceNode.decimalValue(), currencyNode.asText()));
         } catch (Exception exception) {
             log.debug("No quote for {}: {}", symbol, exception.getMessage());
 
             return Optional.empty();
         }
+    }
+
+    private static JdkClientHttpRequestFactory quoteRequestFactory() {
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build());
+        factory.setReadTimeout(Duration.ofSeconds(5));
+
+        return factory;
     }
 }

@@ -44,7 +44,7 @@ class StockPriceServiceTest {
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody("""
-                                {"chart":{"result":[{"meta":{"regularMarketPrice":65.50}}]}}
+                                {"chart":{"result":[{"meta":{"regularMarketPrice":65.50,"currency":"EUR"}}]}}
                                 """)));
 
         assertThat(stockPriceService.fetchPrice("KBC.BR"))
@@ -155,5 +155,25 @@ class StockPriceServiceTest {
         assertThat(position.getLastPrice()).isEqualByComparingTo("77000");
         WireMock.verify(0, getRequestedFor(urlPathEqualTo("/v8/finance/chart/BTC")));
         verify(positionRepository, times(2)).save(position);
+    }
+
+    @Test
+    void anAnswerWithoutACurrencyIsUnknownNotEuro() {
+        stubFor(get(urlPathEqualTo("/v8/finance/chart/NOCUR.PA"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"chart\":{\"result\":[{\"meta\":{\"regularMarketPrice\":12.5}}]}}")));
+
+        assertThat(stockPriceService.fetchPrice("NOCUR.PA")).isEmpty();
+    }
+
+    @Test
+    void anExactNonEuroSymbolIsFetchedOnlyOnce() {
+        stubChart("TSLA.XX", "100", "USD");
+        stubChart("USDEUR=X", "0.9", "EUR");
+
+        assertThat(stockPriceService.resolve("TSLA.XX")).isPresent();
+        WireMock.verify(1, getRequestedFor(urlPathEqualTo("/v8/finance/chart/TSLA.XX")));
     }
 }
