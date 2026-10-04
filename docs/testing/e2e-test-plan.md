@@ -884,7 +884,7 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
 - Optional (BUG-049 candidate, cosmetic): on JordyBox run `ls ~/Emulation/roms/ps3 | head` (Fish-compatible) and paste it — the
   catalog shows platforms `Ps3` and `Usrdir` (raw EmuDeck folder names); I need the real layout before changing the mapping.
 
-#### HANDOFF-14: Sign in as the guest account in the browser pane
+#### HANDOFF-14: Sign in as the guest account in the browser pane — done 2026-10-04
 - Machine: the Claude desktop app's browser pane (tab `seed`) · Target env: prod · Why you: I never enter passwords.
 - Context: the pane is logged out again (each deploy ends the session). You offered to log in as a guest account: that lets me run
   MRB-02 (guest view, BUG-038) and check the new install dialog in a phone-sized viewport (BUG-049) myself.
@@ -910,6 +910,15 @@ export KUBECONFIG=~/.kube/jordylab.yaml
 kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg >/dev/null 2>&1 && /opt/keycloak/bin/kcadm.sh update realms/jordylab -s ssoSessionIdleTimeout=2592000 -s ssoSessionMaxLifespan=7776000 --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh get realms/jordylab --fields ssoSessionIdleTimeout,ssoSessionMaxLifespan --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'
 ```
 - Expect: the last command prints `"ssoSessionIdleTimeout" : 2592000` and `"ssoSessionMaxLifespan" : 7776000`. Tell me "done" and sign in once more; after that you should stay signed in across days.
+
+#### HANDOFF-17: Re-test the Android app on rc10
+- Machine: your phone · Target env: prod · Why you: hardware, your fingerprint.
+- Steps: update to rc10 (the app prompts, or download from jordylab.be again and install over the old one), then:
+  1. Open the app → home-screen icon is the orange "J"; the launch screen is dark with the J.
+  2. Sign in → you land on the library (not the login card).
+  3. Tick "Unlock with fingerprint" → expect the fingerprint prompt; if it fails you now get a red message and the box un-ticks (send me the message).
+  4. Close the app fully and reopen → expect the fingerprint prompt, then the library without a password. If you cancel, the login page shows an "Unlock with fingerprint" button.
+- Tell me what happened at each step.
 
 ## 8. AI call tally
 
@@ -1078,3 +1087,11 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: all ✅ including `apk` and `publish`
 - Contains Flyway migration: no · realm change: no · secret change: no · config change: no (frontend bundle changed)
 - Outcome: deployed; prod look of the dialog pending HANDOFF-14/MRB-04
+
+#### DEPLOY-15
+- Release: `v0.0.1-rc10` on `9156c4b` (PRs #81 monthly briefing + 30-day SSO realm files, #82 mobile login/fingerprint/icon), run 37222494458
+- Jobs: all ✅ including `apk` (the new Android launcher/splash resources compiled) and `publish`
+- Contains Flyway migration: no · realm change: files only (the live realm is changed by the owner, HANDOFF-16) · secret change: no · config change: briefing cron default (monthly)
+- Prod re-verification: `/api/**` 401, deploy job green; `kubectl` could not be used afterwards (Tailscale DNS on the Mac was down), so pod state was not re-read
+- Outcome: deployed
+
