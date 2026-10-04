@@ -928,7 +928,7 @@ python3 jordylab-scan-emudeck.py scan
 ```
 - Expect: `EMUDECK scan APPLIED` (the game set changed); in the Library the `Usrdir` chip is gone, `Ps3` became `PlayStation 3` with your 3 extracted discs (Demon's Souls, London 2012, Rayman Legends) plus the ISO-based ones. Old `Ps3`/`Usrdir` rows disappear after the 30-day grace purge.
 
-#### HANDOFF-19: Finish the secret rotation (Keycloak client + GitHub secret) — done 2026-10-04 (`KEYCLOAK_CLIENT_UPDATED`; GitHub secret set); proven by the next release's `apk` job
+#### HANDOFF-19: Finish the secret rotation (Keycloak client + GitHub secret) — done (but it set the *environment* secret; the apk job needs the repository secret → HANDOFF-21) 2026-10-04 (`KEYCLOAK_CLIENT_UPDATED`; GitHub secret set); proven by the next release's `apk` job
 - Machine: your Mac (Tailscale on) · Target env: prod · Why you: it reads the new secret from the cluster and writes it to prod Keycloak; the agent's writes there are blocked and it must never see the value.
 - Context: rc12 deployed the new `MOBILE_RELEASE_CI_CLIENT_SECRET` to the cluster. The live Keycloak client and the GitHub `production` secret still hold the old one. Do both in one go (no release is running):
 ```bash
@@ -963,6 +963,16 @@ echo "$T" | python3 -c 'import sys,json,base64; p=sys.stdin.read().strip().split
 echo "publish endpoint, no file: $(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" -F versionName=probe -F versionCode=1 -F releaseNotes=probe https://jordylab.be/api/mobile/releases) (400/409 = token + role accepted; 403 = role missing; 401 = token rejected)"
 unset T
 ```
+
+#### HANDOFF-21: Set the GitHub secret where the apk job reads it (repository level)
+- Machine: your Mac (Tailscale on) · Target env: GitHub · Why you: it copies the secret from the cluster without showing it.
+- Why: HANDOFF-19 (my command) stored the new value on the `production` *environment*, but the `apk` job has no environment and reads the *repository* secret, which still holds the old value → Keycloak refuses it. This fixes my mistake.
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_RELEASE_CI_CLIENT_SECRET}' | base64 -d) && [ -n "$V" ] \
+ && printf '%s' "$V" | gh secret set MOBILE_RELEASE_CI_CLIENT_SECRET --repo jordy-swinnen/JordyLab; unset V
+```
+- Expect: `✓ Set Actions secret MOBILE_RELEASE_CI_CLIENT_SECRET for jordy-swinnen/JordyLab`. Tell me "done" and I rerun the rc14 `apk` job, which publishes the APK your phone needs.
 
 ## 8. AI call tally
 
@@ -1161,4 +1171,10 @@ Procedures for everything below, and for the checks that need your login or hard
 - Contains Flyway migration: no · realm change: no · secret change: no · config change: no
 - Prod re-verification: `https://jordylab.be/` shows the login page again (web); the APK of rc13 is not published, so phones still have the broken rc12 until it is
 - Outcome: web deployed; APK pending
+
+#### DEPLOY-20
+- Release: `v0.0.1-rc14` on `822fa45` (PR #95 BUG-058 share-count precision + PR #94 apk-upload diagnostics), run 37238972736
+- Jobs: verify, retag ×3, release, deploy, publish ✅ · `apk` ❌ (Keycloak refused the stale repository secret, BUG-057 → HANDOFF-21)
+- Contains Flyway migration: **yes** — `V20261004001` widens `finance.portfolio_position.share_count` to `NUMERIC(20,10)` (non-destructive, requested by the owner) · realm change: no · secret change: no · config change: no
+- Outcome: backend/frontend deployed; APK of rc14 pending HANDOFF-21
 
