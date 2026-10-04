@@ -861,7 +861,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-056: rc12 shows a blank page on web and in the app — `AuthService` needed a router the pre-bootstrap injector does not have
-- Status: FIXED locally — release pending (`fix/app-boots-authservice-router`); prod rolled back to `v0.0.1-rc11` meanwhile (DEPLOY-18)
+- Status: DEPLOYED in `v0.0.1-rc13` (PR #91) — web verified (login page loads); phones need the rc13 APK, blocked by the apk-job 401 (HANDOFF-20). Prod was rolled back to rc11 in between (DEPLOY-18)
 - Severity: S1
 - Area/spec: mobile + auth / 007 US2, 006
 - Env found: prod, the owner's phone and desktop browser, minutes after rc12 (2026-10-04 ~22:25)
