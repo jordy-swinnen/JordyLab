@@ -920,6 +920,14 @@ kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh co
   4. Close the app fully and reopen → expect the fingerprint prompt, then the library without a password. If you cancel, the login page shows an "Unlock with fingerprint" button.
 - Tell me what happened at each step.
 
+#### HANDOFF-18: Rescan EmuDeck on JordyBox with the PS3 fix
+- Machine: JordyBox (Fish) · Target env: prod · Why you: only JordyBox has the ROM library.
+- Steps: sign in to `https://jordylab.be` as admin, Sources page → download the EmuDeck client (or `GET /api/gamecatalog/ingest/client`) over your old `jordylab-scan-emudeck.py`, then:
+```fish
+python3 jordylab-scan-emudeck.py scan
+```
+- Expect: `EMUDECK scan APPLIED` (the game set changed); in the Library the `Usrdir` chip is gone, `Ps3` became `PlayStation 3` with your 3 extracted discs (Demon's Souls, London 2012, Rayman Legends) plus the ISO-based ones. Old `Ps3`/`Usrdir` rows disappear after the 30-day grace purge.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
@@ -1093,5 +1101,11 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: all ✅ including `apk` (the new Android launcher/splash resources compiled) and `publish`
 - Contains Flyway migration: no · realm change: files only (the live realm is changed by the owner, HANDOFF-16) · secret change: no · config change: briefing cron default (monthly)
 - Prod re-verification: `/api/**` 401, deploy job green; `kubectl` could not be used afterwards (Tailscale DNS on the Mac was down), so pod state was not re-read
+- Outcome: deployed
+
+#### DEPLOY-16
+- Release: `v0.0.1-rc11` on `04d5d4e` (PRs #84 update check after login, #85 PS3 folder grouping + `ps3` label), run 37225563874
+- Jobs: all ✅ including `apk` and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
 - Outcome: deployed
 
