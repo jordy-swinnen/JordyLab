@@ -176,4 +176,20 @@ class StockPriceServiceTest {
         assertThat(stockPriceService.resolve("TSLA.XX")).isPresent();
         WireMock.verify(1, getRequestedFor(urlPathEqualTo("/v8/finance/chart/TSLA.XX")));
     }
+
+    @Test
+    void sendsABrowserCompatibleUserAgentBecauseYahooRejectsCurlAndJava() {
+        stubFor(get(urlPathEqualTo("/v8/finance/chart/UA.PA"))
+                .withHeader("User-Agent", containing("Mozilla/5.0"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"chart\":{\"result\":[{\"meta\":{\"regularMarketPrice\":5,\"currency\":\"EUR\"}}]}}")));
+        stubFor(get(urlPathEqualTo("/v8/finance/chart/UA.PA"))
+                .withHeader("User-Agent", notMatching(".*Mozilla/5.0.*"))
+                .atPriority(1)
+                .willReturn(aResponse().withStatus(429)));
+
+        assertThat(stockPriceService.fetchPrice("UA.PA")).hasValueSatisfying(price -> assertThat(price).isEqualByComparingTo("5"));
+    }
 }
