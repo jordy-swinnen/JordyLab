@@ -41,7 +41,7 @@
           class="mono-label hidden items-center gap-2 px-3 pb-2 text-[10.5px] lg:flex"
         >
           {{ group.label }}
-          @if (isSettingsGroup(group)) {
+          @if (isSettingsGroup(group) && isAdmin()) {
           <lib-pending-count-badge />
           }
         </div>
@@ -79,10 +79,6 @@
 
     @if (username()) {
     <lib-user-menu class="mt-auto hidden lg:block" (signOut)="onLogout()" />
-    }
-
-    @if (platform.platform() === 'native-android') {
-    <lib-biometric-unlock-toggle class="mt-3" />
     }
 
     @if (platform.platform() === 'web-desktop') {

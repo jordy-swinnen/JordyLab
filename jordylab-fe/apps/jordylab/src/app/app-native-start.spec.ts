@@ -109,4 +109,12 @@ describe('App on a native cold start', () => {
 
     expect(checkForUpdate).toHaveBeenCalled();
   });
+
+  it('offers the App settings page to a guest on native, without the admin-only Settings entries', () => {
+    const spectator = createComponent();
+
+    const settings = spectator.component['visibleGroups']().find((group) => group.label === 'Settings');
+
+    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/app']);
+  });
 });

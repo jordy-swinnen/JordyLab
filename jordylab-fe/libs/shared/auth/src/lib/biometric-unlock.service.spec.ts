@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import {
   createServiceFactory,
   SpectatorService,
@@ -5,34 +6,43 @@ import {
 import { AuthService } from './auth.service';
 import { BiometricUnlockService } from './biometric-unlock.service';
 
-const {
-  isAvailable,
-  isDataSaved,
-  setData,
-  deleteData,
-  getSecureData,
-} = vi.hoisted(() => ({
-  isAvailable: vi.fn(),
-  isDataSaved: vi.fn(),
-  setData: vi.fn(),
-  deleteData: vi.fn(),
-  getSecureData: vi.fn(),
-}));
+const { isAvailable, isDataSaved, setData, deleteData, getSecureData } =
+  vi.hoisted(() => ({
+    isAvailable: vi.fn(),
+    isDataSaved: vi.fn(),
+    setData: vi.fn(),
+    deleteData: vi.fn(),
+    getSecureData: vi.fn(),
+  }));
 
 vi.mock('@capgo/capacitor-native-biometric', () => ({
   AccessControl: { NONE: 0, BIOMETRY_CURRENT_SET: 1, BIOMETRY_ANY: 2 },
-  NativeBiometric: { isAvailable, isDataSaved, setData, deleteData, getSecureData },
+  NativeBiometric: {
+    isAvailable,
+    isDataSaved,
+    setData,
+    deleteData,
+    getSecureData,
+  },
 }));
 
 describe('BiometricUnlockService', () => {
   let spectator: SpectatorService<BiometricUnlockService>;
   const getRefreshToken = vi.fn();
   const unlockWithRefreshToken = vi.fn();
+  const nativeFailure = signal<string | null>(null);
 
   const createService = createServiceFactory({
     service: BiometricUnlockService,
     providers: [
-      { provide: AuthService, useValue: { getRefreshToken, unlockWithRefreshToken } },
+      {
+        provide: AuthService,
+        useValue: {
+          getRefreshToken,
+          unlockWithRefreshToken,
+          nativeFailure: nativeFailure.asReadonly(),
+        },
+      },
     ],
   });
 
@@ -86,7 +96,10 @@ describe('BiometricUnlockService', () => {
 
       expect(succeeded).toBe(true);
       expect(setData).toHaveBeenCalledWith(
-        expect.objectContaining({ value: 'the-refresh-token', accessControl: 2 }),
+        expect.objectContaining({
+          value: 'the-refresh-token',
+          accessControl: 2,
+        }),
       );
       expect(spectator.service.enabled()).toBe(true);
     });
@@ -133,7 +146,9 @@ describe('BiometricUnlockService', () => {
       const succeeded = await spectator.service.unlock();
 
       expect(succeeded).toBe(true);
-      expect(unlockWithRefreshToken).toHaveBeenCalledWith('recovered-refresh-token');
+      expect(unlockWithRefreshToken).toHaveBeenCalledWith(
+        'recovered-refresh-token',
+      );
     });
 
     it('falls back to false, without calling the token exchange, when the biometric prompt fails', async () => {
@@ -150,6 +165,35 @@ describe('BiometricUnlockService', () => {
       unlockWithRefreshToken.mockResolvedValueOnce(false);
 
       expect(await spectator.service.unlock()).toBe(false);
+    });
+
+    it('keeps the server reason when the stored session is rejected', async () => {
+      getSecureData.mockResolvedValueOnce({ value: 'revoked-refresh-token' });
+      unlockWithRefreshToken.mockResolvedValueOnce(false);
+      nativeFailure.set(
+        'The server no longer accepts the stored fingerprint session (HTTP 400).',
+      );
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toContain('HTTP 400');
+    });
+
+    it('says the fingerprint check failed when the prompt is cancelled, and clears the reason on success', async () => {
+      getSecureData.mockRejectedValueOnce(new Error('User canceled'));
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toContain(
+        'cancelled or did not match',
+      );
+
+      getSecureData.mockResolvedValueOnce({ value: 'good-refresh-token' });
+      unlockWithRefreshToken.mockResolvedValueOnce(true);
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toBeNull();
     });
   });
 });
