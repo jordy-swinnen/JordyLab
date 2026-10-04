@@ -46,6 +46,7 @@ Two cross-cutting rules apply to all parts:
 ### Session 2026-10-05
 
 - Q: Which user journeys should the first automated web tests cover? → A: Core set: sign-in with session reuse, game catalog grid and detail, admin Settings (including approving a user), FNA briefing view (read-only, no AI generation), and catalog chat only up to the model call.
+- Q: When should the Android E2E job run in CI? → A: On releases only, plus a manual run on demand (not on every merge to main).
 
 ---
 
@@ -333,20 +334,20 @@ As the developer, I want the install prompt, the update check and the share targ
 
 ### User Story 14 - CI runs both layers (Priority: P2)
 
-As the developer, I want the web suite to gate merges and the Android suite to run separately on merge and on releases,
+As the developer, I want the web suite to gate merges and the Android suite to run separately on releases and on demand,
 both ending with the cleanup step.
 
 **Why this priority**: automation only catches regressions if it runs without being asked.
 
-**Independent Test**: a pull request with a broken web journey cannot merge; the Android job reports its result on main
-and on a release.
+**Independent Test**: a pull request with a broken web journey cannot merge; the Android job reports its result on a
+release and can be started by hand at any time.
 
 **Acceptance Scenarios**:
 
 1. **Given** a pull request, **When** CI runs, **Then** the web E2E job is a required check and blocks the merge on
    failure.
-2. **Given** a merge to main or a release, **When** CI runs, **Then** the Android E2E job runs on an emulator and reports
-   its result.
+2. **Given** a release, or a manual start by the developer, **When** CI runs, **Then** the Android E2E job runs on an
+   emulator and reports its result; a plain merge to main does not start it.
 3. **Given** any step of either job fails, **When** the job ends, **Then** the cleanup step and the leftover check still
    run.
 
@@ -487,8 +488,8 @@ prefer agent-browser instead.
   fails.
 - **FR-043**: A final check MUST fail the run if any container, volume or network from that run is left over.
 - **FR-044**: Waiting for services MUST use readiness checks with a time limit, never fixed sleeps.
-- **FR-045**: A web E2E CI job MUST run on pull requests and gate merges; a separate Android E2E CI job MUST run on merge
-  to main and on releases; both MUST end with the cleanup step and the leftover check.
+- **FR-045**: A web E2E CI job MUST run on pull requests and gate merges; a separate Android E2E CI job MUST run on
+  releases and on manual start (not on every merge); both MUST end with the cleanup step and the leftover check.
 - **FR-046**: A short E2E section MUST be added where both agent tools read it, including how the suites relate to
   agent-browser checks.
 - **FR-047**: New docs MUST NOT contain the phrase the `licence-check` job rejects.
@@ -536,8 +537,7 @@ prefer agent-browser instead.
 - **Hook mode**: advisory only; CI is the blocking gate. A type-aware lint pass stays in CI only, the hook stays untyped
   for speed.
 - **Web journeys**: fixed by clarification (see FR-035); further journeys can be added later as separate work.
-- **Android CI trigger**: on merge to main and on releases (the description says "on merge and/or releases"; both are
-  assumed). A local emulator run on the Mac is documented but not required, because the Mac has no Android SDK yet.
+- **Android CI trigger**: fixed by clarification (releases plus manual start). A local emulator run on the Mac is documented but not required, because the Mac has no Android SDK yet.
 - **Android suite location**: its own project in the frontend workspace, so caching and affected runs apply.
 - **E2E realm**: a dedicated throwaway realm import with a test user, derived from the dev realm export; the dev and
   prod realms are not changed.
