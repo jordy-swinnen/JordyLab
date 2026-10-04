@@ -59,7 +59,7 @@ class MobileNotificationListenerTest {
 
         listener.on(new BriefingReady(UUID.randomUUID(), generatedAt));
 
-        verify(ntfyClient).publish(eq("Today's briefing is ready"), contains(generatedAt.toString()),
+        verify(ntfyClient).publish(eq("Your monthly briefing is ready"), contains(generatedAt.toString()),
                 clickUrlCaptor.capture());
         assertThat(clickUrlCaptor.getValue()).isEqualTo("https://jordylab.example/mobile/open?screen=fna-briefing");
     }

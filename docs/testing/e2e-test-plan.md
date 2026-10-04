@@ -901,6 +901,16 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
   3. Then tell me "secret deployed": I set the new value in the live Keycloak client with `kcadm` (needs your yes) and re-sync the GitHub secret from the cluster per `docs/runbook.md` §apk.
 - Expect: the next release's `apk` job logs in and publishes.
 
+#### HANDOFF-16: Apply the longer Keycloak session to the live realm
+- Machine: your Mac (Tailscale on) · Target env: prod · Why you: a live `kcadm` write to prod Keycloak needs your own run (the agent's attempt was blocked, as for HANDOFF-06).
+- What it changes: the realm's SSO session idle timeout 30 min → 30 days and max lifespan → 90 days (access token stays 30 min and refreshes silently). No user, role or client is touched; existing sessions pick up the new idle timeout on their next refresh.
+- Steps:
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg >/dev/null 2>&1 && /opt/keycloak/bin/kcadm.sh update realms/jordylab -s ssoSessionIdleTimeout=2592000 -s ssoSessionMaxLifespan=7776000 --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh get realms/jordylab --fields ssoSessionIdleTimeout,ssoSessionMaxLifespan --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'
+```
+- Expect: the last command prints `"ssoSessionIdleTimeout" : 2592000` and `"ssoSessionMaxLifespan" : 7776000`. Tell me "done" and sign in once more; after that you should stay signed in across days.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.

@@ -11,7 +11,8 @@
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
   "accessTokenLifespan": 1800,
-  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionIdleTimeout": 2592000,
+  "ssoSessionMaxLifespan": 7776000,
   "defaultDefaultClientScopes": [
     "role_list",
     "saml_organization",

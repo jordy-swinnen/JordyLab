@@ -49,7 +49,8 @@ public class BriefingGeneratorService {
         this.systemPrompt = new SystemPromptTemplate(systemPromptResource).render();
     }
 
-    @Scheduled(cron = "0 30 6 * * *")
+    // Monthly (1st, 06:30) — was daily until 2026-10-04. Override with JORDYLAB_FNA_BRIEFING_CRON.
+    @Scheduled(cron = "${jordylab.fna.briefing.cron:0 30 6 1 * *}")
     @Transactional
     public Briefing generateBriefing() {
         List<Article> articles = articleRepository.findTop50ByOrderByPublishedAtDesc();
@@ -58,10 +59,10 @@ public class BriefingGeneratorService {
         String articleContext = buildArticleContext(articles);
         String portfolioContext = buildPortfolioContext(positions);
 
-        String userPrompt = "Today's financial news:\n" + articleContext
+        String userPrompt = "Recent financial news:\n" + articleContext
                 + "\n\nMy portfolio:\n" + portfolioContext
-                + "\n\nAnalyse how today's news affects my portfolio positions, summarise the broader European market themes, "
-                + "and suggest one ticker I don't currently hold that looks interesting based on today's news.";
+                + "\n\nAnalyse how the recent news affects my portfolio positions, summarise the broader European market themes, "
+                + "and suggest one ticker I don't currently hold that looks interesting based on the recent news.";
 
         AiCallResult result = aiService.call(AiFeature.FNA_BRIEFING, systemPrompt, userPrompt);
 

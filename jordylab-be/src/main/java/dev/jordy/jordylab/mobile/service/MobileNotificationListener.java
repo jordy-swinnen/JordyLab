@@ -34,8 +34,8 @@ public class MobileNotificationListener {
     @ApplicationModuleListener
     void on(BriefingReady event) {
         ntfyClient.publish(
-                "Today's briefing is ready",
-                "The FNA daily briefing generated at " + event.generatedAt() + " is ready to read.",
+                "Your monthly briefing is ready",
+                "The FNA monthly briefing generated at " + event.generatedAt() + " is ready to read.",
                 appLinkUrl("fna-briefing"));
     }
 
