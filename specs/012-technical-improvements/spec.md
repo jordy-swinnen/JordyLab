@@ -48,6 +48,7 @@ Two cross-cutting rules apply to all parts:
 - Q: Which user journeys should the first automated web tests cover? → A: Core set: sign-in with session reuse, game catalog grid and detail, admin Settings (including approving a user), FNA briefing view (read-only, no AI generation), and catalog chat only up to the model call.
 - Q: When should the Android E2E job run in CI? → A: On releases only, plus a manual run on demand (not on every merge to main).
 - Q: Where should the Android (Appium) test project live? → A: As its own Nx project inside `jordylab-fe`, so Nx caching and affected runs apply.
+- Q: Should AI gaps that only matter for modules that don't exist yet be drafted now or marked defer? → A: Marked defer, naming the future module that would trigger them; only gaps relevant to today's code get drafts.
 
 ---
 
@@ -460,7 +461,9 @@ prefer agent-browser instead.
 - **FR-029**: A gap analysis MUST compare the research with the shared resilient AI service and all AI code in the repo,
   covering at least the topics in User Story 7, and mark each topic worth building, defer or not applicable, with a
   reason and the code checked.
-- **FR-030**: Each worth-building gap MUST become a draft under `specs/_drafts/`; no gap MAY be built in this feature.
+- **FR-030**: Each worth-building gap relevant to today's code MUST become a draft under `specs/_drafts/`; gaps that only
+  matter for modules that do not exist yet MUST be marked defer, naming the module that would trigger them, and get no
+  draft; no gap MAY be built in this feature.
 - **FR-031**: The `/ai-endpoint` skill and both copies of the `code-reviewer` agent (Claude Code and OpenCode) MUST carry
   the checklist, and the two reviewer copies MUST carry the same checklist.
 - **FR-032**: Loading of the rules MUST be verified in Claude Code and in a fresh OpenCode session started in the AI
@@ -542,8 +545,8 @@ prefer agent-browser instead.
 - **Android suite location**: fixed by clarification (own Nx project in the frontend workspace).
 - **E2E realm**: a dedicated throwaway realm import with a test user, derived from the dev realm export; the dev and
   prod realms are not changed.
-- **Gaps for future modules** (RAG, chat memory, tools, HITL for tools): marked defer, naming the module that would make
-  them relevant, unless clarify decides to draft them now.
+- **Gaps for future modules** (RAG, chat memory, tools, HITL for tools): fixed by clarification: marked defer, naming
+  the module that would make them relevant; they get no draft.
 - **Evals in CI**: if worth building, recorded as a draft with the cost trade-off (every merge versus nightly) left open
   for that draft.
 - Hosted GitHub Actions Linux runners can run the Android emulator for this repo; Podman's Ryuk is disabled locally, so
