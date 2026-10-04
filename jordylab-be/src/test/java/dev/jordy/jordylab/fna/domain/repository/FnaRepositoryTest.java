@@ -4,6 +4,7 @@ import dev.jordy.jordylab.fna.domain.*;
 import dev.jordy.jordylab.shared.config.JpaConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -12,6 +13,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -41,6 +43,9 @@ class FnaRepositoryTest {
 
     @Autowired
     private BriefingRepository briefingRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @BeforeEach
     void cleanSeededData() {
@@ -156,5 +161,17 @@ class FnaRepositoryTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().getContent()).isEqualTo("Newer briefing");
+    }
+
+    @Test
+    void shareCountKeepsTheDigitsOfASmallCryptoPosition() {
+        PortfolioPosition saved = positionRepository.saveAndFlush(PortfolioPositionTestBuilder.aPortfolioPosition()
+                .shareCount(new BigDecimal("0.002106"))
+                .build());
+        entityManager.clear();
+
+        PortfolioPosition reloaded = positionRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(reloaded.getShareCount()).isEqualByComparingTo("0.002106");
     }
 }

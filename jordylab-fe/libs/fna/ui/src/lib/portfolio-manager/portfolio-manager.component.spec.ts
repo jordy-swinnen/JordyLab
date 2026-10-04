@@ -125,4 +125,18 @@ describe('PortfolioManagerComponent', () => {
     expect(legend[0]).toHaveText('ABI');
     expect(legend[0]).toHaveText('100%');
   });
+
+  it('shows every digit of a small crypto position and values it with them', () => {
+    positions.set([aPortfolioPositionMock({ ticker: 'BTC-EUR', shareCount: 0.002106, lastPrice: 76318.08 })]);
+    spectator.detectChanges();
+
+    expect(spectator.query('tbody')?.textContent).toContain('0.002106');
+    expect(spectator.query('[data-testid="row-value"]')?.textContent?.trim()).toBe('€160.73');
+  });
+
+  it('lets the shares field take fractions', () => {
+    spectator.detectChanges();
+
+    expect(spectator.query('input[aria-label="Shares"]')?.getAttribute('step')).toBe('any');
+  });
 });
