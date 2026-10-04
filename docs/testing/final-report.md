@@ -6,7 +6,7 @@
 Production (rc12) is healthy. Of the 20 S2 defects found, 19 are fixed, deployed and verified; the 20th (BUG-050, the app showing
 the login card after a native login) is fixed in rc10 and waits for the owner's phone re-check (HANDOFF-17). The signed-in admin
 and guest browser passes (MRB-01, MRB-02) and the EmuDeck rescan are done. What remains is hardware or approval work: the Android
-re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), and finishing the CI secret rotation (HANDOFF-19).
+re-check, a VPS reboot, a point-in-time restore (see `manual-test-runbook.md`), and the CI secret rotation, which is done and only awaits proof from the next release (HANDOFF-19).
 
 ## What was tested
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
@@ -62,7 +62,7 @@ guest pass (credentials), the JordyBox scan (hardware), Steam family sync (token
 (approval), colour contrast, a full VPS rebuild. **Not built:** 010 Eufy presence, `garmin-sync-service`.
 
 ## Recommended next steps
-1. Do HANDOFF-16 (live Keycloak session change), HANDOFF-19 (finish the secret rotation), HANDOFF-17 (phone re-check) and HANDOFF-18 (EmuDeck rescan).
+1. Do HANDOFF-17 (phone re-check) and HANDOFF-18 (EmuDeck rescan).
 2. Send the `roms/ps3` listing (HANDOFF-13) so the `Ps3`/`Usrdir` platform labels can be fixed.
 3. A scheduled smoke-suite GitHub Action (the checks in `contracts/smoke-suite.md` need no login).
 4. Roll out the CSP in report-only mode first (MRB-11).
