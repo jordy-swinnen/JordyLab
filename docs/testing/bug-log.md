@@ -891,4 +891,3 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): the publish step prints the HTTP status, `WWW-Authenticate`/`Content-Type` and the first 600 bytes of the body, and retries up to 3 times (30 s apart); a final failure names the status. The next release (rc14) shows the cause or simply publishes.
 - Regression test added: none because CI workflow; verified by the next release's `apk` job
 - Verified on prod:
-\n
