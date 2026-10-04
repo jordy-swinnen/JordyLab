@@ -20,6 +20,7 @@ EMUDECK_PLATFORM_LOOKUPS = {
     "psx": "PlayStation",
     "psp": "PSP",
     "ps2": "PlayStation 2",
+    "ps3": "PlayStation 3",
     "dreamcast": "Dreamcast",
     "dc": "Dreamcast",
     "saturn": "Saturn",

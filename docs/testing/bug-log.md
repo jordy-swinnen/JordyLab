@@ -829,3 +829,19 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `app-native-start.spec.ts` (checks once signed in), `update-check.store.spec.ts` (a failed check is swallowed)
 - Verified on prod:
 
+### BUG-054: Extracted PS3 games show up as dozens of "EBOOT"/data-file games on platform "Usrdir"; PS3 is labelled "Ps3"
+- Status: FIXED locally — release pending (`fix/scanner-ps3-folders`); needs a client download + rescan on JordyBox
+- Severity: S3
+- Area/spec: gamecatalog / 003
+- Env found: prod catalog (platform chips `Ps3` and `Usrdir`, 2026-10-02); layout confirmed by the owner's `ls ~/Emulation/roms/ps3` (2026-10-04)
+- Coverage rows: 003-FR-scan
+- Steps to reproduce:
+  1. EmuDeck library with RPCS3 extracted discs: `ps3/<Game>/PS3_GAME/USRDIR/EBOOT.BIN` (+ many data files).
+  2. Scan.
+- Expected (cite spec/story): one game per disc, on a readable platform label.
+- Actual (logs/screenshot, secrets redacted): every file with a ROM-like extension (`EBOOT.BIN`, data `.bin`, …) inside the extracted tree becomes its own game whose platform is its immediate parent folder, `USRDIR` → "Usrdir"; the `ps3` folder itself is labelled "Ps3" (capitalise fallback).
+- Root cause: the platform is "the folder directly above the file" and nothing knows an extracted PS3 disc is a folder-shaped game; `ps3` has no label mapping.
+- Fix (PR / commit / tag): a folder that contains `PS3_GAME` is one game named after that folder (everything inside it is ignored); `ps3` → "PlayStation 3" in the client and the server parser; frozen client regenerated. A `.iso` next to an extracted folder is still its own game (the server adopts same-titled games on the same platform).
+- Regression test added: `test_grouping.py` (extracted disc → one game; iso + folder; dots in the folder name; folder directly under the root skipped); frozen client selftest
+- Verified on prod:
+
