@@ -118,7 +118,7 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
 - Claude Code runs all hooks matching one event **in parallel**, so the existing `post-edit-format.sh` (Prettier) and a
   new lint hook can touch the same file at once. **VERIFY** against the current hook docs while implementing.
   **Decision:** serialise with a lock directory (`mkdir`-based, atomic, portable on macOS and Linux) that both scripts
-  take around their file access; the lint hook waits for it for at most 2 s and otherwise skips silently. This keeps
+  take around their file access; the lint hook waits for it for at most 1 s and otherwise skips silently (time budget: see `contracts/lint-changed-command.md`). This keeps
   the new script separate (as specified) and removes the race without merging the two.
 - **Feedback channel**: the existing hooks print to stdout and exit 0, which only reaches the transcript view. For the
   agent to *see* the finding, the hook emits the JSON form with `hookSpecificOutput.additionalContext` and exits 0

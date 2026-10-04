@@ -10,7 +10,7 @@ It knows nothing about Claude Code or OpenCode.
 | Runner | Oxlint through `bunx` with `jordylab-fe/.oxlintrc.json`; if the baseline decision selected ESLint, ESLint on the same files (same output format) |
 | Output | `path:line:col  rule  message`, one per line, nothing else; empty output means clean or skipped |
 | Exit code | `0` always for skip/clean/findings when run by a hook (`--strict` flag exits `1` on findings, for manual use) |
-| Time limit | internal guard (default 3 s); on expiry prints nothing and exits `0` |
+| Time limit | internal guard of 2 s (the one place this number lives, see the budget below); on expiry prints nothing and exits `0` |
 | Missing linter / parse failure | prints nothing, exits `0` |
 | Side effects | none (read-only; never fixes) |
 
@@ -18,12 +18,15 @@ It knows nothing about Claude Code or OpenCode.
 
 | Aspect | Contract |
 |--------|----------|
-| Registration | `.claude/settings.json` PostToolUse, matcher `Write|Edit|MultiEdit`, with a `timeout` of 5 s |
+| Registration | `.claude/settings.json` PostToolUse, matcher `Write|Edit|MultiEdit`, with a `timeout` of 5 s (budget below) |
 | Input | tool input JSON on stdin; `file_path` read with `jq` (same pattern as the other post-edit hooks) |
-| Action | take the format lock (wait up to 2 s, else skip), call `lint-changed.sh` on the one file, release |
+| Action | take the format lock (wait up to 1 s, else skip), call `lint-changed.sh` on the one file, release |
 | Output on findings | `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"<diagnostics>"}}`, exit 0 |
 | Output otherwise | nothing, exit 0 |
 | Never | blocks, edits the file, prints anything on skip, or runs longer than its limit |
+
+**Time budget (single source of truth):** worst case = lock wait 1 s + linter guard 2 s = 3 s, inside the hook's 5 s
+`timeout`, so the script's own guards always fire before the harness kills it. The normal case is well under 1 s.
 
 `post-edit-format.sh` takes the same lock around its Prettier call (and switches `npx` to `bunx`).
 Fixture cases (`.claude/hooks/tests/lint-cases.sh`): error file, clean file, ignored path, non-TypeScript file,
