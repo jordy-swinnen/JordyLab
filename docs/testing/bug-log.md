@@ -796,7 +796,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Actual (logs/screenshot, secrets redacted): the box shows ticked but the app opens on the login page and never asks for a fingerprint.
 - Root cause: `BiometricUnlockService.unlock()` is never called anywhere (US4 was only half wired: enable and wipe exist, unlock on start does not); and the checkbox keeps the browser-flipped tick when `enable()` fails, so a failure looks like success. The manifest also lacks `USE_BIOMETRIC`.
 - Fix (PR / commit / tag): on native start the app calls `unlock()` when unlock is enabled and there is no session; the login page offers an "Unlock with fingerprint" button as retry; a failed enable un-ticks the box and says so; `USE_BIOMETRIC` added to the manifest. The prompt itself and the Keystore storage still need the phone to confirm (MRB-04).
-- Regression test added: `login.component.spec.ts`, `biometric-unlock-toggle.component.spec.ts` (failed enable)
+- Regression test added: `app-native-start.spec.ts` (asks on a native cold start only when enabled and signed out; a failing unlock is contained), `login.component.spec.ts`, `biometric-unlock-toggle.component.spec.ts` (failed enable)
 - Verified on prod:
 
 ### BUG-052: The Android app uses the placeholder launcher icon and splash screen

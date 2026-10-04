@@ -119,9 +119,14 @@ export class App {
     if (!this.platform.isNative()) {
       return;
     }
-    const authenticated = await this.#auth.init();
-    if (!authenticated && (await this.#biometricUnlock.isEnabled())) {
-      await this.#biometricUnlock.unlock();
+    try {
+      const authenticated = await this.#auth.init();
+      if (!authenticated && (await this.#biometricUnlock.isEnabled())) {
+        await this.#biometricUnlock.unlock();
+      }
+    } catch (error) {
+      // Never leave an unhandled rejection: the login page's own buttons stay available as the fallback.
+      console.error('Restoring the native session failed', error);
     }
   }
 
