@@ -390,7 +390,8 @@ See §11: *Deploy to Production* → *Run workflow* with the release tag. `deplo
 
 ### APK publish credentials
 
-The `apk` job logs in as `mobile-release-ci`. Its GitHub secret must equal the value Keycloak uses, which comes
+The `apk` job logs in as `mobile-release-ci`. Its GitHub secret is a **repository** secret (`--repo`, no `--env`: the job
+has no `environment:`, so a secret set on the `production` environment is invisible to it — spec 011 BUG-057) and must equal the value Keycloak uses, which comes
 from `jordylab-secrets/MOBILE_RELEASE_CI_CLIENT_SECRET`. Set it from the cluster, so it is never
 displayed or retyped. The `[ -n "$V" ]` guard matters: if `kubectl` fails (e.g. no `KUBECONFIG` in that shell), a
 plain pipe would store an **empty** secret.
