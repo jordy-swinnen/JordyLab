@@ -4,7 +4,13 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
 import { UsersStore } from '@jordylab-fe/settings/api';
-import { ApkDownloadService } from '@jordylab-fe/shared/platform/api';
+import {
+  ApkDownloadService,
+  AppLinkService,
+  PlatformService,
+  ShareTargetService,
+  UpdateCheckStore,
+} from '@jordylab-fe/shared/platform/api';
 import { App } from './app';
 
 describe('App', () => {
@@ -15,6 +21,9 @@ describe('App', () => {
   const isAdmin = signal(false);
   const pendingCount = signal(0);
   const resolveLatestDownloadUrl = vi.fn();
+  const authInit = vi.fn();
+  const biometricIsEnabled = vi.fn();
+  const biometricUnlock = vi.fn();
   const createComponent = createComponentFactory({
     component: App,
     imports: [RouterModule.forRoot([])],
@@ -24,6 +33,7 @@ describe('App', () => {
         provide: AuthService,
         useValue: {
           username: () => 'jordy',
+          init: authInit,
           logout,
           hasAppRole: hasAppRole.asReadonly(),
           isAdmin: isAdmin.asReadonly(),
@@ -39,7 +49,14 @@ describe('App', () => {
       },
       {
         provide: BiometricUnlockService,
-        useValue: { disable: disableBiometricUnlock },
+        useValue: {
+          disable: disableBiometricUnlock,
+          isEnabled: biometricIsEnabled,
+          unlock: biometricUnlock,
+          available: signal(false).asReadonly(),
+          enabled: signal(false).asReadonly(),
+          refresh: () => Promise.resolve(),
+        },
       },
     ],
   });
@@ -51,6 +68,9 @@ describe('App', () => {
     isAdmin.set(false);
     pendingCount.set(0);
     resolveLatestDownloadUrl.mockReset();
+    authInit.mockReset().mockResolvedValue(false);
+    biometricIsEnabled.mockReset().mockResolvedValue(false);
+    biometricUnlock.mockReset().mockResolvedValue(true);
     spectator = createComponent();
   });
 
