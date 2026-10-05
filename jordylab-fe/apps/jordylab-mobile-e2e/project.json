@@ -1,0 +1,27 @@
+{
+  "name": "jordylab-mobile-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/jordylab-mobile-e2e/src",
+  "projectType": "application",
+  "tags": ["scope:e2e", "type:e2e"],
+  "implicitDependencies": ["jordylab", "jordylab-mobile"],
+  "targets": {
+    "e2e": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/jordylab-mobile-e2e",
+        "commands": [
+          "bun install --frozen-lockfile",
+          "bun run setup",
+          "bun run test:app",
+          "bun run test:browser"
+        ],
+        "parallel": false
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

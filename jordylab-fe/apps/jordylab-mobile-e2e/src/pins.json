@@ -1,0 +1,8 @@
+{
+  "emulatorImage": "system-images;android-35;google_apis;x86_64",
+  "apiLevel": 35,
+  "webViewVersion": "TO_BE_PINNED_FROM_THE_FIRST_CI_RUN",
+  "appium": "3.8.0",
+  "uiautomator2Driver": "8.7.0",
+  "webdriverio": "9.32.0"
+}
