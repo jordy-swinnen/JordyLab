@@ -74,6 +74,7 @@ tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs wit
   every project, branch coverage differs by up to 1.6 points in three projects (line gate unaffected); production build initial 612.59 kB (was 599.28, +2.2%), transfer
   151.12 kB (was 152.01); mobile 612.68 kB; dist 968 kB (was 984); dependency graph identical (20 nodes); a scratch cross-scope import still fails
   `@nx/enforce-module-boundaries`; `nx serve jordylab` boots; spartan generator runs; the frontend image builds on `oven/bun:1`.
+- CI and image (T021): `build.yml` already floats `node-version: 22` (no change); `oven/bun:1` has no Node, so the image build runs `bunx nx build` on Bun's runtime. Rebuilt locally with Angular 22: success (image hash printed, test image removed).
 - Node: local Node 24.13.1 is below Angular 22's `^24.15.0` floor, but Nx runs the builders directly and every build, test and serve worked; CI uses Node 22 (newest 22.x).
   Raising local Node is still recommended (HANDOFF in T016).
 - Not run: the Capacitor `sync` of the `mobile` build (needs the Android project tooling); the `mobile` web build itself passes.
