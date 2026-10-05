@@ -26,7 +26,9 @@ const PRODUCTION_ORIGIN = 'https://jordylab.be';
 const POLICY_FILE = new URL('../../deploy/containers/frontend/security-headers.conf', import.meta.url);
 const policyLine = readFileSync(POLICY_FILE, 'utf8').split('\n').find((line) => line.startsWith('add_header Content-Security-Policy-Report-Only'));
 if (!policyLine) throw new Error(`No Content-Security-Policy-Report-Only header found in ${POLICY_FILE.pathname}`);
-const POLICY = policyLine.match(/"([^"]+)"/)[1]
+const policyValue = policyLine.match(/"([^"]+)"/)?.[1];
+if (!policyValue) throw new Error(`The Content-Security-Policy-Report-Only line in ${POLICY_FILE.pathname} has no double-quoted policy value`);
+const POLICY = policyValue
   .replace(/(default-src|connect-src) 'self'/g, `$1 'self' ${PRODUCTION_ORIGIN}`);
 const BOOT_TIMEOUT_MS = 45_000;
 const CHROME_CANDIDATES = [
