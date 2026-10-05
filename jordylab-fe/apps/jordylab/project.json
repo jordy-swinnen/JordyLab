@@ -49,6 +49,17 @@
           "extractLicenses": false,
           "sourceMap": true
         },
+        "e2e": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": false,
+          "fileReplacements": [
+            {
+              "replace": "apps/jordylab/src/environments/environment.ts",
+              "with": "apps/jordylab/src/environments/environment.e2e.ts"
+            }
+          ]
+        },
         "mobile": {
           "budgets": [
             {

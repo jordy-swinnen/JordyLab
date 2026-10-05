@@ -331,6 +331,13 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
   ignored the same way, which is why the always-run cleanup step and the sweep exist.
 - Not yet: the `web` mode needs the `e2e` Angular configuration and the Playwright project (T068+); `android` mode needs T081+.
 
+### C3c. `e2e` build record (2026-10-05, branch `test/e2e-web-config`, T078)
+
+- The web build bakes `keycloakUrl` into the bundle, but each run's Keycloak is on a random free port, so `environment.e2e.ts` reads it from `window.__JORDYLAB_E2E__`
+  (the Playwright setup injects it with an init script before the app boots) and falls back to `http://localhost:18180`, the logical address the Android build will use
+  (adb reverse maps it to the real host port). The API is same-origin (`/api`, proxied by `e2e/static-server.ts`).
+- `nx build jordylab --configuration=e2e` builds in about 60 s (no optimisation); the production build is unchanged (612.59 kB initial, 151.12 kB transfer, no e2e strings).
+
 ### C4. Android specifics
 
 - The mobile build hardcodes production (`environment.mobile.ts`: `https://jordylab.be`) and the manifest App Link is
