@@ -736,7 +736,7 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | — | CNPG / backups | PASS | cluster healthy; restore drill passed (runbook §15, 1 min 55 s); daily + manual base backups completed |
 | — | `assetlinks.json` | PASS | `package_name: be.jordylab.app`, release fingerprint `1B:02:13:85:…` (BUG-020/029 fixed) |
 | — | Rollback / roll-forward | PASS | DEPLOY-11 |
-| A12 | Browser console per route | PASS | 2026-10-02 rc8: signed-in admin pass over Library, Switch (search, bulk preview, detail), AI Models, Users, account menu — 0 console errors; guest pass is MRB-02 |
+| A12 | Browser console per route | PASS | since 2026-10-05 also guarded in CI by the `app-boot` job (built app in headless Chrome must reach the login page; BUG-061); 2026-10-02 rc8: signed-in admin pass over Library, Switch (search, bulk preview, detail), AI Models, Users, account menu — 0 console errors; guest pass is MRB-02 |
 
 ### B. Auth, roles and Settings
 Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
