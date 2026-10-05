@@ -135,6 +135,15 @@ present in the repo.
 - Spring AI's pgvector `VectorStore` auto-configuration is excluded in `jordylab-be/src/main/resources/application.yaml` (nothing uses it and no embedding model is configured). A RAG/semantic-search feature must remove that exclusion and configure an `EmbeddingModel`
 - NFS mount to JordyBox uses `soft,timeo=50,retrans=3` — operations fail after ~15s when JordyBox is off
 
+## Local containers (Podman/Docker)
+
+The `jordylab-be-*` containers (`compose.yaml`: dev Postgres + Keycloak) and their volumes hold the owner's dev database. The dev Postgres data is in an *anonymous* volume, so it is lost for good if the container is removed with `-v` or the volume is used by a `--rm` container. Agents:
+
+- **Read-only on the dev stack**: `ps`, `inspect`, `logs` only. Never `rm`, `stop`, `compose down`, `volume rm` or `prune` on it, and never recreate it without the owner's yes.
+- **Remove only what you created, by exact name or run label.** Never select containers by image (the dev stack and the e2e stack both use `pgvector/pgvector:pg16`) or by `ps | grep | xargs rm`.
+- **Never mount an existing volume in a `--rm` container** to look inside it: podman deletes implicitly created volumes when such a container exits. Use `podman volume inspect` / `podman volume export`.
+- Throwaway stacks come from `jordylab-fe/e2e/run.sh` (labelled, self-cleaning, `e2e/lib/cleanup.sh verify-all`), not from hand-written `podman run`. On macOS run it from a path under `/Users` or `/private/tmp`: a bind-mounted file under `/tmp` arrives as a directory and Postgres fails to start.
+
 ## Secrets
 
 - **Never echo, log, or print secret values** — `ANTHROPIC_API_KEY`, `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_BOOTSTRAP_*`, `POSTGRES_PASSWORD`, refresh tokens from `~/.config/jordylab/scan/token.json`, and any other key/token/password. This applies to chat output, file contents, diffs, screenshots, and code. When asked to "show" a `.env` or a key, redact with `<redacted>` or show only the variable name. Verify secrets work by behavior (does the call return 200?), not by reading the value.
