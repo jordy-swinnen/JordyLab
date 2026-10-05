@@ -240,9 +240,9 @@
 ## Phase 13: Polish and cross-cutting
 
 - [X] T104 [P] Run the licence-phrase grep from `.github/workflows/build.yml` locally over all new docs and READMEs (`grep -ril` outside `specs/`) and fix any hit (FR-047)
-- [ ] T105 [P] Check every commit of this feature carries a valid `Refs:` trailer (`.githooks/commit-msg` enabled via `git config core.hooksPath .githooks`; never `--no-verify`) (FR-004)
-- [ ] T106 Run the full `quickstart.md` validation for Parts A, B and C and record pass/fail per item in `research.md`; anything not runnable here (OpenCode, emulator on the Mac) is listed as not run with its HANDOFF
-- [ ] T107 Update `specs/012-technical-improvements/checklists/requirements.md` notes and mark the feature's status in `spec.md` when all parts are merged; list remaining HANDOFFs
+- [X] T105 [P] Check every commit of this feature carries a valid `Refs:` trailer (`.githooks/commit-msg` enabled via `git config core.hooksPath .githooks`; never `--no-verify`) (FR-004)
+- [X] T106 Run the full `quickstart.md` validation for Parts A, B and C and record pass/fail per item in `research.md`; anything not runnable here (OpenCode, emulator on the Mac) is listed as not run with its HANDOFF
+- [X] T107 Update `specs/012-technical-improvements/checklists/requirements.md` notes and mark the feature's status in `spec.md` when all parts are merged; list remaining HANDOFFs
 
 ---
 
