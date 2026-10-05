@@ -30,4 +30,13 @@ export default [
     files: ['**/*.html'],
     rules: {},
   },
+  {
+    // Angular 22 made OnPush the default. The upgrade migration pinned every existing component to
+    // ChangeDetectionStrategy.Eager so behaviour is identical; moving them to OnPush is a separate, deliberate change
+    // (draft: specs/_drafts/angular-onpush-adoption), so the recommended rule stays off until then.
+    files: ['**/*.ts'],
+    rules: {
+      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
+    },
+  },
 ];
