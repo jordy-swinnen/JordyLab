@@ -200,6 +200,27 @@ Claude Code: `/context` in a session started in the package (needs the user's in
 `/context` myself). OpenCode: a fresh session in the package (needs OpenCode installed and a manual start). Both are
 **handed to the developer** if they cannot be run here; the result is reported plainly.
 
+### B5. Part B record (2026-10-05, branch `docs/ai-integration-conventions`)
+
+- Corrections applied to the moved report (GA 12 June 2026 from the spring.io announcement; Spring Boot 4.0 and 4.1) and a new
+  section 14 answers the starter-dependency question with the measured tree (see the report).
+- Rules file: `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md` (+ `CLAUDE.md` containing `@AGENTS.md`). Items the report
+  marks unverified or community-only (JDBC memory dropping tool messages, retry stacking, `@PreAuthorize` on `@Tool`, outbox,
+  prompt versioning) were left out of it.
+- Gap analysis: 18 topics; 4 worth building (token usage and budget, prompts as resources, model calls outside transactions, golden
+  evals), 7 deferred with a trigger, 5 not applicable, 2 covered by builds. The transaction finding is bigger than the report's
+  example: enrichment AI calls also run inside `ScanService.submitScan` and `SteamLibrarySyncService.syncOwned`.
+- Checklist: one identical block (`BEGIN/END AI CHECKLIST`) in `.claude/skills/ai-endpoint/SKILL.md` and both `code-reviewer.md`
+  copies (diff empty). It carries the "no model call inside a transaction" item although the report rates the outbox/idempotency
+  pattern medium confidence: the item is the owner's own convention (spec 012 US9), the rules file stays strictly high-confidence.
+- Loading verified in fresh headless sessions started in the package directory: **Claude Code** (`claude -p`) and **OpenCode**
+  (`opencode run`, model `deepseek-v4.1-flash`) both answered yes and quoted the first rule verbatim. **Not run:** the interactive
+  `/context` view in Claude Code and an interactive OpenCode session (a headless session proves the file is loaded, not how it
+  is displayed); the OpenCode copy of `code-reviewer` was not exercised (same checklist text, diffed identical).
+- Reviewer check: the Claude Code `code-reviewer` run on a scratch class (direct `ChatClient`, `@Transactional` model call, raw
+  string answer, no test) reported 1 blocking (direct `ChatClient`) and 9 important findings including the transaction, the
+  missing typed output and the missing test. The scratch class was deleted.
+
 ## Part C: E2E testing
 
 ### C1. Versions (all confirmed with the developer before install, FR-002)
