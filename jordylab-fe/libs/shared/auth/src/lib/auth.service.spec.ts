@@ -161,6 +161,23 @@ describe('AuthService', () => {
     expect(authenticated).toBe(false);
   });
 
+  it('carries on signed out when Keycloak never answers, instead of leaving the app on a blank page', async () => {
+    vi.useFakeTimers();
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    keycloakInit.mockReturnValueOnce(new Promise<boolean>(() => undefined));
+
+    const initialization = spectator.service.init();
+    await vi.advanceTimersByTimeAsync(8000);
+
+    await expect(initialization).resolves.toBe(false);
+    expect(spectator.service.isAuthenticated()).toBe(false);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+    vi.useRealTimers();
+  });
+
   it('only initializes Keycloak once across repeated init() calls', async () => {
     keycloakInit.mockResolvedValue(true);
 
