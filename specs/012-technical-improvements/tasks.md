@@ -49,7 +49,7 @@
 
 ### PR 1b: Angular 22 (branch `chore/angular-22-upgrade`, after 1a is merged)
 
-- [ ] T016 [HANDOFF] [US1] Post HANDOFF-## asking Jordy to raise local Node to 24.15 or newer (Angular 22 needs `^22.22.3 || ^24.15.0 || >=26`; the Mac has 24.13.1), then confirm `node -v`
+- [X] T016 [HANDOFF] [US1] Post HANDOFF-## asking Jordy to raise local Node to 24.15 or newer (Angular 22 needs `^22.22.3 || ^24.15.0 || >=26`; the Mac has 24.13.1), then confirm `node -v`
 - [X] T017 [US1] Create branch `chore/angular-22-upgrade` from updated `main`; re-check the A6 table in `research.md` against the registry on the day and stop-and-report if any tool rejects TypeScript 6.0 or Angular 22 (edge cases in spec)
 - [X] T018 [US1] Run the Angular 22 migration in `jordylab-fe/` (`bunx nx migrate latest`; if it does not move `@angular/*`, `bunx nx migrate @angular/core@22`), review `package.json`/`migrations.json`, install, `--run-migrations`, review every migration's file changes; TypeScript moves to `~6.0` here (FR-008)
 - [X] T019 [US1] Bump the Angular-coupled tooling in `jordylab-fe/package.json`: `angular-eslint` 22.x, `@analogjs/vite-plugin-angular` and `@analogjs/vitest-angular` 2.8.x, `ng-packagr` 22.x; fix compile and config fallout (`tsconfig.base.json`, per-project `tsconfig.*.json`, `eslint.config.mjs`) (FR-008)
@@ -72,14 +72,14 @@
 ### Oxlint and shared command (PR 2, branch `feat/oxlint-fast-lint`)
 
 - [X] T025 [US2] Measure single-file Oxlint (`bunx oxlint <file>`) versus the T001 single-file ESLint numbers and record in `research.md`; apply the decision rule: if ESLint is within about 2x and under about 2 s, the shared command uses ESLint (FR-020); if borderline, ask Jordy
-- [ ] T026 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to confirm the exact Oxlint and `@nx/oxlint` versions (proposal: oxlint 1.86.0, `@nx/oxlint` 23.2.1) (FR-002)
-- [ ] T027 [US2] Install `oxlint` (exact pin) and run `bunx nx add @nx/oxlint` in `jordylab-fe/`; confirm Bun works, the plugin picks task name `oxlint`, and the `lint` target is untouched (inspect `bunx nx show project <lib>`); record in `research.md` section A2
-- [ ] T028 [US4] Create `jordylab-fe/.oxlintrc.json`: enable only rules ESLint does not own; explicitly turn off every overlapping `typescript`/`correctness` rule ESLint already enables; do not register the boundary rule or any JS plugin (FR-011, FR-012)
-- [ ] T029 [US4] Write `jordylab-fe/tools/check-lint-ownership.sh` per `contracts/lint-ownership.md` (resolved Oxlint rules vs ESLint `--print-config` for one `.ts` file per library type; fail on any rule enabled in both; check ESLint still owns `@angular-eslint/*`, template rules and `@nx/enforce-module-boundaries`); run it and fix `.oxlintrc.json` until it exits 0 (SC-004)
+- [X] T026 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to confirm the exact Oxlint and `@nx/oxlint` versions (proposal: oxlint 1.86.0, `@nx/oxlint` 23.2.1) (FR-002)
+- [X] T027 [US2] Install `oxlint` (exact pin) and run `bunx nx add @nx/oxlint` in `jordylab-fe/`; confirm Bun works, the plugin picks task name `oxlint`, and the `lint` target is untouched (inspect `bunx nx show project <lib>`); record in `research.md` section A2
+- [X] T028 [US4] Create `jordylab-fe/.oxlintrc.json`: enable only rules ESLint does not own; explicitly turn off every overlapping `typescript`/`correctness` rule ESLint already enables; do not register the boundary rule or any JS plugin (FR-011, FR-012)
+- [X] T029 [US4] Write `jordylab-fe/tools/check-lint-ownership.sh` per `contracts/lint-ownership.md` (resolved Oxlint rules vs ESLint `--print-config` for one `.ts` file per library type; fail on any rule enabled in both; check ESLint still owns `@angular-eslint/*`, template rules and `@nx/enforce-module-boundaries`); run it and fix `.oxlintrc.json` until it exits 0 (SC-004)
 - [X] T030 [US2] Write `jordylab-fe/tools/lint-changed.sh` per `contracts/lint-changed-command.md` (path filtering incl. ESLint ignores, `bunx oxlint` or ESLint per T025, `path:line:col  rule  message` output, internal 2 s time guard (budget in the contract) that works on macOS without `timeout`, silent on missing linter/parse failure, `--strict` for manual use)
-- [ ] T031 [US3] Add an "Oxlint" step before the "Lint" step in the `test-frontend` job of `.github/workflows/build.yml` (also running `tools/check-lint-ownership.sh`); both steps fail the job (FR-021)
+- [X] T031 [US3] Add an "Oxlint" step before the "Lint" step in the `test-frontend` job of `.github/workflows/build.yml` (also running `tools/check-lint-ownership.sh`); both steps fail the job (FR-021)
 - [ ] T032 [US3] Prove CI ordering with a scratch branch: one error both linters see fails on the Oxlint step; an Angular template violation and a boundary violation fail only on ESLint (record run links in `research.md`; do not merge the scratch branch)
-- [ ] T033 [P] [US2] Document the commands and the division of labour (one short paragraph, rule-ownership pointer) in `jordylab-fe/AGENTS.md`, plus a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-023)
+- [X] T033 [P] [US2] Document the commands and the division of labour (one short paragraph, rule-ownership pointer) in `jordylab-fe/AGENTS.md`, plus a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-023)
 - [ ] T034 [US2] Open PR 2, wait for CI, resolve review comments, merge
 
 ### Agent hook (PR 3, branch `feat/lint-agent-hook`; may be combined with PR 2)
@@ -103,7 +103,7 @@
 
 **Independent Test**: on a scratch branch, one commit removes Oxlint; lint, tests, builds, hook fixtures stay green.
 
-- [ ] T045 [US5] Rehearse removal on a scratch branch: one commit removing `oxlint`/`@nx/oxlint` from `jordylab-fe/package.json` and `nx.json`, `jordylab-fe/.oxlintrc.json`, `jordylab-fe/tools/check-lint-ownership.sh`, the CI Oxlint steps, and the Oxlint branch in `jordylab-fe/tools/lint-changed.sh` (it falls back to ESLint or silence); run lint, tests, builds and `lint-cases.sh`; record the commit's file list in `jordylab-fe/AGENTS.md` under the Oxlint paragraph so the next person can do it (FR-022, SC-006)
+- [X] T045 [US5] Rehearse removal on a scratch branch: one commit removing `oxlint`/`@nx/oxlint` from `jordylab-fe/package.json` and `nx.json`, `jordylab-fe/.oxlintrc.json`, `jordylab-fe/tools/check-lint-ownership.sh`, the CI Oxlint steps, and the Oxlint branch in `jordylab-fe/tools/lint-changed.sh` (it falls back to ESLint or silence); run lint, tests, builds and `lint-cases.sh`; record the commit's file list in `jordylab-fe/AGENTS.md` under the Oxlint paragraph so the next person can do it (FR-022, SC-006)
 
 ---
 
@@ -152,7 +152,7 @@
 
 **Independent Test**: `jordylab-fe/e2e/run.sh web` is green; breaking a covered journey makes it fail with a readable report.
 
-- [ ] T067 [HANDOFF] [US10] Post HANDOFF-## asking Jordy to confirm the Playwright version (proposal 1.63.0, plus its browser download) (FR-002)
+- [X] T067 [HANDOFF] [US10] Post HANDOFF-## asking Jordy to confirm the Playwright version (proposal 1.63.0, plus its browser download) (FR-002)
 - [ ] T068 [US10] Add `@nx/playwright` and `@playwright/test` at the confirmed versions and generate the Nx project `jordylab-fe/apps/jordylab-e2e` (project.json with `e2e` target, `playwright.config.ts` reading base URL and credentials from the runner's env file)
 - [ ] T069 [US10] Decide and implement how the catalog gets data without database writes: through the app's ingest API with a token from the throwaway realm and a synthetic library folder created by the test (spike in `jordylab-fe/apps/jordylab-e2e/src/support/`; record the decision in `research.md` C3); if only the real downloaded scanner can do it, stop and report (repo validation-data rule)
 - [ ] T070 [US10] Write the global setup in `jordylab-fe/apps/jordylab-e2e/src/global-setup.ts`: log in once through the Keycloak login page as the admin test user and save storage state reused by every test (FR-033)
@@ -174,7 +174,7 @@
 
 - [X] T078 [US12] Add the `e2e` Angular build configuration: `jordylab-fe/apps/jordylab/src/environments/environment.e2e.ts` (Keycloak address injected at run time as `window.__JORDYLAB_E2E__`, fixed logical fallback `http://localhost:18180` for the Android build, where adb reverse maps it) plus the `e2e` configuration in `jordylab-fe/apps/jordylab/project.json`; production output proven unchanged (initial 612.59 kB / 151.12 kB, no e2e strings in the bundle). The Android-specific build values are part of T079
 - [ ] T079 [US12] Make the debug Android build point at the e2e web build and allow cleartext/mixed content in debug only: App Link host placeholder in `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml` (release value stays `jordylab.be`), debug config in `jordylab-fe/apps/jordylab-mobile/android/app/build.gradle` and an e2e Capacitor config next to `jordylab-fe/apps/jordylab-mobile/capacitor.config.ts`; release APK output unchanged (verify with the existing release build steps)
-- [ ] T080 [HANDOFF] [US12] Post HANDOFF-## asking Jordy to confirm Appium 3.8.0, WebdriverIO 9.32.0 and the emulator image/API level for the pins (FR-002, FR-039)
+- [X] T080 [HANDOFF] [US12] Post HANDOFF-## asking Jordy to confirm Appium 3.8.0, WebdriverIO 9.32.0 and the emulator image/API level for the pins (FR-002, FR-039)
 - [ ] T081 [US12] Generate the Nx project `jordylab-fe/apps/jordylab-mobile-e2e` (WebdriverIO + Appium 3 + UiAutomator2, TypeScript, `wdio.conf.ts`); pin the UiAutomator2 driver and chromedriver to the emulator's WebView version and write `jordylab-fe/apps/jordylab-mobile-e2e/PINS.md` (FR-036, FR-039)
 - [ ] T082 [US12] Write the preflight in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/preflight.ts`: read the emulator's WebView version with `adb`, compare with `PINS.md`, fail fast naming both versions (FR-039)
 - [ ] T083 [US12] Write the context helper in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/contexts.ts`: switch between `NATIVE_APP` and the WebView context with a time limit and a clear error when the WebView context is missing (FR-036)
