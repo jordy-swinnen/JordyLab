@@ -6,7 +6,7 @@
 
 ## 1. Executive Summary
 
-Production-grade AI integration is mostly **ordinary distributed-systems engineering wrapped around a non-deterministic component**. Across Anthropic, OpenAI, Microsoft, Martin Fowler, Chip Huyen, Eugene Yan and Hamel Husain, the same principles recur: start with the simplest workflow, build **evals first**, treat **context as a scarce resource**, layer **guardrails**, centralise **provider access (gateway/fallback/caching/cost)**, and keep **humans in the loop for irreversible actions**[^25][^27][^28][^29][^30][^31]. Spring AI (current GA line **2.0.x**, requires Spring Boot 4 / Java 17+) maps well onto these principles: `ChatClient` + **Advisors** (middleware chain) for cross-cutting concerns, `VectorStore`/modular RAG, `@Tool`/MCP, Micrometer-based observability using OTel GenAI conventions, and an `Evaluator` API[^1][^3][^5][^11][^12]. However, **many "hard" production concerns are not provided by the framework** — circuit breaking, model fallback, token budgeting, PII/injection guardrails, tool authorisation, HITL approval and compaction-based memory must be designed by you or taken from community projects[^21][^23][^24][^41][^42]. The recommended architecture is therefore: a **domain-owned port + anti-corruption adapter** around Spring AI, a **thin advisor pipeline** for cross-cutting concerns, **asynchronous/outbox-driven** long-running work, **externalised versioned prompts**, **eval suites in CI**, and **explicit security layers**.
+Production-grade AI integration is mostly **ordinary distributed-systems engineering wrapped around a non-deterministic component**. Across Anthropic, OpenAI, Microsoft, Martin Fowler, Chip Huyen, Eugene Yan and Hamel Husain, the same principles recur: start with the simplest workflow, build **evals first**, treat **context as a scarce resource**, layer **guardrails**, centralise **provider access (gateway/fallback/caching/cost)**, and keep **humans in the loop for irreversible actions**[^25][^27][^28][^29][^30][^31]. Spring AI (current GA line **2.0.x**, designed for Spring Boot 4.0 and 4.1 / Java 17+) maps well onto these principles: `ChatClient` + **Advisors** (middleware chain) for cross-cutting concerns, `VectorStore`/modular RAG, `@Tool`/MCP, Micrometer-based observability using OTel GenAI conventions, and an `Evaluator` API[^1][^3][^5][^11][^12]. However, **many "hard" production concerns are not provided by the framework** — circuit breaking, model fallback, token budgeting, PII/injection guardrails, tool authorisation, HITL approval and compaction-based memory must be designed by you or taken from community projects[^21][^23][^24][^41][^42]. The recommended architecture is therefore: a **domain-owned port + anti-corruption adapter** around Spring AI, a **thin advisor pipeline** for cross-cutting concerns, **asynchronous/outbox-driven** long-running work, **externalised versioned prompts**, **eval suites in CI**, and **explicit security layers**.
 
 ---
 
@@ -14,10 +14,16 @@ Production-grade AI integration is mostly **ordinary distributed-systems enginee
 
 | Item | Finding |
 |---|---|
-| Current Spring AI GA | **2.0.x** (2.0.0 GA reported 28 May 2026; latest release tag `v2.0.1`); `main` is `2.1.0-SNAPSHOT`[^1] |
-| Platform baseline | **Spring Boot 4 / Spring Framework 7 / Java 17+ / Jackson 3**[^1] |
-| Date confidence | GA date is corroborated by secondary sources, not a primary spring.io post[^1] |
+| Current Spring AI GA | **2.0.x** (2.0.0 GA announced **12 June 2026**; latest release tag `v2.0.1`); `main` is `2.1.0-SNAPSHOT`[^1][^43] |
+| Platform baseline | **Spring Boot 4.0 and 4.1 / Spring Framework 7.0 / Java 17+ / Jackson 3**[^1][^43] |
+| Date confidence | GA date is confirmed by the primary spring.io announcement (12 June 2026); the earlier 28 May date in secondary sources was wrong[^43] |
 | Many "1.x" tutorials | Outdated: tool loops, memory ordering, retry stack and HTTP clients all changed in 2.0 (see §9) |
+
+> **Corrections made when this report was filed in the repo (2026-10-05):** the GA date is 12 June 2026, not 28 May; the
+> baseline is Spring Boot 4.0 **and** 4.1, not only 4. The question whether the repo's combination (Spring Boot 4.0.3 with
+> Spring AI 2.0.1) suffers from the starter-dependency problem some reports describe is answered in
+> "§14 Repo finding: Boot 4.0.3 + Spring AI 2.0.1" below. Everything else is the research as delivered; items it marks
+> unverified are still unverified and are deliberately kept out of `jordylab-be/.../shared/ai/AGENTS.md`.
 
 ---
 
@@ -273,6 +279,30 @@ Promptfoo/DeepEval have no first-party Java integration — bridge over HTTP if 
 
 ---
 
+## 14. Repo finding: Boot 4.0.3 + Spring AI 2.0.1 (added 2026-10-05, not part of the original report)
+
+**Question.** Some reports (issue spring-projects/spring-ai#6465, title only seen) say Spring AI 2.0.x starters pull Spring Boot 4.1
+dependencies even though 2.0 is documented for Boot 4.0 as well. JordyLab ran Boot 4.0.3 with Spring AI 2.0.1. Does the problem apply?
+
+**Method.** From `jordylab-be/`: `./gradlew dependencies --configuration runtimeClasspath --no-daemon -q`, then list every
+`org.springframework.boot:spring-boot*` coordinate with the version it *requested* and the version it *resolved* to.
+
+**Result on Boot 4.0.3 (before spec 012 US16).** The Spring AI 2.0.1 starters (`spring-ai-starter-model-anthropic`,
+`-openai`, `-vector-store-pgvector`) *request* `spring-boot-starter`, `spring-boot-starter-jdbc`, `-restclient` and `-webclient`
+at **4.1.1**. The Boot 4.0.3 BOM (applied by the dependency-management plugin) resolves all of them to **4.0.3**
+(`4.1.1 -> 4.0.3` in the tree). Result: 0 coordinates resolved to a 4.1.x version, so the classpath held a single Boot minor. The mismatch exists as a
+*request*, not as a resolved jar, because the BOM wins. It would bite a build that does not apply the Boot BOM (plain Gradle
+platform without constraint enforcement) or a Maven build that does not manage these starters.
+
+**Result on Boot 4.1.1 (spec 012 PR 1c, pull request #106).** Every Boot coordinate resolves to 4.1.1 (106 of 106 references), nothing is forced down, and the
+`JordylabApplicationTests` context loads with Spring AI 2.0.1 on Boot 4.1.1 (run alone; the full local suite has Podman-related
+container failures that also occur on main, see `specs/012-technical-improvements/research.md`, PR 1c record).
+
+**Conclusion.** The combination worked, because the Boot BOM forced the starters down. Moving to Boot 4.1.1 removes the
+request/resolution mismatch altogether. Spring AI 2.0.1 is the newest 2.0.x (checked 2026-10-05), so nothing newer is available to pair.
+
+---
+
 ## Footnotes
 
 [^1]: spring-projects/spring-ai `spring-ai-docs/src/main/antora/modules/ROOT/pages/upgrade-notes.adoc` ([raw](https://raw.githubusercontent.com/spring-projects/spring-ai/main/spring-ai-docs/src/main/antora/modules/ROOT/pages/upgrade-notes.adoc)); latest release `v2.0.1` of [spring-projects/spring-ai](https://github.com/spring-projects/spring-ai); `main` at commit `46d05c2fdbab52f6ef04207abe19b12687a47453` (pom `2.1.0-SNAPSHOT`).
@@ -317,3 +347,4 @@ Promptfoo/DeepEval have no first-party Java integration — bridge over HTTP if 
 [^40]: [Broadcom Tanzu blog – Modern Spring Workflow](https://blogs.vmware.com/tanzu/the-modern-spring-workflow-is-enterprise-ready-and-ai-boosted/); [Spring I/O 2025 – Tzolov](https://2025.springio.net/sessions/from-single-shot-llms-to-intelligent-agents-building-scalable-ai-systems-with-spring-ai-and-mcp/).
 [^41]: Resilience4j + Spring AI double-retry caution from community write-ups (e.g. dev.to "Retry and Circuit Breaker in Spring Boot: When Resilience Backfires") — not official Spring documentation.
 [^42]: Baeldung "Configuring Multiple LLMs in Spring AI" and Java Code Geeks multi-LLM article (community patterns); [Adrastopoulos/spring-ai-multi-provider](https://github.com/Adrastopoulos/spring-ai-multi-provider); no fallback/router type exists in `spring-projects/spring-ai`.
+[^43]: Spring blog, [Spring AI 2.0.0 GA available now](https://spring.io/blog/2026/06/12/spring-ai-2-0-0-GA-available-now/) (12 June 2026): "designed to be used with Spring Boot 4.0 / 4.1", Spring Framework 7.0.
