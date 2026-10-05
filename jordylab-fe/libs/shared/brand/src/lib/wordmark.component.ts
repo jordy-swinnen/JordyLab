@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 /** "Jordy" in a light weight next to "Lab" in a heavy weight, same face. */
 @Component({
   selector: 'lib-wordmark',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<span
     class="font-display leading-none tracking-[-0.03em]"
     style="font-variation-settings: 'wdth' 88"

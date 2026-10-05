@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { GameLibraryStore, InstallStatus, LibrarySource } from '@jordylab-fe/gamecatalog/api';
 import { GameGridViewComponent } from './game-grid-view.component';
 
@@ -6,6 +6,7 @@ import { GameGridViewComponent } from './game-grid-view.component';
   selector: 'lib-game-grid',
   standalone: true,
   imports: [GameGridViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-grid.component.html',
 })
 export class GameGridComponent {

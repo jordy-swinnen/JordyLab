@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
@@ -10,6 +10,7 @@ import { SwitchGameFormat, SwitchGameStore, SwitchSearchResult } from '@jordylab
   selector: 'lib-switch-game',
   standalone: true,
   imports: [FormsModule, RouterLink, HlmBadgeDirective, HlmCardImports, HlmInputDirective],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './switch-game.component.html',
 })
 export class SwitchGameComponent {

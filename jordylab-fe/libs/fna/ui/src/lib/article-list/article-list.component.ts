@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ArticleStore } from '@jordylab-fe/fna/api';
 import { ArticleListViewComponent } from './article-list-view.component';
 
@@ -6,6 +6,7 @@ import { ArticleListViewComponent } from './article-list-view.component';
   selector: 'lib-article-list',
   standalone: true,
   imports: [ArticleListViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './article-list.component.html',
 })
 export class ArticleListComponent {

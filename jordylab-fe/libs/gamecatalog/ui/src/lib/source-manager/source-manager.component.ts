@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
 import { ScanClientType, SourceManagerViewComponent } from './source-manager-view.component';
 
@@ -6,6 +6,7 @@ import { ScanClientType, SourceManagerViewComponent } from './source-manager-vie
   selector: 'lib-source-manager',
   standalone: true,
   imports: [SourceManagerViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './source-manager.component.html',
 })
 export class SourceManagerComponent {

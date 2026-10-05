@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { ShareTargetService } from '@jordylab-fe/shared/platform/api';
@@ -14,6 +14,7 @@ import { ShareTargetService } from '@jordylab-fe/shared/platform/api';
 @Component({
   selector: 'lib-share-landing',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (sharedText(); as text) {
       <div class="jordylab-share-landing">

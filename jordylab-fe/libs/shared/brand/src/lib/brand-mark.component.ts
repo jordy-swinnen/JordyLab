@@ -1,9 +1,10 @@
-import { Component, input } from '@angular/core';
+import { Component, input, ChangeDetectionStrategy } from '@angular/core';
 
 /** The JordyLab flask-J mark: a J whose hook holds two rising bubbles. */
 @Component({
   selector: 'lib-brand-mark',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <svg
       [attr.width]="size()"

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { BriefingStore } from '@jordylab-fe/fna/api';
 import { BriefingDisplayViewComponent } from './briefing-display-view.component';
 
@@ -6,6 +6,7 @@ import { BriefingDisplayViewComponent } from './briefing-display-view.component'
   selector: 'lib-briefing-display',
   standalone: true,
   imports: [BriefingDisplayViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './briefing-display.component.html',
 })
 export class BriefingDisplayComponent {

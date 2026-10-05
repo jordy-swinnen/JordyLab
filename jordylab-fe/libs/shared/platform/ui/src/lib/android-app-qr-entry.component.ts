@@ -1,4 +1,4 @@
-import { Component, ElementRef, viewChild, effect } from '@angular/core';
+import { Component, ElementRef, viewChild, effect, ChangeDetectionStrategy } from '@angular/core';
 import * as QRCode from 'qrcode';
 
 /**
@@ -9,6 +9,7 @@ import * as QRCode from 'qrcode';
 @Component({
   selector: 'lib-android-app-qr-entry',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="jordylab-qr-entry">
       <p>Get the JordyLab app</p>

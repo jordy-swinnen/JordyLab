@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 
 /**
  * Mandatory update screen (spec US3-2, FR-011) — no dismissal, no other UI reachable underneath.
@@ -6,6 +6,7 @@ import { Component, input, output } from '@angular/core';
 @Component({
   selector: 'lib-update-required',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div
       class="jordylab-update-required flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-8 text-center"

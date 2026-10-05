@@ -27,7 +27,7 @@ Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 - Use the Custom Signal Store pattern (`/angular-signal-store`) for all API-backed state — a plain `@Injectable` service in the domain's `api` lib with private writable signals, public readonly signals, and methods that call the API and mutate state directly
 - No NgRx, no `@ngrx/signals` `signalStore()` — hand-rolled services only
 - Containers `inject()` the store directly — the store *is* the facade, no separate facade layer
-- Prefer `httpResource()` only once verified stable in the installed `@angular/core` version (still `@experimental` as of 21.1.6) — default to manual signals until then
+- `httpResource()` carries no `@experimental` marker in Angular 22 (checked in `@angular/common`), but state stays in the hand-rolled signal stores — do not introduce it ad hoc; adopt it only through a deliberate change
 
 # Nx Structure
 

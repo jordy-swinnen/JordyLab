@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { PortfolioStore } from '@jordylab-fe/fna/api';
 import { PortfolioManagerViewComponent } from './portfolio-manager-view.component';
 
@@ -6,6 +6,7 @@ import { PortfolioManagerViewComponent } from './portfolio-manager-view.componen
   selector: 'lib-portfolio-manager',
   standalone: true,
   imports: [PortfolioManagerViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager.component.html',
 })
 export class PortfolioManagerComponent {

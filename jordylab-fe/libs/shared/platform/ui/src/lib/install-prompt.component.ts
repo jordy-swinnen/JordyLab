@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { InstallPromptStore } from '@jordylab-fe/shared/platform/api';
 
 export type InstallDownloadStatus = 'idle' | 'preparing' | 'started' | 'failed';
@@ -16,6 +16,7 @@ const BUTTON =
 @Component({
   selector: 'lib-install-prompt',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @switch (store.promptKind()) {
       @case ('android') {

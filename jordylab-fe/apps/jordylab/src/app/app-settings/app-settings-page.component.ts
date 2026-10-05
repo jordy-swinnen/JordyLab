@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { BiometricUnlockToggleComponent } from '@jordylab-fe/shared/auth';
 
 /**
@@ -9,6 +9,7 @@ import { BiometricUnlockToggleComponent } from '@jordylab-fe/shared/auth';
   selector: 'app-app-settings-page',
   standalone: true,
   imports: [BiometricUnlockToggleComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="flex flex-col gap-3.5">
       <div class="eyebrow">Settings · App</div>
