@@ -78,8 +78,29 @@ jobs:
         working-directory: jordylab-fe
         run: bunx nx run-many --target=test --all --coverage
 
+  # Boots the *built* app in headless Chrome and requires the login page to render: the only check on the real start-up
+  # path (main.ts -> pre-bootstrap auth -> bootstrapApplication). Unit tests could not see the rc12 blank page (NG0201,
+  # spec 011 BUG-056). Chrome is preinstalled on ubuntu-latest; the script has no dependencies.
+  app-boot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: jordylab-fe
+        run: bun install --frozen-lockfile
+      - name: Build the production bundle
+        working-directory: jordylab-fe
+        run: bunx nx build jordylab
+      - name: Boot the built app in headless Chrome
+        working-directory: jordylab-fe
+        run: bun tools/app-boot-check.mjs
+
   build-and-push:
-    needs: [secret-scan, licence-check, test-backend, test-frontend]
+    needs: [secret-scan, licence-check, test-backend, test-frontend, app-boot]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

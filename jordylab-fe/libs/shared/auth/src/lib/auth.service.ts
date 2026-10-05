@@ -17,6 +17,12 @@ function stripTrailingSlash(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
 }
 
+/**
+ * How long start-up waits for Keycloak's silent check before carrying on signed out. Without a limit an unreachable (or
+ * frame-blocked) Keycloak left the whole app on a blank page: `keycloak.init` never settles.
+ */
+const KEYCLOAK_INIT_TIMEOUT_MS = 8000;
+
 /** The two application roles the realm grants. Self-registered users hold neither until approved. */
 export type AppRole = 'admin' | 'guest';
 
@@ -301,15 +307,16 @@ export class AuthService {
       // Native has no cookie session shared with the system browser the login flow opens (the
       // WebView's cookie jar is isolated from it), so a silent-SSO iframe check can only ever
       // fail there — skip it rather than pay a pointless round trip on every app start.
-      const authenticated = Capacitor.isNativePlatform()
-        ? await keycloak.init({ checkLoginIframe: false })
-        : await keycloak.init({
+      const initialization = Capacitor.isNativePlatform()
+        ? keycloak.init({ checkLoginIframe: false })
+        : keycloak.init({
             onLoad: 'check-sso',
             silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
             silentCheckSsoFallback: false,
             pkceMethod: 'S256',
             checkLoginIframe: false,
           });
+      const authenticated = await this.#settleWithin(initialization, KEYCLOAK_INIT_TIMEOUT_MS);
       this.#authenticated.set(authenticated);
       if (authenticated) {
         this.#applyToken();
@@ -320,6 +327,22 @@ export class AuthService {
       console.error('Keycloak init failed', error);
 
       return false;
+    }
+  }
+
+  /** The result of `work`, or `false` (signed out) when it has not settled after `milliseconds`. */
+  async #settleWithin(work: Promise<boolean>, milliseconds: number): Promise<boolean> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => {
+        console.error(`Keycloak did not answer within ${milliseconds / 1000} s; continuing signed out`);
+        resolve(false);
+      }, milliseconds);
+    });
+    try {
+      return await Promise.race([work, timeout]);
+    } finally {
+      clearTimeout(timer);
     }
   }
 

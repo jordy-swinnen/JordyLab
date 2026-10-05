@@ -736,7 +736,7 @@ Run 2026-09-30 ~20:05 CEST against `e167de8`.
 | — | CNPG / backups | PASS | cluster healthy; restore drill passed (runbook §15, 1 min 55 s); daily + manual base backups completed |
 | — | `assetlinks.json` | PASS | `package_name: be.jordylab.app`, release fingerprint `1B:02:13:85:…` (BUG-020/029 fixed) |
 | — | Rollback / roll-forward | PASS | DEPLOY-11 |
-| A12 | Browser console per route | PASS | 2026-10-02 rc8: signed-in admin pass over Library, Switch (search, bulk preview, detail), AI Models, Users, account menu — 0 console errors; guest pass is MRB-02 |
+| A12 | Browser console per route | PASS | since 2026-10-05 also guarded in CI by the `app-boot` job (built app in headless Chrome must reach the login page; BUG-061); 2026-10-02 rc8: signed-in admin pass over Library, Switch (search, bulk preview, detail), AI Models, Users, account menu — 0 console errors; guest pass is MRB-02 |
 
 ### B. Auth, roles and Settings
 Not kept as a table: the results are the matrix rows in §5 (PASS / PASS-CI / FAIL-FIXED with the evidence in each row), the passes in `final-report.md` and the bug entries in `bug-log.md`.
@@ -1192,4 +1192,11 @@ Procedures for everything below, and for the checks that need your login or hard
 - Jobs: all ✅ including `apk` (APK versionCode 115 published) and `publish`
 - Contains Flyway migration: yes — `V20261005001` adds the nullable `finance.portfolio_position.price_symbol` (applied cleanly at startup) · realm change: no · secret change: no · config change: no
 - Outcome: deployed; owner check of BTC/MEUD pending
+
+#### DEPLOY-22
+- Release: `v0.0.1-rc16` on `2b9f673` (PR #101: browser-compatible User-Agent for Yahoo, BUG-060; tagged on that commit on purpose — main already carried PR #102 from another working session, which is not part of this campaign's release), run 37246452381
+- Jobs: all ✅ including `apk` (APK versionCode 116 published) and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
+- Prod re-verification: backend `v0.0.1-rc16`, 0 errors in the first minutes, no `No euro price found` warning from the post-start price refresh
+- Outcome: deployed; owner check of BTC/MEUD values pending. The owner's phone (rc15) should now show the in-app "Update available" banner right after sign-in (BUG-053).
 

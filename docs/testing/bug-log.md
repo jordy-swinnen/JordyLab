@@ -815,7 +815,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-05: the orange J launcher icon is on the owner's phone (screenshots of the install dialog and home screen)
 
 ### BUG-053: The app only learns about a new release after being backgrounded — the update check runs before login
-- Status: DEPLOYED in `v0.0.1-rc11` (PR #84) — phone check: after rc12+ is published, opening the app and signing in shows the Update banner (HANDOFF-17)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S3
 - Area/spec: mobile / 007 US3
 - Env found: code review while answering "how do I update the app?" (2026-10-04)
@@ -827,10 +827,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `checkForUpdate()` was called unconditionally at construction instead of once the user holds an application role; failures were not contained.
 - Fix (PR / commit / tag): the shell runs the check as soon as the user has an application role (login, fingerprint unlock or restored session); a failed check is logged and retried on the next resume.
 - Regression test added: `app-native-start.spec.ts` (checks once signed in), `update-check.store.spec.ts` (a failed check is swallowed)
-- Verified on prod:
+- Verified on prod: 2026-10-05: the owner's phone (rc15) showed the "Update available" banner right after sign-in once the rc16 APK was published ("works perfectly")
 
 ### BUG-054: Extracted PS3 games show up as dozens of "EBOOT"/data-file games on platform "Usrdir"; PS3 is labelled "Ps3"
-- Status: DEPLOYED in `v0.0.1-rc11` (PR #85) — needs a client re-download + EmuDeck rescan on JordyBox (HANDOFF-18)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S3
 - Area/spec: gamecatalog / 003
 - Env found: prod catalog (platform chips `Ps3` and `Usrdir`, 2026-10-02); layout confirmed by the owner's `ls ~/Emulation/roms/ps3` (2026-10-04)
@@ -843,7 +843,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the platform is "the folder directly above the file" and nothing knows an extracted PS3 disc is a folder-shaped game; `ps3` has no label mapping.
 - Fix (PR / commit / tag): a folder that contains `PS3_GAME` is one game named after that folder (everything inside it is ignored); `ps3` → "PlayStation 3" in the client and the server parser; frozen client regenerated. A `.iso` next to an extracted folder is still its own game (the server adopts same-titled games on the same platform).
 - Regression test added: `test_grouping.py` (extracted disc → one game; iso + folder; dots in the folder name; folder directly under the root skipped); frozen client selftest
-- Verified on prod:
+- Verified on prod: 2026-10-05: after the owner's EmuDeck rescan (161 submitted, 18 added, 5 removed) the `Usrdir` chip is gone and PS3 reads "PlayStation 3" (owner: "yep")
 
 ### BUG-055: After a successful fingerprint check the app still asks for the password; the fingerprint switch sits awkwardly in the sidebar
 - Status: VERIFIED-PROD (2026-10-05)
@@ -908,7 +908,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-05 on `v0.0.1-rc14`: the owner re-entered 0.002106 and the position keeps the digits ("the shares is correct now"); its value is now handled by BUG-059
 
 ### BUG-059: A position needs the exact Yahoo symbol (BTC-EUR, MEUD.PA) to get a value
-- Status: DEPLOYED in `v0.0.1-rc15` (PR #99) — owner check pending: remove the `BTC-EUR` row, add `BTC` with 0.002106 and `MEUD`, expect euro values at once
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S2
 - Area/spec: fna / 001 (portfolio)
 - Env found: prod, the owner replacing the `BTC` row (2026-10-05)
@@ -920,10 +920,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: prices were fetched for the symbol exactly as typed and only by a 30-minute job; nothing knew that the same letters mean different instruments on different markets.
 - Fix (PR / commit / tag): `StockPriceService.resolve` tries crypto (`-EUR`) and European listings (`.PA .AS .BR .DE .MI`) for a plain name, takes the first quoted in EUR, falls back to the plain symbol converted to EUR (USD, GBP and pence handled), and the position remembers the resolved symbol (`price_symbol`, migration `V20261005001`); adding a position prices it immediately; typed names are trimmed and upper-cased; exact symbols (with `.`, `-`, `^`, `=`) are used as typed.
 - Regression test added: `StockPriceServiceTest` (BTC → BTC-EUR, MEUD → MEUD.PA, exact symbol as typed, USD and pence conversion, no match, resolve-once-then-reuse), `FnaServiceTest` (upsert prices at once, normalises input)
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc16`: the owner's `BTC` (0.002106) and `MEUD` rows show euro values ("works now")
 
 ### BUG-060: No portfolio price is fetched any more — Yahoo answers 429 to the backend's HTTP client
-- Status: FIXED locally — release pending (`fix/yahoo-user-agent`)
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S2
 - Area/spec: fna / 001 (portfolio prices)
 - Env found: prod backend log after rc15 (2026-10-05): `No euro price found for BTC-EUR / MEUD.PA / BTC / MEUD`
@@ -935,5 +935,20 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: Yahoo now rejects non-browser user agents (it accepted the default one a few days earlier); nothing in the app set a user agent, and fetch failures other than 404 were invisible.
 - Fix (PR / commit / tag): quote requests send `Mozilla/5.0 (compatible; JordyLab/1.0)`; 429/5xx/timeouts are logged at WARN (404 while probing candidates stays debug).
 - Regression test added: `StockPriceServiceTest.sendsABrowserCompatibleUserAgentBecauseYahooRejectsCurlAndJava` (a stub answers 429 unless the agent is browser-compatible)
+- Verified on prod: 2026-10-05 on `v0.0.1-rc16`: the price refresh logs no warning and the owner's BTC and MEUD rows are valued
+
+### BUG-061: If Keycloak cannot be reached or framed, the app stays on a blank page forever
+- Status: FIXED locally — release pending (`ci/app-boot-check`)
+- Severity: S2
+- Area/spec: auth / 006, 007
+- Env found: the new CI app-boot check, first run against the built app (2026-10-05); same failure class as BUG-056
+- Coverage rows: A12
+- Steps to reproduce:
+  1. Serve the built app from an origin Keycloak will not frame (or with Keycloak unreachable) and open it.
+- Expected (cite spec/story): the login page, with the user signed out.
+- Actual (logs/screenshot, secrets redacted): `app-root` stays empty for more than 45 s: start-up waits on `keycloak.init`, whose silent check-sso iframe never reports back (`Framing … violates frame-ancestors 'self'`), and nothing times out.
+- Root cause: `AuthService.init` had no upper bound; `main.ts` bootstraps only after it settles and every route guard awaits the same promise.
+- Fix (PR / commit / tag): start-up waits at most 8 s for Keycloak and then continues signed out (logged); a unit test covers it. The CI app-boot check (below) now guards the whole start-up path.
+- Regression test added: `auth.service.spec.ts` (carries on signed out when Keycloak never answers); `jordylab-fe/tools/app-boot-check.mjs` as a CI job `app-boot`: builds the production bundle, boots it in headless Chrome and requires the login page — it fails with `NG0201` when the rc12 bug is put back (verified locally) and passes on the fixed code
 - Verified on prod:
 
