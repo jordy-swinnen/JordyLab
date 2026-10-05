@@ -1071,3 +1071,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): ask Chrome for a page itself when none is listed, restart Chrome up to three times, and keep Chrome's stderr to print on failure.
 - Regression test added: none (the check is itself a CI script); verified by the rerun of `app-boot` on this PR.
 - Verified on prod: n/a (CI only)
+
+### BUG-070: The silent sign-in page would be blocked by an enforcing Content-Security-Policy (single sign-on silently stops working)
+- Status: FIXING (PR #132); no prod impact, the policy is Report-Only
+- Severity: S3 (it would have been S1/S2 after enforcing: every page load waits 8 s, then "continues signed out")
+- Area/spec: frontend / BUG-021 follow-up (CSP, MRB-11 step 3)
+- Env found: the new CSP journey (`csp.spec.ts`: every signed-in page with the production policy as an enforcing header), local throwaway stack, 2026-10-06
+- Coverage rows: —
+- Steps to reproduce:
+  1. Serve the app with `script-src 'self'` (no `unsafe-inline`); open any signed-in page.
+- Expected (cite spec/story): the page renders signed in.
+- Actual (logs/screenshot, secrets redacted): `Keycloak did not answer within 8 s; continuing signed out` on every page; the app never reached its heading.
+- Root cause: `apps/jordylab/public/silent-check-sso.html` contains an inline `<script>` (`parent.postMessage(...)`) that the policy refuses to run, so Keycloak's silent check-sso iframe never answers the app.
+- Fix (PR / commit / tag): the script moved to `silent-check-sso.js` next to the page (same origin, allowed by `script-src 'self'`; no hash to maintain).
+- Regression test added: `csp.spec.ts` (all signed-in pages, game detail, login) records violations from every frame, including this iframe.
+- Verified on prod: pending (after the release; then CSP step 5 can be considered)
