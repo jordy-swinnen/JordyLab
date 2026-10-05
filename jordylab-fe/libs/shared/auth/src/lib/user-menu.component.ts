@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { ConnectedPosition } from '@angular/cdk/overlay';
 import { AuthService } from './auth.service';
@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
   standalone: true,
   // CDK menu directly: spartan brain's menu trigger reads private CDK overlay fields that CDK 21 no longer has.
   imports: [CdkMenuTrigger, CdkMenu, CdkMenuItem],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <button
       type="button"

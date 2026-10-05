@@ -59,6 +59,32 @@ if the backend check fails. Validation: `./gradlew check` (tests, `ModularityTes
 tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs with Boot 4.1 and what Boot 4.1 changed
 (release notes) are checked at the start of the task. The result also answers the starter-dependency question in B2.
 
+#### PR 1b record: Angular 21.2 → 22.2.1 and TypeScript 5.9 → 6.0 (2026-10-05, branch `chore/angular-22-upgrade`)
+
+- Versions set explicitly (approved): `@angular/*` 22.2.1, `@angular/cdk` 22.2.1, `@angular/cli`/`build`/`@angular-devkit/*`/`@schematics/angular` 22.2.1,
+  TypeScript `~6.0.3` (the registry's latest is 7.0.2, which Angular 22 rejects: it requires `>=6.0 <6.1`), `angular-eslint` 22.5.0,
+  `@analogjs/*` 2.8.0, `ng-packagr` 22.2.4, `typescript-eslint` ^8.71.0. Vite stays on 7 (`nx migrate latest` would have taken Vite 8; not approved).
+- Migrations applied (11): the 8 `@angular/core` 22 migrations, the CDK 22 migration and the two Nx TypeScript-6 migrations. Results: every component without
+  a strategy got `changeDetection: ChangeDetectionStrategy.Eager` (keeps the old default), `strictTemplates: false` and suppressed extended diagnostics in tsconfigs,
+  `ignoreDeprecations: "6.0"` in 20 tsconfig files.
+- Fixups: (1) the helm libraries ended up with `strictTemplates: false` plus an `extendedDiagnostics` block, which the compiler rejects (NG4003); the block was
+  removed from their `tsconfig.lib.json` and `tsconfig.lib.prod.json`. (2) `angular-eslint` 22 flags the 38 `Eager` components with
+  `prefer-on-push-component-change-detection`; the rule is off in the 14 Angular project configs with a pointer to the draft `angular-onpush-adoption`.
+- Results versus a same-commit baseline: lint green (14 projects, one pre-existing warning); 442 tests = 442, statements/functions/lines coverage identical in
+  every project, branch coverage differs by up to 1.6 points in three projects (line gate unaffected); production build initial 612.59 kB (was 599.28, +2.2%), transfer
+  151.12 kB (was 152.01); mobile 612.68 kB; dist 968 kB (was 984); dependency graph identical (20 nodes); a scratch cross-scope import still fails
+  `@nx/enforce-module-boundaries`; `nx serve jordylab` boots; spartan generator runs; the frontend image builds on `oven/bun:1`.
+- HTTP backend: Angular 22 makes `FetchBackend` the default; the `http-xhr-backend` migration added `withXhr()` to `provideHttpClient` in all three apps
+  (`apps/{jordylab,fna,gamecatalog}/src/app/app.config.ts`), so requests keep using XMLHttpRequest as before. Moving to fetch is a separate decision.
+- Tech debt logged: the migration suppressed the `nullishCoalescingNotNullable` and `optionalChainNotNullable` extended diagnostics in the app tsconfigs (and set
+  `strictTemplates: false` in the helm libs) to keep the old behaviour; removing those suppressions and fixing what they hide is future cleanup. Together with the
+  `Eager` change detection (draft `angular-onpush-adoption`) these are the three deliberate carry-overs of this upgrade.
+- `httpResource()` is stable in Angular 22 (no `@experimental` marker in `@angular/common`); `jordylab-fe/AGENTS.md` updated accordingly.
+- CI and image (T021): `build.yml` already floats `node-version: 22` (no change); `oven/bun:1` has no Node, so the image build runs `bunx nx build` on Bun's runtime. Rebuilt locally with Angular 22: success (image hash printed, test image removed).
+- Node: local Node 24.13.1 is below Angular 22's `^24.15.0` floor, but Nx runs the builders directly and every build, test and serve worked; CI uses Node 22 (newest 22.x).
+  Raising local Node is still recommended (HANDOFF in T016).
+- Not run: the Capacitor `sync` of the `mobile` build (needs the Android project tooling); the `mobile` web build itself passes.
+
 #### PR 1c record: backend platform upgrade (2026-10-05, branch `chore/backend-platform-upgrade`)
 
 - Targets (confirmed 2026-10-05): Spring Boot 4.0.3 → **4.1.1**, Spring Modulith 2.0.3 → **2.1.1**, Gradle 9.3.1 → **9.8.0**; Spring AI

@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { AiFeatureModel, CatalogModel, ModelCatalog, VendorGroup } from '@jordylab-fe/settings/api';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
@@ -9,6 +9,7 @@ import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
   selector: 'lib-ai-models-page-view',
   standalone: true,
   imports: [DatePipe, DecimalPipe, HlmBadgeDirective, HlmButtonDirective, HlmSkeletonComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './ai-models-page-view.component.html',
 })
 export class AiModelsPageViewComponent {

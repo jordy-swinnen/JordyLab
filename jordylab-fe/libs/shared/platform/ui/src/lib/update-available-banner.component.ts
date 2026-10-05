@@ -1,9 +1,10 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 
 /** Dismissible "Update available" banner (spec US3-1, FR-011). */
 @Component({
   selector: 'lib-update-available-banner',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (!dismissed()) {
       <div

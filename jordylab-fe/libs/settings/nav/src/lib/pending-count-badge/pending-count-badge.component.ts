@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { UsersStore } from '@jordylab-fe/settings/api';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 
@@ -11,6 +11,7 @@ import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
   selector: 'lib-pending-count-badge',
   standalone: true,
   imports: [HlmBadgeDirective],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (pendingCount() > 0) {
       <span hlmBadge variant="secondary" data-testid="pending-count-badge">{{ pendingCount() }}</span>

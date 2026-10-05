@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { AiModelsStore } from '@jordylab-fe/settings/api';
 import { AiModelsPageViewComponent } from './ai-models-page-view.component';
 
@@ -7,6 +7,7 @@ import { AiModelsPageViewComponent } from './ai-models-page-view.component';
   selector: 'lib-ai-models-page',
   standalone: true,
   imports: [AiModelsPageViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <lib-ai-models-page-view
       [features]="features()"

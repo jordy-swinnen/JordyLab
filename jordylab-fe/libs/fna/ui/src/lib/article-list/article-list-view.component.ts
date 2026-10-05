@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ArticleSummary } from '@jordylab-fe/fna/api';
 
@@ -12,6 +12,7 @@ interface ArticleDay {
   selector: 'lib-article-list-view',
   standalone: true,
   imports: [DatePipe],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './article-list-view.component.html',
 })
 export class ArticleListViewComponent {

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
@@ -11,6 +11,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
   selector: 'app-awaiting-approval',
   standalone: true,
   imports: [HlmButtonDirective],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="flex min-h-[80vh] items-center justify-center">
       <div class="panel w-full max-w-md p-9">

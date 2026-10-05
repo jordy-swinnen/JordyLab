@@ -34,7 +34,7 @@ state.
 
 ### V. Language & Tooling Currency
 Use the most up-to-date language and framework features: Java 25 on the
-backend, Angular 21 / Nx 23 on the frontend. Never use `var` in Java. Prefer
+backend, Angular 22 / Nx 23 on the frontend. Never use `var` in Java. Prefer
 `inject(Service)` over constructor injection and JavaScript `#field` over
 TypeScript `private` in Angular.
 
@@ -60,4 +60,4 @@ per-subproject conventions, defer to the root [AGENTS.md](../../AGENTS.md)
 and the three subproject `AGENTS.md` files — this constitution covers
 project-wide coding principles, not operational detail.
 
-**Version**: 1.1.1 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-10-05 (Nx 22 → 23, spec 012)
+**Version**: 1.1.2 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-10-05 (Nx 22 → 23, Angular 21 → 22, spec 012)

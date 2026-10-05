@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
@@ -20,6 +20,7 @@ interface TextSegment {
     HlmInputDirective,
     BrandMarkComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-chat-view.component.html',
 })
 export class GameChatViewComponent {
