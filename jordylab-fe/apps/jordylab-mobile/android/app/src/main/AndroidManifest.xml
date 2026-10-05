@@ -23,7 +23,8 @@
             </intent-filter>
 
             <!-- App Link callback (login return) and notification tap-through (research D2/D9).
-                 /.well-known/assetlinks.json on jordylab.be must list this app id and the release
+                 /.well-known/assetlinks.json on the host (jordylab.be unless -PjordylabAppLinkHost overrides it for the
+                 automated emulator tests) must list this app id and the release
                  certificate, or autoVerify fails and this degrades to a disambiguation dialog. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -31,7 +32,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="jordylab.be"
+                    android:host="${appLinkHost}"
                     android:pathPrefix="/mobile" />
             </intent-filter>
 
