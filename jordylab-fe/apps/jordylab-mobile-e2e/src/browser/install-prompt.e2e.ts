@@ -1,3 +1,4 @@
+import { waitForAccountMenu } from '../support/account-menu';
 import { requiredEnvironment } from '../support/environment';
 
 const environment = requiredEnvironment();
@@ -6,8 +7,13 @@ const environment = requiredEnvironment();
 describe('Install prompt in Chrome on Android', () => {
   it('offers the app to a signed-in visitor and stays away after "Not now"', async () => {
     await browser.url(environment.webUrl);
-    await $('//button[contains(., "Sign in with Keycloak")]').click();
-    await $('#username').setValue(environment.adminUsername);
+    // WebdriverIO 10 does not wait for an element to exist before acting on it: the app is still starting when the page load returns.
+    const signIn = await $('//button[contains(., "Sign in with Keycloak")]');
+    await signIn.waitForClickable({ timeout: 45_000, timeoutMsg: 'No sign-in button on the web app in Android Chrome' });
+    await signIn.click();
+    const username = await $('#username');
+    await username.waitForDisplayed({ timeout: 45_000, timeoutMsg: 'The Keycloak login page did not open in Android Chrome' });
+    await username.setValue(environment.adminUsername);
     await $('#password').setValue(environment.adminPassword);
     // Enter submits the form; the on-screen keyboard of this small screen can cover the Sign In button.
     await browser.keys('Enter');
@@ -19,7 +25,7 @@ describe('Install prompt in Chrome on Android', () => {
     await $('//button[contains(., "Not now")]').click();
     await expect(dialog).not.toBeDisplayed();
     await browser.refresh();
-    await $('[data-testid="user-menu-trigger"]').waitForDisplayed({ timeout: 45_000 });
+    await waitForAccountMenu(45_000);
     await expect($('[aria-label="Get the JordyLab app"]')).not.toBeDisplayed();
   });
 });

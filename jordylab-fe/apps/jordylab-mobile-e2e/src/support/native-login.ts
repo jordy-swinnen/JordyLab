@@ -1,4 +1,5 @@
 import { requiredEnvironment } from './environment';
+import { waitForAccountMenu } from './account-menu';
 import { switchToNative, switchToWebView } from './contexts';
 
 const environment = requiredEnvironment();
@@ -62,9 +63,11 @@ export async function signInNatively(): Promise<void> {
   });
   await switchToWebView(environment.androidPackage);
   try {
-    await $('[data-testid="user-menu-trigger"]').waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
-  } catch {
-    throw new Error(`The app is back but not signed in (no account menu). From inside the WebView: ${await probeFromWebView()}`);
+    await waitForAccountMenu(STEP_TIMEOUT_MS);
+  } catch (error) {
+    throw new Error(
+      `The app is back but not signed in (${(error as Error).message}). From inside the WebView: ${await probeFromWebView()}`,
+    );
   }
 }
 
