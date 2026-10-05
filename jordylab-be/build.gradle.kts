@@ -1,7 +1,7 @@
 plugins {
     java
     jacoco
-    id("org.springframework.boot") version "4.0.3"
+    id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -33,7 +33,7 @@ repositories {
 }
 
 extra["springAiVersion"] = "2.0.1"
-extra["springModulithVersion"] = "2.0.3"
+extra["springModulithVersion"] = "2.1.1"
 
 dependencies {
     implementation("com.android.tools.build:apksig:8.13.2")

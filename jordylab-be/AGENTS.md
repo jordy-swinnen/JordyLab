@@ -17,7 +17,7 @@ export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.P
 export TESTCONTAINERS_RYUK_DISABLED=true
 ```
 
-**Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.1 (GA) — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
+**Versions**: Spring Boot 4.1.1, Java 25, Spring Modulith 2.1.1, Spring AI 2.0.1 (GA) — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
 
 ## Spring AI 2.0.1 GA
 
