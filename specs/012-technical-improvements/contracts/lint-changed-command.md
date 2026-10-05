@@ -7,8 +7,8 @@ It knows nothing about Claude Code or OpenCode.
 |--------|----------|
 | Arguments | one or more file paths (absolute or relative to the repo root) |
 | Filtering | silently drops files that are not `.ts` under `jordylab-fe/` or that match the ESLint ignores |
-| Runner | Oxlint through `bunx` with `jordylab-fe/.oxlintrc.json`; if the baseline decision selected ESLint, ESLint on the same files (same output format) |
-| Output | `path:line:col  rule  message`, one per line, nothing else; empty output means clean or skipped |
+| Runner | ESLint (`node_modules/.bin/eslint --format json --output-file …`; stdout is not used because the Nx plugin prints a warning there); the Oxlint branch is added with the Oxlint install, same output format |
+| Output | `path:line:col  error\|warn  rule  message`, one per line, nothing else; empty output means clean or skipped |
 | Exit code | `0` always for skip/clean/findings when run by a hook (`--strict` flag exits `1` on findings, for manual use) |
 | Time limit | internal guard of 2 s (the one place this number lives, see the budget below); on expiry prints nothing and exits `0` |
 | Missing linter / parse failure | prints nothing, exits `0` |

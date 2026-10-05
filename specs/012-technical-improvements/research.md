@@ -204,6 +204,25 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
   workflow currently installs only Python; the fixture script must stub the linter binary so CI does not need Bun, or
   the workflow gains a Bun step. Prefer the stub (fast, deterministic) plus one real-binary case run locally.
 
+#### Hook record (2026-10-05, branch `feat/lint-agent-hook`, T030, T035-T042)
+
+- Verified against the current Claude Code hook docs (T035): all hooks matching one event run **in parallel**; plain stdout and stderr at exit 0 go to the debug log only, so
+  only JSON `hookSpecificOutput.additionalContext` (with `hookEventName: "PostToolUse"`) reaches the model; `timeout` is per hook in seconds (PostToolUse default 600).
+  Consequence: the repo's existing advisory hooks (`post-test-convention-check.sh`, `post-java-modularity-check.sh`) print plain stdout and their warnings are not
+  shown to the agent; a follow-up is suggested.
+- Decision (FR-020, T025): single-file ESLint measured about 0.6-0.8 s warm, inside the 1 s target, so the shared command uses **ESLint** now; the Oxlint branch is
+  added with the Oxlint install and adds the CI fast pass. Through the real hook the finding arrives in about 0.9-1.3 s.
+- Real-run finding: the Nx ESLint plugin prints a warning to **stdout** before the JSON when no project graph is cached (it also skips the module-boundary rule then),
+  which broke JSON parsing; the command now uses `--output-file`. The fixtures' ESLint stub prints the same noise so this cannot regress.
+- Race with the formatter: both hooks run in parallel, so a per-file lock directory (`.claude/hooks/lib/edit-lock.sh`) is held by the Prettier hook while it writes and
+  the lint hook waits at most 1 s, then skips silently. A partial read could only produce a parse error, which is filtered as a silent skip, so the race is harmless even
+  without the lock; the lock removes the window. Time budget: 1 s lock wait + 2 s linter guard = 3 s inside the 5 s hook timeout.
+- Fixtures (`.claude/hooks/tests/lint-cases.sh`, run by Hook Tests, no Bun needed): 19 cases (error, warning, spec file, clean, three ignored paths, non-TypeScript,
+  outside the frontend, fatal parse error, missing file, malformed stdin, linter missing, slow linter cut off, lock held, lock released, three `--strict` exit codes). All pass.
+- Live check in Claude Code (headless session in the worktree): after a Write of a file containing `debugger`, the model quoted the findings
+  (`no-debugger` error and an unused-variable warning) verbatim from the hook. **Not verified:** OpenCode running the instruction: a headless `opencode run` produced no output
+  within the wait (likely a tool-permission prompt it cannot answer), so that check is handed to Jordy.
+
 ### A5. Removability (FR-022)
 
 Everything Oxlint-specific is one set: `.oxlintrc.json`, the `@nx/oxlint` plugin entry in `nx.json`, the dev
