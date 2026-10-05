@@ -23,13 +23,13 @@ Production (rc17) is healthy. **Every S1 and S2 defect found (26) is fixed, depl
 - **Coverage matrix:** 544 rows closed — 410 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
   than `PASS`, defined in §5), 55 `FAIL-FIXED`, 64 `NOT TESTABLE`, 5 `PASS`.
 
-## Bugs: 66 found
+## Bugs: 68 found
 | Severity | Count | State |
 |----------|-------|-------|
 | S1 | 1 | verified (BUG-056, the rc12 blank page: rolled back in minutes, fixed in rc13) |
 | S2 | 26 | 25 verified (23 on prod or the phone, 2 by drill / CI); BUG-062 (Android share) fixed, waiting for the phone check |
 | S3 | 24 | 15 verified; BUG-063 (Steam family help and errors) fixed, waiting for the retry; BUG-066 (phone on another ntfy topic) is the owner's HANDOFF-26; 4 deployed (BUG-001–004, CI-level lint/coverage gates — their proof is the green gates); 3 fixed locally (tooling/test infrastructure with no prod component) |
-| S4 | 15 | 9 verified; 4 fixed locally (developer tooling); BUG-064 and BUG-065 (Lighthouse findings) fixed, to re-measure after the release |
+| S4 | 17 | 9 verified; 4 fixed locally (developer tooling); BUG-064 and BUG-065 (Lighthouse findings) fixed, to re-measure after the release; BUG-067 and BUG-068 (found by the new axe check in CI) fixed, to verify after the release |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
 the whole release flow (tag → release → deploy → APK), APK signing verification (v1-only reader vs v2/v3-only signing),

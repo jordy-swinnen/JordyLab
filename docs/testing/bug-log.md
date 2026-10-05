@@ -1027,3 +1027,33 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: none (configuration)
 - Verified on prod: pending
 
+
+### BUG-067: Cover-plate labels fail colour contrast (library cards and game detail banner)
+- Status: FIXING (this branch)
+- Severity: S4
+- Area/spec: frontend / G-UX (colour contrast, axe)
+- Env found: new axe check in the Playwright suite (`accessibility.spec.ts`), local throwaway stack, 2026-10-06; desktop and phone width
+- Coverage rows: G-UX
+- Steps to reproduce:
+  1. Open `/games/grid` or a game's detail page for a game without artwork (Chrono Trigger in the E2E catalog).
+- Expected (cite spec/story): text meets WCAG AA contrast (4.5:1 for small text).
+- Actual (logs/screenshot, secrets redacted): axe `color-contrast (serious)` on the catalogue number (`№ 001`) of the cover plate and on the platform label of the detail banner, 10.5 px mono text.
+- Root cause: both labels use `opacity-75` on top of the generated plate colours (`cover.ts` palette). Each palette pair passes at full opacity, but blending 25 % of the plate colour into the text drops some pairs below 4.5:1.
+- Fix (PR / commit / tag): remove `opacity-75` from both labels; the plate's own text colour is already a passing pair.
+- Regression test added: the axe journey (`accessibility.spec.ts`: Game library and game detail, desktop and phone).
+- Verified on prod: pending
+
+### BUG-068: The positions table on FNA Portfolio cannot be scrolled with the keyboard on a narrow screen
+- Status: FIXING (this branch)
+- Severity: S4
+- Area/spec: frontend / G-UX (keyboard access, axe)
+- Env found: new axe check in the Playwright suite, phone width (390 px), 2026-10-06
+- Coverage rows: G-UX
+- Steps to reproduce:
+  1. Open `/fna/portfolio` at 390 px width; Tab through the page.
+- Expected (cite spec/story): every scrollable area can be reached and scrolled by keyboard (WCAG 2.1.1).
+- Actual (logs/screenshot, secrets redacted): axe `scrollable-region-focusable (serious)` on `.panel > .overflow-x-auto`: the table scrolls sideways but nothing in it is focusable.
+- Root cause: the horizontal scroller has no `tabindex` and no accessible name.
+- Fix (PR / commit / tag): `tabindex="0"`, `role="region"` and an `aria-label` on the scroller.
+- Regression test added: the axe journey (FNA portfolio, phone).
+- Verified on prod: pending
