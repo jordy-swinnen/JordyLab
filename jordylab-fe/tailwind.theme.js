@@ -48,6 +48,9 @@ const nightLab = plugin(({ addBase, addComponents }) => {
       '--deep': '247 36% 23%',
     },
     '*': { borderColor: 'hsl(var(--border))' },
+    // The 8px scrollbar appears once a page grows past the screen (a list that finishes loading) and would push the
+    // whole page sideways: Lighthouse measured that as a layout shift of 0.22. Keep its space reserved (BUG-065).
+    html: { scrollbarGutter: 'stable' },
     body: {
       backgroundColor: 'hsl(var(--background))',
       color: 'hsl(var(--foreground))',

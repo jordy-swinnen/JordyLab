@@ -20,7 +20,6 @@ import { AuthService } from './auth.service';
       data-testid="user-menu-trigger"
       [cdkMenuTriggerFor]="menu"
       [cdkMenuPosition]="positions()"
-      [attr.aria-label]="'Account menu for ' + (username() ?? 'you')"
       [class]="
         compact()
           ? 'flex items-center gap-2 rounded-full text-sm text-muted-foreground hover:text-foreground'
@@ -32,7 +31,10 @@ import { AuthService } from './auth.service';
         aria-hidden="true"
         >{{ initial() }}</span
       >
-      @if (!compact()) {
+      @if (compact()) {
+        <!-- No aria-label: a label that differs from the visible text fails WCAG 2.5.3 (label in name). -->
+        <span class="sr-only">Account menu for {{ username() ?? 'you' }}</span>
+      } @else {
         <span class="flex min-w-0 flex-col gap-0.5">
           <span class="truncate text-sm font-semibold">{{ username() }}</span>
           <span class="text-xs text-muted-foreground">Account</span>
