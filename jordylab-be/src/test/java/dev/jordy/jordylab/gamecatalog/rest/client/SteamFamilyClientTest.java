@@ -120,6 +120,18 @@ class SteamFamilyClientTest {
     }
 
     @Test
+    void anAccountInNoFamilyGroupThrowsNoFamilyGroupInsteadOfAnUnreadableResponse() {
+        stubFamilyGroup("""
+                { "response": { "is_not_member_of_any_group": true } }
+                """);
+
+        assertThatThrownBy(() -> steamFamilyClient.fetchSharedLibrary(TOKEN))
+                .isInstanceOf(SteamFamilyException.class)
+                .satisfies(exception -> assertThat(((SteamFamilyException) exception).getErrorCode())
+                        .isEqualTo("NO_FAMILY_GROUP"));
+    }
+
+    @Test
     void nonArrayAppsThrowsUnknownResponse() {
         stubFamilyGroup("""
                 { "response": { "family_groupid": "123" } }

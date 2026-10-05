@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { catchError, Observable, of } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
 import { LibraryStatus, LibrarySyncRun, ScanLibraryType, ScanSource } from './gamecatalog.models';
+import { librarySyncFailureMessage } from './library-sync-failure';
 
 @Injectable({ providedIn: 'root' })
 export class ScanSourceStore {
@@ -183,8 +184,8 @@ export class ScanSourceStore {
 
     call()
       .pipe(
-        catchError(() => {
-          this.#error.set(`Failed to sync the ${source.toLowerCase()} library.`);
+        catchError((error: unknown) => {
+          this.#error.set(librarySyncFailureMessage(source, error));
           this.#librarySyncing.set(null);
 
           return of(null);

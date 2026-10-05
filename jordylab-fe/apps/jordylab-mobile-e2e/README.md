@@ -9,7 +9,7 @@ A small suite for what only breaks inside the installed Android app, which is th
 | `src/specs/install-prompt.e2e.ts` | Inside the app a signed-in user is never offered to install it |
 | `src/browser/install-prompt.e2e.ts` | In Chrome on Android a signed-in visitor gets the install dialog and "Not now" silences it |
 | `src/specs/update-check.e2e.ts` | A newer release published through the app's own publish endpoint shows "Update available" |
-| `src/specs/share-target.e2e.ts` | An `ACTION_SEND` text share opens the share landing with the text |
+| `src/specs/share-target.e2e.ts` | An `ACTION_SEND` text share opens the share landing with the text; the same share that starts the app from scratch (signed out) asks for the login first and then shows the text |
 
 Tests switch between the `NATIVE_APP` and the WebView context (`src/support/contexts.ts`); Keycloak's page in the Custom Tab is driven through
 accessibility nodes.

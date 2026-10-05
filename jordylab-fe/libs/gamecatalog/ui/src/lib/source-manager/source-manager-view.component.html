@@ -150,25 +150,38 @@
         How do I get a token?
       </summary>
       <ol class="mt-2 list-decimal space-y-1 pl-5">
-        <li>In a browser, sign in to your Steam account.</li>
         <li>
-          Open the
+          In a browser, sign in to the Steam <strong>store</strong> at
+          <a
+            href="https://store.steampowered.com/login/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="underline"
+            >store.steampowered.com</a
+          >
+          (being signed in to the Steam app is not enough).
+        </li>
+        <li>
+          In the same browser open the
           <a
             href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
             target="_blank"
             rel="noopener noreferrer"
             class="underline"
             >Steam Points Summary config page</a
-          >.
+          >. It shows a line of text with a long
+          <code class="font-mono">webapi_token</code> value.
         </li>
         <li>
-          Copy the <code class="font-mono">webapi_token</code> value (a long
-          string) and paste it above.
+          Select all of that text, copy it and paste it above — the whole page
+          works, JordyLab picks the token out.
         </li>
       </ol>
       <p class="mt-2">
-        The token expires roughly every 24 hours — paste a fresh one to sync
-        again. This uses Steam's undocumented family API; see the
+        If the page only shows <code class="font-mono">"data":[]</code>, this
+        browser is not signed in to the Steam store: sign in, then reload the
+        page. The token expires roughly every 24 hours — paste a fresh one to
+        sync again. This uses Steam's undocumented family API; see the
         <a
           href="https://steamapi.xpaw.me/#IFamilyGroupsService/GetSharedLibraryApps"
           target="_blank"
@@ -187,6 +200,7 @@
         class="h-10 w-full max-w-sm"
         #familyTokenInput
         (input)="onFamilyTokenInput($event)"
+        [attr.aria-invalid]="tokenProblem() ? 'true' : null"
       />
       <button
         hlmBtn
@@ -198,6 +212,11 @@
         {{ librarySyncing() === 'FAMILY' ? 'Syncing…' : 'Sync family library' }}
       </button>
     </div>
+    @if (tokenProblem(); as problem) {
+      <p class="text-sm text-destructive" role="alert" data-testid="family-token-problem">
+        {{ problem }}
+      </p>
+    }
     @if (libraryStatus()?.family; as family) {
       <span class="mono-label">
         {{ family.entriesActive }} shared
@@ -212,9 +231,13 @@
   </div>
 
   @if (lastLibraryRun(); as run) {
-    <div class="mono-label border-t border-border pt-5">
-      {{ run.librarySource }} · {{ run.outcome }} · {{ run.entriesAdded }} added
-      · {{ run.metadataCalls }} metadata calls · {{ run.aiCalls }} AI calls
+    <div class="border-t border-border pt-5" data-testid="library-run-summary">
+      <p class="text-sm text-foreground">{{ runSummary(run) }}</p>
+      <p class="mono-label mt-1">
+        {{ run.librarySource }} · {{ run.outcome }} · {{ run.entriesAdded }}
+        added · {{ run.metadataCalls }} metadata calls · {{ run.aiCalls }} AI
+        calls · {{ run.finishedAt | date: 'mediumTime' }}
+      </p>
     </div>
   }
 </div>

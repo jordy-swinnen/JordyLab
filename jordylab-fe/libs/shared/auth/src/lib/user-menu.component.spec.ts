@@ -37,10 +37,16 @@ describe('UserMenuComponent', () => {
     expect(spectator.query('[data-testid="user-menu-trigger"]')).toHaveText('jordy');
   });
 
-  it('shows only the initial in the compact variant', () => {
+  it('shows only the initial in the compact variant, with the name for screen readers only', () => {
     spectator.setInput('compact', true);
 
-    expect(spectator.query('[data-testid="user-menu-trigger"]')).not.toHaveText('jordy');
+    const trigger = spectator.query('[data-testid="user-menu-trigger"]');
+    expect(trigger?.querySelector('.truncate')).toBeNull();
+    expect(trigger?.querySelector('.sr-only')).toHaveText('Account menu for jordy');
+  });
+
+  it('names the trigger from what it shows, never from an aria-label that differs (WCAG label in name)', () => {
+    expect(spectator.query('[data-testid="user-menu-trigger"]')).not.toHaveAttribute('aria-label');
   });
 
   it('starts the Keycloak password change', () => {
