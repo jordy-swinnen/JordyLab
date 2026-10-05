@@ -38,7 +38,7 @@
 - [X] T005 [US1] Create branch `chore/nx-23-upgrade` from current `main` in a clean worktree and confirm `bun install --frozen-lockfile` is green before changes (`jordylab-fe/`)
 - [X] T006 [US1] Run `bunx nx migrate 23.2.1` in `jordylab-fe/`; review the generated `package.json` and `migrations.json` diff; confirm it does NOT move Angular or TypeScript (if it does, stop and report); record the review in `specs/012-technical-improvements/research.md`
 - [X] T007 [US1] `bun install`, then `bunx nx migrate --run-migrations`; review every file each migration changed; keep migration notes in `research.md`; delete `migrations.json` afterwards (FR-006)
-- [X] T008 [P] [US1] Add an explicit Node pin (Node 22.22.3 or newer accepted by Angular 22, per T003) with `actions/setup-node` before dependency install in `.github/workflows/build.yml` (`test-frontend` job)
+- [X] T008 [P] [US1] Add an explicit Node pin (`node-version: 22`, which floats to the newest 22.x and so also satisfies Angular 22's 22.22.3 floor, per T003) with `actions/setup-node` before dependency install in `.github/workflows/build.yml` (`test-frontend` job)
 - [X] T009 [P] [US1] Replace `npx prettier` with `bunx prettier` (run from `jordylab-fe/`) in `.claude/hooks/post-edit-format.sh` as its own commit, via `/dual-agent-config`
 - [X] T010 [US1] Amend the Nx part of principle V in `.specify/memory/constitution.md` ("Nx 22" becomes "Nx 23"), bump version and "Last Amended" (FR-010)
 - [X] T011 [US1] Verify behaviour-neutral: run lint, tests with coverage gate, production build, `--configuration=mobile` build, and `nx graph` diff against the T001/T002 baseline in `jordylab-fe/`; record results (FR-009 definition: same tests, same coverage-gate result, identical graph, bundle sizes within 5%)
