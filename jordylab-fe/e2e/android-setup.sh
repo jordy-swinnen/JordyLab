@@ -29,6 +29,13 @@ adb shell chmod 755 /data/local/tmp/chrome-command-line >/dev/null
 adb shell am set-debug-app --persistent com.android.chrome >/dev/null 2>&1
 adb shell am force-stop com.android.chrome >/dev/null 2>&1
 
+# Chrome's first start on a fresh emulator is slow enough to make the first Custom Tab login flaky: start it once now (on a page of the
+# throwaway Keycloak), give it time, and put it away again.
+adb shell am start -a android.intent.action.VIEW -d "http://localhost:18180/realms/jordylab/.well-known/openid-configuration" com.android.chrome >/dev/null 2>&1
+sleep 12
+adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+adb shell am force-stop com.android.chrome >/dev/null 2>&1
+
 adb uninstall "$E2E_ANDROID_PACKAGE" >/dev/null 2>&1
 adb install -r -g "$E2E_APK_FIRST" >/dev/null || { log "installing the debug APK failed"; exit 1; }
 
