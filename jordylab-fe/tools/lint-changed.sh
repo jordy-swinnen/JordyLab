@@ -87,7 +87,10 @@ any_running() {
 DEADLINE=$(( $(date +%s) + GUARD_SECONDS ))
 while any_running; do
   if (( $(date +%s) >= DEADLINE )); then
-    for pid in "${LINT_PIDS[@]}"; do kill_tree "$pid"; done
+    for pid in "${LINT_PIDS[@]}"; do
+      kill_tree "$pid"
+      wait "$pid" 2>/dev/null  # reaps it; keeps bash's "Terminated" notice off the terminal
+    done
     exit 0
   fi
   sleep 0.05
