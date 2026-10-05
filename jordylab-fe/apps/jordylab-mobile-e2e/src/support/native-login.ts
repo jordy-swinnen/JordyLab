@@ -1,15 +1,21 @@
+import { execFileSync } from 'node:child_process';
 import { requiredEnvironment } from './environment';
 import { switchToNative, switchToWebView } from './contexts';
 
 const environment = requiredEnvironment();
 const CHROME_PACKAGE = 'com.android.chrome';
 const STEP_TIMEOUT_MS = 45_000;
+const ENTER_SUBMIT_TIMEOUT_MS = 15_000;
+const KEYCODE_ENTER = 66;
 
 /**
  * Native Keycloak login as a user would do it: tap sign in in the WebView, sign in on Keycloak's page in the Chrome Custom Tab, and
  * come back into the app through the App Link. Ends in the WebView context on the signed-in app.
  */
 export async function signInNatively(): Promise<void> {
+  // A fresh Chrome for every login: no Keycloak session, saved password or autofill left over from an earlier test.
+  execFileSync('adb', ['shell', 'pm', 'clear', CHROME_PACKAGE]);
+
   await switchToWebView(environment.androidPackage);
   const signInButton = await $('//button[contains(., "Sign in with Keycloak")]');
   await signInButton.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
@@ -21,18 +27,30 @@ export async function signInNatively(): Promise<void> {
     timeoutMsg: 'The Chrome Custom Tab did not open after tapping sign in',
   });
 
-  // Keycloak's page inside Chrome: web content is exposed to UiAutomator as accessibility nodes, so fields are found by class and order.
+  // Keycloak's page inside Chrome: web content is exposed to UiAutomator as accessibility nodes. The emulator screen is small, so the
+  // on-screen keyboard hides whatever is below the field being typed in: move focus with the keyboard's Next action instead of looking
+  // for the password field, and submit with Enter.
   const username = await $('android=new UiSelector().className("android.widget.EditText").instance(0)');
   await username.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
   await username.setValue(environment.adminUsername);
-  const password = await $('android=new UiSelector().className("android.widget.EditText").instance(1)');
+  await driver.execute('mobile: performEditorAction', { action: 'next' });
+  const password = await $('android=new UiSelector().className("android.widget.EditText").focused(true)');
+  await password.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
   await password.setValue(environment.adminPassword);
-  try {
-    await driver.hideKeyboard();
-  } catch {
-    // No keyboard to hide: fine.
+  await driver.pressKeyCode(KEYCODE_ENTER);
+
+  const returned = await driver
+    .waitUntil(async () => (await driver.getCurrentPackage()) === environment.androidPackage, { timeout: ENTER_SUBMIT_TIMEOUT_MS })
+    .catch(() => false);
+  if (!returned) {
+    // Enter did not submit the form: hide the keyboard and tap the button.
+    try {
+      await driver.hideKeyboard();
+    } catch {
+      // No keyboard to hide: fine.
+    }
+    await (await $('android=new UiSelector().text("Sign In")')).click();
   }
-  await (await $('android=new UiSelector().text("Sign In")')).click();
 
   await driver.waitUntil(async () => (await driver.getCurrentPackage()) === environment.androidPackage, {
     timeout: STEP_TIMEOUT_MS,

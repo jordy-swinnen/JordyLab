@@ -9,7 +9,8 @@ describe('Install prompt in Chrome on Android', () => {
     await $('//button[contains(., "Sign in with Keycloak")]').click();
     await $('#username').setValue(environment.adminUsername);
     await $('#password').setValue(environment.adminPassword);
-    await $('#kc-login').click();
+    // Enter submits the form; the on-screen keyboard of this small screen can cover the Sign In button.
+    await browser.keys('Enter');
 
     const dialog = await $('[aria-label="Get the JordyLab app"]');
     await dialog.waitForDisplayed({ timeout: 45_000, timeoutMsg: 'No install dialog after signing in on Android Chrome' });
