@@ -119,6 +119,7 @@ Read these on-demand when working on related tasks — do not load all at once.
 | `jordylab-infrastructure-guide.md` | Working on NFS mounts, container networking, or AI fallback |
 | `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
 | `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
+| `docs/research/spring-ai-architecture.md` | Designing or reviewing an AI feature in depth (the short rules are in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md`) |
 
 Other reference docs (infrastructure guide, project setup, project overview) are planned but not
 yet written — do not cite them as if they exist. Add a row here only once the file is actually

@@ -17,7 +17,7 @@ export DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.P
 export TESTCONTAINERS_RYUK_DISABLED=true
 ```
 
-**Versions**: Spring Boot 4.0.3, Java 25, Spring Modulith 2.0.3, Spring AI 2.0.1 (GA) — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
+**Versions**: Spring Boot 4.1.1, Java 25, Spring Modulith 2.1.1, Spring AI 2.0.1 (GA) — APIs differ significantly from prior versions. Use context7 MCP for up-to-date docs.
 
 ## Spring AI 2.0.1 GA
 
@@ -29,6 +29,10 @@ the classpath), and the OpenAI base URL keeps its `/v1` (the SDK appends `/chat/
 `spring-ai-advisors-vector-store` → `spring-ai-vector-store-advisor`. All Spring AI usage still goes through
 `ResilientAiService`, so a future bump surfaces in one place: re-run `ResilientAiServiceTest`, `AiGatewayWiringTest`,
 `AiPropertiesTest` and `GameCatalogModuleTest`, and read that release's migration notes.
+
+**Rules for building AI features:** `src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md` (short, loaded in that
+package; Claude Code gets it through the `CLAUDE.md` import beside it). Full research, with the Boot/Spring AI version
+finding: `docs/research/spring-ai-architecture.md`; gaps against it: `docs/research/spring-ai-gap-analysis.md`.
 
 # Java Code Style
 

@@ -974,6 +974,15 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 ```
 - Expect: `✓ Set Actions secret MOBILE_RELEASE_CI_CLIENT_SECRET for jordy-swinnen/JordyLab`. Tell me "done" and I rerun the rc14 `apk` job, which publishes the APK your phone needs.
 
+#### HANDOFF-22: Confirm the target versions for the Nx, Angular and backend upgrades (spec 012) — done 2026-10-05 (approved in chat)
+- Asked before anything was installed: Nx 23.2.1 (Angular 21.2 and TypeScript 5.9 unchanged); then Angular 22.2.1 with TypeScript ~6.0, `angular-eslint` 22.5.0, Analog 2.8.0, `ng-packagr` 22.2.4 (needs local Node 24.15 or newer); Spring Boot 4.1.1, Spring Modulith 2.1.1, Gradle 9.8.0 (fallback Boot 4.0.8 / Modulith 2.0.8).
+
+#### HANDOFF-23: Optional interactive check that the AI rules load (spec 012 T057/T058)
+- Machine: your Mac · Target env: local tools · Why you: needs an interactive terminal session; a headless check already passed for both tools.
+- Done by me: fresh headless sessions started in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/` (`claude -p`, `opencode run`) both answered that the rules are loaded and quoted the first rule.
+- Not done: the interactive views. In that directory run `claude`, then `/context`; and start `opencode` and ask what instructions it loaded.
+- Expect: the "AI integration rules (shared/ai)" text appears in both. Tell me "done" or what you saw.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
@@ -1190,4 +1199,11 @@ Procedures for everything below, and for the checks that need your login or hard
 - Contains Flyway migration: no · realm change: no · secret change: no · config change: no
 - Prod re-verification: backend `v0.0.1-rc16`, 0 errors in the first minutes, no `No euro price found` warning from the post-start price refresh
 - Outcome: deployed; owner check of BTC/MEUD values pending. The owner's phone (rc15) should now show the in-app "Update available" banner right after sign-in (BUG-053).
+
+#### DEPLOY-23
+- Release: `v0.0.1-rc17` on `59cf697` (PR #105: 8 s bound on Keycloak start-up + the `app-boot` CI job, BUG-061; main also carries docs-only PR #102 from another working session), run 37249645057
+- Jobs: all ✅ including `apk` (APK versionCode 117) and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
+- Prod re-verification: backend/frontend/keycloak `v0.0.1-rc17`, 0 backend errors, the app renders and the admin session works; BUG-041 probed on prod (404/409) the same day
+- Outcome: deployed; no regression
 
