@@ -4,6 +4,7 @@
 #   lib/cleanup.sh sweep               remove resources of runs whose runner is no longer alive
 #   lib/cleanup.sh remove <runId>      remove everything of one run
 #   lib/cleanup.sh verify <runId>      list leftovers of one run and exit 1 if any
+#   lib/cleanup.sh verify-all          list every resource carrying any E2E run label and exit 1 if any (CI's last step)
 # Resources are found by the label dev.jordylab.e2e.run=<runId> (and the pid label), never by guessing names.
 
 E2E_RUN_LABEL="dev.jordylab.e2e.run"
@@ -89,6 +90,15 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     sweep) e2e_sweep ;;
     remove) e2e_remove_run "${2:?run id}" ;;
     verify) e2e_verify_clean "${2:?run id}" ;;
-    *) echo "usage: $0 sweep | remove <runId> | verify <runId>" >&2; exit 64 ;;
+    verify-all)
+      remaining="$(e2e_list_labelled)"
+      if [[ -n "$remaining" ]]; then
+        echo "e2e: resources with an E2E run label remain:" >&2
+        echo "$remaining" | cut -c1-120 >&2
+        exit 1
+      fi
+      echo "e2e: verified clean: no E2E container, volume or network remains"
+      ;;
+    *) echo "usage: $0 sweep | remove <runId> | verify <runId> | verify-all" >&2; exit 64 ;;
   esac
 fi

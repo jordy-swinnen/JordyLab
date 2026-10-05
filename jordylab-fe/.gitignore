@@ -52,3 +52,8 @@ __screenshots__/
 
 # Per-run E2E credentials, logs and realm (never committed)
 e2e/.run/
+
+# Playwright output and the saved test session (never committed)
+apps/jordylab-e2e/.auth/
+apps/jordylab-e2e/playwright-report/
+apps/jordylab-e2e/test-results/
