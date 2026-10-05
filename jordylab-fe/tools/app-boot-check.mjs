@@ -50,10 +50,13 @@ function serve(root) {
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port })));
 }
 
+let chromeOutput = ''; // Chrome's stderr, printed when it never exposes a page (BUG-069)
+
 async function launchChrome(profileDir, debugPort) {
   for (const binary of CHROME_CANDIDATES) {
     const child = spawn(binary, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run',
-      `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore' });
+      `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+    child.stderr.on('data', (chunk) => { chromeOutput += chunk; if (chromeOutput.length > 4000) chromeOutput = chromeOutput.slice(-4000); });
     const failed = await new Promise((resolve) => { child.once('error', () => resolve(true)); setTimeout(() => resolve(false), 400); });
     if (!failed) return child;
   }
@@ -61,15 +64,16 @@ async function launchChrome(profileDir, debugPort) {
 }
 
 async function pageSocketUrl(debugPort) {
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 80; attempt++) {
     try {
       const targets = await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();
       const page = targets.find((target) => target.type === 'page');
       if (page) return page.webSocketDebuggerUrl;
+      if (attempt === 20 || attempt === 40) await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' }); // none listed: ask for one
     } catch { /* Chrome is still starting */ }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error('Chrome did not expose a page target');
+  return null;
 }
 
 const profileDir = mkdtempSync(join(tmpdir(), 'app-boot-'));
@@ -78,12 +82,24 @@ const debugPort = await new Promise((resolve) => {
   const probe = createNetServer();
   probe.listen(0, '127.0.0.1', () => { const { port: free } = probe.address(); probe.close(() => resolve(free)); });
 });
-const chrome = await launchChrome(profileDir, debugPort);
+let chrome;
 const problems = [];
 const consoleLog = [];
 let exitCode = 1;
 try {
-  const socket = new WebSocket(await pageSocketUrl(debugPort));
+  // A shared CI runner sometimes starts Chrome without ever exposing a page (BUG-069): start it again, up to three times.
+  let socketUrl = null;
+  for (let start = 1; start <= 3 && !socketUrl; start++) {
+    chrome = await launchChrome(profileDir, debugPort);
+    socketUrl = await pageSocketUrl(debugPort);
+    if (!socketUrl && start < 3) {
+      console.error(`Chrome exposed no page on start ${start}/3; restarting it.`);
+      chrome.kill('SIGKILL');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  if (!socketUrl) throw new Error(`Chrome did not expose a page target after 3 starts. Chrome said:\n${chromeOutput.slice(-800) || '(nothing)'}`);
+  const socket = new WebSocket(socketUrl);
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   let nextId = 0;
   const pending = new Map();
@@ -131,7 +147,7 @@ try {
 } catch (error) {
   console.error(`App boot check could not run: ${error.message}`);
 } finally {
-  chrome.kill('SIGKILL');
+  chrome?.kill('SIGKILL');
   server.close();
   rmSync(profileDir, { recursive: true, force: true });
 }
