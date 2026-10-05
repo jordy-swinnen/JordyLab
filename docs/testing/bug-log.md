@@ -952,3 +952,78 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Regression test added: `auth.service.spec.ts` (carries on signed out when Keycloak never answers); `jordylab-fe/tools/app-boot-check.mjs` as a CI job `app-boot`: builds the production bundle, boots it in headless Chrome and requires the login page — it fails with `NG0201` when the rc12 bug is put back (verified locally) and passes on the fixed code
 - Verified on prod: 2026-10-05: rc17 starts on prod (login page / app render, 0 backend errors); the failure path itself (Keycloak not answering) is exercised on every PR by the `app-boot` CI job, where the login page appears via the 8 s timeout
 
+### BUG-062: Sharing to JordyLab from the Android share sheet opens the app and nothing happens
+- Status: FIXED (PR #129), waiting for the owner's phone check after the next release
+- Severity: S2
+- Area/spec: mobile / 007-US5 (share target)
+- Env found: owner's phone, `v0.0.1-rc17` (MRB-06, 2026-10-05)
+- Coverage rows: 007-US5, 007-US5-AS1–AS4
+- Steps to reproduce:
+  1. Close JordyLab completely (or be signed out), open a link in a browser and share it to JordyLab.
+- Expected (cite spec/story): the app opens on the share screen with the link (US5-1); signed out: login first, then the same share screen (US5-4).
+- Actual (logs/screenshot, secrets redacted): JordyLab shows up in the share sheet, the app opens on its normal start page and the share is gone.
+- Root cause: two gaps. (1) Capacitor passes a share to plugins only through `onNewIntent` (app already running); when the share starts the app, the SEND intent is the launch intent and `@capgo/capacitor-share-target` never sees it. The existing Appium test signed in first and shared into the running app, so it only covered the warm path. (2) A share that arrives signed out went `/mobile/share` → auth guard → `/login`, and the login page always ended on `/`, dropping the share even though it was still held in memory.
+- Fix (PR / commit / tag): `MainActivity` replays a launch SEND intent once to the plugin (not on a recreate or from the recents list, where Android would deliver the same share twice); the auth guard remembers where the user was going (`returnUrl`) and the login page returns there (in-app paths only).
+- Regression test added: `auth.guard.spec.ts`, `login.component.spec.ts` (return address, refusing `//evil` and loops); Android e2e `share-target.e2e.ts` second test: force-stop, share, expect the login first, sign in, expect the share screen with the text
+- Verified on prod: pending: owner repeats MRB-06 on the phone after the release that contains PR #129
+
+### BUG-063: Steam family sync fails with an unexplained "Failed to sync the family library."
+- Status: FIXED (PR #129), waiting for the owner's retry with a fresh token
+- Severity: S3
+- Area/spec: gamecatalog / 005 (family library)
+- Env found: owner, prod `v0.0.1-rc17` (MRB-08, 2026-10-05)
+- Coverage rows: 005-US2, 005-US4, 005-US5
+- Steps to reproduce:
+  1. Open the Steam config page from the help text in a browser that is not signed in to the Steam store: it shows `{"success":1,"data":[]}` and there is no token to copy. Paste anything and press Sync family library.
+- Expected (cite spec/story): a family sync with a good token reads the shared library; with a bad one the user is told what to do.
+- Actual (logs/screenshot, secrets redacted): backend log `Family library sync failed: TOKEN_EXPIRED` (Steam answers 401); the screen only says "Failed to sync the family library." The help said to sign in to "your Steam account" without saying it must be the store in that browser. Also, an owned sync that found nothing new looked like "nothing happened".
+- Root cause: not a broken link: an anonymous request to that page returns exactly the owner's `data:[]`, so the owner's browser was not signed in to the store and had no token. The UI dropped the backend's reason (`errorCode`), the help text did not say what an empty page means, only a bare token was accepted (not the page text), and "no change" was shown as a technical status line.
+- Fix (PR / commit / tag): the screen maps the backend reason to a sentence (token refused, not in a family group, unreadable answer); the help names the store sign-in and explains `"data":[]`; the whole page text can be pasted and the token is picked out, an empty page is explained locally instead of being sent; the backend reports `NO_FAMILY_GROUP` for an account in no family; the last run is shown as a sentence ("already up to date").
+- Regression test added: `steam-token.spec.ts`, `source-manager.component.spec.ts`, `scan-source.store.spec.ts` (library sync failures), `SteamFamilyClientTest.anAccountInNoFamilyGroupThrowsNoFamilyGroup...`
+- Verified on prod: pending: owner signs in to store.steampowered.com, copies the config page, syncs (MRB-08)
+
+### BUG-064: The account menu's accessible name does not contain its visible text
+- Status: FIXED (PR #129)
+- Severity: S4
+- Area/spec: shared auth / G-UX (WCAG 2.5.3 label in name)
+- Env found: owner's Lighthouse run on `/fna/articles` (MRB-12, 2026-10-05): accessibility score 100, colour contrast passed, one failed audit that carries no score weight
+- Coverage rows: G-UX
+- Steps to reproduce:
+  1. Run Lighthouse (accessibility) on any signed-in page.
+- Expected (cite spec/story): a control's accessible name contains the text it shows.
+- Actual (logs/screenshot, secrets redacted): `label-content-name-mismatch` on `[data-testid=user-menu-trigger]`: the button shows "J / email / Account" but its `aria-label` is "Account menu for <email>".
+- Root cause: an `aria-label` that replaces the visible text.
+- Fix (PR / commit / tag): the full variant is named by what it shows; the compact (avatar-only) variant carries a screen-reader-only "Account menu for <name>" instead of an `aria-label`.
+- Regression test added: `user-menu.component.spec.ts` (no `aria-label`; compact variant keeps its sr-only name)
+- Verified on prod: pending: re-run after the release
+
+### BUG-065: The first screen shifts sideways while it loads (layout shift 0.22)
+- Status: FIXED (PR #129)
+- Severity: S4
+- Area/spec: frontend / G-UX (performance)
+- Env found: owner's Lighthouse run on `/fna/articles` (MRB-12, 2026-10-05): Cumulative Layout Shift 0.222 (budget 0.1), performance score 86
+- Coverage rows: G-UX
+- Steps to reproduce:
+  1. Load `/fna/articles` with the Lighthouse desktop preset.
+- Expected (cite spec/story): no layout shift above 0.1.
+- Actual (logs/screenshot, secrets redacted): the whole `main` column moves 8 px: the page is short while the list loads, then grows past the screen and the 8 px custom scrollbar appears and narrows the page.
+- Root cause: the theme styles an 8 px scrollbar that only takes space once the page scrolls.
+- Fix (PR / commit / tag): `html { scrollbar-gutter: stable }` keeps the space reserved from the first paint.
+- Regression test added: none (CSS; the Lighthouse number is the check)
+- Verified on prod: pending: Lighthouse after the release (CLS expected below 0.1)
+
+### BUG-066: Sign-up pushes never reach the owner's phone: the phone is subscribed to a different ntfy topic than the backend publishes to
+- Status: OPEN — owner action (HANDOFF-22), no code change needed
+- Severity: S3
+- Area/spec: mobile / 007-US6
+- Env found: owner's phone, MRB-07 (2026-10-05)
+- Coverage rows: 007-US6, 007-FR-016
+- Steps to reproduce:
+  1. Register a throw-away account; read the backend log and the phone.
+- Expected (cite spec/story): the push arrives on the phone within 5 minutes.
+- Actual (logs/screenshot, secrets redacted): backend `Ntfy notification sent: 'New JordyLab sign-up'` at 20:54:49Z and ntfy counted the message (published 11 → 12), but ntfy reported `subscribers=0` and holds 0 messages for the topic the phone shows; the topic in the backend's secret has the same length but a different value (compared inside the pod; the value was never printed). The phone's topic only has the old 1 Oct "Test" message.
+- Root cause: the topic on the phone (from the 1 Oct test) was never changed to the one stored in `NTFY_TOPIC` in `secrets.sops.yaml`.
+- Fix (PR / commit / tag): none in code. The owner subscribes the phone to the `NTFY_TOPIC` value (read it in IntelliJ with `sops`), or changes `NTFY_TOPIC` to the phone's topic and deploys. The runbook (MRB-07) now says so.
+- Regression test added: none (configuration)
+- Verified on prod: pending
+

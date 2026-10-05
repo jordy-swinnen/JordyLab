@@ -20,16 +20,16 @@ Production (rc17) is healthy. **Every S1 and S2 defect found (26) is fixed, depl
   375 px, no unnamed buttons / unlabeled inputs / missing alt text; grid, platform + host filters, search, grounded chat
   (answers from the catalog; "not in the catalog" instead of inventing a game).
 - **Scanners on prod:** device-code login and a Steam scan (5 games) from the MacBook.
-- **Coverage matrix:** 544 rows closed — 412 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
-  than `PASS`, defined in §5), 55 `FAIL-FIXED`, 63 `NOT TESTABLE`, 4 `PASS`.
+- **Coverage matrix:** 544 rows closed — 410 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
+  than `PASS`, defined in §5), 55 `FAIL-FIXED`, 64 `NOT TESTABLE`, 5 `PASS`.
 
-## Bugs: 61 found
+## Bugs: 66 found
 | Severity | Count | State |
 |----------|-------|-------|
 | S1 | 1 | verified (BUG-056, the rc12 blank page: rolled back in minutes, fixed in rc13) |
-| S2 | 25 | all 25 verified (23 on prod or the phone, 2 by drill / CI) |
-| S3 | 22 | 15 verified; 4 deployed (BUG-001–004, CI-level lint/coverage gates — their proof is the green gates); 3 fixed locally (tooling/test infrastructure with no prod component) |
-| S4 | 13 | 9 verified; 4 fixed locally (developer tooling) |
+| S2 | 26 | 25 verified (23 on prod or the phone, 2 by drill / CI); BUG-062 (Android share) fixed, waiting for the phone check |
+| S3 | 24 | 15 verified; BUG-063 (Steam family help and errors) fixed, waiting for the retry; BUG-066 (phone on another ntfy topic) is the owner's HANDOFF-26; 4 deployed (BUG-001–004, CI-level lint/coverage gates — their proof is the green gates); 3 fixed locally (tooling/test infrastructure with no prod component) |
+| S4 | 15 | 9 verified; 4 fixed locally (developer tooling); BUG-064 and BUG-065 (Lighthouse findings) fixed, to re-measure after the release |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
 the whole release flow (tag → release → deploy → APK), APK signing verification (v1-only reader vs v2/v3-only signing),
@@ -39,9 +39,9 @@ Ollama removal (which exposed a hidden embedding-model dependency), Ntfy that ne
 and the EmuDeck scan cap, and two overlapping scans of one source (500 → serialized by an advisory lock).
 
 ## Still open
-- **Owner's manual runbook (done last):** MRB-06 (Android share target), MRB-07 (push notifications and taps), MRB-08 (Steam family sync), MRB-09 (VPS reboot), MRB-10 (point-in-time restore), MRB-11 (CSP rollout), MRB-12 (colour contrast), MRB-13 (full rebuild). MRB-01 to MRB-05 are done.
+- **Owner's manual runbook (done last):** MRB-01 to MRB-05 and MRB-09 (VPS reboot, 2026-10-05) are done; MRB-12 (colour contrast) passed (Lighthouse accessibility 100, two small findings fixed). MRB-06 (share target), MRB-07 (ntfy topic, HANDOFF-26) and MRB-08 (Steam family token, HANDOFF-27) failed on first try, their causes are fixed or explained and each needs one repeat; MRB-10 (point-in-time restore) is postponed by the owner; MRB-11 (CSP) is explained in detail and waits for a go-ahead; MRB-13 (full rebuild) was dropped by the owner.
 - **Not built, by design out of scope here:** 010 (Eufy presence) and the `garmin-sync-service` sidecar; a scheduled smoke-suite Action; a report-only CSP.
-- **Accepted limits:** the matrix has 64 rows NOT TESTABLE (Eufy 010, native Android stories) and 412 rows at PASS-CI (named green suites plus the E2E passes) rather than a direct pass; BUG-001–004 are proven by the lint/coverage gates, not by a prod check.
+- **Accepted limits:** the matrix has 65 rows NOT TESTABLE (Eufy 010, native Android stories, the full VPS rebuild) and 410 rows at PASS-CI (named green suites plus the E2E passes) rather than a direct pass; BUG-001–004 are proven by the lint/coverage gates, not by a prod check.
 - **Dependabot:** done — 0 open (rc7). **Developer tooling:** `opencode.json`'s default model resolves. **CI:** the Build workflow now also boots the built app in headless Chrome (`app-boot`, BUG-061), the check that would have caught the rc12 blank page.
 
 ## AI usage

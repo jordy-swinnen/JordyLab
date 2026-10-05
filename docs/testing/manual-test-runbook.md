@@ -124,6 +124,7 @@ password manager or from the app, never from this file.
 - Pass when: the share arrives and the offered actions match the role.
 - If it fails: add `BUG-<next>`.
 - Record result: 007-US5 rows → `PASS`.
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-062.** JordyLab is listed in the share sheet, but opening it only opened the app: shares that *start* the app were never handed to the share screen, and a share that needed a login was dropped after login. Fixed in PR #129 (the Android suite's share test now also covers the cold start). **Repeat after the next release:** close the app completely, share a link from the browser → expect the login (or the fingerprint prompt), then the share screen with the link.
 
 ### MRB-07: Push notifications and taps
 - Covers: 007-US6 (native side), 007-FR-016 (the push itself passed on prod) | Area/spec: E / 007
@@ -137,6 +138,7 @@ password manager or from the app, never from this file.
 - Pass when: the push arrives and the tap lands on the Users page.
 - If it fails: check `kubectl -n jordylab logs deploy/backend | grep -i ntfy` (expect "Ntfy notifications enabled"); add `BUG-<next>`.
 - Record result: 007-US6 native rows → `PASS`.
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-066, not a code bug.** The backend sent the push (log `Ntfy notification sent`, ntfy counted it) but the phone is subscribed to a *different topic* than the one in `NTFY_TOPIC`: ntfy had no subscriber and nothing stored for the phone's topic. **HANDOFF-26** fixes it. Then repeat steps 1–2 (a new throw-away registration).
 
 ### MRB-08: Steam family sync
 - Covers: 005-US2, 005-US4, 005-US5 (family side) | Area/spec: C / 005
@@ -150,6 +152,7 @@ password manager or from the app, never from this file.
 - Pass when: family games appear and the second run is a no-op.
 - If it fails: add `BUG-<next>` (never paste the token into the bug).
 - Record result: 005 family rows → `PASS`.
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-063 (guidance, not a broken link).** The Steam page is fine, but it shows `{"success":1,"data":[]}` — exactly what Steam returns to anyone not signed in to the *store* in that browser — so there was no token to copy, and what was pasted got a 401 (`TOKEN_EXPIRED` in the backend log). "Sync owned library" did work: `NO_CHANGE` means Steam reported the same 129 games. Fixed in PR #129: the screen now explains each failure, accepts the whole page text, and says "already up to date" for an unchanged sync. **Repeat after the next release (HANDOFF-27).**
 
 ### MRB-09: VPS reboot keeps data and artwork
 - Covers: 008-US5-AS3 | Area/spec: A / 008
@@ -165,6 +168,7 @@ password manager or from the app, never from this file.
 - Pass when: pods return on their own, the data and artwork are intact.
 - If it fails: follow `docs/runbook.md` §12 (logs) and §19 (k3s); add `BUG-<next>`.
 - Record result: 008-US5-AS3 → `PASS`.
+- **Result 2026-10-05 (agent, owner approved the reboot in chat): PASS.** Reboot issued 21:12:04Z. SSH was back after ~22 s, the site answered 200 after ~44 s and all 5 pods were Running (1–2 restarts each, none in CrashLoop) ~35 s after that, without any action. Before → after: games 311 → 311, finance positions 2 → 2, Keycloak users 8 → 8, scan sources 4 → 4, release files on the volume 12 → 12 (articles 195 → 198: normal RSS growth while it ran); the signed-in admin session survived; `openid-configuration`, `assetlinks.json` and the unauthenticated API (401) answered as before; 0 backend errors afterwards. Artwork step: the artwork volume is empty (0 local files: 131 games use an external image URL, 180 a placeholder), so there was no local cover to open; the volume itself stayed mounted. **Done.**
 
 ### MRB-10: Quarterly restore drill and a point-in-time restore
 - Covers: 008-FR-015 (repeat), 008-SC-004 (point-in-time) | Area/spec: A / 008
@@ -179,19 +183,29 @@ password manager or from the app, never from this file.
 - Pass when: both restores come up Ready and the volume is cleaned up.
 - If it fails: add `BUG-<next>` and do not close FR-015.
 - Record result: 008-FR-015 note the new date; 008-SC-004 → `PASS` for point-in-time.
+- **Result 2026-10-05 (owner):** postponed — "I want to focus on the functional first". Stays open; the quarterly repeat is next due 2027-01-01.
 
 ### MRB-11: Content-Security-Policy rollout
 - Covers: BUG-021 follow-up (hardening) | Area/spec: A / 008
 - Why the agent couldn't: a wrong policy would lock everyone out of the site, and verifying one needs a signed-in session on prod
 - You need: a browser, a deploy, 1 h
 - Environment: prod
+- **What this is, in plain words.** A Content-Security-Policy (CSP) is a header the website sends that tells the browser "only run scripts, load images, fonts and connections from these places". If an attacker ever manages to inject a `<script>` into a page, a strict CSP stops the browser from running it. The risk is the other way round: if the list forgets something the site really uses (a font, a cover image host, a script Angular puts inline), the browser blocks it and that part of the site breaks. That is why it is rolled out in two steps with a safe first step.
+  - **Report-Only** (`Content-Security-Policy-Report-Only`): the browser checks the page against the policy but **blocks nothing**; it only writes "would have blocked X" lines in the DevTools console. No risk for users.
+  - **Enforcing** (`Content-Security-Policy`): the same text, but now the browser really blocks. Only switch to this when a whole session produced no violation lines.
 - Steps:
-  1. Add `Content-Security-Policy-Report-Only` to `deploy/containers/frontend/nginx.conf`'s security headers. Start from `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://images.igdb.com https://cdn.cloudflare.steamstatic.com https://raw.githubusercontent.com; connect-src 'self'; frame-ancestors 'self'`.
-  2. Release it, sign in, visit every page → expect: the console lists any blocked resource (Angular's inline bootstrap script may need a hash).
-  3. Adjust until the console is clean for a full session, then switch the header to `Content-Security-Policy`.
-- Pass when: a full signed-in session, including login and logout, produces no CSP violation.
+  1. **Add the Report-Only header.** In `deploy/containers/frontend/nginx.conf`, next to the other `add_header` security headers, add one line with the policy below as the header value (all of it on one line):
+     `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://images.igdb.com https://cdn.cloudflare.steamstatic.com https://raw.githubusercontent.com; connect-src 'self'; frame-ancestors 'self'`
+     Reading it: `default-src 'self'` = by default only things from jordylab.be; `script-src 'self'` = scripts only from our own files; `style-src … 'unsafe-inline'` = our CSS plus inline styles (Angular and the font loader use some) and Google's font stylesheet; `font-src` = the font files come from `fonts.gstatic.com`; `img-src` = our images, inline `data:`/`blob:` images and the cover hosts listed; `connect-src 'self'` = the app may only call jordylab.be (API and Keycloak share that host); `frame-ancestors 'self'` = only our own pages may embed the site (Keycloak's silent login uses such a frame).
+  2. **Release it** the normal way (PR → merge → `v*` tag → approve the deploy). Because it is Report-Only, nothing can break.
+  3. **Look for violations.** Open `https://jordylab.be` in Chrome, press F12 → **Console**, tick "Preserve log". Sign in, then click through **every** page (Library, Chat, Sources, Switch games, FNA articles and Portfolio, Settings, the account menu) and sign out. A violation looks like: `[Report Only] Refused to load the script/image/font '…' because it violates the following Content Security Policy directive: "…"`.
+  4. **Fix the list.** For each line: if it is a host we really use, add that host to the directive named in the message (for example a cover host to `img-src`). If it says `Refused to execute inline script` (Angular's index page contains one small inline script), do not add `'unsafe-inline'` to `script-src`; add that script's hash (`'sha256-…'`, the message prints it) instead. Release again and repeat step 3 until a full session shows **no** `Refused` lines.
+  5. **Enforce.** Rename the header to `Content-Security-Policy`, release, and do one more full signed-in session (login, every page, logout). If anything is blocked, revert to Report-Only straight away (redeploy the previous tag, `docs/runbook.md` §12) and log it.
+  The Android app loads its own packaged copy of the pages, so the header does not apply to it.
+- Pass when: a full signed-in session, including login and logout, produces no CSP violation, with the enforcing header on.
 - If it fails: revert to report-only; add `BUG-<next>`.
 - Record result: BUG-021 → remove "CSP open".
+- **Owner question 2026-10-05:** "I don't understand the steps" → rewritten above. Steps 1–4 are safe for the agent to do (they cannot break the site); step 5 is the one that needs your go-ahead. Say so and it is done.
 
 ### MRB-12: Colour contrast of the main pages
 - Covers: the contrast part of G-UX | Area/spec: G / 011
@@ -204,6 +218,7 @@ password manager or from the app, never from this file.
 - Pass when: axe reports no contrast violations.
 - If it fails: add `BUG-<next>` (S4) listing the elements.
 - Record result: note it in `e2e-test-plan.md` §6 G.
+- **Result 2026-10-05 (owner, Lighthouse 13.4.1 on `/fna/articles`):** accessibility **100**, the colour-contrast audit **passed**. The one failed audit, `label-content-name-mismatch` on the account menu, is logged as BUG-064 (fixed in PR #129); performance 86 with a layout shift of 0.22, logged as BUG-065 (fixed). The other pages are covered by the agent in the entry under §6 G of the test plan. Not ours: the console error is a Trustpilot browser extension's own request.
 
 ### MRB-13: Full VPS rebuild from git
 - Covers: 008-US5-AS4 | Area/spec: A / 008
@@ -214,6 +229,7 @@ password manager or from the app, never from this file.
 - Pass when: a fresh VPS serves the site from git plus the backup bucket only.
 - If it fails: add `BUG-<next>` for every runbook step that needed an undocumented action.
 - Record result: 008-US5-AS4 → `PASS`.
+- **Result 2026-10-05 (owner): DROPPED.** "Too much hassle to set up a second VPS; if there's no easier way to test it just drop it." There is no cheaper way to exercise a bare-machine bootstrap, so 008-US5-AS4 stays `NOT TESTABLE` as an accepted limit. What does cover the pieces: every release applies the same manifests to the cluster (`kustomize build` + deploy), the database restore from the bucket was drilled on 2026-10-01 (MRB-10 repeats it quarterly) and the reboot test (MRB-09) proved a restart needs no manual step.
 
 ---
 

@@ -352,5 +352,5 @@ migration/restore drill), but their evidence was recorded in the plan's coverage
 each with its proof), `final-report.md` and `bug-log.md` instead of per task. They are ticked on that basis. T053 stays **unticked** on purpose: its handoff durations were estimated, not measured. T023 was ticked later the same
 day (2026-10-05) after its one missing step was run on prod: an admin tab left idle for 31.0 minutes in the same document
 (past the 30-minute access-token lifetime), then a click that needs the API — the app answered `POST /auth/realms/jordylab/protocol/openid-connect/token → 200` (silent refresh) followed by `GET /api/gamecatalog/games?platform=SNES → 200`, with no login redirect. Known limits are stated,
-not hidden: the matrix marks 64 rows NOT TESTABLE (Eufy 010, native Android stories) and 412 rows are PASS-CI rather than a direct pass. The remaining manual items are `manual-test-runbook.md` MRB-06 to MRB-13.
+not hidden: the matrix marks 65 rows NOT TESTABLE (Eufy 010, native Android stories, the full VPS rebuild) and 410 rows are PASS-CI rather than a direct pass. The remaining manual items are `manual-test-runbook.md` MRB-06 to MRB-13.
 

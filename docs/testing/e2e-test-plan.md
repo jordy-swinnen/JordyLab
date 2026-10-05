@@ -548,8 +548,8 @@ Open tasks without a story label: T007 T052 T054 T055.
 | 008-US5 | Data is durable and restorable (Priority: P1) | CNPG backups; restore drill | prod (cluster) | tasks closed | high (005–010, no validation) | PASS-CI | prod: smoke A re-run on rc6, restore drill (1 min 55 s), rollback + roll-forward (DEPLOY-11), 5/5 pods Running; CI: build/release/deploy workflows |
 | 008-US5-AS1 | Given the production database, When a day passes, Then a backup exists in OVH Object Storage, | ↑ | prod (cluster) |  | ↑ | PASS | daily base backup `cnpg-daily-backup-20261001030000` completed 03:00 UTC, WAL archiving on (2026-10-01) |
 | 008-US5-AS2 | Given a backup, When I follow the restore runbook, Then I can restore the database to a point in | ↑ | prod (cluster) |  | ↑ | PASS | restore drill 2026-10-01: recovered to a fresh cluster, row counts match (runbook §15) |
-| 008-US5-AS3 | Given a pod restart or a VPS reboot, When it comes back, Then uploaded game artwork and database data | ↑ | prod (cluster) | see §5 legend | ↑ | PASS-CI | prod: smoke A re-run on rc6, restore drill (1 min 55 s), rollback + roll-forward (DEPLOY-11), 5/5 pods Running; CI: build/release/deploy workflows |
-| 008-US5-AS4 | Given the VPS is lost entirely, When I follow the runbook, Then a fresh VPS can be rebuilt from git + | ↑ | prod (cluster) | see §5 legend | ↑ | PASS-CI | prod: smoke A re-run on rc6, restore drill (1 min 55 s), rollback + roll-forward (DEPLOY-11), 5/5 pods Running; CI: build/release/deploy workflows |
+| 008-US5-AS3 | Given a pod restart or a VPS reboot, When it comes back, Then uploaded game artwork and database data | ↑ | prod (cluster) | see §5 legend | ↑ | PASS | prod: VPS reboot 2026-10-05 (MRB-09): site 200 after ~44 s, all 5 pods Running ~35 s later without help; games 311, positions 2, Keycloak users 8, sources 4 and the 12 release files identical before and after; earlier: smoke A re-run on rc6, restore drill (1 min 55 s) |
+| 008-US5-AS4 | Given the VPS is lost entirely, When I follow the runbook, Then a fresh VPS can be rebuilt from git + | ↑ | prod (cluster) | see §5 legend | ↑ | NOT TESTABLE | owner dropped the full-rebuild test 2026-10-05 (needs a second VPS; MRB-13): accepted limit. Partial evidence: manifests apply on every release, restore drill 2026-10-01, reboot MRB-09 |
 | 008-US6 | Learn Kubernetes and Podman on my own project (Priority: P2) | `docs/learn/` | neither (docs) | tasks closed | high (005–010, no validation) | PASS-CI | prod: smoke A re-run on rc6, restore drill (1 min 55 s), rollback + roll-forward (DEPLOY-11), 5/5 pods Running; CI: build/release/deploy workflows |
 | 008-US6-AS1 | Given the learning guide, When I read it, Then each concept (container image, Pod, Deployment, | ↑ | neither (docs) | see §5 legend | ↑ | PASS-CI | prod: smoke A re-run on rc6, restore drill (1 min 55 s), rollback + roll-forward (DEPLOY-11), 5/5 pods Running; CI: build/release/deploy workflows |
 | 008-US6-AS2 | Given the k3s chapter, When I read it, Then I understand what k3s bundles (containerd, Traefik, | ↑ | neither (docs) | see §5 legend | ↑ | PASS-CI | prod: smoke A re-run on rc6, restore drill (1 min 55 s), rollback + roll-forward (DEPLOY-11), 5/5 pods Running; CI: build/release/deploy workflows |
@@ -991,6 +991,26 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 #### HANDOFF-25: Confirm the Oxlint, Playwright, Appium/WebdriverIO versions and raise Node (spec 012 T016, T026, T067) — done 2026-10-05 (in chat)
 - Asked in the previous status report. Jordy answered with a registry check made in an OpenCode session (oxlint 1.86.0, `@nx/oxlint` 23.2.1 with peer `oxlint ^1.43`, Playwright 1.63.0, Appium 3.8.0, WebdriverIO 9.32.0 or 10.0.0, UiAutomator2 driver 8.7.0, suggested emulator image API 35 `google_apis`), said "continue", and showed local Node raised to v24.21.0.
 - Taken as approval of the proposed set: oxlint 1.86.0 + `@nx/oxlint` 23.2.1 (T026), Playwright 1.63.0 (T067), Node 24.21.0 (T016). **T080 closed later the same day:** Jordy chose WebdriverIO 10 (now 10.0.0); the emulator stays API 35.
+
+#### HANDOFF-26: Point the phone's ntfy app at the topic the backend publishes to (MRB-07, BUG-066)
+- Machine: your Mac + your phone · Target env: prod · Why you: the topic is a secret I must not read or print; only you open the decrypted file.
+- Why: the sign-up push was sent (backend log, ntfy counted it) but the phone is subscribed to another topic, so nobody received it.
+```bash
+cd ~/Projects/JordyLab
+SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
+```
+1. In the file find `NTFY_TOPIC` (under `jordylab-secrets` → `stringData`) and copy its value. Close the tab **without changes**, then clear IntelliJ's Local History for that temp file.
+2. In the ntfy app: long-press the old subscription → **Unsubscribe**; **+** → *Use another server* → `https://jordylab.be/ntfy`; topic = the value you copied → **Subscribe**.
+3. Leave the ntfy app's "instant delivery" (the persistent "listening" notification) on and exempt it from battery optimisation, or Android stops it in the background.
+- Expect: tell me "done". I send a test push from inside the backend pod (the topic never leaves the pod), confirm ntfy shows a subscriber, then you repeat MRB-07 steps 1–2.
+- (Alternative: put the *phone's* topic into `NTFY_TOPIC` instead; that needs a deploy, so the steps above are quicker.)
+
+#### HANDOFF-27: Re-run the three phone/Steam checks once the next release is out (MRB-06, MRB-08, MRB-07)
+- Machine: phone + a desktop browser · Target env: prod · Why you: Android hardware and your Steam login.
+- When: after I tell you the release containing PR #129 is deployed (and the APK on the website is the new one: update the app first).
+- **MRB-06 share:** close JordyLab completely; in a browser share a link to JordyLab → expect the login (or fingerprint prompt), then the share screen with the link, with "Ask the catalog" (and "Save to FNA" as admin).
+- **MRB-08 Steam family:** sign in at `https://store.steampowered.com` in your browser (the store, not just the Steam app), open `https://store.steampowered.com/pointssummary/ajaxgetasyncconfig` (it must show a long `webapi_token`, not `"data":[]`), select all, copy, paste into Sources → Family library → Sync. Expect a "Family library synced: N added" sentence; a second sync says "already up to date". Never paste the token anywhere else.
+- Tell me what you saw (for a failure, the sentence the screen shows; never the token).
 
 ## 8. AI call tally
 
