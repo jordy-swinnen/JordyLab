@@ -1,8 +1,7 @@
 <!doctype html>
 <html>
   <body>
-    <script>
-      parent.postMessage(location.href, location.origin);
-    </script>
+    <!-- An external file, not an inline script: the production Content-Security-Policy allows scripts from our own origin only. -->
+    <script src="silent-check-sso.js"></script>
   </body>
 </html>

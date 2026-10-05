@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { environment, expect, test } from './support/fixtures';
+import { PAGES } from './support/pages';
 import { pointAppAtKeycloak } from './support/session';
 
 // Automated accessibility check (WCAG 2.x A and AA: colour contrast, accessible names, labels, landmarks) on every signed-in page, on a
@@ -8,29 +9,6 @@ import { pointAppAtKeycloak } from './support/session';
 // (BUG-064) only showed up when the owner ran Lighthouse by hand on a single page. A failure lists each rule, how many elements it hit and
 // a CSS selector for the first few; the page data comes from the same throwaway catalog the other journeys use.
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
-
-const PAGES: readonly {
-  readonly name: string;
-  readonly path: string;
-  readonly heading: string;
-}[] = [
-  { name: 'FNA articles', path: '/fna/articles', heading: 'Articles' },
-  { name: 'FNA portfolio', path: '/fna/portfolio', heading: 'Portfolio' },
-  {
-    name: 'FNA briefing',
-    path: '/fna/briefing',
-    heading: 'Investment briefing',
-  },
-  { name: 'Game library', path: '/games/grid', heading: 'Library' },
-  { name: 'Game chat', path: '/games/chat', heading: 'Ask the catalog' },
-  { name: 'Game sources', path: '/games/sources', heading: 'Sources' },
-  { name: 'Settings users', path: '/settings/users', heading: 'Users' },
-  {
-    name: 'Settings AI models',
-    path: '/settings/ai-models',
-    heading: 'AI models',
-  },
-];
 
 const SCREENS = [
   { name: 'desktop', viewport: { width: 1280, height: 800 } },

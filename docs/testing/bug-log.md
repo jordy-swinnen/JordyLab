@@ -1057,3 +1057,32 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): `tabindex="0"`, `role="region"` and an `aria-label` on the scroller.
 - Regression test added: the axe journey (FNA portfolio, phone).
 - Verified on prod: pending
+### BUG-069: The CI check `app-boot` fails intermittently with "Chrome did not expose a page target"
+- Status: FIXING (PR #132)
+- Severity: S4
+- Area/spec: CI / 011 (app-boot check, BUG-056)
+- Env found: GitHub Actions `Build`: PR #129 (first run), #130 and #132 on 2026-10-05/06, while the same bundle booted fine locally and on other runs
+- Coverage rows: —
+- Steps to reproduce:
+  1. Re-run `app-boot` on an unchanged commit; roughly one run in four fails after 15 s.
+- Expected (cite spec/story): a green check unless the built app fails to start.
+- Actual (logs/screenshot, secrets redacted): `App boot check could not run: Chrome did not expose a page target`. Chrome was started but its DevTools endpoint listed no page within 15 s; Chrome's own output was discarded, so the cause is invisible.
+- Root cause: the script waits once for a page target and gives up; a slow or stuck Chrome start on a shared runner is never retried, and nothing says why.
+- Fix (PR / commit / tag): ask Chrome for a page itself when none is listed, restart Chrome up to three times, and keep Chrome's stderr to print on failure.
+- Regression test added: none (the check is itself a CI script); verified by the rerun of `app-boot` on this PR.
+- Verified on prod: n/a (CI only)
+
+### BUG-070: The silent sign-in page would be blocked by an enforcing Content-Security-Policy (single sign-on silently stops working)
+- Status: FIXING (PR #132); no prod impact, the policy is Report-Only
+- Severity: S3 (it would have been S1/S2 after enforcing: every page load waits 8 s, then "continues signed out")
+- Area/spec: frontend / BUG-021 follow-up (CSP, MRB-11 step 3)
+- Env found: reviewing the page against the new CSP journey (`csp.spec.ts`: every signed-in page with the production policy as an enforcing header), local throwaway stack, 2026-10-06
+- Coverage rows: —
+- Steps to reproduce:
+  1. Serve the app with the production policy as an enforcing header (`script-src 'self' 'sha256-…'`, no `unsafe-inline`); open `/silent-check-sso.html`.
+- Expected (cite spec/story): the page's script runs, so Keycloak's silent sign-in (hidden iframe on every app start) can answer the app.
+- Actual (logs/screenshot, secrets redacted): the browser reports `script-src-elem blocked inline (silent-check-sso.html:4)`. In the real app this means the silent check never answers, the app waits 8 s and continues signed out. (The e2e stack's own session never loads this page, so the journey opens it directly; a first run that looked like this symptom was a Chrome Local Network Access block of the test harness, not the policy.)
+- Root cause: `apps/jordylab/public/silent-check-sso.html` contains an inline `<script>` (`parent.postMessage(...)`) that the policy refuses to run, so Keycloak's silent check-sso iframe never answers the app.
+- Fix (PR / commit / tag): the script moved to `silent-check-sso.js` next to the page (same origin, allowed by `script-src 'self'`; no hash to maintain).
+- Regression test added: `csp.spec.ts` › "the silent sign-in page runs its script under the policy" (fails with the old inline page, passes with the external script; the other journeys walk every signed-in page, a game detail and the login page).
+- Verified on prod: pending (after the release; then CSP step 5 can be considered)

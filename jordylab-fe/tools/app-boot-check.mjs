@@ -18,6 +18,18 @@ import { extname, join, normalize } from 'node:path';
 
 const distDir = process.argv[2] ?? 'dist/apps/jordylab/browser';
 const EXPECTED_TEXT = 'Sign in with Keycloak';
+// The production Content-Security-Policy (the Report-Only header in security-headers.conf), served here as an ENFORCING header, so
+// anything the built app needs that the policy forbids (a changed inline-script hash after an Angular upgrade, a new host) fails the
+// check instead of surfacing in the owner's console. In production the page origin is jordylab.be, which 'self' covers (API and
+// Keycloak share it); here the page is on 127.0.0.1, so that origin is added to the same directives.
+const PRODUCTION_ORIGIN = 'https://jordylab.be';
+const POLICY_FILE = new URL('../../deploy/containers/frontend/security-headers.conf', import.meta.url);
+const policyLine = readFileSync(POLICY_FILE, 'utf8').split('\n').find((line) => line.startsWith('add_header Content-Security-Policy-Report-Only'));
+if (!policyLine) throw new Error(`No Content-Security-Policy-Report-Only header found in ${POLICY_FILE.pathname}`);
+const policyValue = policyLine.match(/"([^"]+)"/)?.[1];
+if (!policyValue) throw new Error(`The Content-Security-Policy-Report-Only line in ${POLICY_FILE.pathname} has no double-quoted policy value`);
+const POLICY = policyValue
+  .replace(/(default-src|connect-src) 'self'/g, `$1 'self' ${PRODUCTION_ORIGIN}`);
 const BOOT_TIMEOUT_MS = 45_000;
 const CHROME_CANDIDATES = [
   process.env.CHROME_BIN,
@@ -34,16 +46,19 @@ function serve(root) {
     const pathname = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
     let file = join(root, pathname);
     if (!existsSync(file) || statSync(file).isDirectory()) file = join(root, 'index.html'); // SPA fallback
-    response.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
+    response.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream', 'content-security-policy': POLICY });
     response.end(readFileSync(file));
   });
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port })));
 }
 
+let chromeOutput = ''; // Chrome's stderr, printed when it never exposes a page (BUG-069)
+
 async function launchChrome(profileDir, debugPort) {
   for (const binary of CHROME_CANDIDATES) {
     const child = spawn(binary, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run',
-      `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore' });
+      `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+    child.stderr.on('data', (chunk) => { chromeOutput += chunk; if (chromeOutput.length > 4000) chromeOutput = chromeOutput.slice(-4000); });
     const failed = await new Promise((resolve) => { child.once('error', () => resolve(true)); setTimeout(() => resolve(false), 400); });
     if (!failed) return child;
   }
@@ -51,15 +66,16 @@ async function launchChrome(profileDir, debugPort) {
 }
 
 async function pageSocketUrl(debugPort) {
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; attempt < 80; attempt++) {
     try {
       const targets = await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();
       const page = targets.find((target) => target.type === 'page');
       if (page) return page.webSocketDebuggerUrl;
+      if (attempt === 20 || attempt === 40) await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' }); // none listed: ask for one
     } catch { /* Chrome is still starting */ }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error('Chrome did not expose a page target');
+  return null;
 }
 
 const profileDir = mkdtempSync(join(tmpdir(), 'app-boot-'));
@@ -68,12 +84,24 @@ const debugPort = await new Promise((resolve) => {
   const probe = createNetServer();
   probe.listen(0, '127.0.0.1', () => { const { port: free } = probe.address(); probe.close(() => resolve(free)); });
 });
-const chrome = await launchChrome(profileDir, debugPort);
+let chrome;
 const problems = [];
 const consoleLog = [];
 let exitCode = 1;
 try {
-  const socket = new WebSocket(await pageSocketUrl(debugPort));
+  // A shared CI runner sometimes starts Chrome without ever exposing a page (BUG-069): start it again, up to three times.
+  let socketUrl = null;
+  for (let start = 1; start <= 3 && !socketUrl; start++) {
+    chrome = await launchChrome(profileDir, debugPort);
+    socketUrl = await pageSocketUrl(debugPort);
+    if (!socketUrl && start < 3) {
+      console.error(`Chrome exposed no page on start ${start}/3; restarting it.`);
+      chrome.kill('SIGKILL');
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  if (!socketUrl) throw new Error(`Chrome did not expose a page target after 3 starts. Chrome said:\n${chromeOutput.slice(-800) || '(nothing)'}`);
+  const socket = new WebSocket(socketUrl);
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   let nextId = 0;
   const pending = new Map();
@@ -89,7 +117,10 @@ try {
       consoleLog.push(`${message.params.type}: ${text}`);
       if (message.params.type === 'error' && /NG0\d+|Uncaught/.test(text)) problems.push(text);
     } else if (message.method === 'Log.entryAdded') {
-      consoleLog.push(`${message.params.entry.level}: ${message.params.entry.text} ${message.params.entry.url ?? ''}`);
+      const entry = `${message.params.entry.level}: ${message.params.entry.text} ${message.params.entry.url ?? ''}`;
+      consoleLog.push(entry);
+      // Only our own policy's blocks count: "Framing …" lines are Keycloak's policy refusing the silent-check-sso frame (the known 127.0.0.1 artefact above).
+      if (/Content Security Policy directive/i.test(message.params.entry.text) && !/^Framing /.test(message.params.entry.text)) problems.push(`Content-Security-Policy violation: ${message.params.entry.text}`);
     }
   };
   await send('Runtime.enable');
@@ -102,7 +133,7 @@ try {
   while (Date.now() < deadline && problems.length === 0) {
     const result = await send('Runtime.evaluate', { expression: "document.querySelector('app-root')?.innerText ?? ''", returnByValue: true });
     text = result?.result?.value ?? '';
-    if (text.includes(EXPECTED_TEXT)) break;
+    if (text.includes(EXPECTED_TEXT)) { await new Promise((resolve) => setTimeout(resolve, 1500)); break; } // late violations (fonts, styles) arrive just after first paint
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   if (problems.length > 0) {
@@ -118,7 +149,7 @@ try {
 } catch (error) {
   console.error(`App boot check could not run: ${error.message}`);
 } finally {
-  chrome.kill('SIGKILL');
+  chrome?.kill('SIGKILL');
   server.close();
   rmSync(profileDir, { recursive: true, force: true });
 }
