@@ -13,6 +13,9 @@ const KEYCODE_ENTER = 66;
  * come back into the app through the App Link. Ends in the WebView context on the signed-in app.
  */
 export async function signInNatively(): Promise<void> {
+  // A retry starts where the failed attempt stopped, possibly in Chrome on a Keycloak error page: bring the app back to the front first.
+  await switchToNative();
+  await driver.activateApp(environment.androidPackage);
   await switchToWebView(environment.androidPackage);
   const signInButton = await $('//button[contains(., "Sign in with Keycloak")]');
   await signInButton.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
@@ -37,8 +40,7 @@ export async function signInNatively(): Promise<void> {
   if (!returned) {
     await username.setValue(environment.adminUsername);
     await driver.execute('mobile: performEditorAction', { action: 'next' });
-    const password = await $('android=new UiSelector().className("android.widget.EditText").focused(true)');
-    await password.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
+    const password = await passwordField(username.elementId);
     await password.setValue(environment.adminPassword);
     await driver.pressKeyCode(KEYCODE_ENTER);
     returned = Boolean(
@@ -69,6 +71,38 @@ export async function signInNatively(): Promise<void> {
       `The app is back but not signed in (${(error as Error).message}). From inside the WebView: ${await probeFromWebView()}`,
     );
   }
+}
+
+/**
+ * The password field: the one that took focus after the keyboard's Next action. On a cold emulator Next can be slow, and the field that
+ * still has focus then is the username one, so the password would end up in the username box (Keycloak: user_not_found). Give Next a few
+ * seconds to move the focus and fall back to the second text field on the page.
+ */
+async function passwordField(usernameElementId: string): Promise<WebdriverIO.Element> {
+  const focusedSelector = 'android=new UiSelector().className("android.widget.EditText").focused(true)';
+  let found: WebdriverIO.Element | undefined;
+  try {
+    await driver.waitUntil(
+      async () => {
+        const candidate = await $(focusedSelector);
+        if ((await candidate.isExisting()) && candidate.elementId !== usernameElementId) {
+          found = candidate;
+        }
+
+        return found !== undefined;
+      },
+      { timeout: 5_000, interval: 500 },
+    );
+  } catch {
+    // Focus never moved: take the second text field of the form.
+  }
+  if (found) {
+    return found;
+  }
+  const second = await $('android=new UiSelector().className("android.widget.EditText").instance(1)');
+  await second.waitForExist({ timeout: STEP_TIMEOUT_MS });
+
+  return second;
 }
 
 /** When the app is back but signed out, ask the WebView itself what it can reach: the answer separates a network block from a CORS block. */
