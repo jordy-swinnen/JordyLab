@@ -134,6 +134,11 @@ WEB_DIST_FOR_BROWSER=""
 # The app's WebView calls the backend from the origin https://localhost (Capacitor's androidScheme + hostname), as in production.
 CORS_EXTRA_ORIGINS=""
 
+# The SHA-256 digest (hex, no colons) of the certificate that signed an APK, as `apksigner` reports it.
+signing_certificate_digest() {
+  "$1" verify --print-certs "$2" 2>/dev/null | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}' | tr -d ':[:space:]'
+}
+
 # Builds everything an Android run needs before the stack starts: the app as a debug APK (twice, the second with a higher versionCode
 # so the update check has something newer to find), the same web build for the browser, and the debug certificate the backend pins.
 prepare_android() {
@@ -161,12 +166,15 @@ prepare_android() {
   APK_FIRST="$RUN_DIRECTORY/apk/app-first.apk"
   APK_NEWER="$RUN_DIRECTORY/apk/app-newer.apk"
 
-  # The digest of the certificate that signed the APK, read the way the backend reads it: from the APK itself (no keystore path to guess).
-  local apksigner
+  # The digest of the certificate that signed each APK, read the way the backend reads it: from the APK itself (no keystore path to guess).
+  local apksigner newer_digest
   apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
   [[ -x "$apksigner" ]] || { log "apksigner not found under $ANDROID_HOME/build-tools"; return 1; }
-  DEBUG_CERT_SHA256="$("$apksigner" verify --print-certs "$APK_FIRST" 2>"$RUN_DIRECTORY/apksigner.log" | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}' | tr -d ':[:space:]')"
-  [[ -n "$DEBUG_CERT_SHA256" ]] || { log "could not read the signing certificate digest from the APK"; cat "$RUN_DIRECTORY/apksigner.log" >&2; return 1; }
+  DEBUG_CERT_SHA256="$(signing_certificate_digest "$apksigner" "$APK_FIRST")"
+  newer_digest="$(signing_certificate_digest "$apksigner" "$APK_NEWER")"
+  log "signing certificate SHA-256: first APK ${DEBUG_CERT_SHA256:-unreadable}, newer APK ${newer_digest:-unreadable}"
+  [[ "$DEBUG_CERT_SHA256" == "$newer_digest" ]] || { log "the two debug APKs are not signed by the same certificate, so the backend would reject the newer release"; return 1; }
+  [[ -n "$DEBUG_CERT_SHA256" ]] || { log "could not read the signing certificate digest from the APK"; return 1; }
   {
     echo "E2E_APK_FIRST=$APK_FIRST"
     echo "E2E_APK_NEWER=$APK_NEWER"
