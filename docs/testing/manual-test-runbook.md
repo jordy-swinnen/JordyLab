@@ -124,7 +124,7 @@ password manager or from the app, never from this file.
 - Pass when: the share arrives and the offered actions match the role.
 - If it fails: add `BUG-<next>`.
 - Record result: 007-US5 rows → `PASS`.
-- **Result 2026-10-05 (owner, rc17): FAILED → BUG-062.** JordyLab is listed in the share sheet, but opening it only opened the app: shares that *start* the app were never handed to the share screen, and a share that needed a login was dropped after login. Fixed in PR #129 (the Android suite's share test now also covers the cold start). **Repeat after the next release:** close the app completely, share a link from the browser → expect the login (or the fingerprint prompt), then the share screen with the link.
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-062.** JordyLab is listed in the share sheet, but opening it only opened the app: shares that *start* the app were never handed to the share screen, and a share that needed a login was dropped after login. Fixed in PR #129 (the Android suite's share test now also covers the cold start). **Repeat on rc19 (HANDOFF-27 in `e2e-test-plan.md` §7 has the full step-by-step; the steps live there so they are not duplicated here).**
 
 ### MRB-07: Push notifications and taps
 - Covers: 007-US6 (native side), 007-FR-016 (the push itself passed on prod) | Area/spec: E / 007
@@ -153,7 +153,7 @@ password manager or from the app, never from this file.
 - Pass when: family games appear and the second run is a no-op.
 - If it fails: add `BUG-<next>` (never paste the token into the bug).
 - Record result: 005 family rows → `PASS`.
-- **Result 2026-10-05 (owner, rc17): FAILED → BUG-063 (guidance, not a broken link).** The Steam page is fine, but it shows `{"success":1,"data":[]}` — exactly what Steam returns to anyone not signed in to the *store* in that browser — so there was no token to copy, and what was pasted got a 401 (`TOKEN_EXPIRED` in the backend log). "Sync owned library" did work: `NO_CHANGE` means Steam reported the same 129 games. Fixed in PR #129: the screen now explains each failure, accepts the whole page text, and says "already up to date" for an unchanged sync. **Repeat after the next release (HANDOFF-27).**
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-063 (guidance, not a broken link).** The Steam page is fine, but it shows `{"success":1,"data":[]}` — exactly what Steam returns to anyone not signed in to the *store* in that browser — so there was no token to copy, and what was pasted got a 401 (`TOKEN_EXPIRED` in the backend log). "Sync owned library" did work: `NO_CHANGE` means Steam reported the same 129 games. Fixed in PR #129: the screen now explains each failure, accepts the whole page text, and says "already up to date" for an unchanged sync. **Repeat on rc19: the step-by-step is HANDOFF-27 in `e2e-test-plan.md` §7.**
 
 ### MRB-09: VPS reboot keeps data and artwork
 - Covers: 008-US5-AS3 | Area/spec: A / 008
