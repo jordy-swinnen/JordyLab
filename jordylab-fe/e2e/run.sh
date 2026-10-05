@@ -102,6 +102,9 @@ finish() {
       adb logcat -d >"$E2E_ARTIFACT_DIRECTORY/logcat.txt" 2>/dev/null
     fi
   fi
+  if [[ -n "${E2E_ARTIFACT_DIRECTORY:-}" ]]; then
+    compose logs --no-color keycloak >"$E2E_ARTIFACT_DIRECTORY/keycloak.log" 2>/dev/null
+  fi
   compose down --volumes --remove-orphans >/dev/null 2>&1
   e2e_remove_run "$RUN_ID"
   rm -rf "$RUN_DIRECTORY"

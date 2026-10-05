@@ -39,8 +39,41 @@ export async function signInNatively(): Promise<void> {
     timeoutMsg: 'The app did not come back from the Custom Tab (the App Link callback was not handled)',
   });
   await switchToWebView(environment.androidPackage);
-  await $('[data-testid="user-menu-trigger"]').waitForDisplayed({
-    timeout: STEP_TIMEOUT_MS,
-    timeoutMsg: 'The app is back but not signed in (no account menu)',
-  });
+  try {
+    await $('[data-testid="user-menu-trigger"]').waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
+  } catch {
+    throw new Error(`The app is back but not signed in (no account menu). From inside the WebView: ${await probeFromWebView()}`);
+  }
+}
+
+/** When the app is back but signed out, ask the WebView itself what it can reach: the answer separates a network block from a CORS block. */
+async function probeFromWebView(): Promise<string> {
+  const probe = await driver.executeAsync(
+    (keycloakUrl: string, apiOrigin: string, done: (result: string) => void) => {
+      const attempt = async (label: string, url: string, init: RequestInit): Promise<string> => {
+        try {
+          const response = await fetch(url, init);
+          return `${label}: HTTP ${response.status} ${init.mode ?? 'cors'}`;
+        } catch (error) {
+          return `${label}: ${(error as Error).message} (${init.mode ?? 'cors'})`;
+        }
+      };
+      void Promise.all([
+        attempt('keycloak discovery', `${keycloakUrl}/realms/jordylab/.well-known/openid-configuration`, { mode: 'cors' }),
+        attempt('keycloak discovery', `${keycloakUrl}/realms/jordylab/.well-known/openid-configuration`, { mode: 'no-cors' }),
+        attempt('keycloak token', `${keycloakUrl}/realms/jordylab/protocol/openid-connect/token`, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'grant_type=authorization_code&client_id=jordylab-mobile&code=x',
+        }),
+        attempt('backend health', `${apiOrigin}/actuator/health`, { mode: 'cors' }),
+        attempt('backend health', `${apiOrigin}/actuator/health`, { mode: 'no-cors' }),
+      ]).then((results) => done(`origin ${location.origin}; ${results.join('; ')}`));
+    },
+    environment.keycloakUrl,
+    environment.apiOrigin,
+  );
+
+  return String(probe);
 }
