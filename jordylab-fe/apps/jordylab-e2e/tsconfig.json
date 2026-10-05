@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "types": ["node"],
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src/**/*.ts", "playwright.config.ts"]
+}
