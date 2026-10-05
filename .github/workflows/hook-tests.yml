@@ -24,5 +24,8 @@ jobs:
       - name: Run lint hook fixtures
         run: bash .claude/hooks/tests/lint-cases.sh
 
+      - name: Run advisory hook fixtures
+        run: bash .claude/hooks/tests/advisory-cases.sh
+
       - name: Run commit-msg fixtures
         run: bash .githooks/tests/commit-msg-cases.sh
