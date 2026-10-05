@@ -953,7 +953,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-05: rc17 starts on prod (login page / app render, 0 backend errors); the failure path itself (Keycloak not answering) is exercised on every PR by the `app-boot` CI job, where the login page appears via the 8 s timeout
 
 ### BUG-062: Sharing to JordyLab from the Android share sheet opens the app and nothing happens
-- Status: FIXED (PR #129), waiting for the owner's phone check after the next release
+- Status: DEPLOYED (v0.0.1-rc19, PR #129), waiting for the owner's phone check (HANDOFF-27)
 - Severity: S2
 - Area/spec: mobile / 007-US5 (share target)
 - Env found: owner's phone, `v0.0.1-rc17` (MRB-06, 2026-10-05)
@@ -968,7 +968,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending: owner repeats MRB-06 on the phone after the release that contains PR #129
 
 ### BUG-063: Steam family sync fails with an unexplained "Failed to sync the family library."
-- Status: FIXED (PR #129), waiting for the owner's retry with a fresh token
+- Status: DEPLOYED (v0.0.1-rc19, PR #129), waiting for the owner's retry with a fresh token (HANDOFF-27)
 - Severity: S3
 - Area/spec: gamecatalog / 005 (family library)
 - Env found: owner, prod `v0.0.1-rc17` (MRB-08, 2026-10-05)
@@ -983,7 +983,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending: owner signs in to store.steampowered.com, copies the config page, syncs (MRB-08)
 
 ### BUG-064: The account menu's accessible name does not contain its visible text
-- Status: FIXED (PR #129)
+- Status: DEPLOYED (v0.0.1-rc19, PR #129), waiting for a Lighthouse re-run (HANDOFF-29)
 - Severity: S4
 - Area/spec: shared auth / G-UX (WCAG 2.5.3 label in name)
 - Env found: owner's Lighthouse run on `/fna/articles` (MRB-12, 2026-10-05): accessibility score 100, colour contrast passed, one failed audit that carries no score weight
@@ -998,7 +998,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending: re-run after the release
 
 ### BUG-065: The first screen shifts sideways while it loads (layout shift 0.22)
-- Status: FIXED (PR #129)
+- Status: DEPLOYED (v0.0.1-rc19, PR #129), waiting for a Lighthouse re-run (HANDOFF-29)
 - Severity: S4
 - Area/spec: frontend / G-UX (performance)
 - Env found: owner's Lighthouse run on `/fna/articles` (MRB-12, 2026-10-05): Cumulative Layout Shift 0.222 (budget 0.1), performance score 86
@@ -1013,7 +1013,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending: Lighthouse after the release (CLS expected below 0.1)
 
 ### BUG-066: Sign-up pushes never reach the owner's phone: the phone is subscribed to a different ntfy topic than the backend publishes to
-- Status: OPEN — owner action (HANDOFF-22), no code change needed
+- Status: VERIFIED-PROD 2026-10-06 (owner action only, no code change)
 - Severity: S3
 - Area/spec: mobile / 007-US6
 - Env found: owner's phone, MRB-07 (2026-10-05)
@@ -1025,7 +1025,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: the topic on the phone (from the 1 Oct test) was never changed to the one stored in `NTFY_TOPIC` in `secrets.sops.yaml`.
 - Fix (PR / commit / tag): none in code. The owner subscribes the phone to the `NTFY_TOPIC` value (read it in IntelliJ with `sops`), or changes `NTFY_TOPIC` to the phone's topic and deploys. The runbook (MRB-07) now says so.
 - Regression test added: none (configuration)
-- Verified on prod: pending
+- Verified on prod: 2026-10-06 (owner): the phone was subscribed to the backend's topic on `https://jordylab.be/ntfy` (HANDOFF-26, then HANDOFF-28 because the first subscription sat on the default server `ntfy.sh`, which is why ntfy showed `subscribers=0`; the first attempt also had a typo `/nfty` in the server URL). A throw-away registration then produced a push on the phone, and tapping it opened Settings > Users.
 
 
 ### BUG-067: Cover-plate labels fail colour contrast (library cards and game detail banner)

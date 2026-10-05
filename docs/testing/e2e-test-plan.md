@@ -992,7 +992,7 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 - Asked in the previous status report. Jordy answered with a registry check made in an OpenCode session (oxlint 1.86.0, `@nx/oxlint` 23.2.1 with peer `oxlint ^1.43`, Playwright 1.63.0, Appium 3.8.0, WebdriverIO 9.32.0 or 10.0.0, UiAutomator2 driver 8.7.0, suggested emulator image API 35 `google_apis`), said "continue", and showed local Node raised to v24.21.0.
 - Taken as approval of the proposed set: oxlint 1.86.0 + `@nx/oxlint` 23.2.1 (T026), Playwright 1.63.0 (T067), Node 24.21.0 (T016). **T080 closed later the same day:** Jordy chose WebdriverIO 10 (now 10.0.0); the emulator stays API 35.
 
-#### HANDOFF-26: Point the phone's ntfy app at the topic the backend publishes to (MRB-07, BUG-066)
+#### HANDOFF-26: Point the phone's ntfy app at the topic the backend publishes to (MRB-07, BUG-066) — done 2026-10-06
 - Machine: your Mac + your phone · Target env: prod · Why you: the topic is a secret I must not read or print; only you open the decrypted file.
 - Why: the sign-up push was sent (backend log, ntfy counted it) but the phone is subscribed to another topic, so nobody received it.
 ```bash
@@ -1005,12 +1005,36 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Expect: tell me "done". I send a test push from inside the backend pod (the topic never leaves the pod), confirm ntfy shows a subscriber, then you repeat MRB-07 steps 1–2.
 - (Alternative: put the *phone's* topic into `NTFY_TOPIC` instead; that needs a deploy, so the steps above are quicker.)
 
-#### HANDOFF-27: Re-run the three phone/Steam checks once the next release is out (MRB-06, MRB-08, MRB-07)
-- Machine: phone + a desktop browser · Target env: prod · Why you: Android hardware and your Steam login.
-- When: after I tell you the release containing PR #129 is deployed (and the APK on the website is the new one: update the app first).
-- **MRB-06 share:** close JordyLab completely; in a browser share a link to JordyLab → expect the login (or fingerprint prompt), then the share screen with the link, with "Ask the catalog" (and "Save to FNA" as admin).
-- **MRB-08 Steam family:** sign in at `https://store.steampowered.com` in your browser (the store, not just the Steam app), open `https://store.steampowered.com/pointssummary/ajaxgetasyncconfig` (it must show a long `webapi_token`, not `"data":[]`), select all, copy, paste into Sources → Family library → Sync. Expect a "Family library synced: N added" sentence; a second sync says "already up to date". Never paste the token anywhere else.
-- Tell me what you saw (for a failure, the sentence the screen shows; never the token).
+#### HANDOFF-27: Re-run the two phone/Steam checks on release v0.0.1-rc19 (MRB-06, MRB-08)
+- Machine: phone + a desktop browser · Target env: prod · Why you: Android hardware and your Steam login. rc19 (PR #129) is deployed 2026-10-06; the APK on the website is the new one.
+- **Update the app first:** open JordyLab; a banner **Update available: v0.0.1-rc19** should appear (tap **Update** and install the APK Android offers; allow "install unknown apps" for the browser if asked). No banner = you may already be on rc19. Check in Android Settings → Apps → JordyLab → *App info*: the version must be `0.0.1-rc19`.
+- **MRB-06 share target (about 5 minutes)**
+  1. Close JordyLab completely: recents (square or swipe-up button) → swipe the JordyLab card away.
+  2. Open Chrome (or any browser), go to any page, tap the share button / menu → **Share** → pick **JordyLab**.
+     Expect: JordyLab starts and shows **Share to JordyLab** with the link as text, and the buttons **Ask the catalog** and **Save to FNA** (admin).
+  3. Tap **Ask the catalog** → expect: the catalog chat opens with the link as the question text (no need to send).
+  4. Now the harder case, signed out: in JordyLab open the account menu → **Sign out**. Close JordyLab completely again (as in 1). Share a link from the browser to JordyLab again.
+     Expect: the login (or the fingerprint prompt); after you sign in you land on **Share to JordyLab** with that link, not on the home screen.
+  5. Fail = the app opens on its normal home screen with no share screen, or login ends on the home screen. Tell me which step, and whether it was step 2 (signed in) or 4 (signed out).
+- **MRB-08 Steam family (about 10 minutes, on your Mac or any desktop browser)**
+  1. Open `https://store.steampowered.com/login/` and sign in to the Steam **store** (the Steam app being signed in is not enough). Check the page shows your avatar top right.
+  2. In the same browser open `https://store.steampowered.com/pointssummary/ajaxgetasyncconfig`. Expect one line of text containing `webapi_token` followed by a long value. If it says `"data":[]` you are not signed in to the store in this browser: go back to step 1.
+  3. Select all (Cmd+A) and copy (Cmd+C). Do not paste it anywhere except the field below.
+  4. Open `https://jordylab.be` → **Sources** → **Family library** (it also has a *How do I get a token?* box with these steps). Click into the field *Steam access token*, paste, press **Sync family library**.
+     Expect: one sentence, either "Family library synced: N added, 0 removed." (N = the family games not yet in your catalog) or, if Steam has nothing new for you, "Family library is already up to date". If it is a red sentence instead, it explains the reason (token expired, not signed in to the store, no family group, Steam unreachable): send me that sentence, not the token.
+  5. Library → source filter **Family** → expect: the family games, marked not installed.
+  6. Paste the page again (the token lasts about 24 hours; the field is emptied after each sync, so copy again from the open tab) and press **Sync family library** a second time. Expect: "Family library is already up to date: Steam reported the same games as last time."
+  7. Never paste the token into the chat or a bug entry; after the test it expires on its own.
+- Tell me what you saw: the sentence on screen for step 4 and 6, and for the phone which step failed.
+
+#### HANDOFF-28: Check which server the phone's ntfy subscription points at (MRB-07, BUG-066 follow-up) — done 2026-10-06
+- The phone was subscribed on the default server `ntfy.sh`; re-subscribing on `https://jordylab.be/ntfy` (first try typed `/nfty`) fixed it. Optional, still open: rotate `NTFY_TOPIC`, because the topic was typed into `ntfy.sh`. It only decides who can read or publish pushes; if you want it rotated: edit `NTFY_TOPIC` in the SOPS file to a new random value (`jordylab-` + 32 hex), tell me, I deploy it, and you subscribe the phone again.
+
+#### HANDOFF-29: Re-run Lighthouse on the Articles page (MRB-12, BUG-064, BUG-065)
+- Machine: your Mac · Target env: prod · Why you: needs your signed-in session.
+- Chrome → `https://jordylab.be/fna/articles` signed in → DevTools → **Lighthouse** → Desktop, categories Accessibility and Performance → **Analyze**.
+- Expect: accessibility 100 with no failed audits (before: `label-content-name-mismatch` on the account menu) and *Cumulative Layout Shift* below 0.1 (before: 0.22).
+- Tell me the two numbers. (The axe check in CI now covers contrast and names on every page, so this is only the layout-shift number plus a final look.)
 
 ## 8. AI call tally
 

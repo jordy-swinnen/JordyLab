@@ -124,7 +124,7 @@ password manager or from the app, never from this file.
 - Pass when: the share arrives and the offered actions match the role.
 - If it fails: add `BUG-<next>`.
 - Record result: 007-US5 rows → `PASS`.
-- **Result 2026-10-05 (owner, rc17): FAILED → BUG-062.** JordyLab is listed in the share sheet, but opening it only opened the app: shares that *start* the app were never handed to the share screen, and a share that needed a login was dropped after login. Fixed in PR #129 (the Android suite's share test now also covers the cold start). **Repeat after the next release:** close the app completely, share a link from the browser → expect the login (or the fingerprint prompt), then the share screen with the link.
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-062.** JordyLab is listed in the share sheet, but opening it only opened the app: shares that *start* the app were never handed to the share screen, and a share that needed a login was dropped after login. Fixed in PR #129 (the Android suite's share test now also covers the cold start). **Repeat on rc19 (HANDOFF-27 in `e2e-test-plan.md` §7 has the full step-by-step; the steps live there so they are not duplicated here).**
 
 ### MRB-07: Push notifications and taps
 - Covers: 007-US6 (native side), 007-FR-016 (the push itself passed on prod) | Area/spec: E / 007
@@ -139,6 +139,7 @@ password manager or from the app, never from this file.
 - If it fails: check `kubectl -n jordylab logs deploy/backend | grep -i ntfy` (expect "Ntfy notifications enabled"); add `BUG-<next>`.
 - Record result: 007-US6 native rows → `PASS`.
 - **Result 2026-10-05 (owner, rc17): FAILED → BUG-066, not a code bug.** The backend sent the push (log `Ntfy notification sent`, ntfy counted it) but the phone is subscribed to a *different topic* than the one in `NTFY_TOPIC`: ntfy had no subscriber and nothing stored for the phone's topic. **HANDOFF-26** fixes it. Then repeat steps 1–2 (a new throw-away registration).
+- **Repeat 2026-10-06 (owner): PASS.** After HANDOFF-26 the topic matched but the app was still on the default server `ntfy.sh` (ntfy still showed `subscribers=0`; HANDOFF-28); on `https://jordylab.be/ntfy` the test message arrived, the sign-up push arrived and its tap opened Settings > Users.
 
 ### MRB-08: Steam family sync
 - Covers: 005-US2, 005-US4, 005-US5 (family side) | Area/spec: C / 005
@@ -152,7 +153,7 @@ password manager or from the app, never from this file.
 - Pass when: family games appear and the second run is a no-op.
 - If it fails: add `BUG-<next>` (never paste the token into the bug).
 - Record result: 005 family rows → `PASS`.
-- **Result 2026-10-05 (owner, rc17): FAILED → BUG-063 (guidance, not a broken link).** The Steam page is fine, but it shows `{"success":1,"data":[]}` — exactly what Steam returns to anyone not signed in to the *store* in that browser — so there was no token to copy, and what was pasted got a 401 (`TOKEN_EXPIRED` in the backend log). "Sync owned library" did work: `NO_CHANGE` means Steam reported the same 129 games. Fixed in PR #129: the screen now explains each failure, accepts the whole page text, and says "already up to date" for an unchanged sync. **Repeat after the next release (HANDOFF-27).**
+- **Result 2026-10-05 (owner, rc17): FAILED → BUG-063 (guidance, not a broken link).** The Steam page is fine, but it shows `{"success":1,"data":[]}` — exactly what Steam returns to anyone not signed in to the *store* in that browser — so there was no token to copy, and what was pasted got a 401 (`TOKEN_EXPIRED` in the backend log). "Sync owned library" did work: `NO_CHANGE` means Steam reported the same 129 games. Fixed in PR #129: the screen now explains each failure, accepts the whole page text, and says "already up to date" for an unchanged sync. **Repeat on rc19: the step-by-step is HANDOFF-27 in `e2e-test-plan.md` §7.**
 
 ### MRB-09: VPS reboot keeps data and artwork
 - Covers: 008-US5-AS3 | Area/spec: A / 008
