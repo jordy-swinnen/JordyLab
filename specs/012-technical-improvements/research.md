@@ -48,7 +48,7 @@ Stop-and-report conditions are in the spec's Edge Cases.
 
 ### A7. Backend platform check (User Story 16)
 
-Current: Spring Boot `4.0.3`, Spring AI `2.0.1`, Spring Modulith `2.0.3` (pinned), Gradle wrapper `9.3.1`, Java 25
+Pre-upgrade baseline (before PR 1c, see the PR 1c record below): Spring Boot `4.0.3`, Spring AI `2.0.1`, Spring Modulith `2.0.3` (pinned), Gradle wrapper `9.3.1`, Java 25
 (installed 25.0.2). Newest on Maven Central / Gradle today: Boot **4.1.1** (4.0 line: 4.0.8), Spring AI **2.0.1**
 (already latest), Modulith **2.1.1** (2.0 line: 2.0.8), Gradle **9.8.0**.
 
@@ -71,6 +71,13 @@ tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs wit
   Podman socket under full-suite container load. Run alone, those classes pass on both main and Boot 4.1.1. So the failures are a local
   Podman limitation, not an upgrade effect; `test-backend` in CI (Docker) is the arbiter. Testcontainers moves 2.0.3 → 2.0.5 with Boot 4.1.1;
   a local experiment pinning it back did not change the full-suite result, so no pin was added.
+- CI: `test-backend` on this branch is green (full suite on Docker, `ModularityTests` and the JaCoCo 80% gate included), which confirms the
+  local failures were the Podman environment.
+- Boot version check on the resolved runtime classpath: before 36 `spring-boot*` references at 4.0.3 plus 4 requested at 4.1.1 and resolved
+  down to 4.0.3 (0 resolved to 4.1); after 106 of 106 at 4.1.1.
+- Boot check (T101): the Boot 4.1.1 jar (spring-boot-4.1.1 on its classpath) was started by the throwaway E2E runner against its own
+  Postgres and Keycloak and answered `/actuator/health` with 200 within the readiness window; the stack was removed and verified clean.
+- Root `AGENTS.md` and `.specify/memory/constitution.md` name no Spring Boot, Modulith or Gradle versions (checked), so they stay unchanged.
 - Dependency tree: see the reference report section 14 (before: Spring AI 2.0.1 starters *request* Boot starters 4.1.1 while the Boot 4.0.3
   BOM resolves them to 4.0.3, no 4.1 jar on the classpath; after: one Boot minor).
 
@@ -195,7 +202,7 @@ The `shared/ai` package currently has no `AGENTS.md`. `.claude/rules/` was rejec
 
 - GA date 12 June 2026 (not 28 May); baseline Spring Boot 4.0 **and** 4.1. Primary source:
   https://spring.io/blog/2026/06/12/spring-ai-2-0-0-GA-available-now/ (cited in the draft; re-check when editing).
-- **Boot 4.0.3 + Spring AI 2.0.1 starter-dependency question**: not yet answered. Method (task): resolve the
+- **Boot 4.0.3 + Spring AI 2.0.1 starter-dependency question** (answered in section 14 of `docs/research/spring-ai-architecture.md`, Part B PR). Method: resolve the
   dependency tree (`./gradlew dependencies --configuration runtimeClasspath`), check whether any `spring-boot-*` or
   `spring-boot-starter-*` artifact resolves to a 4.1.x version while the Boot plugin is 4.0.3, compare against the
   Spring Boot BOM, and record result and command in the reference doc. Issue spring-projects/spring-ai#6465 (title

@@ -227,12 +227,12 @@
 
 **Independent Test**: `./gradlew check` is green and the dependency tree has one Boot minor.
 
-- [ ] T097 [US16] Look up and record current vs newest Spring Boot, Spring AI, Spring Modulith, Gradle and Java toolchain in `specs/012-technical-improvements/research.md` section A7, including the Boot 4.1 release notes and whether Modulith 2.1.x pairs with Boot 4.1 and Spring AI 2.0.1 runs on Boot 4.1 (FR-048)
-- [ ] T098 [US16] Run `./gradlew check --no-daemon` on the current versions in `jordylab-be/` as the baseline (tests, `ModularityTests`, JaCoCo 80% gate); record results
-- [ ] T099 [US16] Apply the confirmed versions: `jordylab-be/build.gradle.kts` (`org.springframework.boot` plugin, `springModulithVersion`, `springAiVersion` if it changes) and `jordylab-be/gradle/wrapper/gradle-wrapper.properties`; fix compile/config fallout (FR-049)
-- [ ] T100 [US16] Run `./gradlew check --no-daemon`; confirm green with unchanged behaviour; run `./gradlew dependencies --configuration runtimeClasspath` and confirm a single Spring Boot minor in the tree (SC-014)
-- [ ] T101 [US16] Start the backend against the local compose stack and confirm it boots and `/actuator/health` is up (`jordylab-be/`); if the check fails in a way that is not a small fix, fall back to the patch-only versions (Boot 4.0.8, Modulith 2.0.8) and record why (spec scenario 3)
-- [ ] T102 [US16] Update version mentions in `AGENTS.md`, `jordylab-be/AGENTS.md` and `.specify/memory/constitution.md` (Java/Spring lines only if they name versions) and feed the dependency-tree finding into T047
+- [X] T097 [US16] Look up and record current vs newest Spring Boot, Spring AI, Spring Modulith, Gradle and Java toolchain in `specs/012-technical-improvements/research.md` section A7, including the Boot 4.1 release notes and whether Modulith 2.1.x pairs with Boot 4.1 and Spring AI 2.0.1 runs on Boot 4.1 (FR-048)
+- [X] T098 [US16] Run `./gradlew check --no-daemon` on the current versions in `jordylab-be/` as the baseline (tests, `ModularityTests`, JaCoCo 80% gate); record results
+- [X] T099 [US16] Apply the confirmed versions: `jordylab-be/build.gradle.kts` (`org.springframework.boot` plugin, `springModulithVersion`, `springAiVersion` if it changes) and `jordylab-be/gradle/wrapper/gradle-wrapper.properties`; fix compile/config fallout (FR-049)
+- [X] T100 [US16] Run `./gradlew check --no-daemon`; confirm green with unchanged behaviour; run `./gradlew dependencies --configuration runtimeClasspath` and confirm a single Spring Boot minor in the tree (SC-014)
+- [X] T101 [US16] Start the backend against the local compose stack and confirm it boots and `/actuator/health` is up (`jordylab-be/`); if the check fails in a way that is not a small fix, fall back to the patch-only versions (Boot 4.0.8, Modulith 2.0.8) and record why (spec scenario 3)
+- [X] T102 [US16] Update version mentions in `AGENTS.md`, `jordylab-be/AGENTS.md` and `.specify/memory/constitution.md` (Java/Spring lines only if they name versions) and feed the dependency-tree finding into T047
 - [ ] T103 [US16] Open PR 1c, wait for CI (`test-backend`), resolve review comments, merge
 
 ---
