@@ -516,3 +516,19 @@ checks, and the `workflow_run` trigger of the Android job, which only a real rel
 Jordy chose WebdriverIO 10 ("Upgrade to webdriver 10"). All `@wdio/*` packages and `webdriverio` are now 10.0.0 (they all exist at that version, including `@wdio/globals`; the Node floor is 22.19, which CI's floating
 Node 22 meets). One API change: `executeAsync` is gone, so the in-WebView probe uses `execute` with an async function. The emulator level stays API 35 `google_apis` as recommended (not objected to). Appium 3.8.0 and the UiAutomator2
 driver 8.7.0 are unchanged.
+
+Under 10 the Android suite needed four more changes, all in test support (PRs 126 and 127):
+
+- the `adb reverse` tunnels are re-created at the start of every session (`reverse-ports.ts`), so a restart of the adb server cannot leave the emulator without `localhost`;
+- the shell renders the account menu trigger more than once and WebdriverIO 10 no longer waits on the first match, so `account-menu.ts` looks at every match;
+- WebdriverIO 10 does not wait for an element to exist before acting on it: the Chrome journey waits for the sign-in button and the Keycloak form;
+- the password field is the one that took focus after the keyboard's Next action, with the second text field as fallback.
+
+## First release run of the Android job (`v0.0.1-rc18`, 2026-10-05)
+
+`v0.0.1-rc18` was cut from `df5c88f` (PR 126). Release deployed, published and built the APK; the `E2E Android`
+workflow then started by itself through `workflow_run` (run 37346837158 on `main`), which is the one path nothing
+else could exercise. It passed 5 of 6 tests: the first test on the fresh emulator failed twice, because the keyboard's Next
+action was slow, the focused field was still the username field, and the password went into it (Keycloak `user_not_found`).
+PR 127 fixed that; a dispatch of the workflow on `main` after the merge was green (run 37350348362).
+

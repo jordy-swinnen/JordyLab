@@ -206,7 +206,7 @@
 - [X] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
 - [X] T092 [US14] Make `e2e-web` a required check: done directly on Jordy's request ("do this") by adding a `required_status_checks` rule to the `main` repository ruleset, not through a handoff; recorded with the before/after and its consequence in `research.md` C5b
 - [X] T093 [US14] Create `.github/workflows/e2e-android.yml`: `workflow_dispatch`, `workflow_run` after a successful Release, and `pull_request` limited to Android-specific paths (a new workflow file cannot be started by hand until it is on the default branch; it does not run on ordinary merges), `reactivecircus/android-emulator-runner` on API 35, JDK 21 for the Android build and 25 for the backend, `jordylab-fe/e2e/run.sh android`, a release-manifest check, an `if: always()` cleanup and leftover check (FR-045; deviation from `workflow_call` recorded in `research.md` C4b)
-- [X] T094 [US14] Run the Android job after releases without blocking them: the `workflow_run` trigger on a successful Release (it runs separately, so a failure never affects the publish); exercised so far by the `pull_request` path and re-runs; the `workflow_run` path itself needs the next real release
+- [X] T094 [US14] Run the Android job after releases without blocking them: the `workflow_run` trigger on a successful Release (it runs separately, so a failure never affects the publish); exercised by the `pull_request` path, re-runs and the real `workflow_run` after `v0.0.1-rc18` (see research.md)
 
 ---
 
