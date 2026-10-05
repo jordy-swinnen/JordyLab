@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { AuthService } from './auth.service';
 import { BiometricUnlockService } from './biometric-unlock.service';
@@ -17,6 +17,7 @@ describe('LoginComponent', () => {
   const createComponent = createComponentFactory({
     component: LoginComponent,
     providers: [
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
       {
         provide: AuthService,
         useValue: {
@@ -94,5 +95,55 @@ describe('LoginComponent', () => {
     expect(spectator.query('[role="alert"]')?.textContent).toContain(
       'could not be refreshed',
     );
+  });
+});
+
+describe('LoginComponent return address', () => {
+  const isAuthenticated = signal(false);
+  let returnUrl: string | null;
+
+  const createComponent = createComponentFactory({
+    component: LoginComponent,
+    providers: [
+      {
+        provide: ActivatedRoute,
+        useFactory: () => ({
+          snapshot: { queryParamMap: convertToParamMap(returnUrl === null ? {} : { returnUrl }) },
+        }),
+      },
+      {
+        provide: AuthService,
+        useValue: { login: vi.fn(), isAuthenticated: isAuthenticated.asReadonly(), nativeFailure: signal(null).asReadonly() },
+      },
+      {
+        provide: BiometricUnlockService,
+        useValue: { enabled: signal(false).asReadonly(), failure: signal(null).asReadonly(), refresh: () => Promise.resolve() },
+      },
+    ],
+  });
+
+  const signInReturningTo = (candidate: string | null) => {
+    returnUrl = candidate;
+    isAuthenticated.set(false);
+    const spectator = createComponent();
+    const navigateByUrl = vi.spyOn(spectator.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    isAuthenticated.set(true);
+    spectator.detectChanges();
+
+    return navigateByUrl;
+  };
+
+  it('goes back to the share screen a signed-out share was heading for', () => {
+    expect(signInReturningTo('/mobile/share')).toHaveBeenCalledWith('/mobile/share');
+  });
+
+  it('goes to the start page when nothing was remembered', () => {
+    expect(signInReturningTo(null)).toHaveBeenCalledWith('/');
+  });
+
+  it('ignores a return address that leaves the app or loops back to the login page', () => {
+    expect(signInReturningTo('//evil.example/x')).toHaveBeenCalledWith('/');
+    expect(signInReturningTo('https://evil.example/')).toHaveBeenCalledWith('/');
+    expect(signInReturningTo('/login?returnUrl=/fna')).toHaveBeenCalledWith('/');
   });
 });

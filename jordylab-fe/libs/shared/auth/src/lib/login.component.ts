@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { BiometricUnlockService } from './biometric-unlock.service';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
@@ -56,6 +56,7 @@ export class LoginComponent {
   #auth = inject(AuthService);
   #biometric = inject(BiometricUnlockService);
   #router = inject(Router);
+  #returnUrl = safeReturnUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl'));
 
   protected readonly biometricEnabled = this.#biometric.enabled;
   protected readonly failure = computed(() => this.#biometric.failure() ?? this.#auth.nativeFailure());
@@ -66,7 +67,7 @@ export class LoginComponent {
     // away from this page once the tokens arrive: leave it as soon as the session is authenticated.
     effect(() => {
       if (this.#auth.isAuthenticated()) {
-        void this.#router.navigateByUrl('/');
+        void this.#router.navigateByUrl(this.#returnUrl);
       }
     });
   }
@@ -78,4 +79,13 @@ export class LoginComponent {
   async onLogin(): Promise<void> {
     await this.#auth.login();
   }
+}
+
+/** Only an in-app path may be returned to: never another site, never the login page itself. */
+function safeReturnUrl(candidate: string | null): string {
+  if (!candidate || !candidate.startsWith('/') || candidate.startsWith('//') || candidate.startsWith('/login')) {
+    return '/';
+  }
+
+  return candidate;
 }
