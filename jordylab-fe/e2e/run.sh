@@ -128,6 +128,8 @@ DEBUG_CERT_SHA256=""
 APK_FIRST=""
 APK_NEWER=""
 WEB_DIST_FOR_BROWSER=""
+# The app's WebView calls the backend from the origin https://localhost (Capacitor's androidScheme + hostname), as in production.
+CORS_EXTRA_ORIGINS=""
 
 # Builds everything an Android run needs before the stack starts: the app as a debug APK (twice, the second with a higher versionCode
 # so the update check has something newer to find), the same web build for the browser, and the debug certificate the backend pins.
@@ -138,6 +140,7 @@ prepare_android() {
   local mobile_directory="$FRONTEND_ROOT/apps/jordylab-mobile"
   local gradle_properties="-PjordylabAppLinkHost=$ANDROID_APP_LINK_HOST"
   mkdir -p "$RUN_DIRECTORY/apk"
+  CORS_EXTRA_ORIGINS=",https://localhost"
 
   log "building the web app for the browser tests"
   (cd "$FRONTEND_ROOT" && bunx nx build jordylab --configuration=e2e --skip-nx-cache) || return 1
@@ -202,7 +205,7 @@ start_backend() {
     JORDYLAB_SETTINGS_KEYCLOAK_ADMIN_CLIENT_SECRET="$E2E_BACKEND_CLIENT_SECRET" \
     JORDYLAB_SCRIPT_KEYCLOAK_URL="http://localhost:$KEYCLOAK_PORT" \
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="http://localhost:$KEYCLOAK_PORT/realms/jordylab" \
-    JORDYLAB_CORS_ALLOWED_ORIGINS="http://localhost:$WEB_PORT" \
+    JORDYLAB_CORS_ALLOWED_ORIGINS="http://localhost:$WEB_PORT${CORS_EXTRA_ORIGINS:-}" \
     GAMECATALOG_ARTWORK_DIR="$RUN_DIRECTORY/artwork" \
     MOBILE_APPLICATION_ID="$ANDROID_PACKAGE" \
     MOBILE_PRODUCTION_DOMAIN="$ANDROID_APP_LINK_HOST" \

@@ -6,7 +6,7 @@ check, which fails the run (naming both versions) when the emulator's WebView is
 | What | Pin |
 |------|-----|
 | Emulator image | `system-images;android-35;google_apis;x86_64` (API 35, Google APIs without Play Store; CI uses `reactivecircus/android-emulator-runner@v2`) |
-| WebView on that image | see `src/pins.json` (`webViewVersion`); set from the first CI run's preflight output |
+| WebView on that image | 124.0.6367.219 (`com.google.android.webview`, read by the preflight from the first CI run; also in `src/pins.json`) |
 | Appium | 3.8.0 |
 | UiAutomator2 driver | 8.7.0 (`bun run setup` installs exactly this into `.appium/`) |
 | WebdriverIO | 9.32.0 (`@wdio/globals` 9.31.3, the version `@wdio/cli` 9.32.0 depends on) |
