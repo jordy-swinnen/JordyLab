@@ -1191,3 +1191,10 @@ Procedures for everything below, and for the checks that need your login or hard
 - Prod re-verification: backend `v0.0.1-rc16`, 0 errors in the first minutes, no `No euro price found` warning from the post-start price refresh
 - Outcome: deployed; owner check of BTC/MEUD values pending. The owner's phone (rc15) should now show the in-app "Update available" banner right after sign-in (BUG-053).
 
+#### DEPLOY-23
+- Release: `v0.0.1-rc17` on `59cf697` (PR #105: 8 s bound on Keycloak start-up + the `app-boot` CI job, BUG-061; main also carries docs-only PR #102 from another working session), run 37249645057
+- Jobs: all ✅ including `apk` (APK versionCode 117) and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
+- Prod re-verification: backend/frontend/keycloak `v0.0.1-rc17`, 0 backend errors, the app renders and the admin session works; BUG-041 probed on prod (404/409) the same day
+- Outcome: deployed; no regression
+

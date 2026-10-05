@@ -633,7 +633,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-02 on `v0.0.1-rc8`, signed in as admin in the browser pane: `Switch games` is in the sidebar and leads to the add page
 
 ### BUG-041: Switch endpoints answer 500 for duplicates, bad input and unknown games
-- Status: DEPLOYED in `v0.0.1-rc6` — covered by `SwitchGameControllerTest` (400/404/409) in CI; the one-time prod probe of the error codes is optional
+- Status: VERIFIED-PROD (2026-10-05)
 - Severity: S3
 - Area/spec: gamecatalog / 009
 - Env found: code reading
@@ -645,7 +645,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: no exception handler for the Switch controller.
 - Fix (PR / commit / tag): `SwitchGameExceptionHandler` (400/404/409 ProblemDetail), `SwitchGameNotFoundException`.
 - Regression test added: `SwitchGameControllerTest` (409, 404, 400)
-- Verified on prod:
+- Verified on prod: 2026-10-05 on `v0.0.1-rc16`, admin session in the browser pane: `GET /api/gamecatalog/games/<unknown id>` → 404 ("This game is not in your catalog"); adding Pikmin 4 → 201, adding it again → 409 (no 500s). The 400 for an empty title is stopped by the form before a request is sent; the 400/404/409 mapping is covered by `SwitchGameControllerTest` in CI. The test game was removed again (DELETE → 204)
 
 ### BUG-042: Switch IGDB search misses ports and expanded games — "Mario Kart 8 Deluxe" finds nothing
 - Status: VERIFIED-PROD (2026-10-02)
@@ -739,7 +739,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-02 on `v0.0.1-rc7`: the owner's EmuDeck rescan on JordyBox applied (148 installations on `cachyos-htpc`, 68 Steam); a rerun answered `NO_CHANGE` (exit 0).
 
 ### BUG-048: Two overlapping scans of the same source fail one of them with a duplicate-key 500
-- Status: DEPLOYED in `v0.0.1-rc8` (PR #74) — a live double-scan on JordyBox is optional (MRB-03 step 5)
+- Status: VERIFIED (CI)
 - Severity: S3
 - Area/spec: gamecatalog / 003
 - Env found: prod (backend log, 2026-10-01 22:50:55Z; the owner's EmuDeck rescan was started twice in a row)
@@ -751,7 +751,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `ScanService.submitScan` is one long `@Transactional`; the idempotency hash is only visible after the first transaction commits, so a concurrent scan sees nothing and re-creates the rows.
 - Fix (PR / commit / tag): PR #74, `v0.0.1-rc8` — `ScanLock` takes a Postgres transaction-scoped advisory lock per host + library type at the start of `submitScan`; the second scan blocks until the first commits, then sees the stored hash and answers `NO_CHANGE`.
 - Regression test added: `GameCatalogModuleTest.aSecondScanOfTheSameSourceWaitsForTheFirstInsteadOfFailingOnDuplicateKeys` (fails with `DataIntegrityViolationException` without the lock, passes with it); `ScanServiceTest` constructor updated.
-- Verified on prod:
+- Verified on prod: 2026-10-05: the race cannot be produced with the real client — it holds a per-machine file lock, so two scans from one machine are serialized before they reach the backend; the service-level race is reproduced by `GameCatalogModuleTest.aSecondScanOfTheSameSourceWaitsForTheFirstInsteadOfFailingOnDuplicateKeys` (fails with a duplicate-key error without the lock, passes with it) and the lock is live since rc8; since then the owner's rescans and reruns of the EmuDeck scan (rc10–rc15) all answered APPLIED/NO_CHANGE with no 500
 
 ### BUG-049: Android install dialog is unstyled and gives no feedback — tapping Download "does nothing"
 - Status: VERIFIED-PROD (2026-10-04)
@@ -938,7 +938,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-05 on `v0.0.1-rc16`: the price refresh logs no warning and the owner's BTC and MEUD rows are valued
 
 ### BUG-061: If Keycloak cannot be reached or framed, the app stays on a blank page forever
-- Status: FIXED locally — release pending (`ci/app-boot-check`)
+- Status: VERIFIED (CI) — deployed in `v0.0.1-rc17` (PR #105)
 - Severity: S2
 - Area/spec: auth / 006, 007
 - Env found: the new CI app-boot check, first run against the built app (2026-10-05); same failure class as BUG-056
@@ -950,5 +950,5 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: `AuthService.init` had no upper bound; `main.ts` bootstraps only after it settles and every route guard awaits the same promise.
 - Fix (PR / commit / tag): start-up waits at most 8 s for Keycloak and then continues signed out (logged); a unit test covers it. The CI app-boot check (below) now guards the whole start-up path.
 - Regression test added: `auth.service.spec.ts` (carries on signed out when Keycloak never answers); `jordylab-fe/tools/app-boot-check.mjs` as a CI job `app-boot`: builds the production bundle, boots it in headless Chrome and requires the login page — it fails with `NG0201` when the rc12 bug is put back (verified locally) and passes on the fixed code
-- Verified on prod:
+- Verified on prod: 2026-10-05: rc17 starts on prod (login page / app render, 0 backend errors); the failure path itself (Keycloak not answering) is exercised on every PR by the `app-boot` CI job, where the login page appears via the 8 s timeout
 

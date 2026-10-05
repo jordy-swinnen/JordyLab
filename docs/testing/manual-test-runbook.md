@@ -94,6 +94,7 @@ password manager or from the app, never from this file.
 - If it fails: add `BUG-<next>` with the phone model and Android version.
 - Record result: 007-US2 and 007-US3 rows → `PASS`.
 - **Result 2026-10-02 (owner, Brave on Android, rc8):** the install dialog rendered as plain unstyled text and Download appeared to do nothing → BUG-049, fixed in rc9. Re-check on the phone after rc9: styled bottom sheet; tapping Download shows "Preparing…" then "Download requested", and `jordylab-0.0.1-rc9.apk` lands in Downloads. Installing and the rest of the app are still untested.
+- **Result 2026-10-05 (owner):** install, sign-in, the launcher icon, the in-app Update banner (rc15 → rc16) all work. **Done.**
 
 ### MRB-05: Android app: biometric unlock
 - Covers: 007-US4, 007-US4-AS1–AS3 | Area/spec: E / 007
@@ -109,6 +110,7 @@ password manager or from the app, never from this file.
 - Pass when: unlock works only with the fingerprint and is cleared by logout, off-switch and revoke.
 - If it fails: add `BUG-<next>`.
 - Record result: 007-US4 rows → `PASS`.
+- **Result 2026-10-05 (owner, rc15/rc16):** fingerprint unlock works (BUG-051/055 fixed): the switch is under Settings → App, reopening the app asks for the fingerprint. **Done.**
 
 ### MRB-06: Android app: share target
 - Covers: 007-US5, 007-US5-AS1–AS4 | Area/spec: E / 007
