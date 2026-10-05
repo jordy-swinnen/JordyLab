@@ -153,16 +153,16 @@
 **Independent Test**: `jordylab-fe/e2e/run.sh web` is green; breaking a covered journey makes it fail with a readable report.
 
 - [ ] T067 [HANDOFF] [US10] Post HANDOFF-## asking Jordy to confirm the Playwright version (proposal 1.63.0, plus its browser download) (FR-002)
-- [ ] T068 [US10] Add `@nx/playwright` and `@playwright/test` at the confirmed versions and generate the Nx project `jordylab-fe/apps/jordylab-e2e` (project.json with `e2e` target, `playwright.config.ts` reading base URL and credentials from the runner's env file)
-- [ ] T069 [US10] Decide and implement how the catalog gets data without database writes: through the app's ingest API with a token from the throwaway realm and a synthetic library folder created by the test (spike in `jordylab-fe/apps/jordylab-e2e/src/support/`; record the decision in `research.md` C3); if only the real downloaded scanner can do it, stop and report (repo validation-data rule)
-- [ ] T070 [US10] Write the global setup in `jordylab-fe/apps/jordylab-e2e/src/global-setup.ts`: log in once through the Keycloak login page as the admin test user and save storage state reused by every test (FR-033)
-- [ ] T071 [P] [US10] Add `data-testid` attributes only where roles/names are insufficient, in the components used by the journeys under `jordylab-fe/libs/gamecatalog/ui/src/lib/`, `jordylab-fe/libs/fna/ui/src/lib/` and `jordylab-fe/libs/settings/ui/src/lib/`; update existing unit specs if templates change (FR-034)
-- [ ] T072 [US10] Journey test: sign-in and session reuse, signed-in shell and sign-out in `jordylab-fe/apps/jordylab-e2e/src/auth.spec.ts`
-- [ ] T073 [P] [US10] Journey test: game catalog grid and detail with data created through the app's API in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog.spec.ts`
-- [ ] T074 [P] [US10] Journey test: admin Settings including approving a user created through the app (guest sign-up through the UI, approve as admin) in `jordylab-fe/apps/jordylab-e2e/src/settings.spec.ts`
-- [ ] T075 [P] [US10] Journey test: FNA briefing view, read-only, no AI generation, in `jordylab-fe/apps/jordylab-e2e/src/fna.spec.ts`
-- [ ] T076 [P] [US10] Journey test: catalog chat up to the model call (sends a question, asserts the pending state and the graceful failure/empty state since the throwaway backend has no AI keys; no paid call) in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog-chat.spec.ts` (FR-035)
-- [ ] T077 [US10] Run `jordylab-fe/e2e/run.sh web` end to end; confirm green on a fresh build; break one covered journey on purpose and confirm the suite fails with a readable report, then revert (SC-012 evidence)
+- [X] T068 [US10] Add `@nx/playwright` and `@playwright/test` at the confirmed versions and generate the Nx project `jordylab-fe/apps/jordylab-e2e` (project.json with `e2e` target, `playwright.config.ts` reading base URL and credentials from the runner's env file)
+- [X] T069 [US10] Decide and implement how the catalog gets data without database writes: through the app's ingest API with a token from the throwaway realm and a synthetic library folder created by the test (spike in `jordylab-fe/apps/jordylab-e2e/src/support/`; record the decision in `research.md` C3); if only the real downloaded scanner can do it, stop and report (repo validation-data rule)
+- [X] T070 [US10] Write the global setup in `jordylab-fe/apps/jordylab-e2e/src/global-setup.ts`: log in once through the Keycloak login page as the admin test user and save storage state reused by every test (FR-033)
+- [X] T071 [P] [US10] Add `data-testid` attributes only where roles/names are insufficient, in the components used by the journeys under `jordylab-fe/libs/gamecatalog/ui/src/lib/`, `jordylab-fe/libs/fna/ui/src/lib/` and `jordylab-fe/libs/settings/ui/src/lib/`; update existing unit specs if templates change (FR-034)
+- [X] T072 [US10] Journey test: sign-in and session reuse, signed-in shell and sign-out in `jordylab-fe/apps/jordylab-e2e/src/auth.spec.ts`
+- [X] T073 [P] [US10] Journey test: game catalog grid and detail with data created through the app's API in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog.spec.ts`
+- [X] T074 [P] [US10] Journey test: admin Settings including approving a user created through the app (guest sign-up through the UI, approve as admin) in `jordylab-fe/apps/jordylab-e2e/src/settings.spec.ts`
+- [X] T075 [P] [US10] Journey test: FNA briefing view, read-only, no AI generation, in `jordylab-fe/apps/jordylab-e2e/src/fna.spec.ts`
+- [X] T076 [P] [US10] Journey test: catalog chat up to the model call (sends a question, asserts the pending state and the graceful failure/empty state since the throwaway backend has no AI keys; no paid call) in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog-chat.spec.ts` (FR-035)
+- [X] T077 [US10] Run `jordylab-fe/e2e/run.sh web` end to end; confirm green on a fresh build; break one covered journey on purpose and confirm the suite fails with a readable report, then revert (SC-012 evidence)
 
 ---
 
@@ -203,7 +203,7 @@
 
 **Independent Test**: a PR with a broken web journey cannot merge; the Android job runs on `workflow_dispatch` and reports.
 
-- [ ] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
+- [X] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
 - [ ] T092 [HANDOFF] [US14] Post HANDOFF-## asking Jordy to mark the `e2e-web` check as required in the repository's branch protection (a repo setting only they can change); verify later with a deliberately broken journey PR (SC-012)
 - [ ] T093 [US14] Create `.github/workflows/e2e-android.yml`: triggers `workflow_dispatch` and `workflow_call` (called from `.github/workflows/release.yml` after the `apk` job), `reactivecircus/android-emulator-runner` on the pinned API level, build the e2e debug APK, run `jordylab-fe/e2e/run.sh android`, an `if: always()` cleanup and leftover-check step (FR-045)
 - [ ] T094 [US14] Wire the Android job into `.github/workflows/release.yml` without blocking the release publish if the job fails (it reports; decision recorded in `research.md`), then trigger it once with `workflow_dispatch` and record the run
