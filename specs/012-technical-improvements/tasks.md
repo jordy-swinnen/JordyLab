@@ -45,7 +45,7 @@
 - [X] T012 [US1] Prove a deliberate boundary violation still fails: add a scratch import crossing `scope:fna` into `scope:gamecatalog` in a scratch file, run `bunx nx lint`, confirm failure, discard the file (`jordylab-fe/libs/`)
 - [X] T013 [US1] Build the frontend image locally (`deploy/containers/frontend/Containerfile`) and confirm `nx build jordylab --configuration=production` works on its Node/Bun runtime; if not, fix the image in this PR
 - [X] T014 [US1] Verify spartan generators and the `serve` targets still work (`bunx nx serve jordylab` boots; `bunx nx g @spartan-ng/nx:ui --help` runs) and record in `research.md`
-- [ ] T015 [US1] Push the branch and open PR 1a with a description listing versions, declined/accepted migrations and the verification record; wait for CI; resolve review comments; merge per the merge-authority rule
+- [X] T015 [US1] Push the branch and open PR 1a with a description listing versions, declined/accepted migrations and the verification record; wait for CI; resolve review comments; merge per the merge-authority rule
 
 ### PR 1b: Angular 22 (branch `chore/angular-22-upgrade`, after 1a is merged)
 
@@ -57,7 +57,7 @@
 - [X] T021 [P] [US1] Verified, no file change needed: `.github/workflows/build.yml` already pins `node-version: 22` (floats to the newest 22.x, which meets Angular 22's 22.22.3 floor) and `deploy/containers/frontend/Containerfile` builds on `oven/bun:1`, which has no Node (`bunx nx` runs on Bun); the image was rebuilt locally with Angular 22 and the result is recorded in `research.md` (PR 1b record)
 - [X] T022 [US1] Amend the Angular part of principle V in `.specify/memory/constitution.md` ("Angular 21" becomes "Angular 22") and the stack lines in `AGENTS.md` and `jordylab-fe/AGENTS.md` that name versions (FR-010)
 - [ ] T023 [US1] Re-run the T011/T012/T014 verification set for this PR; also confirm the Capacitor `mobile` build output still syncs (`bunx nx run jordylab-mobile:sync` or the project's sync target) and record results
-- [ ] T024 [US1] Open PR 1b, wait for CI, resolve review comments, merge. If Angular 22 cannot be made green, stop, record the blocking tool in `research.md`, and leave the workspace on Nx 23 + Angular 21.2 (spec edge case)
+- [X] T024 [US1] Open PR 1b, wait for CI, resolve review comments, merge. If Angular 22 cannot be made green, stop, record the blocking tool in `research.md`, and leave the workspace on Nx 23 + Angular 21.2 (spec edge case)
 
 **Checkpoint**: Nx 23 (and Angular 22 if green) merged; Parts A (Oxlint) and C can start.
 
@@ -93,7 +93,7 @@
 - [X] T041 [P] [US2] Add the OpenCode instruction to `jordylab-fe/AGENTS.md` ("after editing a TypeScript file under `jordylab-fe/`, run `tools/lint-changed.sh <file>` and fix what it reports"), via `/dual-agent-config` (FR-019)
 - [X] T042 [US2] Verify live in Claude Code: edit a frontend `.ts` file with a deliberate lint error and confirm the diagnostic reaches the agent in the same turn within about a second; also edit a clean file and a `.md` file and confirm silence; record in `research.md`
 - [X] T043 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to run the OpenCode check (fresh OpenCode session in `jordylab-fe/`, edit a `.ts` file with a deliberate error, confirm it runs `tools/lint-changed.sh` and fixes it); if unreliable, a plugin calling the same script is the follow-up (FR-019)
-- [ ] T044 [US2] Open PR 3, wait for CI (including Hook Tests), resolve review comments, merge
+- [X] T044 [US2] Open PR 3, wait for CI (including Hook Tests), resolve review comments, merge
 
 ---
 
@@ -126,7 +126,7 @@
 - [X] T056 [US9] Validate the checklist: scaffold a throwaway sample AI feature with `/ai-endpoint` in a scratch worktree (discard it) and confirm typed output + prompt resource; run each `code-reviewer` copy on a scratch change that calls a model inside `@Transactional` and confirm it is reported
 - [X] T057 [US6] Verify loading in Claude Code: start/continue a session with the package as the working context and run `/context`; if it cannot be run from this session, say so and hand it over (FR-032)
 - [X] T058 [HANDOFF] [US6] Post HANDOFF-## asking Jordy to start a fresh OpenCode session in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/` and confirm the rules load (and to run `/context` in Claude Code if T057 could not) (FR-032)
-- [ ] T059 [US6] Open PR 4, wait for CI, resolve review comments, merge
+- [X] T059 [US6] Open PR 4, wait for CI, resolve review comments, merge
 
 ---
 
@@ -233,13 +233,13 @@
 - [X] T100 [US16] Run `./gradlew check --no-daemon`; confirm green with unchanged behaviour; run `./gradlew dependencies --configuration runtimeClasspath` and confirm a single Spring Boot minor in the tree (SC-014)
 - [X] T101 [US16] Start the backend against the local compose stack and confirm it boots and `/actuator/health` is up (`jordylab-be/`); if the check fails in a way that is not a small fix, fall back to the patch-only versions (Boot 4.0.8, Modulith 2.0.8) and record why (spec scenario 3)
 - [X] T102 [US16] Update version mentions in `AGENTS.md`, `jordylab-be/AGENTS.md` and `.specify/memory/constitution.md` (Java/Spring lines only if they name versions) and feed the dependency-tree finding into T047
-- [ ] T103 [US16] Open PR 1c, wait for CI (`test-backend`), resolve review comments, merge
+- [X] T103 [US16] Open PR 1c, wait for CI (`test-backend`), resolve review comments, merge
 
 ---
 
 ## Phase 13: Polish and cross-cutting
 
-- [ ] T104 [P] Run the licence-phrase grep from `.github/workflows/build.yml` locally over all new docs and READMEs (`grep -ril` outside `specs/`) and fix any hit (FR-047)
+- [X] T104 [P] Run the licence-phrase grep from `.github/workflows/build.yml` locally over all new docs and READMEs (`grep -ril` outside `specs/`) and fix any hit (FR-047)
 - [ ] T105 [P] Check every commit of this feature carries a valid `Refs:` trailer (`.githooks/commit-msg` enabled via `git config core.hooksPath .githooks`; never `--no-verify`) (FR-004)
 - [ ] T106 Run the full `quickstart.md` validation for Parts A, B and C and record pass/fail per item in `research.md`; anything not runnable here (OpenCode, emulator on the Mac) is listed as not run with its HANDOFF
 - [ ] T107 Update `specs/012-technical-improvements/checklists/requirements.md` notes and mark the feature's status in `spec.md` when all parts are merged; list remaining HANDOFFs
