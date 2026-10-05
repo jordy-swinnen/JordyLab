@@ -1184,3 +1184,10 @@ Procedures for everything below, and for the checks that need your login or hard
 - Contains Flyway migration: yes — `V20261005001` adds the nullable `finance.portfolio_position.price_symbol` (applied cleanly at startup) · realm change: no · secret change: no · config change: no
 - Outcome: deployed; owner check of BTC/MEUD pending
 
+#### DEPLOY-22
+- Release: `v0.0.1-rc16` on `2b9f673` (PR #101: browser-compatible User-Agent for Yahoo, BUG-060; tagged on that commit on purpose — main already carried PR #102 from another working session, which is not part of this campaign's release), run 37246452381
+- Jobs: all ✅ including `apk` (APK versionCode 116 published) and `publish`
+- Contains Flyway migration: no · realm change: no · secret change: no · config change: no
+- Prod re-verification: backend `v0.0.1-rc16`, 0 errors in the first minutes, no `No euro price found` warning from the post-start price refresh
+- Outcome: deployed; owner check of BTC/MEUD values pending. The owner's phone (rc15) should now show the in-app "Update available" banner right after sign-in (BUG-053).
+

@@ -1,15 +1,15 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-05 · production `https://jordylab.be` · last release `v0.0.1-rc15` (`5167ca2`)
+2026-09-30 → 2026-10-05 · production `https://jordylab.be` · last release `v0.0.1-rc16` (`2b9f673`)
 
 ## Verdict
-Production (rc15) is healthy and every S1/S2 defect found is fixed and deployed. 21 of the 24 S1/S2 bugs are verified on prod or by a drill; the other three (BUG-050 login screen after native login, BUG-056 blank page — web verified, BUG-059 portfolio symbol resolution) wait only for the owner's check on the owner's phone or in the portfolio. Nothing known is broken. What remains after that is the manual runbook (VPS reboot, point-in-time restore, contrast, rebuild), which the owner does last.
+Production (rc16) is healthy and every S1/S2 defect found is fixed and deployed. 23 of the 25 S1/S2 bugs are verified on prod or by a drill (the phone app, the portfolio precision, the release pipeline and the rc12 blank page are all confirmed); the other two (BUG-059 plain-name symbol resolution and BUG-060 Yahoo user agent) wait only for the owner to look at the BTC and MEUD values. Nothing known is broken. What remains after that is the manual runbook (VPS reboot, point-in-time restore, contrast, rebuild), which the owner does last.
 
 ## What was tested
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
   compression and caching, deep links, OIDC issuer, unauthenticated API, CORS, pods, image tags, app links — all PASS on
   rc6 (re-run in the plan §6).
-- **Releases and rollback:** fifteen release tags (rc1–rc15; rc12 was rolled back within minutes) through the tag-driven pipeline; rc6 and rc7 are the first with every job
+- **Releases and rollback:** sixteen release tags (rc1–rc16; rc12 was rolled back within minutes) through the tag-driven pipeline; rc6 and rc7 are the first with every job
   green (retag, release, deploy, publish, **APK built, signed, verified and published**). Rollback to rc5 and roll-forward
   to rc6 both succeeded (DEPLOY-11).
 - **Data durability:** base backups running; a restore drill recovered production into a scratch cluster in 1 min 55 s
@@ -23,13 +23,13 @@ Production (rc15) is healthy and every S1/S2 defect found is fixed and deployed.
 - **Coverage matrix:** 544 rows closed — 412 `PASS-CI` (named green suites + the passes above; a deliberately weaker level
   than `PASS`, defined in §5), 55 `FAIL-FIXED`, 63 `NOT TESTABLE`, 4 `PASS`.
 
-## Bugs: 59 found
+## Bugs: 60 found
 | Severity | Count | State |
 |----------|-------|-------|
-| S1 | 1 | BUG-056 (rc12 blank page, rolled back in minutes, fixed in rc13): web verified, phone check pending |
-| S2 | 23 | 21 verified (20 on prod, 1 by the restore drill); BUG-050 and BUG-059 deployed, owner check pending |
-| S3 | 22 | 9 verified on prod; 10 deployed (4 CI-level lint/coverage gates, BUG-041 CI-covered, BUG-048 optional live check, BUG-051/053 phone, BUG-054 rescan done — view check, BUG-055 phone); 3 fixed locally (tooling/test infra) |
-| S4 | 13 | 8 verified; 4 fixed locally (tooling); 1 deployed (BUG-052 app icon, phone) |
+| S1 | 1 | BUG-056 (rc12 blank page): rolled back in minutes, fixed in rc13, verified on the phone |
+| S2 | 24 | 22 verified (21 on prod, 1 by the restore drill); BUG-059 and BUG-060 deployed, owner check pending |
+| S3 | 22 | 11 verified on prod; 8 deployed (4 CI-level lint/coverage gates, BUG-041 CI-covered, BUG-048 optional live check, BUG-053 update banner awaiting the phone, BUG-054 awaiting a look at the Library chips); 3 fixed locally (tooling/test infra) |
+| S4 | 13 | 9 verified; 4 fixed locally (tooling) |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
 the whole release flow (tag → release → deploy → APK), APK signing verification (v1-only reader vs v2/v3-only signing),
