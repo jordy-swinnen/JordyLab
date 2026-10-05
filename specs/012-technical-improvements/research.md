@@ -231,6 +231,7 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
 - Ownership: ESLint resolves 84 enabled rules (core, typescript-eslint, `@angular-eslint`, `@nx/enforce-module-boundaries`); Oxlint owns exactly 27, all `oxc/*` and `unicorn/*` correctness rules
   that ESLint does not have, listed explicitly with the `correctness` category off (otherwise Oxlint's built-in core rules would overlap). Result: no rule in both. `tools/check-lint-ownership.sh` resolves ESLint
   per project directory (the root config alone has no Angular rules, which is how Nx runs it) and fails on overlap or when ESLint loses its Angular or boundary rules.
+- Confirmations are recorded as HANDOFF-25 in `docs/testing/e2e-test-plan.md` (T016, T026, T067; T080 stays open). The ownership check also asserts ESLint still enables Angular template rules (it samples a component `.html` file).
 - Oxlint finds nothing in the current code (0 findings on 227 files), so no code change was needed.
 - CI: `Oxlint` (`nx run-many -t oxlint`) and `Lint rule ownership` steps run before `Lint` in `test-frontend`.
 - CI ordering proof (T032, two draft scratch PRs, closed): a file with `new Array(3)` (seen only by Oxlint) failed the `Oxlint` step and the later steps (`Lint rule ownership`, `Lint`, tests) were skipped

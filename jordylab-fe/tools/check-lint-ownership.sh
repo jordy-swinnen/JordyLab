@@ -14,6 +14,7 @@ cd "$FRONTEND_ROOT" || exit 2
 ESLINT_SAMPLES=(
   "apps/jordylab src/main.ts"
   "libs/fna/ui src/lib/article-list/article-list.component.ts"
+  "libs/fna/ui src/lib/article-list/article-list.component.html"
   "libs/shared/auth src/lib/pkce.ts"
   "libs/gamecatalog/api src/index.ts"
 )
@@ -69,6 +70,8 @@ for rule in sorted(oxlint_rules):
         problems.append(f"Oxlint must not own an ESLint-only rule: {rule}")
 if not any(rule.startswith("@angular-eslint/") for rule in eslint_rules):
     problems.append("ESLint no longer enables any @angular-eslint rule (check the config)")
+if not any(rule.startswith("@angular-eslint/template/") for rule in eslint_rules):
+    problems.append("ESLint no longer enables any Angular template rule (@angular-eslint/template/*)")
 if "@nx/enforce-module-boundaries" not in eslint_rules:
     problems.append("ESLint no longer enables @nx/enforce-module-boundaries")
 

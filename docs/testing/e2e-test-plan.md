@@ -988,6 +988,10 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 - In `jordylab-fe/` start `opencode`, ask it to create a `.ts` file under `libs/` containing a `debugger` statement, and watch whether it runs `tools/lint-changed.sh <file>` and fixes the finding without being told.
 - Expect: it runs the script (the rule is in `jordylab-fe/AGENTS.md`, "Lint feedback after every edit") and removes the `debugger`. If it does not, the follow-up is an OpenCode plugin calling the same script. Tell me what you saw.
 
+#### HANDOFF-25: Confirm the Oxlint, Playwright, Appium/WebdriverIO versions and raise Node (spec 012 T016, T026, T067) — done 2026-10-05 (in chat)
+- Asked in the previous status report. Jordy answered with a registry check made in an OpenCode session (oxlint 1.86.0, `@nx/oxlint` 23.2.1 with peer `oxlint ^1.43`, Playwright 1.63.0, Appium 3.8.0, WebdriverIO 9.32.0 or 10.0.0, UiAutomator2 driver 8.7.0, suggested emulator image API 35 `google_apis`), said "continue", and showed local Node raised to v24.21.0.
+- Taken as approval of the proposed set: oxlint 1.86.0 + `@nx/oxlint` 23.2.1 (T026), Playwright 1.63.0 (T067), Node 24.21.0 (T016). **Still open (T080):** WebdriverIO 9.32.0 versus 10.0.0 and the emulator image/API level were not chosen; the Android phase starts by asking again.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
