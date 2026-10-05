@@ -175,7 +175,7 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
 - **agent-browser / the browser pane versus these suites.** Use the browser pane for exploring, reproducing a bug, checking a
   deployed environment or anything that needs judgement. Use the suites to prove a journey still works: repeatable, run by CI, no
   agent needed. When a manual finding becomes a regression risk, turn it into a journey here.
-- The Android layer (Appium) is added in `apps/jordylab-mobile-e2e`; see its README for the emulator pins.
+- An Android layer (Appium, for what only breaks inside the installed app) is being added separately; this section covers the web suite only until it lands.
 
 # Auth via Keycloak
 

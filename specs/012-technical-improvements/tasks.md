@@ -204,7 +204,7 @@
 **Independent Test**: a PR with a broken web journey cannot merge; the Android job runs on `workflow_dispatch` and reports.
 
 - [X] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
-- [X] T092 [HANDOFF] [US14] Post HANDOFF-## asking Jordy to mark the `e2e-web` check as required in the repository's branch protection (a repo setting only they can change); verify later with a deliberately broken journey PR (SC-012)
+- [X] T092 [US14] Make `e2e-web` a required check: done directly on Jordy's request ("do this") by adding a `required_status_checks` rule to the `main` repository ruleset, not through a handoff; recorded with the before/after and its consequence in `research.md` C5b
 - [ ] T093 [US14] Create `.github/workflows/e2e-android.yml`: triggers `workflow_dispatch` and `workflow_call` (called from `.github/workflows/release.yml` after the `apk` job), `reactivecircus/android-emulator-runner` on the pinned API level, build the e2e debug APK, run `jordylab-fe/e2e/run.sh android`, an `if: always()` cleanup and leftover-check step (FR-045)
 - [ ] T094 [US14] Wire the Android job into `.github/workflows/release.yml` without blocking the release publish if the job fails (it reports; decision recorded in `research.md`), then trigger it once with `workflow_dispatch` and record the run
 
