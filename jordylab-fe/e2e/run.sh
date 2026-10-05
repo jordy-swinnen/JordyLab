@@ -136,7 +136,7 @@ CORS_EXTRA_ORIGINS=""
 
 # The SHA-256 digest (hex, no colons) of the certificate that signed an APK, as `apksigner` reports it.
 signing_certificate_digest() {
-  "$1" verify --print-certs "$2" 2>/dev/null | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}' | tr -d ':[:space:]'
+  "$1" verify --print-certs "$2" 2>/dev/null | awk '/certificate SHA-256 digest/ {print $NF; exit}' | tr -d ':[:space:]'
 }
 
 # Builds everything an Android run needs before the stack starts: the app as a debug APK (twice, the second with a higher versionCode
