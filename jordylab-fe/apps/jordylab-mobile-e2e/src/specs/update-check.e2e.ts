@@ -30,7 +30,12 @@ async function publishNewerRelease(): Promise<void> {
     body: form,
   });
   if (!response.ok) {
-    throw new Error(`Publishing the newer release was rejected (HTTP ${response.status}): ${await response.text()}`);
+    const reason = await response.text();
+    // A retried test publishes again: the release from the first attempt is already there, which is what the test needs.
+    if (response.status === 400 && reason.includes('VERSION_CODE_NOT_MONOTONIC')) {
+      return;
+    }
+    throw new Error(`Publishing the newer release was rejected (HTTP ${response.status}): ${reason}`);
   }
 }
 

@@ -9,7 +9,7 @@ check, which fails the run (naming both versions) when the emulator's WebView is
 | WebView on that image | 124.0.6367.219 (`com.google.android.webview`, read by the preflight from the first CI run; also in `src/pins.json`) |
 | Appium | 3.8.0 |
 | UiAutomator2 driver | 8.7.0 (`bun run setup` installs exactly this into `.appium/`) |
-| WebdriverIO | 9.32.0 (`@wdio/globals` 9.31.3, the version `@wdio/cli` 9.32.0 depends on) |
+| WebdriverIO | 10.0.0 (all `@wdio/*` packages and `webdriverio`; needs Node 22.19 or newer, which CI's floating Node 22 satisfies) |
 | chromedriver | resolved by Appium's chromedriver autodownload for the WebView it finds (`--allow-insecure uiautomator2:chromedriver_autodownload`); the WebView pin above is what makes this reproducible |
 
 Changing the emulator image changes the WebView: update `src/pins.json` and this file in the same commit and re-run.

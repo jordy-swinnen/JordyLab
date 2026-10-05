@@ -1,3 +1,4 @@
+import { isAccountMenuDisplayed } from '../support/account-menu';
 import { switchToWebView } from '../support/contexts';
 import { requiredEnvironment } from '../support/environment';
 import { signInNatively } from '../support/native-login';
@@ -9,7 +10,7 @@ describe('Native Keycloak login in the installed app', () => {
     await signInNatively();
 
     await switchToWebView(environment.androidPackage);
-    await expect($('[data-testid="user-menu-trigger"]')).toBeDisplayed();
+    expect(await isAccountMenuDisplayed()).toBe(true);
     await expect($('//button[contains(., "Sign in with Keycloak")]')).not.toBeDisplayed();
   });
 });

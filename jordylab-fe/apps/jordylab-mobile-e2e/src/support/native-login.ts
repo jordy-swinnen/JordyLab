@@ -1,4 +1,5 @@
 import { requiredEnvironment } from './environment';
+import { waitForAccountMenu } from './account-menu';
 import { switchToNative, switchToWebView } from './contexts';
 
 const environment = requiredEnvironment();
@@ -62,16 +63,18 @@ export async function signInNatively(): Promise<void> {
   });
   await switchToWebView(environment.androidPackage);
   try {
-    await $('[data-testid="user-menu-trigger"]').waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
-  } catch {
-    throw new Error(`The app is back but not signed in (no account menu). From inside the WebView: ${await probeFromWebView()}`);
+    await waitForAccountMenu(STEP_TIMEOUT_MS);
+  } catch (error) {
+    throw new Error(
+      `The app is back but not signed in (${(error as Error).message}). From inside the WebView: ${await probeFromWebView()}`,
+    );
   }
 }
 
 /** When the app is back but signed out, ask the WebView itself what it can reach: the answer separates a network block from a CORS block. */
 async function probeFromWebView(): Promise<string> {
-  const probe = await driver.executeAsync(
-    (keycloakUrl: string, apiOrigin: string, done: (result: string) => void) => {
+  const probe = await driver.execute(
+    async (keycloakUrl: string, apiOrigin: string): Promise<string> => {
       const attempt = async (label: string, url: string, init: RequestInit): Promise<string> => {
         try {
           const response = await fetch(url, init);
@@ -80,7 +83,7 @@ async function probeFromWebView(): Promise<string> {
           return `${label}: ${(error as Error).message} (${init.mode ?? 'cors'})`;
         }
       };
-      void Promise.all([
+      const results = await Promise.all([
         attempt('keycloak discovery', `${keycloakUrl}/realms/jordylab/.well-known/openid-configuration`, { mode: 'cors' }),
         attempt('keycloak discovery', `${keycloakUrl}/realms/jordylab/.well-known/openid-configuration`, { mode: 'no-cors' }),
         attempt('keycloak token', `${keycloakUrl}/realms/jordylab/protocol/openid-connect/token`, {
@@ -91,7 +94,9 @@ async function probeFromWebView(): Promise<string> {
         }),
         attempt('backend health', `${apiOrigin}/actuator/health`, { mode: 'cors' }),
         attempt('backend health', `${apiOrigin}/actuator/health`, { mode: 'no-cors' }),
-      ]).then((results) => done(`origin ${location.origin}; ${results.join('; ')}`));
+      ]);
+
+      return `origin ${location.origin}; ${results.join('; ')}`;
     },
     environment.keycloakUrl,
     environment.apiOrigin,

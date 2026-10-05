@@ -990,7 +990,7 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 
 #### HANDOFF-25: Confirm the Oxlint, Playwright, Appium/WebdriverIO versions and raise Node (spec 012 T016, T026, T067) — done 2026-10-05 (in chat)
 - Asked in the previous status report. Jordy answered with a registry check made in an OpenCode session (oxlint 1.86.0, `@nx/oxlint` 23.2.1 with peer `oxlint ^1.43`, Playwright 1.63.0, Appium 3.8.0, WebdriverIO 9.32.0 or 10.0.0, UiAutomator2 driver 8.7.0, suggested emulator image API 35 `google_apis`), said "continue", and showed local Node raised to v24.21.0.
-- Taken as approval of the proposed set: oxlint 1.86.0 + `@nx/oxlint` 23.2.1 (T026), Playwright 1.63.0 (T067), Node 24.21.0 (T016). **Still open (T080):** WebdriverIO 9.32.0 versus 10.0.0 and the emulator image/API level were not chosen; the Android phase starts by asking again.
+- Taken as approval of the proposed set: oxlint 1.86.0 + `@nx/oxlint` 23.2.1 (T026), Playwright 1.63.0 (T067), Node 24.21.0 (T016). **T080 closed later the same day:** Jordy chose WebdriverIO 10 (now 10.0.0); the emulator stays API 35.
 
 ## 8. AI call tally
 

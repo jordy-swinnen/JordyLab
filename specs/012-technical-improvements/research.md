@@ -508,5 +508,11 @@ pointer from the root `AGENTS.md`.
 | C | Android suite on an emulator | 5 tests passed in CI, twice on the same commit; not run locally (no Android SDK on the Mac) |
 | all | Refs trailer audit | 77 non-merge commits on main since the spec, 0 without a `Refs:` trailer (the commit-msg hook and the `refs` check enforce it) |
 
-Open at the end: T080 (WebdriverIO 9 versus 10 and the emulator level were taken as proposed, not explicitly chosen), the optional HANDOFF-23 and HANDOFF-24
+Open at the end: the optional HANDOFF-23 and HANDOFF-24 (HANDOFF-24 deferred by Jordy until he is home)
 checks, and the `workflow_run` trigger of the Android job, which only a real release can exercise.
+
+## WebdriverIO 10 (T080 closed, 2026-10-05)
+
+Jordy chose WebdriverIO 10 ("Upgrade to webdriver 10"). All `@wdio/*` packages and `webdriverio` are now 10.0.0 (they all exist at that version, including `@wdio/globals`; the Node floor is 22.19, which CI's floating
+Node 22 meets). One API change: `executeAsync` is gone, so the in-WebView probe uses `execute` with an async function. The emulator level stays API 35 `google_apis` as recommended (not objected to). Appium 3.8.0 and the UiAutomator2
+driver 8.7.0 are unchanged.

@@ -4,5 +4,5 @@
   "webViewVersion": "124.0.6367.219",
   "appium": "3.8.0",
   "uiautomator2Driver": "8.7.0",
-  "webdriverio": "9.32.0"
+  "webdriverio": "10.0.0"
 }
