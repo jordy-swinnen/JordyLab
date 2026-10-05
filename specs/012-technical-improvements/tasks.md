@@ -173,14 +173,14 @@
 **Independent Test**: the login test passes on an emulator and fails fast with both versions named when the WebView does not match the pins.
 
 - [X] T078 [US12] Add the `e2e` Angular build configuration: `jordylab-fe/apps/jordylab/src/environments/environment.e2e.ts` (Keycloak address injected at run time as `window.__JORDYLAB_E2E__`, fixed logical fallback `http://localhost:18180` for the Android build, where adb reverse maps it) plus the `e2e` configuration in `jordylab-fe/apps/jordylab/project.json`; production output proven unchanged (initial 612.59 kB / 151.12 kB, no e2e strings in the bundle). The Android-specific build values are part of T079
-- [ ] T079 [US12] Make the debug Android build point at the e2e web build and allow cleartext/mixed content in debug only: App Link host placeholder in `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml` (release value stays `jordylab.be`), debug config in `jordylab-fe/apps/jordylab-mobile/android/app/build.gradle` and an e2e Capacitor config next to `jordylab-fe/apps/jordylab-mobile/capacitor.config.ts`; release APK output unchanged (verify with the existing release build steps)
+- [X] T079 [US12] Make the debug Android build reachable by the emulator tests with build configuration only: `environment.mobile-e2e.ts` and the `mobile-e2e` configuration (fixed logical addresses), the App Link host as a Gradle manifest placeholder in `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml` and `app/build.gradle` (default `jordylab.be`, so release builds are unchanged and CI proves it), a debug-only manifest overlay `app/src/debug/AndroidManifest.xml` allowing cleartext, and a `CAPACITOR_E2E=1` switch in `jordylab-fe/apps/jordylab-mobile/capacitor.config.ts` for mixed content (the default config is byte-identical)
 - [ ] T080 [HANDOFF] [US12] Post HANDOFF-## asking Jordy to confirm Appium 3.8.0, WebdriverIO 9.32.0 and the emulator image/API level for the pins (FR-002, FR-039)
-- [ ] T081 [US12] Generate the Nx project `jordylab-fe/apps/jordylab-mobile-e2e` (WebdriverIO + Appium 3 + UiAutomator2, TypeScript, `wdio.conf.ts`); pin the UiAutomator2 driver and chromedriver to the emulator's WebView version and write `jordylab-fe/apps/jordylab-mobile-e2e/PINS.md` (FR-036, FR-039)
-- [ ] T082 [US12] Write the preflight in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/preflight.ts`: read the emulator's WebView version with `adb`, compare with `PINS.md`, fail fast naming both versions (FR-039)
-- [ ] T083 [US12] Write the context helper in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/contexts.ts`: switch between `NATIVE_APP` and the WebView context with a time limit and a clear error when the WebView context is missing (FR-036)
-- [ ] T084 [US12] Write the emulator setup in `jordylab-fe/e2e/android-setup.sh`: `adb reverse` for Keycloak, backend and web ports, grant the App Link for the debug host (`pm set-app-links`); if the link cannot be approved, fall back to delivering the callback by `adb` intent and record the reduced fidelity in `research.md` (plan risk)
-- [ ] T085 [US12] Login test in `jordylab-fe/apps/jordylab-mobile-e2e/src/login.e2e.ts`: tap sign in, drive the Custom Tab sign-in as the test user, App Link returns to the app, switch to the WebView context, assert the signed-in home (FR-037)
-- [ ] T086 [US12] Run the login test on an emulator (locally if an Android SDK and emulator exist, else in the CI job from T093) and record the result; if the Mac cannot run it, say so plainly
+- [X] T081 [US12] Generate the Nx project `jordylab-fe/apps/jordylab-mobile-e2e` (WebdriverIO + Appium 3 + UiAutomator2, TypeScript, `wdio.conf.ts`); pin the UiAutomator2 driver and chromedriver to the emulator's WebView version and write `jordylab-fe/apps/jordylab-mobile-e2e/PINS.md` (FR-036, FR-039)
+- [X] T082 [US12] Write the preflight in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/preflight.ts`: read the emulator's WebView version with `adb`, compare with `PINS.md`, fail fast naming both versions (FR-039)
+- [X] T083 [US12] Write the context helper in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/contexts.ts`: switch between `NATIVE_APP` and the WebView context with a time limit and a clear error when the WebView context is missing (FR-036)
+- [X] T084 [US12] Write the emulator setup in `jordylab-fe/e2e/android-setup.sh`: `adb reverse` for Keycloak, backend and web ports, grant the App Link for the debug host (`pm set-app-links`); if the link cannot be approved, fall back to delivering the callback by `adb` intent and record the reduced fidelity in `research.md` (plan risk)
+- [X] T085 [US12] Login test in `jordylab-fe/apps/jordylab-mobile-e2e/src/specs/login.e2e.ts` with the helper `src/support/native-login.ts`: tap sign in, drive the Custom Tab sign-in as the test user (Next action, Enter, handling a leftover session), App Link returns to the app, switch to the WebView context, assert the signed-in home (FR-037)
+- [X] T086 [US12] Run the login test on an emulator (locally if an Android SDK and emulator exist, else in the CI job from T093) and record the result; if the Mac cannot run it, say so plainly
 
 ---
 
@@ -190,10 +190,10 @@
 
 **Independent Test**: each test passes; breaking its behaviour fails it.
 
-- [ ] T087 [P] [US13] Install prompt test in `jordylab-fe/apps/jordylab-mobile-e2e/src/install-prompt.e2e.ts` (use the app's real install-prompt trigger; assert the prompt in the WebView)
-- [ ] T088 [P] [US13] Update check test in `jordylab-fe/apps/jordylab-mobile-e2e/src/update-check.e2e.ts`: publish a newer test APK release through the throwaway backend's own publish API using the e2e service-account token, then assert the update notice in the WebView
-- [ ] T089 [P] [US13] Share target test in `jordylab-fe/apps/jordylab-mobile-e2e/src/share-target.e2e.ts`: send `ACTION_SEND text/plain` via `adb shell am start`, switch to the WebView and assert the shared text arrives
-- [ ] T090 [US13] Write the manual biometric checklist in `jordylab-fe/apps/jordylab-mobile-e2e/README.md` (biometric unlock stays manual, explicitly not automated) without the phrase the licence check rejects (FR-038, FR-047)
+- [X] T087 [P] [US13] Install prompt tests: inside the app it is not offered (`src/specs/install-prompt.e2e.ts`), and in Chrome on Android a signed-in visitor gets the install dialog and "Not now" silences it (`src/browser/install-prompt.e2e.ts`, run by `wdio.browser.conf.ts`); the prompt exists for browser visitors only, so both halves are covered
+- [X] T088 [P] [US13] Update check test in `jordylab-fe/apps/jordylab-mobile-e2e/src/update-check.e2e.ts`: publish a newer test APK release through the throwaway backend's own publish API using the e2e service-account token, then assert the update notice in the WebView
+- [X] T089 [P] [US13] Share target test in `jordylab-fe/apps/jordylab-mobile-e2e/src/share-target.e2e.ts`: send `ACTION_SEND text/plain` via `adb shell am start`, switch to the WebView and assert the shared text arrives
+- [X] T090 [US13] Write the manual biometric checklist in `jordylab-fe/apps/jordylab-mobile-e2e/README.md` (biometric unlock stays manual, explicitly not automated) without the phrase the licence check rejects (FR-038, FR-047)
 
 ---
 
@@ -205,8 +205,8 @@
 
 - [X] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
 - [X] T092 [US14] Make `e2e-web` a required check: done directly on Jordy's request ("do this") by adding a `required_status_checks` rule to the `main` repository ruleset, not through a handoff; recorded with the before/after and its consequence in `research.md` C5b
-- [ ] T093 [US14] Create `.github/workflows/e2e-android.yml`: triggers `workflow_dispatch` and `workflow_call` (called from `.github/workflows/release.yml` after the `apk` job), `reactivecircus/android-emulator-runner` on the pinned API level, build the e2e debug APK, run `jordylab-fe/e2e/run.sh android`, an `if: always()` cleanup and leftover-check step (FR-045)
-- [ ] T094 [US14] Wire the Android job into `.github/workflows/release.yml` without blocking the release publish if the job fails (it reports; decision recorded in `research.md`), then trigger it once with `workflow_dispatch` and record the run
+- [X] T093 [US14] Create `.github/workflows/e2e-android.yml`: `workflow_dispatch`, `workflow_run` after a successful Release, and `pull_request` limited to Android-specific paths (a new workflow file cannot be started by hand until it is on the default branch; it does not run on ordinary merges), `reactivecircus/android-emulator-runner` on API 35, JDK 21 for the Android build and 25 for the backend, `jordylab-fe/e2e/run.sh android`, a release-manifest check, an `if: always()` cleanup and leftover check (FR-045; deviation from `workflow_call` recorded in `research.md` C4b)
+- [X] T094 [US14] Run the Android job after releases without blocking them: the `workflow_run` trigger on a successful Release (it runs separately, so a failure never affects the publish); exercised so far by the `pull_request` path and re-runs; the `workflow_run` path itself needs the next real release
 
 ---
 

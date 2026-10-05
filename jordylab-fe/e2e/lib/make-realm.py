@@ -31,7 +31,9 @@ def main() -> None:
         if client["clientId"] == "jordylab-backend":
             client["secret"] = os.environ["E2E_BACKEND_CLIENT_SECRET"]  # per run, never the dev constant
         if client["clientId"] == "jordylab-mobile":
-            client["redirectUris"] = [f"{web_origin}/mobile/callback"]
+            # The web origin callback is for browser runs; the App Link callback is what the debug APK declares for the emulator tests
+            # (-PjordylabAppLinkHost, see run.sh). The WebView origin https://localhost stays a web origin from the dev export.
+            client["redirectUris"] = [f"{web_origin}/mobile/callback", "https://e2e.jordylab.test/mobile/callback"]
             client.setdefault("attributes", {})["post.logout.redirect.uris"] = f"{web_origin}/mobile/*"
 
     realm["clients"].append({
@@ -60,7 +62,9 @@ def main() -> None:
             "enabled": True,
             "firstName": "E2E",
             "lastName": "Admin",
-            "realmRoles": ["admin"],
+            # offline_access: the Android app signs in with scope offline_access (refresh token for the fingerprint unlock); without
+            # this role Keycloak refuses the code exchange, and the browser reports that error response as a CORS failure.
+            "realmRoles": ["admin", "offline_access"],
             "credentials": [{"type": "password", "value": os.environ["E2E_ADMIN_PASSWORD"], "temporary": False}],
         },
     ]

@@ -175,7 +175,9 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
 - **agent-browser / the browser pane versus these suites.** Use the browser pane for exploring, reproducing a bug, checking a
   deployed environment or anything that needs judgement. Use the suites to prove a journey still works: repeatable, run by CI, no
   agent needed. When a manual finding becomes a regression risk, turn it into a journey here.
-- An Android layer (Appium, for what only breaks inside the installed app) is being added separately; this section covers the web suite only until it lands.
+- **Android layer (Appium 3 + WebdriverIO, `apps/jordylab-mobile-e2e`)** for what only breaks inside the installed app: native Keycloak login (Custom Tab, App Link), install prompt, update check, share target. Runs on a hosted emulator in the
+  `E2E Android` workflow (on demand, after a Release, and when Android files change; not a required check); locally `e2e/run.sh android` needs the Android SDK and an emulator. Emulator and WebView pins: `apps/jordylab-mobile-e2e/PINS.md`.
+  Biometric unlock stays a manual checklist (README of that project).
 
 # Auth via Keycloak
 
