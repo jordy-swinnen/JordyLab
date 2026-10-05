@@ -299,8 +299,7 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
 ### C2. Layout
 
 - Web suite: new Nx project `apps/jordylab-e2e` (Playwright), using `@nx/playwright` (peer-aligned with Nx 23.2.1) so
-  Nx caching and `nx affected` apply. Test ids added to components as `data-testid` (none exist today: zero hits in
-  `libs/` and `apps/`); roles/names are preferred, test ids only where no accessible name exists.
+  Nx caching and `nx affected` apply. Test ids added to components as `data-testid` (a first grep reported none, but many exist; see C3d); roles/names are preferred, test ids only where no accessible name exists.
 - Android suite: new Nx project `apps/jordylab-mobile-e2e` (decision Q3) with WebdriverIO + Appium, TypeScript.
 - Throwaway environment, shared by both suites: `jordylab-fe/e2e/` directory (or repo `e2e/`) holding the compose file,
   realm import, orchestration scripts (see contract `e2e-environment.md`).
@@ -356,6 +355,25 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
   (the Playwright setup injects it with an init script before the app boots) and falls back to `http://localhost:18180`, the logical address the Android build will use
   (adb reverse maps it to the real host port). The API is same-origin (`/api`, proxied by `e2e/static-server.ts`).
 - `nx build jordylab --configuration=e2e` builds in about 60 s (no optimisation); the production build is unchanged (612.59 kB initial, 151.12 kB transfer, no e2e strings).
+
+### C3d. Web suite record (2026-10-05, branch `test/e2e-web-suite`, T067-T077, T091)
+
+- Playwright 1.63.0 (+ `@nx/playwright` 23.2.1, Chromium headless shell 94 MB, approved). New Nx project `apps/jordylab-e2e` (`nx e2e jordylab-e2e` runs `playwright test`; the runner exports the per-run `E2E_*` values).
+  Correction to the earlier C2 note: the app already has many `data-testid`s (user menu, users page approve/revoke, grid toggle, model pickers, ...) plus accessible names everywhere,
+  so no component needed a new test id; selectors are roles, labels and the existing ids. Keycloak's own login and registration pages are third-party DOM without accessible
+  labels, so only there the documented element ids (`#username`, `#password`, `#kc-login`, `#firstName`, ...) are used.
+- Data (T069): the catalog is filled once in `global-setup.ts` through the app's own `POST /api/gamecatalog/ingest/scan` with a scanner-role token from the throwaway realm's `e2e-ingest`
+  service account (EmuDeck source, three games); the response outcome is checked. No SQL, no real scanner needed. The guest user for the approval journey signs up through Keycloak's registration page.
+- Session: global setup signs in once through the Keycloak login page and saves cookies; later pages restore the session through the app's silent check-sso. The Keycloak address reaches the
+  bundle through an init script on the browser context (`window.__JORDYLAB_E2E__`, see C3c), which runs before the bundle.
+- Journeys (8 tests, about 12 s of test time, 4-5 minutes including the backend and web builds and the stack): sign-in with session reuse and sign-out; library grid, search and game detail
+  (the spec sheet only renders for enriched games, so the journey asserts platform, host and the back link instead); catalog chat up to the model call (question shown, graceful
+  "unavailable" message, the throwaway backend has no AI keys); FNA briefing empty state (read-only); admin Settings approving a sign-up (pending, approve, moves to approved).
+- Findings while getting it green: the account menu exists twice in the DOM (wide and narrow layout), so the suite uses the visible one; keycloak-js signs out with the bare origin, which
+  needs `post.logout.redirect.uris` on the client (the dev realm lists dev ports there), so the derived realm sets it and also registers the bare origin as a redirect URI.
+- T077: green on a fresh build (`run.sh web` with no skip flags); a deliberately wrong heading expectation failed the run with exit 1, a readable locator message and a screenshot, and was restored.
+- CI: job `e2e-web` in `build.yml` (Node 22, Java 25, Playwright browser with system dependencies, the runner, report and logs uploaded on failure, `sweep` and `verify-all` steps with `if: always()`);
+  `build-and-push` now needs it. Making it a required check is a repository setting (T092).
 
 ### C4. Android specifics
 

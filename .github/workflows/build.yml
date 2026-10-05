@@ -99,8 +99,54 @@ jobs:
         working-directory: jordylab-fe
         run: bun tools/app-boot-check.mjs
 
+  # End-to-end journeys against a freshly built app, on this run's own throwaway Postgres + Keycloak + backend (spec 012 FR-045).
+  # Gates merges: make this check required in branch protection. The cleanup steps always run, so nothing outlives the job.
+  e2e-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Install dependencies
+        working-directory: jordylab-fe
+        run: bun install --frozen-lockfile
+      - name: Install the Playwright browser
+        working-directory: jordylab-fe
+        run: bunx playwright install --with-deps chromium
+      - name: Run the web journeys
+        working-directory: jordylab-fe
+        env:
+          E2E_ARTIFACT_DIRECTORY: ${{ runner.temp }}/e2e-logs
+        run: e2e/run.sh web
+      - name: Upload the report and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-web-report
+          path: |
+            jordylab-fe/apps/jordylab-e2e/playwright-report
+            jordylab-fe/apps/jordylab-e2e/test-results
+            ${{ runner.temp }}/e2e-logs
+          if-no-files-found: ignore
+      # Even when a step above failed or the job was cancelled: remove what a killed runner left behind, then fail on any leftover.
+      - name: Remove leftovers
+        if: always()
+        working-directory: jordylab-fe
+        run: bash e2e/lib/cleanup.sh sweep
+      - name: Verify nothing is left
+        if: always()
+        working-directory: jordylab-fe
+        run: bash e2e/lib/cleanup.sh verify-all
+
   build-and-push:
-    needs: [secret-scan, licence-check, test-backend, test-frontend, app-boot]
+    needs: [secret-scan, licence-check, test-backend, test-frontend, app-boot, e2e-web]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
