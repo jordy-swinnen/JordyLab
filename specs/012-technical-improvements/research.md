@@ -487,3 +487,26 @@ pointer from the root `AGENTS.md`.
 | D7 | Own compose project, label-based cleanup, no fixed ports | Coexists with dev stack; sweep works after hard kill | Reusing dev compose |
 | D8 | `e2e` Angular configuration + debug manifest placeholder for App Link host | Only way to test login against a throwaway Keycloak | Testing against production |
 | D9 | `adb reverse` for localhost parity | One origin string for emulator and host | `10.0.2.2` hostname mismatch with Keycloak issuer |
+
+## Quickstart validation (T105, T106, 2026-10-05)
+
+| Part | Check | Result |
+|------|-------|--------|
+| A | Baseline before changes (lint, tests, builds, graph) | recorded in A3 |
+| A | After each upgrade: lint, 441/442 tests with identical line coverage, production and mobile builds, identical graph, a boundary violation still fails lint | passed for Nx 23 (PR 103) and Angular 22 (PR 109), see their records |
+| A | `tools/check-lint-ownership.sh` | passes: 99 ESLint rules, 27 Oxlint rules, none shared |
+| A | `tools/lint-changed.sh` on a file with a core and an Oxlint error | both findings printed |
+| A | `.claude/hooks/tests/lint-cases.sh` | 22 passed, 0 failed (also run by Hook Tests in CI) |
+| A | Live agent feedback in Claude Code | passed (headless session quoted the findings); OpenCode left as HANDOFF-24, not run |
+| A | CI order, removal rehearsal | passed (A5 records) |
+| B | Reference doc present with the 12 June 2026 correction and the dependency finding | passed |
+| B | Rules file loads in Claude Code and OpenCode | headless sessions passed; interactive `/context` and OpenCode view left as optional HANDOFF-23, not run |
+| B | Identical AI checklist in the skill and both reviewers | diff empty |
+| B | Gap analysis: 18 topics, 4 drafts, 7 deferred | present |
+| C | `e2e/run.sh web` on a fresh build, 8 journeys | passed locally and in CI (`e2e-web` is a required check) |
+| C | `e2e/prove-cleanup.sh`: pass, fail, SIGINT, SIGTERM, hard kill + sweep, dev database untouched | passed |
+| C | Android suite on an emulator | 5 tests passed in CI, twice on the same commit; not run locally (no Android SDK on the Mac) |
+| all | Refs trailer audit | 77 non-merge commits on main since the spec, 0 without a `Refs:` trailer (the commit-msg hook and the `refs` check enforce it) |
+
+Open at the end: T080 (WebdriverIO 9 versus 10 and the emulator level were taken as proposed, not explicitly chosen), the optional HANDOFF-23 and HANDOFF-24
+checks, and the `workflow_run` trigger of the Android job, which only a real release can exercise.
