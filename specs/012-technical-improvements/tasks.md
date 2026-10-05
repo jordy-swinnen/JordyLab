@@ -56,7 +56,7 @@
 - [X] T020 [US1] Fix TypeScript 6 / Angular 22 fallout in source and specs under `jordylab-fe/libs/` and `jordylab-fe/apps/` until lint, tests and builds are green; no behaviour changes
 - [X] T021 [P] [US1] Verified, no file change needed: `.github/workflows/build.yml` already pins `node-version: 22` (floats to the newest 22.x, which meets Angular 22's 22.22.3 floor) and `deploy/containers/frontend/Containerfile` builds on `oven/bun:1`, which has no Node (`bunx nx` runs on Bun); the image was rebuilt locally with Angular 22 and the result is recorded in `research.md` (PR 1b record)
 - [X] T022 [US1] Amend the Angular part of principle V in `.specify/memory/constitution.md` ("Angular 21" becomes "Angular 22") and the stack lines in `AGENTS.md` and `jordylab-fe/AGENTS.md` that name versions (FR-010)
-- [ ] T023 [US1] Re-run the T011/T012/T014 verification set for this PR; also confirm the Capacitor `mobile` build output still syncs (`bunx nx run jordylab-mobile:sync` or the project's sync target) and record results
+- [X] T023 [US1] Re-run the T011/T012/T014 verification set for this PR; also confirm the Capacitor `mobile` build output still syncs (`bunx nx run jordylab-mobile:sync` or the project's sync target) and record results
 - [X] T024 [US1] Open PR 1b, wait for CI, resolve review comments, merge. If Angular 22 cannot be made green, stop, record the blocking tool in `research.md`, and leave the workspace on Nx 23 + Angular 21.2 (spec edge case)
 
 **Checkpoint**: Nx 23 (and Angular 22 if green) merged; Parts A (Oxlint) and C can start.
