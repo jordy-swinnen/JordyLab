@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { requiredEnvironment } from './environment';
 import { switchToNative, switchToWebView } from './contexts';
 
@@ -13,9 +12,6 @@ const KEYCODE_ENTER = 66;
  * come back into the app through the App Link. Ends in the WebView context on the signed-in app.
  */
 export async function signInNatively(): Promise<void> {
-  // A fresh Chrome for every login: no Keycloak session, saved password or autofill left over from an earlier test.
-  execFileSync('adb', ['shell', 'pm', 'clear', CHROME_PACKAGE]);
-
   await switchToWebView(environment.androidPackage);
   const signInButton = await $('//button[contains(., "Sign in with Keycloak")]');
   await signInButton.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
@@ -30,18 +26,26 @@ export async function signInNatively(): Promise<void> {
   // Keycloak's page inside Chrome: web content is exposed to UiAutomator as accessibility nodes. The emulator screen is small, so the
   // on-screen keyboard hides whatever is below the field being typed in: move focus with the keyboard's Next action instead of looking
   // for the password field, and submit with Enter.
+  // Either the login form shows, or Chrome still has the Keycloak session of an earlier test and goes straight back to the app.
   const username = await $('android=new UiSelector().className("android.widget.EditText").instance(0)');
-  await username.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
-  await username.setValue(environment.adminUsername);
-  await driver.execute('mobile: performEditorAction', { action: 'next' });
-  const password = await $('android=new UiSelector().className("android.widget.EditText").focused(true)');
-  await password.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
-  await password.setValue(environment.adminPassword);
-  await driver.pressKeyCode(KEYCODE_ENTER);
-
-  const returned = await driver
-    .waitUntil(async () => (await driver.getCurrentPackage()) === environment.androidPackage, { timeout: ENTER_SUBMIT_TIMEOUT_MS })
-    .catch(() => false);
+  await driver.waitUntil(async () => (await username.isExisting()) || (await driver.getCurrentPackage()) === environment.androidPackage, {
+    timeout: STEP_TIMEOUT_MS,
+    timeoutMsg: 'Neither the Keycloak login form nor the app showed up after the Custom Tab opened',
+  });
+  let returned = (await driver.getCurrentPackage()) === environment.androidPackage;
+  if (!returned) {
+    await username.setValue(environment.adminUsername);
+    await driver.execute('mobile: performEditorAction', { action: 'next' });
+    const password = await $('android=new UiSelector().className("android.widget.EditText").focused(true)');
+    await password.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });
+    await password.setValue(environment.adminPassword);
+    await driver.pressKeyCode(KEYCODE_ENTER);
+    returned = Boolean(
+      await driver
+        .waitUntil(async () => (await driver.getCurrentPackage()) === environment.androidPackage, { timeout: ENTER_SUBMIT_TIMEOUT_MS })
+        .catch(() => false),
+    );
+  }
   if (!returned) {
     // Enter did not submit the form: hide the keyboard and tap the button.
     try {
