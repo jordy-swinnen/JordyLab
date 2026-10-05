@@ -41,6 +41,11 @@ services:
       KC_HOSTNAME: localhost
       KC_HOSTNAME_PORT: ${E2E_KEYCLOAK_PORT}
       KC_HTTP_PORT: "8080"
+      # Diagnostics for failed logins in CI artifacts: Keycloak's own events (why a code exchange failed) and an access log with the
+      # caller's Origin (whether a browser request arrived and what it was answered with).
+      KC_LOG_LEVEL: "info,org.keycloak.events:debug"
+      QUARKUS_HTTP_ACCESS_LOG_ENABLED: "true"
+      QUARKUS_HTTP_ACCESS_LOG_PATTERN: '%h "%r" %s origin=%{i,Origin}'
     depends_on:
       postgres:
         condition: service_healthy
