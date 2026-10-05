@@ -88,6 +88,7 @@ function makeJwt(payload: Record<string, unknown>): string {
 }
 
 describe('AuthService', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn> | undefined;
   const navigateByUrl = vi.fn().mockResolvedValue(true);
   let spectator: SpectatorService<AuthService>;
 
@@ -102,6 +103,12 @@ describe('AuthService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     spectator = createService();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    consoleErrorSpy?.mockRestore();
+    consoleErrorSpy = undefined;
   });
 
   it('starts unauthenticated before init', () => {
@@ -163,9 +170,7 @@ describe('AuthService', () => {
 
   it('carries on signed out when Keycloak never answers, instead of leaving the app on a blank page', async () => {
     vi.useFakeTimers();
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     keycloakInit.mockReturnValueOnce(new Promise<boolean>(() => undefined));
 
     const initialization = spectator.service.init();
@@ -173,9 +178,7 @@ describe('AuthService', () => {
 
     await expect(initialization).resolves.toBe(false);
     expect(spectator.service.isAuthenticated()).toBe(false);
-    expect(consoleError).toHaveBeenCalled();
-    consoleError.mockRestore();
-    vi.useRealTimers();
+    expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
   it('only initializes Keycloak once across repeated init() calls', async () => {

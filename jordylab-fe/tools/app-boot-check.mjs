@@ -4,10 +4,15 @@
 // (main.ts -> pre-bootstrap auth -> bootstrapApplication -> router). It would have caught the rc12 blank page
 // (NG0201: AuthService -> Router, spec 011 BUG-056). No dependencies: Chrome DevTools Protocol over a WebSocket.
 //
+// Keycloak is deliberately not available here: the app is served from 127.0.0.1, which Keycloak refuses to frame, so the
+// silent check-sso never answers and the login page appears only after AuthService's 8 s start-up timeout. That timeout
+// must therefore stay well below BOOT_TIMEOUT_MS (45 s). Any uncaught exception (or NG0xxx console error) fails the check.
+//
 //   bun tools/app-boot-check.mjs [distDir]      (default dist/apps/jordylab/browser; CHROME_BIN overrides the browser)
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { createServer as createNetServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 
@@ -59,7 +64,10 @@ async function pageSocketUrl(debugPort) {
 
 const profileDir = mkdtempSync(join(tmpdir(), 'app-boot-'));
 const { server, port } = await serve(distDir);
-const debugPort = 9300 + Math.floor(Math.random() * 500);
+const debugPort = await new Promise((resolve) => {
+  const probe = createNetServer();
+  probe.listen(0, '127.0.0.1', () => { const { port: free } = probe.address(); probe.close(() => resolve(free)); });
+});
 const chrome = await launchChrome(profileDir, debugPort);
 const problems = [];
 const consoleLog = [];

@@ -1,21 +1,10 @@
-import {
-  computed,
-  inject,
-  Injectable,
-  Injector,
-  signal,
-  Signal,
-} from '@angular/core';
+import { computed, inject, Injectable, Injector, signal, Signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import Keycloak, { KeycloakInstance, KeycloakTokenParsed } from 'keycloak-js';
 import { AUTH_CONFIG } from './auth-config';
-import {
-  codeChallengeFromVerifier,
-  decodeJwtPayload,
-  randomToken,
-} from './pkce';
+import { codeChallengeFromVerifier, decodeJwtPayload, randomToken } from './pkce';
 
 interface PendingNativeLogin {
   readonly state: string;
@@ -39,12 +28,8 @@ export type AppRole = 'admin' | 'guest';
 
 const APP_ROLES: readonly AppRole[] = ['admin', 'guest'];
 
-function realmRolesFrom(
-  tokenParsed: KeycloakTokenParsed | undefined,
-): string[] {
-  const realmAccess = tokenParsed?.['realm_access'] as
-    | { roles?: unknown }
-    | undefined;
+function realmRolesFrom(tokenParsed: KeycloakTokenParsed | undefined): string[] {
+  const realmAccess = tokenParsed?.['realm_access'] as { roles?: unknown } | undefined;
   const roles = realmAccess?.roles;
   if (!Array.isArray(roles)) {
     return [];
@@ -54,10 +39,7 @@ function realmRolesFrom(
 }
 
 /** Keycloak application-initiated actions a user may start on their own account (006 US5). */
-export type AccountAction =
-  | 'UPDATE_PASSWORD'
-  | 'UPDATE_PROFILE'
-  | 'UPDATE_EMAIL';
+export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL';
 
 /**
  * Wraps the official `keycloak-js` SDK behind Angular signals. Every deployable app
@@ -84,8 +66,7 @@ export class AuthService {
   readonly token: Signal<string | null> = this.#token.asReadonly();
   readonly roles: Signal<string[]> = this.#roles.asReadonly();
   /** Why the last native token exchange (login callback, fingerprint unlock, refresh) failed — shown, never silent. */
-  readonly nativeFailure: Signal<string | null> =
-    this.#nativeFailure.asReadonly();
+  readonly nativeFailure: Signal<string | null> = this.#nativeFailure.asReadonly();
   readonly isAdmin = computed(() => this.#roles().includes('admin'));
   readonly isGuest = computed(() => this.#roles().includes('guest'));
   readonly hasAppRole = computed(() =>
@@ -176,10 +157,7 @@ export class AuthService {
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
     if (error || !code || state !== pending.state) {
-      console.error('Native login callback rejected', {
-        error,
-        stateMatched: state === pending.state,
-      });
+      console.error('Native login callback rejected', { error, stateMatched: state === pending.state });
 
       return;
     }
@@ -216,12 +194,7 @@ export class AuthService {
       refresh_token?: string;
       id_token?: string;
     };
-    this.#applyNativeTokens(
-      tokens.access_token,
-      tokens.refresh_token,
-      tokens.id_token,
-      pending.nonce,
-    );
+    this.#applyNativeTokens(tokens.access_token, tokens.refresh_token, tokens.id_token, pending.nonce);
   }
 
   /**
@@ -264,9 +237,7 @@ export class AuthService {
       });
     } catch (fetchError) {
       console.error('Biometric unlock token refresh failed', fetchError);
-      this.#nativeFailure.set(
-        'Could not reach the server to restore your session. Check your connection.',
-      );
+      this.#nativeFailure.set('Could not reach the server to restore your session. Check your connection.');
 
       return false;
     }
@@ -285,11 +256,7 @@ export class AuthService {
       id_token?: string;
     };
     this.#nativeFailure.set(null);
-    this.#applyNativeTokens(
-      tokens.access_token,
-      tokens.refresh_token,
-      tokens.id_token,
-    );
+    this.#applyNativeTokens(tokens.access_token, tokens.refresh_token, tokens.id_token);
 
     return true;
   }
@@ -305,9 +272,7 @@ export class AuthService {
       if (Capacitor.isNativePlatform()) {
         // Don't throw the user into a browser credentials page behind their back: drop the dead session and show
         // the login page, which says what happened and offers fingerprint unlock again.
-        this.#nativeFailure.set(
-          'Your session could not be refreshed. Sign in again.',
-        );
+        this.#nativeFailure.set('Your session could not be refreshed. Sign in again.');
         this.#keycloak.clearToken();
         this.#authenticated.set(false);
         this.#applyToken();
@@ -351,10 +316,7 @@ export class AuthService {
             pkceMethod: 'S256',
             checkLoginIframe: false,
           });
-      const authenticated = await this.#settleWithin(
-        initialization,
-        KEYCLOAK_INIT_TIMEOUT_MS,
-      );
+      const authenticated = await this.#settleWithin(initialization, KEYCLOAK_INIT_TIMEOUT_MS);
       this.#authenticated.set(authenticated);
       if (authenticated) {
         this.#applyToken();
@@ -369,16 +331,11 @@ export class AuthService {
   }
 
   /** The result of `work`, or `false` (signed out) when it has not settled after `milliseconds`. */
-  async #settleWithin(
-    work: Promise<boolean>,
-    milliseconds: number,
-  ): Promise<boolean> {
+  async #settleWithin(work: Promise<boolean>, milliseconds: number): Promise<boolean> {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<boolean>((resolve) => {
       timer = setTimeout(() => {
-        console.error(
-          `Keycloak did not answer within ${milliseconds / 1000} s; continuing signed out`,
-        );
+        console.error(`Keycloak did not answer within ${milliseconds / 1000} s; continuing signed out`);
         resolve(false);
       }, milliseconds);
     });
@@ -428,11 +385,7 @@ export class AuthService {
     // Fire-and-forget: there is no App Link callback for logout (only login needs one, D2), so
     // this clears local state immediately rather than waiting on a round trip through the system
     // browser the user may not even see complete.
-    void Browser.open({
-      url: this.#keycloak.createLogoutUrl({
-        redirectUri: this.#config.mobileCallbackUri,
-      }),
-    });
+    void Browser.open({ url: this.#keycloak.createLogoutUrl({ redirectUri: this.#config.mobileCallbackUri }) });
     this.#keycloak.clearToken();
     this.#authenticated.set(false);
     this.#applyToken();
@@ -447,11 +400,7 @@ export class AuthService {
     if (!this.#keycloak) {
       return;
     }
-    if (
-      expectedNonce &&
-      idToken &&
-      decodeJwtPayload(idToken)['nonce'] !== expectedNonce
-    ) {
+    if (expectedNonce && idToken && decodeJwtPayload(idToken)['nonce'] !== expectedNonce) {
       console.error('Native login rejected: ID token nonce mismatch');
 
       return;
@@ -459,9 +408,7 @@ export class AuthService {
 
     const tokenParsed = decodeJwtPayload(accessToken) as KeycloakTokenParsed;
     // keycloak-js treats a token as expired whenever timeSkew is unset, which forced a refresh on every request.
-    this.#keycloak.timeSkew =
-      Math.floor(Date.now() / 1000) -
-      (tokenParsed.iat ?? Math.floor(Date.now() / 1000));
+    this.#keycloak.timeSkew = Math.floor(Date.now() / 1000) - (tokenParsed.iat ?? Math.floor(Date.now() / 1000));
     this.#keycloak.token = accessToken;
     this.#keycloak.tokenParsed = tokenParsed;
     this.#keycloak.authenticated = true;
@@ -470,15 +417,11 @@ export class AuthService {
     this.#keycloak.resourceAccess = tokenParsed.resource_access;
     if (refreshToken) {
       this.#keycloak.refreshToken = refreshToken;
-      this.#keycloak.refreshTokenParsed = decodeJwtPayload(
-        refreshToken,
-      ) as KeycloakTokenParsed;
+      this.#keycloak.refreshTokenParsed = decodeJwtPayload(refreshToken) as KeycloakTokenParsed;
     }
     if (idToken) {
       this.#keycloak.idToken = idToken;
-      this.#keycloak.idTokenParsed = decodeJwtPayload(
-        idToken,
-      ) as KeycloakTokenParsed;
+      this.#keycloak.idTokenParsed = decodeJwtPayload(idToken) as KeycloakTokenParsed;
     }
 
     this.#authenticated.set(true);
