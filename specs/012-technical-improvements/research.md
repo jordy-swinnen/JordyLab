@@ -83,7 +83,7 @@ tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs wit
 - CI and image (T021): `build.yml` already floats `node-version: 22` (no change); `oven/bun:1` has no Node, so the image build runs `bunx nx build` on Bun's runtime. Rebuilt locally with Angular 22: success (image hash printed, test image removed).
 - Node: local Node 24.13.1 is below Angular 22's `^24.15.0` floor, but Nx runs the builders directly and every build, test and serve worked; CI uses Node 22 (newest 22.x).
   Raising local Node is still recommended (HANDOFF in T016).
-- Not run: the Capacitor `sync` of the `mobile` build (needs the Android project tooling); the `mobile` web build itself passes.
+- Capacitor: `bunx nx run jordylab-mobile:sync` (mobile build, then `cap sync android`) succeeds on Angular 22 (run after the merge, T023). It generates two untracked files, `android/app/capacitor.build.gradle` and `android/capacitor.settings.gradle`, which are not committed (deleted after the run).
 
 #### PR 1c record: backend platform upgrade (2026-10-05, branch `chore/backend-platform-upgrade`)
 
