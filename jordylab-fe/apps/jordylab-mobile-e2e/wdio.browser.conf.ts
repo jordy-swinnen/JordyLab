@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assertPinnedWebView } from './src/support/preflight';
+import { ensureReversedPorts } from './src/support/reverse-ports';
 import { requiredEnvironment } from './src/support/environment';
 
 process.env['APPIUM_HOME'] = join(process.cwd(), '.appium');
@@ -39,6 +40,10 @@ export const config: WebdriverIO.Config = {
   logLevel: 'info',
   onPrepare: () => {
     assertPinnedWebView();
+  },
+  // Before every session's tests: the adb reverse tunnels can disappear when the adb server restarts (see reverse-ports.ts).
+  before: () => {
+    ensureReversedPorts();
   },
   // A failed test leaves a screenshot and the page source behind for the CI artifact.
   afterTest: async (test, _context, { passed }) => {
