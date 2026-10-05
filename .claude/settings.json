@@ -47,6 +47,16 @@
             "command": ".claude/hooks/post-test-convention-check.sh"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-lint-check.sh",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }

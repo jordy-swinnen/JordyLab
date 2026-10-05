@@ -12,6 +12,14 @@ bunx nx run-many -t lint           # Lint everything
 
 Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 
+## Lint feedback after every edit
+
+After editing a TypeScript file under `jordylab-fe/`, run `jordylab-fe/tools/lint-changed.sh <file>` and fix what it prints
+(empty output means clean). It runs ESLint on that one file in about a second: Angular rules, template rules and
+module boundaries stay with ESLint. In Claude Code a post-edit hook runs the same command and hands the result back to the
+agent automatically, so this is only an explicit step in OpenCode (an OpenCode plugin calling the same script is the
+fallback if this instruction proves unreliable). `--strict` exits 1 when there are findings, for scripts.
+
 # Angular Code Style
 
 - Use `inject(Service)` over constructor injection

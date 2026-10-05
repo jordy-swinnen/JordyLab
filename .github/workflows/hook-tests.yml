@@ -21,5 +21,8 @@ jobs:
       - name: Run pre-bash-guard.sh fixtures
         run: bash .claude/hooks/tests/guard-cases.sh
 
+      - name: Run lint hook fixtures
+        run: bash .claude/hooks/tests/lint-cases.sh
+
       - name: Run commit-msg fixtures
         run: bash .githooks/tests/commit-msg-cases.sh

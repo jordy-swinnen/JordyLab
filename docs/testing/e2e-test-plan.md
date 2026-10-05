@@ -983,6 +983,11 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 - Not done: the interactive views. In that directory run `claude`, then `/context`; and start `opencode` and ask what instructions it loaded.
 - Expect: the "AI integration rules (shared/ai)" text appears in both. Tell me "done" or what you saw.
 
+#### HANDOFF-24: Check that OpenCode runs the lint command after a TypeScript edit (spec 012 T043)
+- Machine: your Mac · Target env: local tools · Why you: needs an interactive OpenCode session (a headless run cannot answer tool-permission prompts).
+- In `jordylab-fe/` start `opencode`, ask it to create a `.ts` file under `libs/` containing a `debugger` statement, and watch whether it runs `tools/lint-changed.sh <file>` and fixes the finding without being told.
+- Expect: it runs the script (the rule is in `jordylab-fe/AGENTS.md`, "Lint feedback after every edit") and removes the `debugger`. If it does not, the follow-up is an OpenCode plugin calling the same script. Tell me what you saw.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
