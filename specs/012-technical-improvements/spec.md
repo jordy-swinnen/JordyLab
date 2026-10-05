@@ -536,7 +536,7 @@ gate) passes as before and the application starts against the local stack.
 - **FR-043**: A final check MUST fail the run if any container, volume or network from that run is left over.
 - **FR-044**: Waiting for services MUST use readiness checks with a time limit, never fixed sleeps.
 - **FR-045**: A web E2E CI job MUST run on pull requests and gate merges; a separate Android E2E CI job MUST run on
-  releases and on manual start (not on every merge; as built it also starts when Android-specific files change in a pull request, because a new workflow file cannot be started by hand until it is on the default branch); both MUST end with the cleanup step and the leftover check.
+  releases and on manual start (not on every merge; the path-filtered pull_request trigger added as built is explained in `research.md` C4b); both MUST end with the cleanup step and the leftover check.
 - **FR-046**: A short E2E section MUST be added where both agent tools read it, including how the suites relate to
   agent-browser checks.
 - **FR-047**: New docs MUST NOT contain the phrase the `licence-check` job rejects.
