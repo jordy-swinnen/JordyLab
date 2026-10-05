@@ -48,7 +48,7 @@ Stop-and-report conditions are in the spec's Edge Cases.
 
 ### A7. Backend platform check (User Story 16)
 
-Current: Spring Boot `4.0.3`, Spring AI `2.0.1`, Spring Modulith `2.0.3` (pinned), Gradle wrapper `9.3.1`, Java 25
+Pre-upgrade baseline (before PR 1c, see the PR 1c record below): Spring Boot `4.0.3`, Spring AI `2.0.1`, Spring Modulith `2.0.3` (pinned), Gradle wrapper `9.3.1`, Java 25
 (installed 25.0.2). Newest on Maven Central / Gradle today: Boot **4.1.1** (4.0 line: 4.0.8), Spring AI **2.0.1**
 (already latest), Modulith **2.1.1** (2.0 line: 2.0.8), Gradle **9.8.0**.
 
@@ -58,6 +58,28 @@ because it removes the Boot 4.0 / Spring AI 4.1-dependency mismatch the report w
 if the backend check fails. Validation: `./gradlew check` (tests, `ModularityTests`, JaCoCo 80% gate), a dependency
 tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs with Boot 4.1 and what Boot 4.1 changed
 (release notes) are checked at the start of the task. The result also answers the starter-dependency question in B2.
+
+#### PR 1c record: backend platform upgrade (2026-10-05, branch `chore/backend-platform-upgrade`)
+
+- Targets (confirmed 2026-10-05): Spring Boot 4.0.3 → **4.1.1**, Spring Modulith 2.0.3 → **2.1.1**, Gradle 9.3.1 → **9.8.0**; Spring AI
+  stays **2.0.1** (already the newest, designed for Boot 4.0 and 4.1 per its announcement). Boot 4.1 notes read: deprecated 4.0
+  APIs removed; Hibernate 7.4, Flyway 12.4, Spring Security 7.1, Spring Framework 7.0.8; Spring Data JPA bootstrap-executor changes.
+- Compiles with one fix: Boot 4.1 moved `OAuth2ResourceServerAutoConfiguration` from `...resource.autoconfigure.servlet` to
+  `...resource.autoconfigure`; two test imports updated (`TestSecurityConfig`, `SwitchGameControllerSecurityTest`).
+- Local full `./gradlew check`: 662 tests; **8 fail the same way on unchanged main**: `JordylabApplicationTests`,
+  `GuestChatLimitIntegrationTest`, `RoleMatrixTest` x6, all `ContainerLaunchException` / `localhost:2375 failed to respond` from the
+  Podman socket under full-suite container load. Run alone, those classes pass on both main and Boot 4.1.1. So the failures are a local
+  Podman limitation, not an upgrade effect; `test-backend` in CI (Docker) is the arbiter. Testcontainers moves 2.0.3 → 2.0.5 with Boot 4.1.1;
+  a local experiment pinning it back did not change the full-suite result, so no pin was added.
+- CI: `test-backend` on this branch is green (full suite on Docker, `ModularityTests` and the JaCoCo 80% gate included), which confirms the
+  local failures were the Podman environment.
+- Boot version check on the resolved runtime classpath: before 36 `spring-boot*` references at 4.0.3 plus 4 requested at 4.1.1 and resolved
+  down to 4.0.3 (0 resolved to 4.1); after 106 of 106 at 4.1.1.
+- Boot check (T101): the Boot 4.1.1 jar (spring-boot-4.1.1 on its classpath) was started by the throwaway E2E runner against its own
+  Postgres and Keycloak and answered `/actuator/health` with 200 within the readiness window; the stack was removed and verified clean.
+- Root `AGENTS.md` and `.specify/memory/constitution.md` name no Spring Boot, Modulith or Gradle versions (checked), so they stay unchanged.
+- Dependency tree: see the reference report section 14 (before: Spring AI 2.0.1 starters *request* Boot starters 4.1.1 while the Boot 4.0.3
+  BOM resolves them to 4.0.3, no 4.1 jar on the classpath; after: one Boot minor).
 
 ### A2. Oxlint
 
@@ -180,7 +202,7 @@ The `shared/ai` package currently has no `AGENTS.md`. `.claude/rules/` was rejec
 
 - GA date 12 June 2026 (not 28 May); baseline Spring Boot 4.0 **and** 4.1. Primary source:
   https://spring.io/blog/2026/06/12/spring-ai-2-0-0-GA-available-now/ (cited in the draft; re-check when editing).
-- **Boot 4.0.3 + Spring AI 2.0.1 starter-dependency question**: not yet answered. Method (task): resolve the
+- **Boot 4.0.3 + Spring AI 2.0.1 starter-dependency question** (answered in section 14 of `docs/research/spring-ai-architecture.md`, Part B PR). Method: resolve the
   dependency tree (`./gradlew dependencies --configuration runtimeClasspath`), check whether any `spring-boot-*` or
   `spring-boot-starter-*` artifact resolves to a 4.1.x version while the Boot plugin is 4.0.3, compare against the
   Spring Boot BOM, and record result and command in the reference doc. Issue spring-projects/spring-ai#6465 (title
@@ -199,6 +221,27 @@ modules are marked defer with the triggering module and get no draft.
 Claude Code: `/context` in a session started in the package (needs the user's interactive session; I cannot run
 `/context` myself). OpenCode: a fresh session in the package (needs OpenCode installed and a manual start). Both are
 **handed to the developer** if they cannot be run here; the result is reported plainly.
+
+### B5. Part B record (2026-10-05, branch `docs/ai-integration-conventions`)
+
+- Corrections applied to the moved report (GA 12 June 2026 from the spring.io announcement; Spring Boot 4.0 and 4.1) and a new
+  section 14 answers the starter-dependency question with the measured tree (see the report).
+- Rules file: `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md` (+ `CLAUDE.md` containing `@AGENTS.md`). Items the report
+  marks unverified or community-only (JDBC memory dropping tool messages, retry stacking, `@PreAuthorize` on `@Tool`, outbox,
+  prompt versioning) were left out of it.
+- Gap analysis: 18 topics; 4 worth building (token usage and budget, prompts as resources, model calls outside transactions, golden
+  evals), 7 deferred with a trigger, 5 not applicable, 2 covered by builds. The transaction finding is bigger than the report's
+  example: enrichment AI calls also run inside `ScanService.submitScan` and `SteamLibrarySyncService.syncOwned`.
+- Checklist: one identical block (`BEGIN/END AI CHECKLIST`) in `.claude/skills/ai-endpoint/SKILL.md` and both `code-reviewer.md`
+  copies (diff empty). It carries the "no model call inside a transaction" item although the report rates the outbox/idempotency
+  pattern medium confidence: the item is the owner's own convention (spec 012 US9), the rules file stays strictly high-confidence.
+- Loading verified in fresh headless sessions started in the package directory: **Claude Code** (`claude -p`) and **OpenCode**
+  (`opencode run`, model `deepseek-v4.1-flash`) both answered yes and quoted the first rule verbatim. **Not run:** the interactive
+  `/context` view in Claude Code and an interactive OpenCode session (a headless session proves the file is loaded, not how it
+  is displayed); the OpenCode copy of `code-reviewer` was not exercised (same checklist text, diffed identical).
+- Reviewer check: the Claude Code `code-reviewer` run on a scratch class (direct `ChatClient`, `@Transactional` model call, raw
+  string answer, no test) reported 1 blocking (direct `ChatClient`) and 9 important findings including the transaction, the
+  missing typed output and the missing test. The scratch class was deleted.
 
 ## Part C: E2E testing
 
