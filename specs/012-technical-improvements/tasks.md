@@ -78,7 +78,7 @@
 - [X] T029 [US4] Write `jordylab-fe/tools/check-lint-ownership.sh` per `contracts/lint-ownership.md` (resolved Oxlint rules vs ESLint `--print-config` for one `.ts` file per library type; fail on any rule enabled in both; check ESLint still owns `@angular-eslint/*`, template rules and `@nx/enforce-module-boundaries`); run it and fix `.oxlintrc.json` until it exits 0 (SC-004)
 - [X] T030 [US2] Write `jordylab-fe/tools/lint-changed.sh` per `contracts/lint-changed-command.md` (path filtering incl. ESLint ignores, `bunx oxlint` or ESLint per T025, `path:line:col  rule  message` output, internal 2 s time guard (budget in the contract) that works on macOS without `timeout`, silent on missing linter/parse failure, `--strict` for manual use)
 - [X] T031 [US3] Add an "Oxlint" step before the "Lint" step in the `test-frontend` job of `.github/workflows/build.yml` (also running `tools/check-lint-ownership.sh`); both steps fail the job (FR-021)
-- [ ] T032 [US3] Prove CI ordering with a scratch branch: one error both linters see fails on the Oxlint step; an Angular template violation and a boundary violation fail only on ESLint (record run links in `research.md`; do not merge the scratch branch)
+- [X] T032 [US3] Prove CI ordering with a scratch branch: one error both linters see fails on the Oxlint step; an Angular template violation and a boundary violation fail only on ESLint (record run links in `research.md`; do not merge the scratch branch)
 - [X] T033 [P] [US2] Document the commands and the division of labour (one short paragraph, rule-ownership pointer) in `jordylab-fe/AGENTS.md`, plus a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-023)
 - [ ] T034 [US2] Open PR 2, wait for CI, resolve review comments, merge
 

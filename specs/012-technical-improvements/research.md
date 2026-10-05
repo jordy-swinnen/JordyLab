@@ -233,6 +233,8 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
   per project directory (the root config alone has no Angular rules, which is how Nx runs it) and fails on overlap or when ESLint loses its Angular or boundary rules.
 - Oxlint finds nothing in the current code (0 findings on 227 files), so no code change was needed.
 - CI: `Oxlint` (`nx run-many -t oxlint`) and `Lint rule ownership` steps run before `Lint` in `test-frontend`.
+- CI ordering proof (T032, two draft scratch PRs, closed): a file with `new Array(3)` (seen only by Oxlint) failed the `Oxlint` step and the later steps (`Lint rule ownership`, `Lint`, tests) were skipped
+  (run 37295679671); a component with a boundary violation and an `<img>` without alt text (seen only by ESLint) passed `Oxlint` and `Lint rule ownership` and failed at `Lint` (run 37295685103).
 - Removal rehearsal (T045, throwaway branch): one change removing the two dependencies, the `nx.json` plugin, `.oxlintrc.json`, the ownership script, the two CI steps and the Oxlint block of
   `lint-changed.sh` touched 7 files; ESLint over 14 projects and a library's unit tests stayed green; the hook fixtures' Oxlint cases must go with it (documented in `jordylab-fe/AGENTS.md`).
 - Found while rehearsing: a killed slow linter printed bash's "Terminated" notice; fixed by reaping the job.
