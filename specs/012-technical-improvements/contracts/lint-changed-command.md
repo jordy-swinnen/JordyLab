@@ -5,7 +5,7 @@ It knows nothing about Claude Code or OpenCode.
 
 | Aspect | Contract |
 |--------|----------|
-| Arguments | one or more file paths (absolute or relative to the repo root) |
+| Arguments | one or more file paths (absolute, or relative to the current directory: from `jordylab-fe/` use `src/…`, from the repo root use `jordylab-fe/…`) |
 | Filtering | silently drops files that are not `.ts` under `jordylab-fe/` or that match the ESLint ignores |
 | Runner | ESLint (`node_modules/.bin/eslint --format json --output-file …`; stdout is not used because the Nx plugin prints a warning there); the Oxlint branch is added with the Oxlint install, same output format |
 | Output | `path:line:col  error\|warn  rule  message`, one per line, nothing else; empty output means clean or skipped |

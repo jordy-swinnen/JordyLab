@@ -134,6 +134,13 @@ edit_lock_release
 run_hook "$FAKE/jordylab-fe/src/a.ts" STUB_MODE=error
 echo "$OUTPUT" | jq -e '.hookSpecificOutput' >/dev/null 2>&1 && report "lock released: lint runs again" ok "" || report "lock released: lint runs again" fail "output='$OUTPUT'"
 
+# A lock left behind by a crashed formatter (older than 30 s) is cleared instead of blocking every later edit
+LOCK_PATH="$(edit_lock_path "$FAKE/jordylab-fe/src/a.ts")"
+mkdir -p "$LOCK_PATH" && touch -t 202001010000 "$LOCK_PATH"
+run_hook "$FAKE/jordylab-fe/src/a.ts" STUB_MODE=error
+echo "$OUTPUT" | jq -e '.hookSpecificOutput' >/dev/null 2>&1 && report "stale lock (older than 30 s) is cleared: lint runs" ok "" || report "stale lock (older than 30 s) is cleared: lint runs" fail "output='$OUTPUT'"
+rmdir "$LOCK_PATH" 2>/dev/null
+
 echo "lint-changed.sh:"
 "$FAKE/jordylab-fe/tools/lint-changed.sh" --strict "$FAKE/jordylab-fe/src/a.ts" >/dev/null 2>&1
 [[ $? == 0 ]] && report "no findings: exit 0 even with --strict" ok "" || report "no findings: exit 0 even with --strict" fail "non-zero"

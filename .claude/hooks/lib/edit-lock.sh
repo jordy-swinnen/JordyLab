@@ -13,13 +13,21 @@ edit_lock_path() {
   echo "${TMPDIR:-/tmp}/jordylab-edit-hooks/$key.lock"
 }
 
+# Seconds since the lock directory was created. GNU stat first (BSD stat rejects -c); `find -mmin` is avoided because
+# fractional minutes are not portable.
+edit_lock_age_seconds() {
+  local modified
+  modified="$(stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null)" || return 1
+  echo $(( $(date +%s) - modified ))
+}
+
 edit_lock_acquire() {
   local file="$1" max_wait_seconds="${2:-1}" lock_path waited_tenths=0 limit_tenths
   lock_path="$(edit_lock_path "$file")"
   limit_tenths=$(( max_wait_seconds * 10 ))
   mkdir -p "$(dirname "$lock_path")" 2>/dev/null
   while ! mkdir "$lock_path" 2>/dev/null; do
-    if [[ -n "$(find "$lock_path" -maxdepth 0 -mmin +0.5 2>/dev/null)" ]]; then
+    if [[ "$(edit_lock_age_seconds "$lock_path" || echo 0)" -gt 30 ]]; then
       rmdir "$lock_path" 2>/dev/null
       continue
     fi
