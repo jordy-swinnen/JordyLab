@@ -1,7 +1,7 @@
 // Serves the freshly built Angular app for one E2E run and proxies /api to the throwaway backend, like the production
 // ingress does. Bun only, no dependencies. Config comes from the runner's environment.
 import { existsSync } from 'node:fs';
-import { join, normalize } from 'node:path';
+import { isAbsolute, join, normalize, relative } from 'node:path';
 
 const distDirectory = process.env['E2E_WEB_DIST'] ?? '';
 const webPort = Number(process.env['E2E_WEB_PORT']);
@@ -21,7 +21,8 @@ Bun.serve({
       return fetch(new Request(apiOrigin + url.pathname + url.search, request));
     }
     const requested = normalize(join(distDirectory, url.pathname));
-    const insideDist = requested.startsWith(normalize(distDirectory));
+    const relativeToDist = relative(distDirectory, requested);
+    const insideDist = !relativeToDist.startsWith('..') && !isAbsolute(relativeToDist);
     const file = insideDist && existsSync(requested) && !requested.endsWith('/') ? Bun.file(requested) : null;
     if (file && (await file.exists()) && url.pathname !== '/') {
       return new Response(file);

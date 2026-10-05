@@ -299,7 +299,10 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
 - Proof (`e2e/prove-cleanup.sh`, podman, dev stack running with 16 tables): passing run, failing run, SIGTERM (CI cancel) and SIGKILL followed by the sweep all end
   with no container, volume or network carrying the run label; dev database table counts identical before and after (SC-011, SC-013). A full lifecycle takes about 45 s.
   The Boot 4.1.1 jar also starts and reports healthy in this stack (T101).
-- Known nit: in the proof script the simulated Ctrl-C (SIGINT) run cleans up correctly but exits 0 instead of 130; cleanup, the guarantee, is unaffected.
+- SIGINT: the first proof runs exited 0 instead of 130 because the proof script itself had been started in the background by a tool, so SIGINT was ignored on
+  entry and bash cannot trap an ignored signal (an isolated trap test gave 130). `prove-cleanup.sh` now starts the runner with SIGINT at its default action;
+  the SIGINT scenario then exits 130 and leaves nothing behind (rerun with `E2E_PROOF_ONLY=sigint`), and SIGTERM exits 143. In a CI cancel the SIGINT may be
+  ignored the same way, which is why the always-run cleanup step and the sweep exist.
 - Not yet: the `web` mode needs the `e2e` Angular configuration and the Playwright project (T068+); `android` mode needs T081+.
 
 ### C4. Android specifics

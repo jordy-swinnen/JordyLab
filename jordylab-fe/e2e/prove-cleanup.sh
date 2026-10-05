@@ -14,6 +14,20 @@ if [[ "$RUNTIME" == "podman" && -z "${DOCKER_HOST:-}" ]]; then
 fi
 DEV_DATABASE_CONTAINER="${E2E_DEV_DATABASE_CONTAINER:-jordylab-be-pgvector-1}"
 FAILURES=0
+# E2E_PROOF_ONLY="sigint sigterm" runs just those scenarios (pass fail sigint sigterm sigkill); default is all of them.
+wanted() { [[ -z "${E2E_PROOF_ONLY:-}" || " $E2E_PROOF_ONLY " == *" $1 "* ]]; }
+
+# Starts the runner in the background with SIGINT at its default action. A shell started in the background by a script,
+# a CI step or another tool inherits SIGINT as ignored, and bash cannot trap a signal that was ignored on entry, which would
+# make a Ctrl-C test meaningless; a terminal never ignores it, so this matches real use.
+start_runner_with_default_sigint() {
+  local mode="$1" log="$2"
+  E2E_SKIP_BACKEND_BUILD=1 python3 -c '
+import os, signal, sys
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+os.execvp("bash", ["bash", sys.argv[1], sys.argv[2]])
+' "$SCRIPT_DIRECTORY/run.sh" "$mode" >"$log" 2>&1 &
+}
 
 # One "schema.table count" line per application table of the dev database, or nothing when the dev stack is not running.
 # Read-only; runs inside the dev container so no credential is handled here.
@@ -63,17 +77,15 @@ wait_for_log_line() {
 BEFORE="$(dev_row_counts)"
 [[ -n "$BEFORE" ]] && echo "dev stack found: recorded $(echo "$BEFORE" | wc -l | tr -d ' ') table counts" || echo "no dev stack running: dev-database check skipped"
 
-run_scenario pass selftest-pass 0
-run_scenario fail selftest-fail 1
+wanted pass && run_scenario pass selftest-pass 0
+wanted fail && run_scenario fail selftest-fail 1
 
 # 3. interrupt: a real SIGINT (Ctrl-C) and a SIGTERM (CI cancel) to the runner while the test command is running.
 # Job control gives each background run its own process group and keeps SIGINT enabled, as in a terminal.
 interrupt_scenario() {
   local scenario="$1" signal="$2" expected_exit="$3" runner_pid exit_code
-  set -m
-  E2E_SKIP_BACKEND_BUILD=1 bash "$SCRIPT_DIRECTORY/run.sh" selftest-wait >"/tmp/e2e-proof-$scenario.log" 2>&1 &
+  start_runner_with_default_sigint selftest-wait "/tmp/e2e-proof-$scenario.log"
   runner_pid=$!
-  set +m
   if wait_for_log_line "/tmp/e2e-proof-$scenario.log" "waiting for an interrupt"; then
     kill "-$signal" "$runner_pid"
     wait "$runner_pid"
@@ -86,8 +98,8 @@ interrupt_scenario() {
   fi
   check_no_leftovers "$scenario"
 }
-interrupt_scenario sigint INT 130
-interrupt_scenario sigterm TERM 143
+wanted sigint && interrupt_scenario sigint INT 130
+wanted sigterm && interrupt_scenario sigterm TERM 143
 
 # 4. hard kill: the trap cannot run, the next run's sweep (or the CI always() step) must clean up
 E2E_SKIP_BACKEND_BUILD=1 bash "$SCRIPT_DIRECTORY/run.sh" selftest-wait >/tmp/e2e-proof-sigkill.log 2>&1 &
