@@ -23,5 +23,15 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', testIgnore: '**/csp.spec.ts', use: { ...devices['Desktop Chrome'] } },
+    {
+      // csp.spec.ts serves each document through route.fulfill() to add the policy header. Chrome then has no address for the document, treats it
+      // as public and its Local Network Access check refuses the page's requests to the throwaway Keycloak on localhost. That check is a
+      // browser feature, not part of the policy under test, so only this project switches it off.
+      name: 'chromium-csp',
+      testMatch: '**/csp.spec.ts',
+      use: { ...devices['Desktop Chrome'], launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] } },
+    },
+  ],
 });

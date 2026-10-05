@@ -1076,13 +1076,13 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Status: FIXING (PR #132); no prod impact, the policy is Report-Only
 - Severity: S3 (it would have been S1/S2 after enforcing: every page load waits 8 s, then "continues signed out")
 - Area/spec: frontend / BUG-021 follow-up (CSP, MRB-11 step 3)
-- Env found: the new CSP journey (`csp.spec.ts`: every signed-in page with the production policy as an enforcing header), local throwaway stack, 2026-10-06
+- Env found: reviewing the page against the new CSP journey (`csp.spec.ts`: every signed-in page with the production policy as an enforcing header), local throwaway stack, 2026-10-06
 - Coverage rows: —
 - Steps to reproduce:
-  1. Serve the app with `script-src 'self'` (no `unsafe-inline`); open any signed-in page.
-- Expected (cite spec/story): the page renders signed in.
-- Actual (logs/screenshot, secrets redacted): `Keycloak did not answer within 8 s; continuing signed out` on every page; the app never reached its heading.
+  1. Serve the app with the production policy as an enforcing header (`script-src 'self' 'sha256-…'`, no `unsafe-inline`); open `/silent-check-sso.html`.
+- Expected (cite spec/story): the page's script runs, so Keycloak's silent sign-in (hidden iframe on every app start) can answer the app.
+- Actual (logs/screenshot, secrets redacted): the browser reports `script-src-elem blocked inline (silent-check-sso.html:4)`. In the real app this means the silent check never answers, the app waits 8 s and continues signed out. (The e2e stack's own session never loads this page, so the journey opens it directly; a first run that looked like this symptom was a Chrome Local Network Access block of the test harness, not the policy.)
 - Root cause: `apps/jordylab/public/silent-check-sso.html` contains an inline `<script>` (`parent.postMessage(...)`) that the policy refuses to run, so Keycloak's silent check-sso iframe never answers the app.
 - Fix (PR / commit / tag): the script moved to `silent-check-sso.js` next to the page (same origin, allowed by `script-src 'self'`; no hash to maintain).
-- Regression test added: `csp.spec.ts` (all signed-in pages, game detail, login) records violations from every frame, including this iframe.
+- Regression test added: `csp.spec.ts` › "the silent sign-in page runs its script under the policy" (fails with the old inline page, passes with the external script; the other journeys walk every signed-in page, a game detail and the login page).
 - Verified on prod: pending (after the release; then CSP step 5 can be considered)
