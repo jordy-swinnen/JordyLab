@@ -59,6 +59,21 @@ if the backend check fails. Validation: `./gradlew check` (tests, `ModularityTes
 tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs with Boot 4.1 and what Boot 4.1 changed
 (release notes) are checked at the start of the task. The result also answers the starter-dependency question in B2.
 
+#### PR 1c record: backend platform upgrade (2026-10-05, branch `chore/backend-platform-upgrade`)
+
+- Targets (confirmed 2026-10-05): Spring Boot 4.0.3 → **4.1.1**, Spring Modulith 2.0.3 → **2.1.1**, Gradle 9.3.1 → **9.8.0**; Spring AI
+  stays **2.0.1** (already the newest, designed for Boot 4.0 and 4.1 per its announcement). Boot 4.1 notes read: deprecated 4.0
+  APIs removed; Hibernate 7.4, Flyway 12.4, Spring Security 7.1, Spring Framework 7.0.8; Spring Data JPA bootstrap-executor changes.
+- Compiles with one fix: Boot 4.1 moved `OAuth2ResourceServerAutoConfiguration` from `...resource.autoconfigure.servlet` to
+  `...resource.autoconfigure`; two test imports updated (`TestSecurityConfig`, `SwitchGameControllerSecurityTest`).
+- Local full `./gradlew check`: 662 tests; **8 fail the same way on unchanged main**: `JordylabApplicationTests`,
+  `GuestChatLimitIntegrationTest`, `RoleMatrixTest` x6, all `ContainerLaunchException` / `localhost:2375 failed to respond` from the
+  Podman socket under full-suite container load. Run alone, those classes pass on both main and Boot 4.1.1. So the failures are a local
+  Podman limitation, not an upgrade effect; `test-backend` in CI (Docker) is the arbiter. Testcontainers moves 2.0.3 → 2.0.5 with Boot 4.1.1;
+  a local experiment pinning it back did not change the full-suite result, so no pin was added.
+- Dependency tree: see the reference report section 14 (before: Spring AI 2.0.1 starters *request* Boot starters 4.1.1 while the Boot 4.0.3
+  BOM resolves them to 4.0.3, no 4.1 jar on the classpath; after: one Boot minor).
+
 ### A2. Oxlint
 
 - Latest `oxlint` is **1.86.0**; `@nx/oxlint` 23.2.1 peers `oxlint ^1.43.0` (docs say 1.70.0 or later). Pin an exact
