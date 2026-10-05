@@ -92,7 +92,7 @@
 - [X] T040 [US2] Add a step running `bash .claude/hooks/tests/lint-cases.sh` to `.github/workflows/hook-tests.yml` (it already triggers on `.claude/hooks/**`)
 - [X] T041 [P] [US2] Add the OpenCode instruction to `jordylab-fe/AGENTS.md` ("after editing a TypeScript file under `jordylab-fe/`, run `tools/lint-changed.sh <file>` and fix what it reports"), via `/dual-agent-config` (FR-019)
 - [X] T042 [US2] Verify live in Claude Code: edit a frontend `.ts` file with a deliberate lint error and confirm the diagnostic reaches the agent in the same turn within about a second; also edit a clean file and a `.md` file and confirm silence; record in `research.md`
-- [ ] T043 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to run the OpenCode check (fresh OpenCode session in `jordylab-fe/`, edit a `.ts` file with a deliberate error, confirm it runs `tools/lint-changed.sh` and fixes it); if unreliable, a plugin calling the same script is the follow-up (FR-019)
+- [X] T043 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to run the OpenCode check (fresh OpenCode session in `jordylab-fe/`, edit a `.ts` file with a deliberate error, confirm it runs `tools/lint-changed.sh` and fixes it); if unreliable, a plugin calling the same script is the follow-up (FR-019)
 - [ ] T044 [US2] Open PR 3, wait for CI (including Hook Tests), resolve review comments, merge
 
 ---
