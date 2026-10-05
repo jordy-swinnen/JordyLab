@@ -908,7 +908,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: 2026-10-05 on `v0.0.1-rc14`: the owner re-entered 0.002106 and the position keeps the digits ("the shares is correct now"); its value is now handled by BUG-059
 
 ### BUG-059: A position needs the exact Yahoo symbol (BTC-EUR, MEUD.PA) to get a value
-- Status: DEPLOYED in `v0.0.1-rc15` (PR #99) — owner check pending: remove the `BTC-EUR` row, add `BTC` with 0.002106 and `MEUD`, expect euro values at once
+- Status: DEPLOYED in `v0.0.1-rc15` (PR #99); prices were blocked by Yahoo until BUG-060 (rc16) — owner check pending: remove the `BTC-EUR` row, add `BTC` with 0.002106 and `MEUD`, expect euro values at once
 - Severity: S2
 - Area/spec: fna / 001 (portfolio)
 - Env found: prod, the owner replacing the `BTC` row (2026-10-05)
@@ -923,7 +923,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod:
 
 ### BUG-060: No portfolio price is fetched any more — Yahoo answers 429 to the backend's HTTP client
-- Status: FIXED locally — release pending (`fix/yahoo-user-agent`)
+- Status: DEPLOYED in `v0.0.1-rc16` (PR #101) — owner check: the BTC and MEUD rows show a euro value
 - Severity: S2
 - Area/spec: fna / 001 (portfolio prices)
 - Env found: prod backend log after rc15 (2026-10-05): `No euro price found for BTC-EUR / MEUD.PA / BTC / MEUD`
