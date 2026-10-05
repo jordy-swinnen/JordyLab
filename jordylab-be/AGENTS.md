@@ -30,6 +30,10 @@ the classpath), and the OpenAI base URL keeps its `/v1` (the SDK appends `/chat/
 `ResilientAiService`, so a future bump surfaces in one place: re-run `ResilientAiServiceTest`, `AiGatewayWiringTest`,
 `AiPropertiesTest` and `GameCatalogModuleTest`, and read that release's migration notes.
 
+**Rules for building AI features:** `src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md` (short, loaded in that
+package; Claude Code gets it through the `CLAUDE.md` import beside it). Full research, with the Boot/Spring AI version
+finding: `docs/research/spring-ai-architecture.md`; gaps against it: `docs/research/spring-ai-gap-analysis.md`.
+
 # Java Code Style
 
 - Never use `var` — always declare explicit types
