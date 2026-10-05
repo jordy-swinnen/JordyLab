@@ -111,8 +111,11 @@ else
   report "several violations: one JSON document carries all of them" fail "output='$OUTPUT' exit=$EXIT_CODE"
 fi
 
-printf '{"tool_input":{"filePath":"%s"}}' "$JAVA_TEST_DIRECTORY/AnyTest.java" | "$CONVENTION_HOOK" 2>/dev/null | jq -e '.hookSpecificOutput.additionalContext' >/dev/null 2>&1 \
-  && report "filePath spelling of the tool input is understood" ok "" || report "filePath spelling of the tool input is understood" fail "no JSON"
+if printf '{"tool_input":{"filePath":"%s"}}' "$JAVA_TEST_DIRECTORY/AnyTest.java" | "$CONVENTION_HOOK" 2>/dev/null | jq -e '.hookSpecificOutput.additionalContext' >/dev/null 2>&1; then
+  report "filePath spelling of the tool input is understood" ok ""
+else
+  report "filePath spelling of the tool input is understood" fail "no JSON"
+fi
 
 expect_silent "clean Java test: silent" "$CONVENTION_HOOK" "$JAVA_TEST_DIRECTORY/CleanTest.java"
 expect_silent "single assertThat: silent" "$CONVENTION_HOOK" "$JAVA_TEST_DIRECTORY/SingleTest.java"
@@ -122,9 +125,9 @@ expect_silent "clean spec.ts: silent" "$CONVENTION_HOOK" "$WORK/fe/clean.spec.ts
 expect_silent "useClass in a non-spec .ts file: silent" "$CONVENTION_HOOK" "$WORK/fe/class.ts"
 expect_silent "missing file: silent" "$CONVENTION_HOOK" "$JAVA_TEST_DIRECTORY/Missing.java"
 
-printf '{"tool_input":{}}' | "$CONVENTION_HOOK" >/dev/null 2>&1; [[ $? == 0 ]] && report "no file path: exit 0" ok "" || report "no file path: exit 0" fail "non-zero"
+printf '{"tool_input":{}}' | "$CONVENTION_HOOK" >/dev/null 2>&1; if [[ $? == 0 ]]; then report "no file path: exit 0" ok ""; else report "no file path: exit 0" fail "non-zero"; fi
 OUTPUT="$(printf 'not json' | "$CONVENTION_HOOK" 2>/dev/null)"; EXIT_CODE=$?
-[[ -z "$OUTPUT" && "$EXIT_CODE" == 0 ]] && report "malformed stdin: silent, exit 0" ok "" || report "malformed stdin: silent, exit 0" fail "output='$OUTPUT' exit=$EXIT_CODE"
+if [[ -z "$OUTPUT" && "$EXIT_CODE" == 0 ]]; then report "malformed stdin: silent, exit 0" ok ""; else report "malformed stdin: silent, exit 0" fail "output='$OUTPUT' exit=$EXIT_CODE"; fi
 
 # ---------------------------------------------------------------- post-java-modularity-check.sh
 echo "post-java-modularity-check.sh:"
@@ -161,14 +164,14 @@ echo "plain" >"$FAKE/jordylab-be/src/main/java/x/notes.txt"
 rm -f "$STUB_CALLED_MARKER"
 expect_warning "failing boundary check: violation reaches the agent as additionalContext" "$MODULARITY_HOOK" \
   "$FAKE/jordylab-be/src/main/java/x/A.java" "depends on non-exposed type" STUB_MODE=fail
-[[ -e "$STUB_CALLED_MARKER" ]] && report "failing boundary check: gradle was started" ok "" || report "failing boundary check: gradle was started" fail "stub not invoked"
+if [[ -e "$STUB_CALLED_MARKER" ]]; then report "failing boundary check: gradle was started" ok ""; else report "failing boundary check: gradle was started" fail "stub not invoked"; fi
 
 expect_warning "the warning names the edited file" "$MODULARITY_HOOK" \
   "$FAKE/jordylab-be/src/main/java/x/A.java" "$FAKE/jordylab-be/src/main/java/x/A.java" STUB_MODE=fail
 
 rm -f "$STUB_CALLED_MARKER"
 expect_silent "passing boundary check: silent" "$MODULARITY_HOOK" "$FAKE/jordylab-be/src/main/java/x/A.java" STUB_MODE=pass
-[[ -e "$STUB_CALLED_MARKER" ]] && report "passing boundary check: gradle was started" ok "" || report "passing boundary check: gradle was started" fail "stub not invoked"
+if [[ -e "$STUB_CALLED_MARKER" ]]; then report "passing boundary check: gradle was started" ok ""; else report "passing boundary check: gradle was started" fail "stub not invoked"; fi
 expect_silent "gradle exits 0 with noise on stdout: silent (only a failure is a finding)" "$MODULARITY_HOOK" "$FAKE/jordylab-be/src/main/java/x/A.java" STUB_MODE=noisy
 
 run_hook "$MODULARITY_HOOK" "$FAKE/jordylab-be/src/main/java/x/A.java" STUB_MODE=long
@@ -188,14 +191,14 @@ not_started "Java test file: not checked" "$FAKE/jordylab-be/src/test/java/x/ATe
 not_started "non-Java file: not checked" "$FAKE/jordylab-be/src/main/java/x/notes.txt"
 not_started "repo without jordylab-be/gradlew: not checked" "$NOBE/src/main/java/x/B.java"
 
-printf '{"tool_input":{}}' | "$MODULARITY_HOOK" >/dev/null 2>&1; [[ $? == 0 ]] && report "no file path: exit 0" ok "" || report "no file path: exit 0" fail "non-zero"
+printf '{"tool_input":{}}' | "$MODULARITY_HOOK" >/dev/null 2>&1; if [[ $? == 0 ]]; then report "no file path: exit 0" ok ""; else report "no file path: exit 0" fail "non-zero"; fi
 OUTPUT="$(printf 'not json' | "$MODULARITY_HOOK" 2>/dev/null)"; EXIT_CODE=$?
-[[ -z "$OUTPUT" && "$EXIT_CODE" == 0 ]] && report "malformed stdin: silent, exit 0" ok "" || report "malformed stdin: silent, exit 0" fail "output='$OUTPUT' exit=$EXIT_CODE"
+if [[ -z "$OUTPUT" && "$EXIT_CODE" == 0 ]]; then report "malformed stdin: silent, exit 0" ok ""; else report "malformed stdin: silent, exit 0" fail "output='$OUTPUT' exit=$EXIT_CODE"; fi
 
 # A Java file outside any git work tree: the hook falls back to ./jordylab-be of the working directory (empty here)
 mkdir -p "$WORK/loose"; echo "class L {}" >"$WORK/loose/L.java"
 OUTPUT="$(cd "$EMPTY" && printf '{"tool_input":{"file_path":"%s"}}' "$WORK/loose/L.java" | STUB_MODE=fail "$MODULARITY_HOOK" 2>/dev/null)"; EXIT_CODE=$?
-[[ -z "$OUTPUT" && "$EXIT_CODE" == 0 ]] && report "file outside a git repo: silent, exit 0" ok "" || report "file outside a git repo: silent, exit 0" fail "output='$OUTPUT' exit=$EXIT_CODE"
+if [[ -z "$OUTPUT" && "$EXIT_CODE" == 0 ]]; then report "file outside a git repo: silent, exit 0" ok ""; else report "file outside a git repo: silent, exit 0" fail "output='$OUTPUT' exit=$EXIT_CODE"; fi
 
 echo
 echo "$pass_count passed, $fail_count failed"
