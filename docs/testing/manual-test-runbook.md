@@ -205,6 +205,7 @@ password manager or from the app, never from this file.
 - Pass when: a full signed-in session, including login and logout, produces no CSP violation, with the enforcing header on.
 - If it fails: revert to report-only; add `BUG-<next>`.
 - Record result: BUG-021 → remove "CSP open".
+- **Progress 2026-10-06 (owner said "yes, steps 1–4"):** step 1 done: the Report-Only header is in `deploy/containers/frontend/security-headers.conf` (least-privilege list: only `images.igdb.com` for images — the Steam/GitHub image hosts are fetched by the backend, never by the browser — plus `base-uri`, `form-action` and `object-src 'none'`; Angular's one inline script is allowed by hash). Step 4 is automated: `tools/app-boot-check.mjs` (CI job `app-boot`) serves the production bundle with this exact policy as an *enforcing* header and fails on any violation, including a drifted hash after an Angular upgrade. Step 3 (a signed-in click-through) is covered in CI by a Playwright journey that applies the same policy to every page; that journey uses the e2e build, so after the release the Report-Only console on prod is still worth one look. Step 5 (enforce) stays the owner's go-ahead.
 - **Owner question 2026-10-05:** "I don't understand the steps" → rewritten above. Steps 1–4 are safe for the agent to do (they cannot break the site); step 5 is the one that needs your go-ahead. Say so and it is done.
 
 ### MRB-12: Colour contrast of the main pages
