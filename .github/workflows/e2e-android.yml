@@ -1,0 +1,99 @@
+name: E2E Android
+
+# Appium suite for what only breaks inside the installed Android app (spec 012 US12-US14): native Keycloak login (Custom Tab, App Link back
+# into the app), install prompt, update check, share target. It runs on a hosted emulator against a debug build and the run's own throwaway
+# Postgres + Keycloak + backend. NOT a merge gate (about 15-25 minutes): it runs after a successful Release and on demand
+# (Actions → E2E Android → Run workflow). Biometric unlock cannot be automated and stays on the manual checklist in
+# jordylab-fe/apps/jordylab-mobile-e2e/README.md.
+on:
+  workflow_dispatch:
+  # Also when the Android-specific files change (a new workflow file cannot be started by hand until it is on the default branch).
+  pull_request:
+    paths:
+      - '.github/workflows/e2e-android.yml'
+      - 'jordylab-fe/apps/jordylab-mobile-e2e/**'
+      - 'jordylab-fe/apps/jordylab-mobile/**'
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-android
+  cancel-in-progress: false
+
+jobs:
+  e2e-android:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The Android Gradle plugin builds on JDK 21 (as release.yml does); the backend needs 25, which stays the default on PATH.
+      - uses: actions/setup-java@v4
+        id: java21
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install dependencies
+        working-directory: jordylab-fe
+        run: bun install --frozen-lockfile
+      - name: Run the Android journeys on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_JAVA_HOME: ${{ steps.java21.outputs.path }}
+          E2E_ARTIFACT_DIRECTORY: ${{ runner.temp }}/e2e-logs
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          working-directory: jordylab-fe
+          script: bash e2e/run.sh android
+      - name: The release build keeps the production App Link host
+        if: always()
+        working-directory: jordylab-fe/apps/jordylab-mobile/android
+        env:
+          JAVA_HOME: ${{ steps.java21.outputs.path }}
+        run: |
+          ./gradlew assembleRelease --no-daemon -q
+          aapt2="$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)"
+          "$aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/release/app-release-unsigned.apk > "$RUNNER_TEMP/release-manifest.txt"
+          grep -q 'jordylab.be' "$RUNNER_TEMP/release-manifest.txt"
+          ! grep -q 'e2e.jordylab.test' "$RUNNER_TEMP/release-manifest.txt"
+      - name: Upload logs, screenshots and logcat
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-android-logs
+          path: |
+            ${{ runner.temp }}/e2e-logs
+            jordylab-fe/apps/jordylab-mobile-e2e/logs
+          if-no-files-found: ignore
+      # Even when a step above failed or the job was cancelled: remove what a killed runner left behind, then fail on any leftover.
+      - name: Remove leftovers
+        if: always()
+        working-directory: jordylab-fe
+        run: bash e2e/lib/cleanup.sh sweep
+      - name: Verify nothing is left
+        if: always()
+        working-directory: jordylab-fe
+        run: bash e2e/lib/cleanup.sh verify-all
