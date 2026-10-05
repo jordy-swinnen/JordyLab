@@ -25,6 +25,35 @@ Review the provided code or files against all JordyLab conventions.
 - **Important**: Convention violations that affect maintainability (e.g., missing type hints in Python, constructor injection instead of `inject()` in Angular, `@Data` instead of `record`)
 - **Nit**: Style preferences that don't affect correctness (e.g., method ordering, missing blank line before return)
 
+## AI code
+
+When the change touches AI code (`ResilientAiService`, prompts, `AiFeature`, anything under `shared/ai` or calling it), apply the
+AI checklist below. Report a skipped item as **Important**; direct `ChatClient`/`ChatModel` use outside `shared/ai` is **Blocking**.
+
+<!-- BEGIN AI CHECKLIST -->
+## AI checklist
+
+Rules behind each item: `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md`; research and caveats:
+`docs/research/spring-ai-architecture.md`; known gaps: `docs/research/spring-ai-gap-analysis.md`.
+
+- [ ] Model calls go only through `ResilientAiService.call(AiFeature, …)`: no `ChatClient` or `ChatModel` anywhere else
+- [ ] A new feature has its own `AiFeature` constant and a bracketed default model key (`"[module.task]"`), and the failure case
+      (`!result.success()`) is handled explicitly
+- [ ] The system prompt is a resource under `src/main/resources/prompts/<module>/`, not a Java string literal
+- [ ] The answer is parsed into a typed record and validated before use; raw model text is never executed, trusted for
+      authorization, or stored unchecked
+- [ ] Options that matter for determinism (temperature, max tokens) are set explicitly
+- [ ] No model call runs while a database transaction is open (repo convention; existing violations are listed in the gap
+      analysis and tracked there, flag only new ones)
+- [ ] Prompt, completion and tool content logging stays off; no secrets or prompt text in logs
+- [ ] If tools are involved: tool fallback resolution off, user/tenant context via `ToolContext`, call caps, authorization
+      inside a secured service, human approval for write actions
+- [ ] If memory or retrieval is involved: server-derived conversation id; tenant filter on every search, filters on metadata
+      values only, empty-context refusal kept
+- [ ] A unit test around a mocked `ChatModel` plus a golden example of the typed result exist; `ResilientAiServiceTest`,
+      `AiGatewayWiringTest` and `AiPropertiesTest` still pass
+<!-- END AI CHECKLIST -->
+
 ## Output Format
 
 ```
