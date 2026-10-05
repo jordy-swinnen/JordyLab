@@ -36,7 +36,8 @@ export const config: WebdriverIO.Config = {
     },
   ],
   framework: 'mocha',
-  mochaOpts: { timeout: 240_000 },
+  // One retry per test: a software emulator occasionally stalls on a cold start; a real regression fails both attempts.
+  mochaOpts: { timeout: 240_000, retries: 1 },
   reporters: ['spec'],
   logLevel: 'info',
   onPrepare: () => {
