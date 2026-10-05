@@ -53,6 +53,7 @@
     "@angular/compiler-cli": "22.2.1",
     "@angular/language-service": "22.2.1",
     "@angular/platform-browser-dynamic": "22.2.1",
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^9.8.0",
     "@ngneat/spectator": "^22.1.0",
     "@nx/angular": "23.2.1",

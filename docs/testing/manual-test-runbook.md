@@ -219,6 +219,7 @@ password manager or from the app, never from this file.
 - If it fails: add `BUG-<next>` (S4) listing the elements.
 - Record result: note it in `e2e-test-plan.md` §6 G.
 - **Result 2026-10-05 (owner, Lighthouse 13.4.1 on `/fna/articles`):** accessibility **100**, the colour-contrast audit **passed**. The one failed audit, `label-content-name-mismatch` on the account menu, is logged as BUG-064 (fixed in PR #129); performance 86 with a layout shift of 0.22, logged as BUG-065 (fixed). The other pages are covered by the agent in the entry under §6 G of the test plan. Not ours: the console error is a Trustpilot browser extension's own request.
+- **Result 2026-10-06 (agent, automated):** the manual pages-by-hand check is now a CI check: `accessibility.spec.ts` runs axe (WCAG 2 A/AA) on 8 signed-in pages, a game detail page and the login page at desktop and phone width (required check `e2e-web`). First run found BUG-067 (cover-plate label contrast) and BUG-068 (keyboard access to the portfolio table); both fixed, the suite is green. Pages added later need one line in its `PAGES` list.
 
 ### MRB-13: Full VPS rebuild from git
 - Covers: 008-US5-AS4 | Area/spec: A / 008
