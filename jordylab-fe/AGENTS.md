@@ -170,7 +170,7 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
 - **Selectors** are roles, labels and `data-testid`; never class names. Keycloak's own pages are third-party DOM, so only there the
   documented element ids are used.
 - **Journeys** (`apps/jordylab-e2e/src/*.spec.ts`): sign-in with session reuse and sign-out, library grid/search/detail, catalog chat
-  up to the model call, FNA briefing (read-only), admin approving a sign-up. The throwaway backend has no AI keys, so nothing paid
+  up to the model call, FNA briefing (read-only), admin approving a sign-up. `accessibility.spec.ts` runs axe (WCAG 2 A/AA: colour contrast, names, labels, keyboard access) on every signed-in page plus the login page, at desktop and phone width; a new page needs one line in its `PAGES` list. The throwaway backend has no AI keys, so nothing paid
   is ever called and journeys that touch AI assert the graceful "unavailable" state.
 - **agent-browser / the browser pane versus these suites.** Use the browser pane for exploring, reproducing a bug, checking a
   deployed environment or anything that needs judgement. Use the suites to prove a journey still works: repeatable, run by CI, no
