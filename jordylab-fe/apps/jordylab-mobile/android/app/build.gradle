@@ -11,6 +11,9 @@ android {
         // whose versionCode doesn't increase. Local builds fall back to 1 / "0.0.0-dev".
         versionCode((project.findProperty("jordylabVersionCode") ?: "1") as Integer)
         versionName((project.findProperty("jordylabVersionName") ?: "0.0.0-dev") as String)
+        // The App Link host of the login callback. Always jordylab.be for real builds; the automated emulator tests build a debug APK
+        // with -PjordylabAppLinkHost=e2e.jordylab.test so the callback can be handled without a verified production domain.
+        manifestPlaceholders = [appLinkHost: (project.findProperty("jordylabAppLinkHost") ?: "jordylab.be") as String]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

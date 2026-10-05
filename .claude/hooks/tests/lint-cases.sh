@@ -42,6 +42,17 @@ case "${STUB_MODE:-clean}" in
 esac
 STUB
 chmod +x "$FAKE/jordylab-fe/node_modules/.bin/eslint"
+# Stub Oxlint: JSON on stdout like the real one, by STUB_OXLINT_MODE (none by default).
+cat >"$FAKE/jordylab-fe/node_modules/.bin/oxlint" <<'STUB'
+#!/usr/bin/env bash
+file="${@: -1}"
+case "${STUB_OXLINT_MODE:-none}" in
+  error) printf '{"diagnostics":[{"message":"Do not use new Array(singleArgument).","code":"unicorn(no-new-array)","severity":"error","filename":"%s","labels":[{"span":{"line":5,"column":20}}]}]}' "$file" ;;
+  *) printf '{"diagnostics":[]}' ;;
+esac
+STUB
+chmod +x "$FAKE/jordylab-fe/node_modules/.bin/oxlint"
+echo '{}' >"$FAKE/jordylab-fe/.oxlintrc.json"
 export STUB_CALLED_MARKER="$WORK/eslint-called"
 
 for name in src/a.ts src/a.spec.ts src/a.html libs/ui/helm/x/h.ts dist/d.ts out-tsc/o.ts; do
@@ -95,6 +106,13 @@ echo "$OUTPUT" | jq -e '.hookSpecificOutput.additionalContext' >/dev/null 2>&1 \
 run_hook "$FAKE/jordylab-fe/src/a.ts" STUB_MODE=warn
 echo "$OUTPUT" | jq -r '.hookSpecificOutput.additionalContext' | grep -q "warn  no-console" \
   && report "warnings are labelled warn" ok "" || report "warnings are labelled warn" fail "output='$OUTPUT'"
+
+run_hook "$FAKE/jordylab-fe/src/a.ts" STUB_MODE=clean STUB_OXLINT_MODE=error
+echo "$OUTPUT" | jq -r '.hookSpecificOutput.additionalContext' | grep -q "src/a.ts:5:20  error  unicorn(no-new-array)" \
+  && report "Oxlint finding reaches the agent" ok "" || report "Oxlint finding reaches the agent" fail "output='$OUTPUT'"
+run_hook "$FAKE/jordylab-fe/src/a.ts" STUB_MODE=error STUB_OXLINT_MODE=error
+echo "$OUTPUT" | jq -r '.hookSpecificOutput.additionalContext' | grep -q "no-debugger" && echo "$OUTPUT" | jq -r '.hookSpecificOutput.additionalContext' | grep -q "no-new-array" \
+  && report "ESLint and Oxlint findings are merged" ok "" || report "ESLint and Oxlint findings are merged" fail "output='$OUTPUT'"
 
 expect_silent "clean file: silent" "$FAKE/jordylab-fe/src/a.ts" STUB_MODE=clean
 expect_not_linted "ignored path libs/ui/helm: not linted" "$FAKE/jordylab-fe/libs/ui/helm/x/h.ts"

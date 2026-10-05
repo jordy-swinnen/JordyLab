@@ -67,6 +67,14 @@
       ]
     }
   },
+  "plugins": [
+    {
+      "plugin": "@nx/oxlint",
+      "options": {
+        "targetName": "oxlint"
+      }
+    }
+  ],
   "generators": {
     "@nx/angular:application": {
       "e2eTestRunner": "none",

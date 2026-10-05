@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only (merged into the debug variant, never into release): the automated emulator tests (spec 012) reach Keycloak and the
+     backend over plain HTTP on localhost through adb reverse, and Android blocks cleartext traffic for the app by default. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:usesCleartextTraffic="true" />
+</manifest>

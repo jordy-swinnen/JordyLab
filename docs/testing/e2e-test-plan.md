@@ -51,7 +51,7 @@ Campaign spec: [specs/011-prod-e2e-hardening](../../specs/011-prod-e2e-hardening
    deploy-prod.yml" is already done (pinned kubectl v1.36.4 / kustomize v5.8.1) → BUG-006.
 7. **Deploy approval**: `.claude/agents/jordylab-devops.md` requires Jordy's explicit yes for approving a deploy; the
    brief delegates it for the campaign's own merged, green commits. → Q-01.
-8. **No `browser-test` agent / `agent-browser`** exists; the built-in browser pane is used.
+8. **No `browser-test` agent / `agent-browser`** exists; the built-in browser pane is used. (Since spec 012 the main web journeys are also automated with Playwright, `jordylab-fe/e2e/run.sh web`; see `jordylab-fe/AGENTS.md`. This campaign's manual passes stay the tool for exploration.)
 9. **Backend health is not public** — the Gateway routes only `/api` and `/.well-known/assetlinks.json` to the backend,
    so `/actuator/health` is checked in-cluster (by design, not a bug).
 10. **Scanner Python**: brief/AGENTS say Python 3.12; the client targets `>=3.9` (macOS system Python 3.9.6 here). Not a
@@ -987,6 +987,10 @@ V=$(kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_R
 - Machine: your Mac · Target env: local tools · Why you: needs an interactive OpenCode session (a headless run cannot answer tool-permission prompts).
 - In `jordylab-fe/` start `opencode`, ask it to create a `.ts` file under `libs/` containing a `debugger` statement, and watch whether it runs `tools/lint-changed.sh <file>` and fixes the finding without being told.
 - Expect: it runs the script (the rule is in `jordylab-fe/AGENTS.md`, "Lint feedback after every edit") and removes the `debugger`. If it does not, the follow-up is an OpenCode plugin calling the same script. Tell me what you saw.
+
+#### HANDOFF-25: Confirm the Oxlint, Playwright, Appium/WebdriverIO versions and raise Node (spec 012 T016, T026, T067) — done 2026-10-05 (in chat)
+- Asked in the previous status report. Jordy answered with a registry check made in an OpenCode session (oxlint 1.86.0, `@nx/oxlint` 23.2.1 with peer `oxlint ^1.43`, Playwright 1.63.0, Appium 3.8.0, WebdriverIO 9.32.0 or 10.0.0, UiAutomator2 driver 8.7.0, suggested emulator image API 35 `google_apis`), said "continue", and showed local Node raised to v24.21.0.
+- Taken as approval of the proposed set: oxlint 1.86.0 + `@nx/oxlint` 23.2.1 (T026), Playwright 1.63.0 (T067), Node 24.21.0 (T016). **T080 closed later the same day:** Jordy chose WebdriverIO 10 (now 10.0.0); the emulator stays API 35.
 
 ## 8. AI call tally
 

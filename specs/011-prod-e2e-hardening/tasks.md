@@ -129,7 +129,7 @@ matrix; every FAIL has a BUG.
   endpoint as unauthenticated, pending, guest and admin (tokens obtained through the browser session, never typed
   passwords; read-only verbs on prod, mutating verbs on local); expected per specs 006/007; check error bodies carry
   no stack traces
-- [ ] T023 [US2] B1–B3 flows in the browser: login → navigate → logout → login, silent token refresh (leave the tab
+- [X] T023 [US2] B1–B3 flows in the browser: login → navigate → logout → login, silent token refresh (leave the tab
   past access-token lifetime), unauthenticated deep link → Keycloak, no redirect loop
 - [X] T024 [US2] Self-registration → admin approval into `guest` → guest sees only Game Catalog; pending and rejected
   users get nothing (depends on HANDOFF for approval and a second browser profile)
@@ -349,7 +349,8 @@ has changed. Stop and validate at the T017 gate.
 T022, T024, T026–T032 and T034–T037 were executed in the first sessions of the campaign (local stack with the real
 scanners, the role matrix in CI against a real Keycloak, the guest and admin passes, the FNA/mobile web-side checks, the
 migration/restore drill), but their evidence was recorded in the plan's coverage matrix (§5: PASS / PASS-CI / FAIL-FIXED per row,
-each with its proof), `final-report.md` and `bug-log.md` instead of per task. They are ticked on that basis. T023 and T053 stay **unticked** on purpose: T023's "leave the tab past the
-access-token lifetime" step was never timed, and T053's handoff durations were estimated, not measured. Known limits are stated,
+each with its proof), `final-report.md` and `bug-log.md` instead of per task. They are ticked on that basis. T053 stays **unticked** on purpose: its handoff durations were estimated, not measured. T023 was ticked later the same
+day (2026-10-05) after its one missing step was run on prod: an admin tab left idle for 31.0 minutes in the same document
+(past the 30-minute access-token lifetime), then a click that needs the API — the app answered `POST /auth/realms/jordylab/protocol/openid-connect/token → 200` (silent refresh) followed by `GET /api/gamecatalog/games?platform=SNES → 200`, with no login redirect. Known limits are stated,
 not hidden: the matrix marks 64 rows NOT TESTABLE (Eufy 010, native Android stories) and 412 rows are PASS-CI rather than a direct pass. The remaining manual items are `manual-test-runbook.md` MRB-06 to MRB-13.
 

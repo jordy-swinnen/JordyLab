@@ -9,7 +9,11 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     hostname: 'localhost',
+    // Only for the automated emulator tests (CAPACITOR_E2E=1, set by jordylab-fe/e2e): they talk to Keycloak and the backend
+    // over plain HTTP on localhost through adb reverse. A normal sync never sets it, so real builds stay HTTPS-only.
+    ...(process.env['CAPACITOR_E2E'] === '1' ? { cleartext: true } : {}),
   },
+  ...(process.env['CAPACITOR_E2E'] === '1' ? { android: { allowMixedContent: true } } : {}),
 };
 
 export default config;

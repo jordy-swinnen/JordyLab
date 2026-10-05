@@ -225,6 +225,23 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
   (`no-debugger` error and an unused-variable warning) verbatim from the hook. **Not verified:** OpenCode running the instruction: a headless `opencode run` produced no output
   within the wait (likely a tool-permission prompt it cannot answer), so that check is handed to Jordy.
 
+#### Oxlint record (2026-10-05, branch `feat/oxlint-fast-lint`, T025-T033, T045)
+
+- Versions (approved): `oxlint` 1.86.0, `@nx/oxlint` 23.2.1 (peer `oxlint ^1.43`). `bun add -d` and `nx add @nx/oxlint` work with Bun; the plugin infers an `oxlint` target (`oxlint .` per
+  project) and leaves the `lint` target (`@nx/eslint:lint`) untouched. `nx add` reformatted all of `nx.json`; only the plugin block was kept.
+- Measured: `oxlint` over all 227 `.ts` files: 10 ms; one file: 3 ms; versus single-file ESLint 0.6-0.8 s warm. The shared command runs both in parallel (about 1 s end to end, dominated by ESLint).
+- Ownership: ESLint resolves 84 enabled rules (core, typescript-eslint, `@angular-eslint`, `@nx/enforce-module-boundaries`); Oxlint owns exactly 27, all `oxc/*` and `unicorn/*` correctness rules
+  that ESLint does not have, listed explicitly with the `correctness` category off (otherwise Oxlint's built-in core rules would overlap). Result: no rule in both. `tools/check-lint-ownership.sh` resolves ESLint
+  per project directory (the root config alone has no Angular rules, which is how Nx runs it) and fails on overlap or when ESLint loses its Angular or boundary rules.
+- Confirmations are recorded as HANDOFF-25 in `docs/testing/e2e-test-plan.md` (T016, T026, T067; T080 stays open). The ownership check also asserts ESLint still enables Angular template rules (it samples a component `.html` file).
+- Oxlint finds nothing in the current code (0 findings on 227 files), so no code change was needed.
+- CI: `Oxlint` (`nx run-many -t oxlint`) and `Lint rule ownership` steps run before `Lint` in `test-frontend`.
+- CI ordering proof (T032, two draft scratch PRs, closed): a file with `new Array(3)` (seen only by Oxlint) failed the `Oxlint` step and the later steps (`Lint rule ownership`, `Lint`, tests) were skipped
+  (run 37295679671); a component with a boundary violation and an `<img>` without alt text (seen only by ESLint) passed `Oxlint` and `Lint rule ownership` and failed at `Lint` (run 37295685103).
+- Removal rehearsal (T045, throwaway branch): one change removing the two dependencies, the `nx.json` plugin, `.oxlintrc.json`, the ownership script, the two CI steps and the Oxlint block of
+  `lint-changed.sh` touched 7 files; ESLint over 14 projects and a library's unit tests stayed green; the hook fixtures' Oxlint cases must go with it (documented in `jordylab-fe/AGENTS.md`).
+- Found while rehearsing: a killed slow linter printed bash's "Terminated" notice; fixed by reaping the job.
+
 ### A5. Removability (FR-022)
 
 Everything Oxlint-specific is one set: `.oxlintrc.json`, the `@nx/oxlint` plugin entry in `nx.json`, the dev
@@ -301,8 +318,7 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
 ### C2. Layout
 
 - Web suite: new Nx project `apps/jordylab-e2e` (Playwright), using `@nx/playwright` (peer-aligned with Nx 23.2.1) so
-  Nx caching and `nx affected` apply. Test ids added to components as `data-testid` (none exist today: zero hits in
-  `libs/` and `apps/`); roles/names are preferred, test ids only where no accessible name exists.
+  Nx caching and `nx affected` apply. Test ids added to components as `data-testid` (a first grep reported none, but many exist; see C3d); roles/names are preferred, test ids only where no accessible name exists.
 - Android suite: new Nx project `apps/jordylab-mobile-e2e` (decision Q3) with WebdriverIO + Appium, TypeScript.
 - Throwaway environment, shared by both suites: `jordylab-fe/e2e/` directory (or repo `e2e/`) holding the compose file,
   realm import, orchestration scripts (see contract `e2e-environment.md`).
@@ -359,6 +375,32 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
   (adb reverse maps it to the real host port). The API is same-origin (`/api`, proxied by `e2e/static-server.ts`).
 - `nx build jordylab --configuration=e2e` builds in about 60 s (no optimisation); the production build is unchanged (612.59 kB initial, 151.12 kB transfer, no e2e strings).
 
+### C3d. Web suite record (2026-10-05, branch `test/e2e-web-suite`, T067-T077, T091)
+
+- Playwright 1.63.0 (+ `@nx/playwright` 23.2.1, Chromium headless shell 94 MB, approved). New Nx project `apps/jordylab-e2e` (`nx e2e jordylab-e2e` runs `playwright test`; the runner exports the per-run `E2E_*` values).
+  Correction to the earlier C2 note: the app already has many `data-testid`s (user menu, users page approve/revoke, grid toggle, model pickers, ...) plus accessible names everywhere,
+  so no component needed a new test id; selectors are roles, labels and the existing ids. Keycloak's own login and registration pages are third-party DOM without accessible
+  labels, so only there the documented element ids (`#username`, `#password`, `#kc-login`, `#firstName`, ...) are used.
+- Data (T069): the catalog is filled once in `global-setup.ts` through the app's own `POST /api/gamecatalog/ingest/scan` with a scanner-role token from the throwaway realm's `e2e-ingest`
+  service account (EmuDeck source, three games); the response outcome is checked. No SQL, no real scanner needed. The guest user for the approval journey signs up through Keycloak's registration page.
+- Session: global setup signs in once through the Keycloak login page and saves cookies; later pages restore the session through the app's silent check-sso. The Keycloak address reaches the
+  bundle through an init script on the browser context (`window.__JORDYLAB_E2E__`, see C3c), which runs before the bundle.
+- Journeys (8 tests, about 12 s of test time, 4-5 minutes including the backend and web builds and the stack): sign-in with session reuse and sign-out; library grid, search and game detail
+  (the spec sheet only renders for enriched games, so the journey asserts platform, host and the back link instead); catalog chat up to the model call (question shown, graceful
+  "unavailable" message, the throwaway backend has no AI keys); FNA briefing empty state (read-only); admin Settings approving a sign-up (pending, approve, moves to approved).
+- Findings while getting it green: the account menu exists twice in the DOM (wide and narrow layout), so the suite uses the visible one; keycloak-js signs out with the bare origin, which
+  needs `post.logout.redirect.uris` on the client (the dev realm lists dev ports there), so the derived realm sets it and also registers the bare origin as a redirect URI.
+- T077: green on a fresh build (`run.sh web` with no skip flags); a deliberately wrong heading expectation failed the run with exit 1, a readable locator message and a screenshot, and was restored.
+- CI: job `e2e-web` in `build.yml` (Node 22, Java 25, Playwright browser with system dependencies, the runner, report and logs uploaded on failure, `sweep` and `verify-all` steps with `if: always()`);
+  `build-and-push` now needs it. Making it a required check is a repository setting (T092).
+
+### C5b. Branch protection (T092, 2026-10-05)
+
+- `main` is protected by a repository **ruleset** ("main", id 20184530), not classic branch protection; before the change it only blocked deletion and non-fast-forward pushes and required no checks.
+  Done at Jordy's request ("do this"): a `required_status_checks` rule was added with the single context `e2e-web` (non-strict, any integration), everything else unchanged. The job passed in real
+  CI before the rule was added (Ubuntu, Docker, 4m11s). Consequence to know: a push to `main` that has not passed `e2e-web` is now rejected, so every change goes through a pull request.
+  Other checks (test-backend, test-frontend, ...) are still not required; adding them is a one-line change to the same rule.
+
 ### C4. Android specifics
 
 - The mobile build hardcodes production (`environment.mobile.ts`: `https://jordylab.be`) and the manifest App Link is
@@ -385,6 +427,29 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
 - CI: `reactivecircus/android-emulator-runner` on `ubuntu-latest`; job triggered by release and `workflow_dispatch`
   (decision Q2). It needs the debug APK built in the job (Gradle + Android SDK on the runner; the existing `apk` job
   in `release.yml` already builds release APKs on a hosted runner).
+
+### C4b. Android suite record (2026-10-05, branch `test/e2e-android`, T079-T090, T093-T094)
+
+- Result: all five Android tests pass in CI on a hosted emulator (API 35, `google_apis`, x86_64, WebView 124.0.6367.219), job about 16-17 minutes of which the tests take about 1 minute:
+  native Keycloak login (Custom Tab, App Link back, WebView context, signed-in app), install prompt not offered inside the app, install prompt offered and silenced in Chrome,
+  update check ("Update available: v0.0.2-e2e" after publishing a newer debug-signed APK through the app's own endpoint), share target (ACTION_SEND opens the share landing with the text).
+  The same job checks that the release build keeps `jordylab.be` as App Link host (and not the test host) and ends with the `sweep` and `verify-all` cleanup steps (verified clean).
+- It took 12 CI iterations; the causes, for the next person: `--allow-insecure` given as an array to the wdio Appium service was serialised as JSON (chromedriver autodownload off);
+  `dumpsys webview` does not exist on this image (version read from the WebView package); Android blocks cleartext for the app (debug-only manifest overlay, release untouched);
+  the backend must allow the WebView origin `https://localhost`; **Keycloak refused the code exchange because the throwaway user lacked `offline_access` (the app signs in with that scope)**
+  and Chrome reported Keycloak's error response, which has no CORS headers, as a CORS failure (found with Keycloak's event log); the `apksigner` digest line puts the value in the last field;
+  on the small emulator screen the on-screen keyboard hides the password field and the Sign In button (focus with the Next action, submit with Enter); `pm clear com.android.chrome`
+  overloaded the software emulator (ANR) so a leftover Keycloak session is handled instead; the first published release's minimum supported version defaults to itself, which shows the blocking
+  "update required" screen (the test publishes with `minSupportedVersionCode=1`).
+- Product-side changes (build configuration only): `mobile-e2e` Angular configuration and `environment.mobile-e2e.ts`; the App Link host as a Gradle manifest placeholder (default `jordylab.be`);
+  a debug-only manifest overlay allowing cleartext; a `CAPACITOR_E2E=1` switch in `capacitor.config.ts` (default config byte-identical).
+- App Link in the emulator: the debug APK declares `e2e.jordylab.test`; `pm set-app-links-user-selection` approves it without a verified `assetlinks.json`, and Chrome hands the redirect to the app. No intent fallback was needed.
+- Runner `android` mode: fixed ports 18180/18080/18200 (the app is built with them; `adb reverse` maps the same numbers), two debug APKs (second versionCode 2), a check that both are signed by the same
+  certificate, backend env for the mobile module, Keycloak event and access logging, logcat and Keycloak's log in the artifact.
+- Triggers: `workflow_dispatch`, `workflow_run` after a successful Release (not yet exercised: it needs a real release) and `pull_request` limited to Android-specific paths (added because a new
+  workflow file cannot be started by hand until it is on the default branch; it does not run on ordinary merges, so FR-045 holds). Not a required check.
+- Versions used, as proposed in the status report: Appium 3.8.0, UiAutomator2 driver 8.7.0, WebdriverIO 9.32.0 (`@wdio/globals` 9.31.3), image API 35. The choice between WebdriverIO 9 and 10 and the emulator
+  level was not answered explicitly (T080 stays open until it is).
 
 ### C5. CI
 
@@ -424,3 +489,48 @@ pointer from the root `AGENTS.md`.
 | D7 | Own compose project, label-based cleanup, no fixed ports | Coexists with dev stack; sweep works after hard kill | Reusing dev compose |
 | D8 | `e2e` Angular configuration + debug manifest placeholder for App Link host | Only way to test login against a throwaway Keycloak | Testing against production |
 | D9 | `adb reverse` for localhost parity | One origin string for emulator and host | `10.0.2.2` hostname mismatch with Keycloak issuer |
+
+## Quickstart validation (T105, T106, 2026-10-05)
+
+| Part | Check | Result |
+|------|-------|--------|
+| A | Baseline before changes (lint, tests, builds, graph) | recorded in A3 |
+| A | After each upgrade: lint, 441/442 tests with identical line coverage, production and mobile builds, identical graph, a boundary violation still fails lint | passed for Nx 23 (PR 103) and Angular 22 (PR 109), see their records |
+| A | `tools/check-lint-ownership.sh` | passes: 99 ESLint rules, 27 Oxlint rules, none shared |
+| A | `tools/lint-changed.sh` on a file with a core and an Oxlint error | both findings printed |
+| A | `.claude/hooks/tests/lint-cases.sh` | 22 passed, 0 failed (also run by Hook Tests in CI) |
+| A | Live agent feedback in Claude Code | passed (headless session quoted the findings); OpenCode left as HANDOFF-24, not run |
+| A | CI order, removal rehearsal | passed (A5 records) |
+| B | Reference doc present with the 12 June 2026 correction and the dependency finding | passed |
+| B | Rules file loads in Claude Code and OpenCode | headless sessions passed; interactive `/context` and OpenCode view left as optional HANDOFF-23, not run |
+| B | Identical AI checklist in the skill and both reviewers | diff empty |
+| B | Gap analysis: 18 topics, 4 drafts, 7 deferred | present |
+| C | `e2e/run.sh web` on a fresh build, 8 journeys | passed locally and in CI (`e2e-web` is a required check) |
+| C | `e2e/prove-cleanup.sh`: pass, fail, SIGINT, SIGTERM, hard kill + sweep, dev database untouched | passed |
+| C | Android suite on an emulator | 5 tests passed in CI, twice on the same commit; not run locally (no Android SDK on the Mac) |
+| all | Refs trailer audit | 77 non-merge commits on main since the spec, 0 without a `Refs:` trailer (the commit-msg hook and the `refs` check enforce it) |
+
+Open at the end: the optional HANDOFF-23 and HANDOFF-24 (HANDOFF-24 deferred by Jordy until he is home)
+checks, and the `workflow_run` trigger of the Android job, which only a real release can exercise.
+
+## WebdriverIO 10 (T080 closed, 2026-10-05)
+
+Jordy chose WebdriverIO 10 ("Upgrade to webdriver 10"). All `@wdio/*` packages and `webdriverio` are now 10.0.0 (they all exist at that version, including `@wdio/globals`; the Node floor is 22.19, which CI's floating
+Node 22 meets). One API change: `executeAsync` is gone, so the in-WebView probe uses `execute` with an async function. The emulator level stays API 35 `google_apis` as recommended (not objected to). Appium 3.8.0 and the UiAutomator2
+driver 8.7.0 are unchanged.
+
+Under 10 the Android suite needed four more changes, all in test support (PRs 126 and 127):
+
+- the `adb reverse` tunnels are re-created at the start of every session (`reverse-ports.ts`), so a restart of the adb server cannot leave the emulator without `localhost`;
+- the shell renders the account menu trigger more than once and WebdriverIO 10 no longer waits on the first match, so `account-menu.ts` looks at every match;
+- WebdriverIO 10 does not wait for an element to exist before acting on it: the Chrome journey waits for the sign-in button and the Keycloak form;
+- the password field is the one that took focus after the keyboard's Next action, with the second text field as fallback.
+
+## First release run of the Android job (`v0.0.1-rc18`, 2026-10-05)
+
+`v0.0.1-rc18` was cut from `df5c88f` (PR 126). Release deployed, published and built the APK; the `E2E Android`
+workflow then started by itself through `workflow_run` (run 37346837158 on `main`), which is the one path nothing
+else could exercise. It passed 5 of 6 tests: the first test on the fresh emulator failed twice, because the keyboard's Next
+action was slow, the focused field was still the username field, and the password went into it (Keycloak `user_not_found`).
+PR 127 fixed that; a dispatch of the workflow on `main` after the merge was green (run 37350348362).
+

@@ -49,7 +49,7 @@
 
 ### PR 1b: Angular 22 (branch `chore/angular-22-upgrade`, after 1a is merged)
 
-- [ ] T016 [HANDOFF] [US1] Post HANDOFF-## asking Jordy to raise local Node to 24.15 or newer (Angular 22 needs `^22.22.3 || ^24.15.0 || >=26`; the Mac has 24.13.1), then confirm `node -v`
+- [X] T016 [HANDOFF] [US1] Post HANDOFF-## asking Jordy to raise local Node to 24.15 or newer (Angular 22 needs `^22.22.3 || ^24.15.0 || >=26`; the Mac has 24.13.1), then confirm `node -v`
 - [X] T017 [US1] Create branch `chore/angular-22-upgrade` from updated `main`; re-check the A6 table in `research.md` against the registry on the day and stop-and-report if any tool rejects TypeScript 6.0 or Angular 22 (edge cases in spec)
 - [X] T018 [US1] Run the Angular 22 migration in `jordylab-fe/` (`bunx nx migrate latest`; if it does not move `@angular/*`, `bunx nx migrate @angular/core@22`), review `package.json`/`migrations.json`, install, `--run-migrations`, review every migration's file changes; TypeScript moves to `~6.0` here (FR-008)
 - [X] T019 [US1] Bump the Angular-coupled tooling in `jordylab-fe/package.json`: `angular-eslint` 22.x, `@analogjs/vite-plugin-angular` and `@analogjs/vitest-angular` 2.8.x, `ng-packagr` 22.x; fix compile and config fallout (`tsconfig.base.json`, per-project `tsconfig.*.json`, `eslint.config.mjs`) (FR-008)
@@ -72,15 +72,15 @@
 ### Oxlint and shared command (PR 2, branch `feat/oxlint-fast-lint`)
 
 - [X] T025 [US2] Measure single-file Oxlint (`bunx oxlint <file>`) versus the T001 single-file ESLint numbers and record in `research.md`; apply the decision rule: if ESLint is within about 2x and under about 2 s, the shared command uses ESLint (FR-020); if borderline, ask Jordy
-- [ ] T026 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to confirm the exact Oxlint and `@nx/oxlint` versions (proposal: oxlint 1.86.0, `@nx/oxlint` 23.2.1) (FR-002)
-- [ ] T027 [US2] Install `oxlint` (exact pin) and run `bunx nx add @nx/oxlint` in `jordylab-fe/`; confirm Bun works, the plugin picks task name `oxlint`, and the `lint` target is untouched (inspect `bunx nx show project <lib>`); record in `research.md` section A2
-- [ ] T028 [US4] Create `jordylab-fe/.oxlintrc.json`: enable only rules ESLint does not own; explicitly turn off every overlapping `typescript`/`correctness` rule ESLint already enables; do not register the boundary rule or any JS plugin (FR-011, FR-012)
-- [ ] T029 [US4] Write `jordylab-fe/tools/check-lint-ownership.sh` per `contracts/lint-ownership.md` (resolved Oxlint rules vs ESLint `--print-config` for one `.ts` file per library type; fail on any rule enabled in both; check ESLint still owns `@angular-eslint/*`, template rules and `@nx/enforce-module-boundaries`); run it and fix `.oxlintrc.json` until it exits 0 (SC-004)
+- [X] T026 [HANDOFF] [US2] Post HANDOFF-## asking Jordy to confirm the exact Oxlint and `@nx/oxlint` versions (proposal: oxlint 1.86.0, `@nx/oxlint` 23.2.1) (FR-002)
+- [X] T027 [US2] Install `oxlint` (exact pin) and run `bunx nx add @nx/oxlint` in `jordylab-fe/`; confirm Bun works, the plugin picks task name `oxlint`, and the `lint` target is untouched (inspect `bunx nx show project <lib>`); record in `research.md` section A2
+- [X] T028 [US4] Create `jordylab-fe/.oxlintrc.json`: enable only rules ESLint does not own; explicitly turn off every overlapping `typescript`/`correctness` rule ESLint already enables; do not register the boundary rule or any JS plugin (FR-011, FR-012)
+- [X] T029 [US4] Write `jordylab-fe/tools/check-lint-ownership.sh` per `contracts/lint-ownership.md` (resolved Oxlint rules vs ESLint `--print-config` for one `.ts` file per library type; fail on any rule enabled in both; check ESLint still owns `@angular-eslint/*`, template rules and `@nx/enforce-module-boundaries`); run it and fix `.oxlintrc.json` until it exits 0 (SC-004)
 - [X] T030 [US2] Write `jordylab-fe/tools/lint-changed.sh` per `contracts/lint-changed-command.md` (path filtering incl. ESLint ignores, `bunx oxlint` or ESLint per T025, `path:line:col  rule  message` output, internal 2 s time guard (budget in the contract) that works on macOS without `timeout`, silent on missing linter/parse failure, `--strict` for manual use)
-- [ ] T031 [US3] Add an "Oxlint" step before the "Lint" step in the `test-frontend` job of `.github/workflows/build.yml` (also running `tools/check-lint-ownership.sh`); both steps fail the job (FR-021)
-- [ ] T032 [US3] Prove CI ordering with a scratch branch: one error both linters see fails on the Oxlint step; an Angular template violation and a boundary violation fail only on ESLint (record run links in `research.md`; do not merge the scratch branch)
-- [ ] T033 [P] [US2] Document the commands and the division of labour (one short paragraph, rule-ownership pointer) in `jordylab-fe/AGENTS.md`, plus a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-023)
-- [ ] T034 [US2] Open PR 2, wait for CI, resolve review comments, merge
+- [X] T031 [US3] Add an "Oxlint" step before the "Lint" step in the `test-frontend` job of `.github/workflows/build.yml` (also running `tools/check-lint-ownership.sh`); both steps fail the job (FR-021)
+- [X] T032 [US3] Prove CI ordering with a scratch branch: one error both linters see fails on the Oxlint step; an Angular template violation and a boundary violation fail only on ESLint (record run links in `research.md`; do not merge the scratch branch)
+- [X] T033 [P] [US2] Document the commands and the division of labour (one short paragraph, rule-ownership pointer) in `jordylab-fe/AGENTS.md`, plus a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-023)
+- [X] T034 [US2] Open PR 2, wait for CI, resolve review comments, merge
 
 ### Agent hook (PR 3, branch `feat/lint-agent-hook`; may be combined with PR 2)
 
@@ -103,7 +103,7 @@
 
 **Independent Test**: on a scratch branch, one commit removes Oxlint; lint, tests, builds, hook fixtures stay green.
 
-- [ ] T045 [US5] Rehearse removal on a scratch branch: one commit removing `oxlint`/`@nx/oxlint` from `jordylab-fe/package.json` and `nx.json`, `jordylab-fe/.oxlintrc.json`, `jordylab-fe/tools/check-lint-ownership.sh`, the CI Oxlint steps, and the Oxlint branch in `jordylab-fe/tools/lint-changed.sh` (it falls back to ESLint or silence); run lint, tests, builds and `lint-cases.sh`; record the commit's file list in `jordylab-fe/AGENTS.md` under the Oxlint paragraph so the next person can do it (FR-022, SC-006)
+- [X] T045 [US5] Rehearse removal on a scratch branch: one commit removing `oxlint`/`@nx/oxlint` from `jordylab-fe/package.json` and `nx.json`, `jordylab-fe/.oxlintrc.json`, `jordylab-fe/tools/check-lint-ownership.sh`, the CI Oxlint steps, and the Oxlint branch in `jordylab-fe/tools/lint-changed.sh` (it falls back to ESLint or silence); run lint, tests, builds and `lint-cases.sh`; record the commit's file list in `jordylab-fe/AGENTS.md` under the Oxlint paragraph so the next person can do it (FR-022, SC-006)
 
 ---
 
@@ -152,17 +152,17 @@
 
 **Independent Test**: `jordylab-fe/e2e/run.sh web` is green; breaking a covered journey makes it fail with a readable report.
 
-- [ ] T067 [HANDOFF] [US10] Post HANDOFF-## asking Jordy to confirm the Playwright version (proposal 1.63.0, plus its browser download) (FR-002)
-- [ ] T068 [US10] Add `@nx/playwright` and `@playwright/test` at the confirmed versions and generate the Nx project `jordylab-fe/apps/jordylab-e2e` (project.json with `e2e` target, `playwright.config.ts` reading base URL and credentials from the runner's env file)
-- [ ] T069 [US10] Decide and implement how the catalog gets data without database writes: through the app's ingest API with a token from the throwaway realm and a synthetic library folder created by the test (spike in `jordylab-fe/apps/jordylab-e2e/src/support/`; record the decision in `research.md` C3); if only the real downloaded scanner can do it, stop and report (repo validation-data rule)
-- [ ] T070 [US10] Write the global setup in `jordylab-fe/apps/jordylab-e2e/src/global-setup.ts`: log in once through the Keycloak login page as the admin test user and save storage state reused by every test (FR-033)
-- [ ] T071 [P] [US10] Add `data-testid` attributes only where roles/names are insufficient, in the components used by the journeys under `jordylab-fe/libs/gamecatalog/ui/src/lib/`, `jordylab-fe/libs/fna/ui/src/lib/` and `jordylab-fe/libs/settings/ui/src/lib/`; update existing unit specs if templates change (FR-034)
-- [ ] T072 [US10] Journey test: sign-in and session reuse, signed-in shell and sign-out in `jordylab-fe/apps/jordylab-e2e/src/auth.spec.ts`
-- [ ] T073 [P] [US10] Journey test: game catalog grid and detail with data created through the app's API in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog.spec.ts`
-- [ ] T074 [P] [US10] Journey test: admin Settings including approving a user created through the app (guest sign-up through the UI, approve as admin) in `jordylab-fe/apps/jordylab-e2e/src/settings.spec.ts`
-- [ ] T075 [P] [US10] Journey test: FNA briefing view, read-only, no AI generation, in `jordylab-fe/apps/jordylab-e2e/src/fna.spec.ts`
-- [ ] T076 [P] [US10] Journey test: catalog chat up to the model call (sends a question, asserts the pending state and the graceful failure/empty state since the throwaway backend has no AI keys; no paid call) in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog-chat.spec.ts` (FR-035)
-- [ ] T077 [US10] Run `jordylab-fe/e2e/run.sh web` end to end; confirm green on a fresh build; break one covered journey on purpose and confirm the suite fails with a readable report, then revert (SC-012 evidence)
+- [X] T067 [HANDOFF] [US10] Post HANDOFF-## asking Jordy to confirm the Playwright version (proposal 1.63.0, plus its browser download) (FR-002)
+- [X] T068 [US10] Add `@nx/playwright` and `@playwright/test` at the confirmed versions and generate the Nx project `jordylab-fe/apps/jordylab-e2e` (project.json with `e2e` target, `playwright.config.ts` reading base URL and credentials from the runner's env file)
+- [X] T069 [US10] Decide and implement how the catalog gets data without database writes: through the app's ingest API with a token from the throwaway realm and a synthetic library folder created by the test (spike in `jordylab-fe/apps/jordylab-e2e/src/support/`; record the decision in `research.md` C3); if only the real downloaded scanner can do it, stop and report (repo validation-data rule)
+- [X] T070 [US10] Write the global setup in `jordylab-fe/apps/jordylab-e2e/src/global-setup.ts`: log in once through the Keycloak login page as the admin test user and save storage state reused by every test (FR-033)
+- [X] T071 [P] [US10] Add `data-testid` attributes only where roles/names are insufficient, in the components used by the journeys under `jordylab-fe/libs/gamecatalog/ui/src/lib/`, `jordylab-fe/libs/fna/ui/src/lib/` and `jordylab-fe/libs/settings/ui/src/lib/`; update existing unit specs if templates change (FR-034)
+- [X] T072 [US10] Journey test: sign-in and session reuse, signed-in shell and sign-out in `jordylab-fe/apps/jordylab-e2e/src/auth.spec.ts`
+- [X] T073 [P] [US10] Journey test: game catalog grid and detail with data created through the app's API in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog.spec.ts`
+- [X] T074 [P] [US10] Journey test: admin Settings including approving a user created through the app (guest sign-up through the UI, approve as admin) in `jordylab-fe/apps/jordylab-e2e/src/settings.spec.ts`
+- [X] T075 [P] [US10] Journey test: FNA briefing view, read-only, no AI generation, in `jordylab-fe/apps/jordylab-e2e/src/fna.spec.ts`
+- [X] T076 [P] [US10] Journey test: catalog chat up to the model call (sends a question, asserts the pending state and the graceful failure/empty state since the throwaway backend has no AI keys; no paid call) in `jordylab-fe/apps/jordylab-e2e/src/gamecatalog-chat.spec.ts` (FR-035)
+- [X] T077 [US10] Run `jordylab-fe/e2e/run.sh web` end to end; confirm green on a fresh build; break one covered journey on purpose and confirm the suite fails with a readable report, then revert (SC-012 evidence)
 
 ---
 
@@ -173,14 +173,14 @@
 **Independent Test**: the login test passes on an emulator and fails fast with both versions named when the WebView does not match the pins.
 
 - [X] T078 [US12] Add the `e2e` Angular build configuration: `jordylab-fe/apps/jordylab/src/environments/environment.e2e.ts` (Keycloak address injected at run time as `window.__JORDYLAB_E2E__`, fixed logical fallback `http://localhost:18180` for the Android build, where adb reverse maps it) plus the `e2e` configuration in `jordylab-fe/apps/jordylab/project.json`; production output proven unchanged (initial 612.59 kB / 151.12 kB, no e2e strings in the bundle). The Android-specific build values are part of T079
-- [ ] T079 [US12] Make the debug Android build point at the e2e web build and allow cleartext/mixed content in debug only: App Link host placeholder in `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml` (release value stays `jordylab.be`), debug config in `jordylab-fe/apps/jordylab-mobile/android/app/build.gradle` and an e2e Capacitor config next to `jordylab-fe/apps/jordylab-mobile/capacitor.config.ts`; release APK output unchanged (verify with the existing release build steps)
-- [ ] T080 [HANDOFF] [US12] Post HANDOFF-## asking Jordy to confirm Appium 3.8.0, WebdriverIO 9.32.0 and the emulator image/API level for the pins (FR-002, FR-039)
-- [ ] T081 [US12] Generate the Nx project `jordylab-fe/apps/jordylab-mobile-e2e` (WebdriverIO + Appium 3 + UiAutomator2, TypeScript, `wdio.conf.ts`); pin the UiAutomator2 driver and chromedriver to the emulator's WebView version and write `jordylab-fe/apps/jordylab-mobile-e2e/PINS.md` (FR-036, FR-039)
-- [ ] T082 [US12] Write the preflight in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/preflight.ts`: read the emulator's WebView version with `adb`, compare with `PINS.md`, fail fast naming both versions (FR-039)
-- [ ] T083 [US12] Write the context helper in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/contexts.ts`: switch between `NATIVE_APP` and the WebView context with a time limit and a clear error when the WebView context is missing (FR-036)
-- [ ] T084 [US12] Write the emulator setup in `jordylab-fe/e2e/android-setup.sh`: `adb reverse` for Keycloak, backend and web ports, grant the App Link for the debug host (`pm set-app-links`); if the link cannot be approved, fall back to delivering the callback by `adb` intent and record the reduced fidelity in `research.md` (plan risk)
-- [ ] T085 [US12] Login test in `jordylab-fe/apps/jordylab-mobile-e2e/src/login.e2e.ts`: tap sign in, drive the Custom Tab sign-in as the test user, App Link returns to the app, switch to the WebView context, assert the signed-in home (FR-037)
-- [ ] T086 [US12] Run the login test on an emulator (locally if an Android SDK and emulator exist, else in the CI job from T093) and record the result; if the Mac cannot run it, say so plainly
+- [X] T079 [US12] Make the debug Android build reachable by the emulator tests with build configuration only: `environment.mobile-e2e.ts` and the `mobile-e2e` configuration (fixed logical addresses), the App Link host as a Gradle manifest placeholder in `jordylab-fe/apps/jordylab-mobile/android/app/src/main/AndroidManifest.xml` and `app/build.gradle` (default `jordylab.be`, so release builds are unchanged and CI proves it), a debug-only manifest overlay `app/src/debug/AndroidManifest.xml` allowing cleartext, and a `CAPACITOR_E2E=1` switch in `jordylab-fe/apps/jordylab-mobile/capacitor.config.ts` for mixed content (the default config is byte-identical)
+- [X] T080 [HANDOFF] [US12] Post HANDOFF-## asking Jordy to confirm Appium 3.8.0, WebdriverIO 9.32.0 and the emulator image/API level for the pins (FR-002, FR-039)
+- [X] T081 [US12] Generate the Nx project `jordylab-fe/apps/jordylab-mobile-e2e` (WebdriverIO + Appium 3 + UiAutomator2, TypeScript, `wdio.conf.ts`); pin the UiAutomator2 driver and chromedriver to the emulator's WebView version and write `jordylab-fe/apps/jordylab-mobile-e2e/PINS.md` (FR-036, FR-039)
+- [X] T082 [US12] Write the preflight in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/preflight.ts`: read the emulator's WebView version with `adb`, compare with `PINS.md`, fail fast naming both versions (FR-039)
+- [X] T083 [US12] Write the context helper in `jordylab-fe/apps/jordylab-mobile-e2e/src/support/contexts.ts`: switch between `NATIVE_APP` and the WebView context with a time limit and a clear error when the WebView context is missing (FR-036)
+- [X] T084 [US12] Write the emulator setup in `jordylab-fe/e2e/android-setup.sh`: `adb reverse` for Keycloak, backend and web ports, grant the App Link for the debug host (`pm set-app-links`); if the link cannot be approved, fall back to delivering the callback by `adb` intent and record the reduced fidelity in `research.md` (plan risk)
+- [X] T085 [US12] Login test in `jordylab-fe/apps/jordylab-mobile-e2e/src/specs/login.e2e.ts` with the helper `src/support/native-login.ts`: tap sign in, drive the Custom Tab sign-in as the test user (Next action, Enter, handling a leftover session), App Link returns to the app, switch to the WebView context, assert the signed-in home (FR-037)
+- [X] T086 [US12] Run the login test on an emulator (locally if an Android SDK and emulator exist, else in the CI job from T093) and record the result; if the Mac cannot run it, say so plainly
 
 ---
 
@@ -190,10 +190,10 @@
 
 **Independent Test**: each test passes; breaking its behaviour fails it.
 
-- [ ] T087 [P] [US13] Install prompt test in `jordylab-fe/apps/jordylab-mobile-e2e/src/install-prompt.e2e.ts` (use the app's real install-prompt trigger; assert the prompt in the WebView)
-- [ ] T088 [P] [US13] Update check test in `jordylab-fe/apps/jordylab-mobile-e2e/src/update-check.e2e.ts`: publish a newer test APK release through the throwaway backend's own publish API using the e2e service-account token, then assert the update notice in the WebView
-- [ ] T089 [P] [US13] Share target test in `jordylab-fe/apps/jordylab-mobile-e2e/src/share-target.e2e.ts`: send `ACTION_SEND text/plain` via `adb shell am start`, switch to the WebView and assert the shared text arrives
-- [ ] T090 [US13] Write the manual biometric checklist in `jordylab-fe/apps/jordylab-mobile-e2e/README.md` (biometric unlock stays manual, explicitly not automated) without the phrase the licence check rejects (FR-038, FR-047)
+- [X] T087 [P] [US13] Install prompt tests: inside the app it is not offered (`src/specs/install-prompt.e2e.ts`), and in Chrome on Android a signed-in visitor gets the install dialog and "Not now" silences it (`src/browser/install-prompt.e2e.ts`, run by `wdio.browser.conf.ts`); the prompt exists for browser visitors only, so both halves are covered
+- [X] T088 [P] [US13] Update check test in `jordylab-fe/apps/jordylab-mobile-e2e/src/update-check.e2e.ts`: publish a newer test APK release through the throwaway backend's own publish API using the e2e service-account token, then assert the update notice in the WebView
+- [X] T089 [P] [US13] Share target test in `jordylab-fe/apps/jordylab-mobile-e2e/src/share-target.e2e.ts`: send `ACTION_SEND text/plain` via `adb shell am start`, switch to the WebView and assert the shared text arrives
+- [X] T090 [US13] Write the manual biometric checklist in `jordylab-fe/apps/jordylab-mobile-e2e/README.md` (biometric unlock stays manual, explicitly not automated) without the phrase the licence check rejects (FR-038, FR-047)
 
 ---
 
@@ -203,10 +203,10 @@
 
 **Independent Test**: a PR with a broken web journey cannot merge; the Android job runs on `workflow_dispatch` and reports.
 
-- [ ] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
-- [ ] T092 [HANDOFF] [US14] Post HANDOFF-## asking Jordy to mark the `e2e-web` check as required in the repository's branch protection (a repo setting only they can change); verify later with a deliberately broken journey PR (SC-012)
-- [ ] T093 [US14] Create `.github/workflows/e2e-android.yml`: triggers `workflow_dispatch` and `workflow_call` (called from `.github/workflows/release.yml` after the `apk` job), `reactivecircus/android-emulator-runner` on the pinned API level, build the e2e debug APK, run `jordylab-fe/e2e/run.sh android`, an `if: always()` cleanup and leftover-check step (FR-045)
-- [ ] T094 [US14] Wire the Android job into `.github/workflows/release.yml` without blocking the release publish if the job fails (it reports; decision recorded in `research.md`), then trigger it once with `workflow_dispatch` and record the run
+- [X] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
+- [X] T092 [US14] Make `e2e-web` a required check: done directly on Jordy's request ("do this") by adding a `required_status_checks` rule to the `main` repository ruleset, not through a handoff; recorded with the before/after and its consequence in `research.md` C5b
+- [X] T093 [US14] Create `.github/workflows/e2e-android.yml`: `workflow_dispatch`, `workflow_run` after a successful Release, and `pull_request` limited to Android-specific paths (a new workflow file cannot be started by hand until it is on the default branch; it does not run on ordinary merges), `reactivecircus/android-emulator-runner` on API 35, JDK 21 for the Android build and 25 for the backend, `jordylab-fe/e2e/run.sh android`, a release-manifest check, an `if: always()` cleanup and leftover check (FR-045; deviation from `workflow_call` recorded in `research.md` C4b)
+- [X] T094 [US14] Run the Android job after releases without blocking them: the `workflow_run` trigger on a successful Release (it runs separately, so a failure never affects the publish); exercised by the `pull_request` path, re-runs and the real `workflow_run` after `v0.0.1-rc18` (see research.md)
 
 ---
 
@@ -216,8 +216,8 @@
 
 **Independent Test**: fresh Claude Code and OpenCode sessions each name the run command and when to prefer agent-browser.
 
-- [ ] T095 [US15] Add a short E2E section to `jordylab-fe/AGENTS.md` (commands `e2e/run.sh web|android`, what each covers, cleanup guarantee, no hand-seeding, versions pinned in `PINS.md`, and that agent-browser/the browser pane stays for exploratory and one-off checks while the suites are the regression gate) and a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-046)
-- [ ] T096 [US15] Update `docs/testing/e2e-test-plan.md` section 2 line about "No browser-test agent / agent-browser" only if it conflicts; add a one-line link to the new suites
+- [X] T095 [US15] Add a short E2E section to `jordylab-fe/AGENTS.md` (commands `e2e/run.sh web|android`, what each covers, cleanup guarantee, no hand-seeding, versions pinned in `PINS.md`, and that agent-browser/the browser pane stays for exploratory and one-off checks while the suites are the regression gate) and a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-046)
+- [X] T096 [US15] Update `docs/testing/e2e-test-plan.md` section 2 line about "No browser-test agent / agent-browser" only if it conflicts; add a one-line link to the new suites
 
 ---
 
@@ -240,9 +240,9 @@
 ## Phase 13: Polish and cross-cutting
 
 - [X] T104 [P] Run the licence-phrase grep from `.github/workflows/build.yml` locally over all new docs and READMEs (`grep -ril` outside `specs/`) and fix any hit (FR-047)
-- [ ] T105 [P] Check every commit of this feature carries a valid `Refs:` trailer (`.githooks/commit-msg` enabled via `git config core.hooksPath .githooks`; never `--no-verify`) (FR-004)
-- [ ] T106 Run the full `quickstart.md` validation for Parts A, B and C and record pass/fail per item in `research.md`; anything not runnable here (OpenCode, emulator on the Mac) is listed as not run with its HANDOFF
-- [ ] T107 Update `specs/012-technical-improvements/checklists/requirements.md` notes and mark the feature's status in `spec.md` when all parts are merged; list remaining HANDOFFs
+- [X] T105 [P] Check every commit of this feature carries a valid `Refs:` trailer (`.githooks/commit-msg` enabled via `git config core.hooksPath .githooks`; never `--no-verify`) (FR-004)
+- [X] T106 Run the full `quickstart.md` validation for Parts A, B and C and record pass/fail per item in `research.md`; anything not runnable here (OpenCode, emulator on the Mac) is listed as not run with its HANDOFF
+- [X] T107 Update `specs/012-technical-improvements/checklists/requirements.md` notes and mark the feature's status in `spec.md` when all parts are merged; list remaining HANDOFFs
 
 ---
 

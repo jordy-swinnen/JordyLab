@@ -12,6 +12,19 @@ bunx nx run-many -t lint           # Lint everything
 
 Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 
+## Two linters, one owner per rule
+
+ESLint runs through Nx (`bunx nx run-many -t lint`) and owns the Angular rules, the Angular template rules,
+`@nx/enforce-module-boundaries`, the core rules and typescript-eslint. Oxlint (`bunx nx run-many -t oxlint`, config
+`jordylab-fe/.oxlintrc.json`) is a fast extra pass that owns only the `oxc/*` and `unicorn/*` rules ESLint does not have, so
+agents never get conflicting feedback. `tools/check-lint-ownership.sh` fails when a rule is enabled in both. CI runs Oxlint
+first, then ESLint; either failing fails the build. Formatting stays with Prettier.
+
+To drop Oxlint again, one commit removes: `oxlint` and `@nx/oxlint` from `package.json`, the `@nx/oxlint` plugin entry in
+`nx.json`, `.oxlintrc.json`, `tools/check-lint-ownership.sh`, the "Oxlint" and "Lint rule ownership" steps in
+`.github/workflows/build.yml`, the Oxlint block in `tools/lint-changed.sh` and the Oxlint stub and cases in
+`.claude/hooks/tests/lint-cases.sh` (the hook then falls back to ESLint only). Rehearsed: ESLint over all 14 projects and the unit tests stay green.
+
 ## Lint feedback after every edit
 
 After editing a TypeScript file under `jordylab-fe/`, run `jordylab-fe/tools/lint-changed.sh <file>` and fix what it prints
@@ -131,6 +144,40 @@ the backend follows.
 - Create the component once in `beforeEach`, not separately inside every `it()`
 - Fixture data lives in `libs/<domain>/api/src/lib/mocks/<interface>.model.mock.ts` — one file per interface, named after it, exporting a factory function (`aFooMock(overrides = {}) => Foo`)
 - Specs import via the barrel (`@jordylab-fe/<domain>/<layer>`), never deep-relative into another lib (`../../other-lib/src/...`)
+
+# End-to-end tests (Playwright)
+
+Automated browser journeys for the web app, run against a freshly built app on a throwaway stack. Unit tests (Vitest) stay the
+fast layer; this is the regression gate for whole journeys.
+
+```bash
+cd jordylab-fe
+e2e/run.sh web                       # build fresh, start Postgres + Keycloak + backend, run the journeys, clean up, verify clean
+E2E_SKIP_BACKEND_BUILD=1 E2E_SKIP_WEB_BUILD=1 e2e/run.sh web    # reuse the last builds while iterating
+e2e/lib/cleanup.sh verify-all        # lists any E2E container, volume or network still around (should print "verified clean")
+e2e/prove-cleanup.sh                 # proves cleanup after a pass, a failure, Ctrl-C, SIGTERM and a hard kill
+```
+
+Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromium` once. CI runs the same script as the required
+`e2e-web` check.
+
+- **Throwaway environment.** Every run starts its own Postgres and Keycloak (unique compose project, free ports, labels, no volumes,
+  per-run credentials, a realm derived from the dev export) and a backend against them, and removes everything on pass, failure,
+  interrupt or hard kill; a final check fails the run if anything with the run label is left. It never touches the dev stack or the
+  dev database: the backend runs under profile `local` with every dev value overridden (see `e2e/run.sh`).
+- **Data only through the app.** The catalog is filled through the scan endpoint with a scanner-role token, guests sign up through
+  Keycloak's page. No SQL, no hand-seeded rows (same rule as everywhere).
+- **Selectors** are roles, labels and `data-testid`; never class names. Keycloak's own pages are third-party DOM, so only there the
+  documented element ids are used.
+- **Journeys** (`apps/jordylab-e2e/src/*.spec.ts`): sign-in with session reuse and sign-out, library grid/search/detail, catalog chat
+  up to the model call, FNA briefing (read-only), admin approving a sign-up. The throwaway backend has no AI keys, so nothing paid
+  is ever called and journeys that touch AI assert the graceful "unavailable" state.
+- **agent-browser / the browser pane versus these suites.** Use the browser pane for exploring, reproducing a bug, checking a
+  deployed environment or anything that needs judgement. Use the suites to prove a journey still works: repeatable, run by CI, no
+  agent needed. When a manual finding becomes a regression risk, turn it into a journey here.
+- **Android layer (Appium 3 + WebdriverIO, `apps/jordylab-mobile-e2e`)** for what only breaks inside the installed app: native Keycloak login (Custom Tab, App Link), install prompt, update check, share target. Runs on a hosted emulator in the
+  `E2E Android` workflow (on demand, after a Release, and when Android files change; not a required check); locally `e2e/run.sh android` needs the Android SDK and an emulator. Emulator and WebView pins: `apps/jordylab-mobile-e2e/PINS.md`.
+  Biometric unlock stays a manual checklist (README of that project).
 
 # Auth via Keycloak
 
