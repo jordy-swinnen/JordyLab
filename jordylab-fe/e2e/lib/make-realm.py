@@ -62,7 +62,9 @@ def main() -> None:
             "enabled": True,
             "firstName": "E2E",
             "lastName": "Admin",
-            "realmRoles": ["admin"],
+            # offline_access: the Android app signs in with scope offline_access (refresh token for the fingerprint unlock); without
+            # this role Keycloak refuses the code exchange, and the browser reports that error response as a CORS failure.
+            "realmRoles": ["admin", "offline_access"],
             "credentials": [{"type": "password", "value": os.environ["E2E_ADMIN_PASSWORD"], "temporary": False}],
         },
     ]
