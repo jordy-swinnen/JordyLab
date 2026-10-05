@@ -134,7 +134,6 @@ WEB_DIST_FOR_BROWSER=""
 prepare_android() {
   command -v adb >/dev/null 2>&1 || { log "adb not found: an Android run needs the Android SDK platform tools and a running emulator"; return 1; }
   [[ -n "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" ]] || { log "ANDROID_HOME is not set"; return 1; }
-  command -v keytool >/dev/null 2>&1 || { log "keytool (JDK) not found"; return 1; }
   export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
   local mobile_directory="$FRONTEND_ROOT/apps/jordylab-mobile"
   local gradle_properties="-PjordylabAppLinkHost=$ANDROID_APP_LINK_HOST"
@@ -156,9 +155,12 @@ prepare_android() {
   APK_FIRST="$RUN_DIRECTORY/apk/app-first.apk"
   APK_NEWER="$RUN_DIRECTORY/apk/app-newer.apk"
 
-  DEBUG_CERT_SHA256="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android -keypass android 2>/dev/null \
-    | awk '/SHA256:/ {print $2; exit}' | tr -d ':')"
-  [[ -n "$DEBUG_CERT_SHA256" ]] || { log "could not read the debug certificate fingerprint"; return 1; }
+  # The digest of the certificate that signed the APK, read the way the backend reads it: from the APK itself (no keystore path to guess).
+  local apksigner
+  apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+  [[ -x "$apksigner" ]] || { log "apksigner not found under $ANDROID_HOME/build-tools"; return 1; }
+  DEBUG_CERT_SHA256="$("$apksigner" verify --print-certs "$APK_FIRST" 2>"$RUN_DIRECTORY/apksigner.log" | awk -F': ' '/certificate SHA-256 digest/ {print $2; exit}' | tr -d ':[:space:]')"
+  [[ -n "$DEBUG_CERT_SHA256" ]] || { log "could not read the signing certificate digest from the APK"; cat "$RUN_DIRECTORY/apksigner.log" >&2; return 1; }
   {
     echo "E2E_APK_FIRST=$APK_FIRST"
     echo "E2E_APK_NEWER=$APK_NEWER"
