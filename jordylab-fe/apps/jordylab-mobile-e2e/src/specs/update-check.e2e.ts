@@ -20,6 +20,9 @@ async function publishNewerRelease(): Promise<void> {
   form.set('versionName', '0.0.2-e2e');
   form.set('versionCode', '2');
   form.set('releaseNotes', 'End-to-end test release');
+  // Without this the first release's minimum supported version is its own (2): the installed app (1) would be blocked by the "update required"
+  // screen. With 1 it is an ordinary "update available".
+  form.set('minSupportedVersionCode', '1');
   form.set('file', new Blob([new Uint8Array(await readFile(environment.apkNewer))], { type: 'application/vnd.android.package-archive' }), 'jordylab-0.0.2-e2e.apk');
   const response = await fetch(`${environment.apiOrigin}/api/mobile/releases`, {
     method: 'POST',
