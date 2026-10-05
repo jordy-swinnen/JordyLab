@@ -36,6 +36,10 @@ free_port() {
   python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'
 }
 
+port_is_free() {
+  python3 -c 'import socket, sys; s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(("127.0.0.1", int(sys.argv[1]))); s.close()' "$1" 2>/dev/null
+}
+
 compose() {
   "$RUNTIME" compose -p "$PROJECT" -f "$SCRIPT_DIRECTORY/compose.e2e.yaml" "$@"
 }
@@ -94,6 +98,9 @@ finish() {
   if [[ -n "${E2E_ARTIFACT_DIRECTORY:-}" && -d "$RUN_DIRECTORY" ]]; then
     mkdir -p "$E2E_ARTIFACT_DIRECTORY"
     cp "$RUN_DIRECTORY"/*.log "$E2E_ARTIFACT_DIRECTORY"/ 2>/dev/null
+    if [[ "$MODE" == "android" ]] && command -v adb >/dev/null 2>&1; then
+      adb logcat -d >"$E2E_ARTIFACT_DIRECTORY/logcat.txt" 2>/dev/null
+    fi
   fi
   compose down --volumes --remove-orphans >/dev/null 2>&1
   e2e_remove_run "$RUN_ID"
@@ -108,6 +115,61 @@ on_signal() {
   log "interrupted"
   TEST_EXIT_CODE="$1"
   exit "$1"
+}
+
+# Android runs only. The app is built with fixed logical addresses (see environment.mobile-e2e.ts), so Keycloak, the backend and the
+# web server use exactly these ports and the emulator reaches them with `adb reverse` on the same numbers.
+ANDROID_KEYCLOAK_PORT=18180
+ANDROID_API_PORT=18080
+ANDROID_WEB_PORT=18200
+ANDROID_PACKAGE="be.jordylab.app"
+ANDROID_APP_LINK_HOST="e2e.jordylab.test"
+DEBUG_CERT_SHA256=""
+APK_FIRST=""
+APK_NEWER=""
+WEB_DIST_FOR_BROWSER=""
+
+# Builds everything an Android run needs before the stack starts: the app as a debug APK (twice, the second with a higher versionCode
+# so the update check has something newer to find), the same web build for the browser, and the debug certificate the backend pins.
+prepare_android() {
+  command -v adb >/dev/null 2>&1 || { log "adb not found: an Android run needs the Android SDK platform tools and a running emulator"; return 1; }
+  [[ -n "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" ]] || { log "ANDROID_HOME is not set"; return 1; }
+  command -v keytool >/dev/null 2>&1 || { log "keytool (JDK) not found"; return 1; }
+  export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+  local mobile_directory="$FRONTEND_ROOT/apps/jordylab-mobile"
+  local gradle_properties="-PjordylabAppLinkHost=$ANDROID_APP_LINK_HOST"
+  mkdir -p "$RUN_DIRECTORY/apk"
+
+  log "building the web app for the browser tests"
+  (cd "$FRONTEND_ROOT" && bunx nx build jordylab --configuration=e2e --skip-nx-cache) || return 1
+  WEB_DIST_FOR_BROWSER="$RUN_DIRECTORY/web-dist"
+  cp -R "$FRONTEND_ROOT/dist/apps/jordylab/browser" "$WEB_DIST_FOR_BROWSER" || return 1
+
+  log "building the native app (web build with the e2e mobile configuration, Capacitor sync, debug APKs)"
+  (cd "$FRONTEND_ROOT" && bunx nx build jordylab --configuration=mobile-e2e --skip-nx-cache) || return 1
+  (cd "$mobile_directory" && CAPACITOR_E2E=1 bunx cap sync android) || return 1
+  # The Android Gradle plugin builds on JDK 21 (as release.yml does) while the backend needs 25: ANDROID_JAVA_HOME picks the former.
+  (cd "$mobile_directory/android" && JAVA_HOME="${ANDROID_JAVA_HOME:-${JAVA_HOME:-}}" ./gradlew assembleDebug --no-daemon -q $gradle_properties -PjordylabVersionCode=1 -PjordylabVersionName=0.0.1-e2e) || return 1
+  cp "$mobile_directory/android/app/build/outputs/apk/debug/app-debug.apk" "$RUN_DIRECTORY/apk/app-first.apk" || return 1
+  (cd "$mobile_directory/android" && JAVA_HOME="${ANDROID_JAVA_HOME:-${JAVA_HOME:-}}" ./gradlew assembleDebug --no-daemon -q $gradle_properties -PjordylabVersionCode=2 -PjordylabVersionName=0.0.2-e2e) || return 1
+  cp "$mobile_directory/android/app/build/outputs/apk/debug/app-debug.apk" "$RUN_DIRECTORY/apk/app-newer.apk" || return 1
+  APK_FIRST="$RUN_DIRECTORY/apk/app-first.apk"
+  APK_NEWER="$RUN_DIRECTORY/apk/app-newer.apk"
+
+  DEBUG_CERT_SHA256="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android -keypass android 2>/dev/null \
+    | awk '/SHA256:/ {print $2; exit}' | tr -d ':')"
+  [[ -n "$DEBUG_CERT_SHA256" ]] || { log "could not read the debug certificate fingerprint"; return 1; }
+  {
+    echo "E2E_APK_FIRST=$APK_FIRST"
+    echo "E2E_APK_NEWER=$APK_NEWER"
+    echo "E2E_ANDROID_PACKAGE=$ANDROID_PACKAGE"
+    echo "E2E_APP_LINK_HOST=$ANDROID_APP_LINK_HOST"
+    echo "E2E_WEB_PORT=$ANDROID_WEB_PORT"
+  } >>"$RUN_DIRECTORY/env"
+  set -a
+  # shellcheck disable=SC1091
+  . "$RUN_DIRECTORY/env"
+  set +a
 }
 
 start_backend() {
@@ -140,6 +202,11 @@ start_backend() {
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="http://localhost:$KEYCLOAK_PORT/realms/jordylab" \
     JORDYLAB_CORS_ALLOWED_ORIGINS="http://localhost:$WEB_PORT" \
     GAMECATALOG_ARTWORK_DIR="$RUN_DIRECTORY/artwork" \
+    MOBILE_APPLICATION_ID="$ANDROID_PACKAGE" \
+    MOBILE_PRODUCTION_DOMAIN="$ANDROID_APP_LINK_HOST" \
+    MOBILE_RELEASE_STORAGE_DIR="$RUN_DIRECTORY/releases" \
+    MOBILE_RELEASE_SIGNING_CERT_SHA256="$DEBUG_CERT_SHA256" \
+    MOBILE_DOWNLOAD_LINK_SECRET="$E2E_DOWNLOAD_LINK_SECRET" \
     java -jar "$jar" >"$RUN_DIRECTORY/backend.log" 2>&1 &
   BACKEND_PID=$!
 }
@@ -148,16 +215,21 @@ web_is_up() { curl -fsS "http://localhost:$WEB_PORT/" -o /dev/null; }
 keycloak_is_up() { curl -fsS "http://localhost:$KEYCLOAK_PORT/realms/jordylab/.well-known/openid-configuration" -o /dev/null; }
 backend_is_up() { curl -fsS "http://localhost:$API_PORT/actuator/health" -o /dev/null; }
 
-# Web only: build the app fresh and serve it (static files plus the /api proxy) next to the backend.
+# Serves a built web app (static files plus the /api proxy) next to the backend.
+serve_web() {
+  E2E_WEB_DIST="$1" E2E_WEB_PORT="$WEB_PORT" E2E_API_ORIGIN="http://localhost:$API_PORT" \
+    bun run "$SCRIPT_DIRECTORY/static-server.ts" >"$RUN_DIRECTORY/static-server.log" 2>&1 &
+  STATIC_SERVER_PID=$!
+  wait_for "the web server on port $WEB_PORT" web_is_up
+}
+
+# Web only: build the app fresh and serve it.
 prepare_web() {
   if [[ "${E2E_SKIP_WEB_BUILD:-0}" != "1" ]]; then
     log "building the app fresh"
     (cd "$FRONTEND_ROOT" && bunx nx build jordylab --configuration=e2e --skip-nx-cache) || return 1
   fi
-  E2E_WEB_DIST="$FRONTEND_ROOT/dist/apps/jordylab/browser" E2E_WEB_PORT="$WEB_PORT" E2E_API_ORIGIN="http://localhost:$API_PORT" \
-    bun run "$SCRIPT_DIRECTORY/static-server.ts" >"$RUN_DIRECTORY/static-server.log" 2>&1 &
-  STATIC_SERVER_PID=$!
-  wait_for "the web server on port $WEB_PORT" web_is_up
+  serve_web "$FRONTEND_ROOT/dist/apps/jordylab/browser"
 }
 
 # The test command itself. It runs in the background and the runner `wait`s for it, so a signal is handled at once and the
@@ -168,7 +240,10 @@ run_tests() {
     selftest-fail) false ;;
     selftest-wait) log "waiting for an interrupt"; sleep 600 ;;
     web) cd "$FRONTEND_ROOT" && bunx nx e2e jordylab-e2e --skip-nx-cache ;;
-    android) cd "$FRONTEND_ROOT" && bunx nx e2e jordylab-mobile-e2e --skip-nx-cache ;;
+    android)
+      "$SCRIPT_DIRECTORY/android-setup.sh" || exit 1
+      cd "$FRONTEND_ROOT" && bunx nx e2e jordylab-mobile-e2e --skip-nx-cache
+      ;;
   esac
 }
 
@@ -196,12 +271,19 @@ main() {
   E2E_ADMIN_PASSWORD="$(random_secret)"
   E2E_INGEST_CLIENT_SECRET="$(random_secret)"
   E2E_BACKEND_CLIENT_SECRET="$(random_secret)"
+  E2E_DOWNLOAD_LINK_SECRET="$(random_secret)"
+  if [[ "$MODE" == "android" ]]; then
+    KEYCLOAK_PORT="$ANDROID_KEYCLOAK_PORT"; API_PORT="$ANDROID_API_PORT"; WEB_PORT="$ANDROID_WEB_PORT"
+    for fixed_port in "$KEYCLOAK_PORT" "$API_PORT" "$WEB_PORT"; do
+      port_is_free "$fixed_port" || { log "port $fixed_port is in use; an Android run needs ports $KEYCLOAK_PORT, $API_PORT and $WEB_PORT (the app is built with them)"; TEST_EXIT_CODE=1; exit 1; }
+    done
+  fi
   if [[ "$POSTGRES_PORT" == "5432" || "$KEYCLOAK_PORT" == "8180" ]]; then
     log "refusing to run: a chosen port collides with the dev stack"; TEST_EXIT_CODE=1; exit 1
   fi
   export E2E_PROJECT="$PROJECT" E2E_RUN_ID="$RUN_ID" E2E_RUNNER_PID="$$" E2E_REPO_ROOT="$REPOSITORY_ROOT"
   export E2E_POSTGRES_PORT="$POSTGRES_PORT" E2E_KEYCLOAK_PORT="$KEYCLOAK_PORT" E2E_WEB_PORT="$WEB_PORT"
-  export E2E_DB_PASSWORD E2E_KEYCLOAK_ADMIN_PASSWORD E2E_ADMIN_USERNAME E2E_ADMIN_PASSWORD E2E_INGEST_CLIENT_SECRET E2E_BACKEND_CLIENT_SECRET
+  export E2E_DB_PASSWORD E2E_KEYCLOAK_ADMIN_PASSWORD E2E_ADMIN_USERNAME E2E_ADMIN_PASSWORD E2E_INGEST_CLIENT_SECRET E2E_BACKEND_CLIENT_SECRET E2E_DOWNLOAD_LINK_SECRET
   export E2E_REALM_FILE="$RUN_DIRECTORY/realm.json"
 
   python3 "$SCRIPT_DIRECTORY/lib/make-realm.py" "$E2E_REALM_FILE" || { TEST_EXIT_CODE=1; exit 1; }
@@ -222,6 +304,10 @@ main() {
   . "$RUN_DIRECTORY/env"
   set +a
 
+  if [[ "$MODE" == "android" ]]; then
+    prepare_android || { TEST_EXIT_CODE=1; exit 1; }
+  fi
+
   log "starting Postgres and Keycloak (ports $POSTGRES_PORT / $KEYCLOAK_PORT)"
   compose up -d >"$RUN_DIRECTORY/compose.log" 2>&1 || { log "compose up failed (see compose log)"; tail -20 "$RUN_DIRECTORY/compose.log" >&2; TEST_EXIT_CODE=1; exit 1; }
   wait_for "Keycloak realm on port $KEYCLOAK_PORT" keycloak_is_up || { compose logs --tail 30 keycloak >&2; TEST_EXIT_CODE=1; exit 1; }
@@ -230,6 +316,8 @@ main() {
 
   if [[ "$MODE" == "web" ]]; then
     prepare_web || { TEST_EXIT_CODE=1; exit 1; }
+  elif [[ "$MODE" == "android" ]]; then
+    serve_web "$WEB_DIST_FOR_BROWSER" || { TEST_EXIT_CODE=1; exit 1; }
   fi
   run_tests &
   TEST_PID=$!
