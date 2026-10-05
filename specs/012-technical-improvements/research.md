@@ -426,6 +426,29 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
   (decision Q2). It needs the debug APK built in the job (Gradle + Android SDK on the runner; the existing `apk` job
   in `release.yml` already builds release APKs on a hosted runner).
 
+### C4b. Android suite record (2026-10-05, branch `test/e2e-android`, T079-T090, T093-T094)
+
+- Result: all five Android tests pass in CI on a hosted emulator (API 35, `google_apis`, x86_64, WebView 124.0.6367.219), job about 16-17 minutes of which the tests take about 1 minute:
+  native Keycloak login (Custom Tab, App Link back, WebView context, signed-in app), install prompt not offered inside the app, install prompt offered and silenced in Chrome,
+  update check ("Update available: v0.0.2-e2e" after publishing a newer debug-signed APK through the app's own endpoint), share target (ACTION_SEND opens the share landing with the text).
+  The same job checks that the release build keeps `jordylab.be` as App Link host (and not the test host) and ends with the `sweep` and `verify-all` cleanup steps (verified clean).
+- It took 12 CI iterations; the causes, for the next person: `--allow-insecure` given as an array to the wdio Appium service was serialised as JSON (chromedriver autodownload off);
+  `dumpsys webview` does not exist on this image (version read from the WebView package); Android blocks cleartext for the app (debug-only manifest overlay, release untouched);
+  the backend must allow the WebView origin `https://localhost`; **Keycloak refused the code exchange because the throwaway user lacked `offline_access` (the app signs in with that scope)**
+  and Chrome reported Keycloak's error response, which has no CORS headers, as a CORS failure (found with Keycloak's event log); the `apksigner` digest line puts the value in the last field;
+  on the small emulator screen the on-screen keyboard hides the password field and the Sign In button (focus with the Next action, submit with Enter); `pm clear com.android.chrome`
+  overloaded the software emulator (ANR) so a leftover Keycloak session is handled instead; the first published release's minimum supported version defaults to itself, which shows the blocking
+  "update required" screen (the test publishes with `minSupportedVersionCode=1`).
+- Product-side changes (build configuration only): `mobile-e2e` Angular configuration and `environment.mobile-e2e.ts`; the App Link host as a Gradle manifest placeholder (default `jordylab.be`);
+  a debug-only manifest overlay allowing cleartext; a `CAPACITOR_E2E=1` switch in `capacitor.config.ts` (default config byte-identical).
+- App Link in the emulator: the debug APK declares `e2e.jordylab.test`; `pm set-app-links-user-selection` approves it without a verified `assetlinks.json`, and Chrome hands the redirect to the app. No intent fallback was needed.
+- Runner `android` mode: fixed ports 18180/18080/18200 (the app is built with them; `adb reverse` maps the same numbers), two debug APKs (second versionCode 2), a check that both are signed by the same
+  certificate, backend env for the mobile module, Keycloak event and access logging, logcat and Keycloak's log in the artifact.
+- Triggers: `workflow_dispatch`, `workflow_run` after a successful Release (not yet exercised: it needs a real release) and `pull_request` limited to Android-specific paths (added because a new
+  workflow file cannot be started by hand until it is on the default branch; it does not run on ordinary merges, so FR-045 holds). Not a required check.
+- Versions used, as proposed in the status report: Appium 3.8.0, UiAutomator2 driver 8.7.0, WebdriverIO 9.32.0 (`@wdio/globals` 9.31.3), image API 35. The choice between WebdriverIO 9 and 10 and the emulator
+  level was not answered explicitly (T080 stays open until it is).
+
 ### C5. CI
 
 - Web job `e2e-web` in `build.yml` on `pull_request` and `push` to main: install, build app fresh, start environment,
