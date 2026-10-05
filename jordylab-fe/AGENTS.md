@@ -12,6 +12,19 @@ bunx nx run-many -t lint           # Lint everything
 
 Use `bun` and `bunx` — not `npm`, `npx`, or `yarn`.
 
+## Two linters, one owner per rule
+
+ESLint runs through Nx (`bunx nx run-many -t lint`) and owns the Angular rules, the Angular template rules,
+`@nx/enforce-module-boundaries`, the core rules and typescript-eslint. Oxlint (`bunx nx run-many -t oxlint`, config
+`jordylab-fe/.oxlintrc.json`) is a fast extra pass that owns only the `oxc/*` and `unicorn/*` rules ESLint does not have, so
+agents never get conflicting feedback. `tools/check-lint-ownership.sh` fails when a rule is enabled in both. CI runs Oxlint
+first, then ESLint; either failing fails the build. Formatting stays with Prettier.
+
+To drop Oxlint again, one commit removes: `oxlint` and `@nx/oxlint` from `package.json`, the `@nx/oxlint` plugin entry in
+`nx.json`, `.oxlintrc.json`, `tools/check-lint-ownership.sh`, the "Oxlint" and "Lint rule ownership" steps in
+`.github/workflows/build.yml`, the Oxlint block in `tools/lint-changed.sh` and the Oxlint stub and cases in
+`.claude/hooks/tests/lint-cases.sh` (the hook then falls back to ESLint only). Rehearsed: ESLint over all 14 projects and the unit tests stay green.
+
 ## Lint feedback after every edit
 
 After editing a TypeScript file under `jordylab-fe/`, run `jordylab-fe/tools/lint-changed.sh <file>` and fix what it prints

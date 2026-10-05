@@ -68,6 +68,17 @@ jobs:
       - name: Install dependencies
         working-directory: jordylab-fe
         run: bun install --frozen-lockfile
+      # Fast first pass (spec 012 FR-021): Oxlint owns only the oxc and unicorn rules ESLint does not have, so a plain error fails
+      # here in seconds. ESLint below still gates everything Oxlint cannot see (templates, Angular, module boundaries).
+      - name: Oxlint
+        working-directory: jordylab-fe
+        run: bunx nx run-many --target=oxlint --all
+
+      # No rule may be enabled in both linters (FR-012): fails with the list of rules that overlap.
+      - name: Lint rule ownership
+        working-directory: jordylab-fe
+        run: tools/check-lint-ownership.sh
+
       # Module boundaries and template accessibility are lint rules (001 FR-011–FR-013; spec 011 BUG-003).
       - name: Lint
         working-directory: jordylab-fe

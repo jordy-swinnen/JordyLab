@@ -223,6 +223,23 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
   (`no-debugger` error and an unused-variable warning) verbatim from the hook. **Not verified:** OpenCode running the instruction: a headless `opencode run` produced no output
   within the wait (likely a tool-permission prompt it cannot answer), so that check is handed to Jordy.
 
+#### Oxlint record (2026-10-05, branch `feat/oxlint-fast-lint`, T025-T033, T045)
+
+- Versions (approved): `oxlint` 1.86.0, `@nx/oxlint` 23.2.1 (peer `oxlint ^1.43`). `bun add -d` and `nx add @nx/oxlint` work with Bun; the plugin infers an `oxlint` target (`oxlint .` per
+  project) and leaves the `lint` target (`@nx/eslint:lint`) untouched. `nx add` reformatted all of `nx.json`; only the plugin block was kept.
+- Measured: `oxlint` over all 227 `.ts` files: 10 ms; one file: 3 ms; versus single-file ESLint 0.6-0.8 s warm. The shared command runs both in parallel (about 1 s end to end, dominated by ESLint).
+- Ownership: ESLint resolves 84 enabled rules (core, typescript-eslint, `@angular-eslint`, `@nx/enforce-module-boundaries`); Oxlint owns exactly 27, all `oxc/*` and `unicorn/*` correctness rules
+  that ESLint does not have, listed explicitly with the `correctness` category off (otherwise Oxlint's built-in core rules would overlap). Result: no rule in both. `tools/check-lint-ownership.sh` resolves ESLint
+  per project directory (the root config alone has no Angular rules, which is how Nx runs it) and fails on overlap or when ESLint loses its Angular or boundary rules.
+- Confirmations are recorded as HANDOFF-25 in `docs/testing/e2e-test-plan.md` (T016, T026, T067; T080 stays open). The ownership check also asserts ESLint still enables Angular template rules (it samples a component `.html` file).
+- Oxlint finds nothing in the current code (0 findings on 227 files), so no code change was needed.
+- CI: `Oxlint` (`nx run-many -t oxlint`) and `Lint rule ownership` steps run before `Lint` in `test-frontend`.
+- CI ordering proof (T032, two draft scratch PRs, closed): a file with `new Array(3)` (seen only by Oxlint) failed the `Oxlint` step and the later steps (`Lint rule ownership`, `Lint`, tests) were skipped
+  (run 37295679671); a component with a boundary violation and an `<img>` without alt text (seen only by ESLint) passed `Oxlint` and `Lint rule ownership` and failed at `Lint` (run 37295685103).
+- Removal rehearsal (T045, throwaway branch): one change removing the two dependencies, the `nx.json` plugin, `.oxlintrc.json`, the ownership script, the two CI steps and the Oxlint block of
+  `lint-changed.sh` touched 7 files; ESLint over 14 projects and a library's unit tests stayed green; the hook fixtures' Oxlint cases must go with it (documented in `jordylab-fe/AGENTS.md`).
+- Found while rehearsing: a killed slow linter printed bash's "Terminated" notice; fixed by reaping the job.
+
 ### A5. Removability (FR-022)
 
 Everything Oxlint-specific is one set: `.oxlintrc.json`, the `@nx/oxlint` plugin entry in `nx.json`, the dev

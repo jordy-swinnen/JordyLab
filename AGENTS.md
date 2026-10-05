@@ -127,6 +127,8 @@ present in the repo.
 
 ## Shared Gotchas
 
+- Frontend lint is two tools with one owner per rule: ESLint (Angular, templates, module boundaries) and Oxlint (a fast extra pass for `oxc`/`unicorn` rules); details and the one-commit removal recipe in `jordylab-fe/AGENTS.md`
+
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`
 - Spring AI: leave `spring.ai.model.chat` **unset** — both the OpenAI (OpenRouter) and Anthropic chat starters only create their model when it is unset or names them, and `ResilientAiService` needs both. Feature keys under `jordylab.ai.features` contain dots: write them as `"[fna.briefing]"`, or they don't bind
 - Spring AI's pgvector `VectorStore` auto-configuration is excluded in `jordylab-be/src/main/resources/application.yaml` (nothing uses it and no embedding model is configured). A RAG/semantic-search feature must remove that exclusion and configure an `EmbeddingModel`
