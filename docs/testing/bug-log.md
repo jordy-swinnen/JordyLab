@@ -1057,3 +1057,17 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): `tabindex="0"`, `role="region"` and an `aria-label` on the scroller.
 - Regression test added: the axe journey (FNA portfolio, phone).
 - Verified on prod: pending
+### BUG-069: The CI check `app-boot` fails intermittently with "Chrome did not expose a page target"
+- Status: FIXING (PR #132)
+- Severity: S4
+- Area/spec: CI / 011 (app-boot check, BUG-056)
+- Env found: GitHub Actions `Build`: PR #129 (first run), #130 and #132 on 2026-10-05/06, while the same bundle booted fine locally and on other runs
+- Coverage rows: —
+- Steps to reproduce:
+  1. Re-run `app-boot` on an unchanged commit; roughly one run in four fails after 15 s.
+- Expected (cite spec/story): a green check unless the built app fails to start.
+- Actual (logs/screenshot, secrets redacted): `App boot check could not run: Chrome did not expose a page target`. Chrome was started but its DevTools endpoint listed no page within 15 s; Chrome's own output was discarded, so the cause is invisible.
+- Root cause: the script waits once for a page target and gives up; a slow or stuck Chrome start on a shared runner is never retried, and nothing says why.
+- Fix (PR / commit / tag): ask Chrome for a page itself when none is listed, restart Chrome up to three times, and keep Chrome's stderr to print on failure.
+- Regression test added: none (the check is itself a CI script); verified by the rerun of `app-boot` on this PR.
+- Verified on prod: n/a (CI only)
