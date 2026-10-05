@@ -145,6 +145,38 @@ the backend follows.
 - Fixture data lives in `libs/<domain>/api/src/lib/mocks/<interface>.model.mock.ts` — one file per interface, named after it, exporting a factory function (`aFooMock(overrides = {}) => Foo`)
 - Specs import via the barrel (`@jordylab-fe/<domain>/<layer>`), never deep-relative into another lib (`../../other-lib/src/...`)
 
+# End-to-end tests (Playwright)
+
+Automated browser journeys for the web app, run against a freshly built app on a throwaway stack. Unit tests (Vitest) stay the
+fast layer; this is the regression gate for whole journeys.
+
+```bash
+cd jordylab-fe
+e2e/run.sh web                       # build fresh, start Postgres + Keycloak + backend, run the journeys, clean up, verify clean
+E2E_SKIP_BACKEND_BUILD=1 E2E_SKIP_WEB_BUILD=1 e2e/run.sh web    # reuse the last builds while iterating
+e2e/lib/cleanup.sh verify-all        # lists any E2E container, volume or network still around (should print "verified clean")
+e2e/prove-cleanup.sh                 # proves cleanup after a pass, a failure, Ctrl-C, SIGTERM and a hard kill
+```
+
+Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromium` once. CI runs the same script as the required
+`e2e-web` check.
+
+- **Throwaway environment.** Every run starts its own Postgres and Keycloak (unique compose project, free ports, labels, no volumes,
+  per-run credentials, a realm derived from the dev export) and a backend against them, and removes everything on pass, failure,
+  interrupt or hard kill; a final check fails the run if anything with the run label is left. It never touches the dev stack or the
+  dev database: the backend runs under profile `local` with every dev value overridden (see `e2e/run.sh`).
+- **Data only through the app.** The catalog is filled through the scan endpoint with a scanner-role token, guests sign up through
+  Keycloak's page. No SQL, no hand-seeded rows (same rule as everywhere).
+- **Selectors** are roles, labels and `data-testid`; never class names. Keycloak's own pages are third-party DOM, so only there the
+  documented element ids are used.
+- **Journeys** (`apps/jordylab-e2e/src/*.spec.ts`): sign-in with session reuse and sign-out, library grid/search/detail, catalog chat
+  up to the model call, FNA briefing (read-only), admin approving a sign-up. The throwaway backend has no AI keys, so nothing paid
+  is ever called and journeys that touch AI assert the graceful "unavailable" state.
+- **agent-browser / the browser pane versus these suites.** Use the browser pane for exploring, reproducing a bug, checking a
+  deployed environment or anything that needs judgement. Use the suites to prove a journey still works: repeatable, run by CI, no
+  agent needed. When a manual finding becomes a regression risk, turn it into a journey here.
+- The Android layer (Appium) is added in `apps/jordylab-mobile-e2e`; see its README for the emulator pins.
+
 # Auth via Keycloak
 
 - Keycloak integration (the `keycloak-js` SDK, token plumbing, route guard, login page) lives in

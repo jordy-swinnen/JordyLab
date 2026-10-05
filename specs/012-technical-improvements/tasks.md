@@ -80,7 +80,7 @@
 - [X] T031 [US3] Add an "Oxlint" step before the "Lint" step in the `test-frontend` job of `.github/workflows/build.yml` (also running `tools/check-lint-ownership.sh`); both steps fail the job (FR-021)
 - [X] T032 [US3] Prove CI ordering with a scratch branch: one error both linters see fails on the Oxlint step; an Angular template violation and a boundary violation fail only on ESLint (record run links in `research.md`; do not merge the scratch branch)
 - [X] T033 [P] [US2] Document the commands and the division of labour (one short paragraph, rule-ownership pointer) in `jordylab-fe/AGENTS.md`, plus a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-023)
-- [ ] T034 [US2] Open PR 2, wait for CI, resolve review comments, merge
+- [X] T034 [US2] Open PR 2, wait for CI, resolve review comments, merge
 
 ### Agent hook (PR 3, branch `feat/lint-agent-hook`; may be combined with PR 2)
 
@@ -204,7 +204,7 @@
 **Independent Test**: a PR with a broken web journey cannot merge; the Android job runs on `workflow_dispatch` and reports.
 
 - [X] T091 [US14] Add the `e2e-web` job to `.github/workflows/build.yml` (Node pin, Bun, install, fresh build, `jordylab-fe/e2e/run.sh web`, upload Playwright report and traces on failure, an `if: always()` cleanup and leftover-check step) (FR-045)
-- [ ] T092 [HANDOFF] [US14] Post HANDOFF-## asking Jordy to mark the `e2e-web` check as required in the repository's branch protection (a repo setting only they can change); verify later with a deliberately broken journey PR (SC-012)
+- [X] T092 [HANDOFF] [US14] Post HANDOFF-## asking Jordy to mark the `e2e-web` check as required in the repository's branch protection (a repo setting only they can change); verify later with a deliberately broken journey PR (SC-012)
 - [ ] T093 [US14] Create `.github/workflows/e2e-android.yml`: triggers `workflow_dispatch` and `workflow_call` (called from `.github/workflows/release.yml` after the `apk` job), `reactivecircus/android-emulator-runner` on the pinned API level, build the e2e debug APK, run `jordylab-fe/e2e/run.sh android`, an `if: always()` cleanup and leftover-check step (FR-045)
 - [ ] T094 [US14] Wire the Android job into `.github/workflows/release.yml` without blocking the release publish if the job fails (it reports; decision recorded in `research.md`), then trigger it once with `workflow_dispatch` and record the run
 
@@ -216,8 +216,8 @@
 
 **Independent Test**: fresh Claude Code and OpenCode sessions each name the run command and when to prefer agent-browser.
 
-- [ ] T095 [US15] Add a short E2E section to `jordylab-fe/AGENTS.md` (commands `e2e/run.sh web|android`, what each covers, cleanup guarantee, no hand-seeding, versions pinned in `PINS.md`, and that agent-browser/the browser pane stays for exploratory and one-off checks while the suites are the regression gate) and a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-046)
-- [ ] T096 [US15] Update `docs/testing/e2e-test-plan.md` section 2 line about "No browser-test agent / agent-browser" only if it conflicts; add a one-line link to the new suites
+- [X] T095 [US15] Add a short E2E section to `jordylab-fe/AGENTS.md` (commands `e2e/run.sh web|android`, what each covers, cleanup guarantee, no hand-seeding, versions pinned in `PINS.md`, and that agent-browser/the browser pane stays for exploratory and one-off checks while the suites are the regression gate) and a pointer line in root `AGENTS.md`, via `/dual-agent-config` (FR-046)
+- [X] T096 [US15] Update `docs/testing/e2e-test-plan.md` section 2 line about "No browser-test agent / agent-browser" only if it conflicts; add a one-line link to the new suites
 
 ---
 
