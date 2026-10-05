@@ -74,6 +74,12 @@ tree showing one Boot minor, and a local start. Whether Modulith 2.1.x pairs wit
   every project, branch coverage differs by up to 1.6 points in three projects (line gate unaffected); production build initial 612.59 kB (was 599.28, +2.2%), transfer
   151.12 kB (was 152.01); mobile 612.68 kB; dist 968 kB (was 984); dependency graph identical (20 nodes); a scratch cross-scope import still fails
   `@nx/enforce-module-boundaries`; `nx serve jordylab` boots; spartan generator runs; the frontend image builds on `oven/bun:1`.
+- HTTP backend: Angular 22 makes `FetchBackend` the default; the `http-xhr-backend` migration added `withXhr()` to `provideHttpClient` in all three apps
+  (`apps/{jordylab,fna,gamecatalog}/src/app/app.config.ts`), so requests keep using XMLHttpRequest as before. Moving to fetch is a separate decision.
+- Tech debt logged: the migration suppressed the `nullishCoalescingNotNullable` and `optionalChainNotNullable` extended diagnostics in the app tsconfigs (and set
+  `strictTemplates: false` in the helm libs) to keep the old behaviour; removing those suppressions and fixing what they hide is future cleanup. Together with the
+  `Eager` change detection (draft `angular-onpush-adoption`) these are the three deliberate carry-overs of this upgrade.
+- `httpResource()` is stable in Angular 22 (no `@experimental` marker in `@angular/common`); `jordylab-fe/AGENTS.md` updated accordingly.
 - CI and image (T021): `build.yml` already floats `node-version: 22` (no change); `oven/bun:1` has no Node, so the image build runs `bunx nx build` on Bun's runtime. Rebuilt locally with Angular 22: success (image hash printed, test image removed).
 - Node: local Node 24.13.1 is below Angular 22's `^24.15.0` floor, but Nx runs the builders directly and every build, test and serve worked; CI uses Node 22 (newest 22.x).
   Raising local Node is still recommended (HANDOFF in T016).
