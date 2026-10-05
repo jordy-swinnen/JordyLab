@@ -243,6 +243,22 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
   or Anthropic keys; chat and briefing journeys assert up to the call and the app's graceful failure/empty states
   (decision Q1: no paid calls in the merge gate).
 
+### C3b. Runner record (2026-10-05, branch `test/e2e-web`, T060-T066)
+
+- Files: `jordylab-fe/e2e/{compose.e2e.yaml,run.sh,static-server.ts,prove-cleanup.sh,lib/cleanup.sh,lib/make-realm.py}`. The throwaway realm is derived from
+  the dev export at run time (no copy to drift); credentials are generated per run into an untracked 0600 file and never printed.
+- **Safety finding:** the backend refuses to start without profile `local` or `prod`, and `local` hard-codes the dev stack (database `localhost:5432`, Keycloak
+  `8180`, a dev client secret, dev CORS origins). A first attempt that only set `POSTGRES_URL` pointed the backend at the dev database and was stopped only
+  because the random password did not match. The runner now sets the profile and overrides every one of those values with higher-priority environment variables,
+  and refuses to run if a chosen port equals 5432 or 8180.
+- Lifecycle: sweep of dead runs (by runner-pid label), free ports, compose up, readiness waits that fail fast when a container or the backend dies, test command in
+  the background with `wait` so signals act at once, `trap` cleanup, label-based removal, and a final leftover check that fails the run with exit 97.
+- Proof (`e2e/prove-cleanup.sh`, podman, dev stack running with 16 tables): passing run, failing run, SIGTERM (CI cancel) and SIGKILL followed by the sweep all end
+  with no container, volume or network carrying the run label; dev database table counts identical before and after (SC-011, SC-013). A full lifecycle takes about 45 s.
+  The Boot 4.1.1 jar also starts and reports healthy in this stack (T101).
+- Known nit: in the proof script the simulated Ctrl-C (SIGINT) run cleans up correctly but exits 0 instead of 130; cleanup, the guarantee, is unaffected.
+- Not yet: the `web` mode needs the `e2e` Angular configuration and the Playwright project (T068+); `android` mode needs T081+.
+
 ### C4. Android specifics
 
 - The mobile build hardcodes production (`environment.mobile.ts`: `https://jordylab.be`) and the manifest App Link is
