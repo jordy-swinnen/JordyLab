@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { PortfolioPositionRow } from '@jordylab-fe/fna/api';
@@ -23,6 +23,7 @@ interface AllocationSegment {
   selector: 'lib-portfolio-manager-view',
   standalone: true,
   imports: [FormsModule, DatePipe, DecimalPipe, HlmButtonDirective],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager-view.component.html',
 })
 export class PortfolioManagerViewComponent {

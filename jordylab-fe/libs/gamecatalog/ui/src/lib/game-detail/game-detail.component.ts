@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { GameDetailStore, SwitchGameFormat } from '@jordylab-fe/gamecatalog/api';
 import { AuthService } from '@jordylab-fe/shared/auth';
@@ -8,6 +8,7 @@ import { GameDetailViewComponent } from './game-detail-view.component';
   selector: 'lib-game-detail',
   standalone: true,
   imports: [GameDetailViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-detail.component.html',
 })
 export class GameDetailComponent {

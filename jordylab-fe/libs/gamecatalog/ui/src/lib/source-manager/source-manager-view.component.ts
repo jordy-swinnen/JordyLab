@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
@@ -24,6 +24,7 @@ export type ScanClientType = 'steam' | 'emudeck';
     HlmInputDirective,
     HlmSkeletonComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './source-manager-view.component.html',
 })
 export class SourceManagerViewComponent {

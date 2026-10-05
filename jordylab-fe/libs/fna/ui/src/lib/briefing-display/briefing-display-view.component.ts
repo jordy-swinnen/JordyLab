@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Briefing } from '@jordylab-fe/fna/api';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
@@ -8,6 +8,7 @@ import { MarkdownPipe } from './markdown.pipe';
   selector: 'lib-briefing-display-view',
   standalone: true,
   imports: [DatePipe, HlmButtonDirective, MarkdownPipe],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './briefing-display-view.component.html',
 })
 export class BriefingDisplayViewComponent {

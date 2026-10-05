@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
@@ -24,6 +24,7 @@ const CHIP = 'h-10 cursor-pointer px-4 text-sm font-semibold';
     HlmInputDirective,
     HlmSkeletonComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-grid-view.component.html',
 })
 export class GameGridViewComponent {

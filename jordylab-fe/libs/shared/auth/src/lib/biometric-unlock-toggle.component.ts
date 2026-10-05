@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { BiometricUnlockService } from './biometric-unlock.service';
 
 /**
@@ -9,6 +9,7 @@ import { BiometricUnlockService } from './biometric-unlock.service';
 @Component({
   selector: 'lib-biometric-unlock-toggle',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <section class="rounded-2xl border border-border p-5" aria-labelledby="fingerprint-heading">
       <div class="flex items-start justify-between gap-4">

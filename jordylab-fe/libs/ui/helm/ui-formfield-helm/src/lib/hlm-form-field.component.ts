@@ -1,4 +1,4 @@
-import { Component, computed, contentChild, contentChildren, effect } from '@angular/core';
+import { Component, computed, contentChild, contentChildren, effect, ChangeDetectionStrategy } from '@angular/core';
 import { BrnFormFieldControl } from '@spartan-ng/brain/form-field';
 import { HlmErrorDirective } from './hlm-error.directive';
 
@@ -17,6 +17,7 @@ import { HlmErrorDirective } from './hlm-error.directive';
 		}
 	`,
 	standalone: true,
+	changeDetection: ChangeDetectionStrategy.Eager,
 	host: {
 		class: 'space-y-2 block',
 	},

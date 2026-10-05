@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { UsersStore } from '@jordylab-fe/settings/api';
 import { UsersPageViewComponent } from './users-page-view.component';
 
@@ -6,6 +6,7 @@ import { UsersPageViewComponent } from './users-page-view.component';
   selector: 'lib-users-page',
   standalone: true,
   imports: [UsersPageViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <lib-users-page-view
       [pendingUsers]="pendingUsers()"

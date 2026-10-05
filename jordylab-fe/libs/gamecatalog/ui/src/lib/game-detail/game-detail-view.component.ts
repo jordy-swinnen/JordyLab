@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
@@ -15,6 +15,7 @@ import { coverInitials, coverPalette, platformTagClass } from '../cover';
   selector: 'lib-game-detail-view',
   standalone: true,
   imports: [RouterLink, HlmBadgeDirective, HlmSkeletonComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-detail-view.component.html',
 })
 export class GameDetailViewComponent {

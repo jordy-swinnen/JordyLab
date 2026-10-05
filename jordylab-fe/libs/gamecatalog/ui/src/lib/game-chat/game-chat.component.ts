@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, ChangeDetectionStrategy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { GameChatStore } from '@jordylab-fe/gamecatalog/api';
@@ -8,6 +8,7 @@ import { GameChatViewComponent } from './game-chat-view.component';
   selector: 'lib-game-chat',
   standalone: true,
   imports: [GameChatViewComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-chat.component.html',
 })
 export class GameChatComponent {

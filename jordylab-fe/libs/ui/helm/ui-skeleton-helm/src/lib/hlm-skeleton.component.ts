@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { hlm } from '@spartan-ng/ui-core';
 import type { ClassValue } from 'clsx';
 
@@ -6,6 +6,7 @@ import type { ClassValue } from 'clsx';
 	selector: 'hlm-skeleton',
 	standalone: true,
 	template: '',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	host: {
 		'[class]': '_computedClass()',
 	},
