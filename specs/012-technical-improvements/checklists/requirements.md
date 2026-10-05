@@ -34,8 +34,9 @@
 1. This is a developer-tooling feature: the developer named the tools themselves (Nx 23, Oxlint, ESLint, Prettier,
    Playwright, Appium 3 + WebdriverIO + UiAutomator2, Claude Code, OpenCode), so they appear as requirements, not as
    implementation choices. Implementation detail (script names, config files, CI step layout, compose wiring, versions)
-   is left to `/speckit-plan`.
-2. No clarification markers were needed; open choices were given defaults in Assumptions and are the expected
-   `/speckit-clarify` topics: the final web journey list (the description says it comes out of clarify), whether the
-   Android job runs on merge, on releases or both, how AI-calling journeys avoid paid model calls in the merge gate, and
-   whether future-module AI gaps are deferred or drafted now.
+   lives in `plan.md` and `research.md`.
+2. The four open choices from the first draft were settled in `/speckit-clarify` (see the Clarifications section of
+   `spec.md`): the web journey list, the Android job triggers, where the Android project lives, and how future-module AI
+   gaps are handled. A fifth question settled what "no change" means after the upgrade.
+3. After implementation (2026-10-05): all items still pass; the spec's status line and FR-045 describe what was built,
+   and the end of `research.md` lists what is still open (T080, two optional handoffs, the release-triggered Android run).
