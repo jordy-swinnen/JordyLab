@@ -122,7 +122,8 @@ start_backend() {
   # The backend refuses to start without profile `local` or `prod`, and `local` hard-codes the DEV stack (database on
   # localhost:5432, Keycloak on 8180, a dev client secret, dev CORS origins). Environment variables beat profile files, so
   # every one of those values is overridden below; nothing may fall back to the dev stack (see the port guard in main).
-  env \
+  # -u: the throwaway backend must have no AI provider keys, whatever the developer's shell exports.
+  env -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
     SPRING_PROFILES_ACTIVE=local \
     SERVER_PORT="$API_PORT" \
     SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:$POSTGRES_PORT/jordylab" \
@@ -139,7 +140,6 @@ start_backend() {
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="http://localhost:$KEYCLOAK_PORT/realms/jordylab" \
     JORDYLAB_CORS_ALLOWED_ORIGINS="http://localhost:$WEB_PORT" \
     GAMECATALOG_ARTWORK_DIR="$RUN_DIRECTORY/artwork" \
-    OPENROUTER_API_KEY="" ANTHROPIC_API_KEY="" \
     java -jar "$jar" >"$RUN_DIRECTORY/backend.log" 2>&1 &
   BACKEND_PID=$!
 }
