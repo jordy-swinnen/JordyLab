@@ -139,6 +139,7 @@ password manager or from the app, never from this file.
 - If it fails: check `kubectl -n jordylab logs deploy/backend | grep -i ntfy` (expect "Ntfy notifications enabled"); add `BUG-<next>`.
 - Record result: 007-US6 native rows → `PASS`.
 - **Result 2026-10-05 (owner, rc17): FAILED → BUG-066, not a code bug.** The backend sent the push (log `Ntfy notification sent`, ntfy counted it) but the phone is subscribed to a *different topic* than the one in `NTFY_TOPIC`: ntfy had no subscriber and nothing stored for the phone's topic. **HANDOFF-26** fixes it. Then repeat steps 1–2 (a new throw-away registration).
+- **Repeat 2026-10-06 (owner): PASS.** After HANDOFF-26 the topic matched but the app was still on the default server `ntfy.sh` (ntfy still showed `subscribers=0`; HANDOFF-28); on `https://jordylab.be/ntfy` the test message arrived, the sign-up push arrived and its tap opened Settings > Users.
 
 ### MRB-08: Steam family sync
 - Covers: 005-US2, 005-US4, 005-US5 (family side) | Area/spec: C / 005

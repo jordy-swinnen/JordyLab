@@ -27,9 +27,9 @@ Production (rc17) is healthy. **Every S1 and S2 defect found (26) is fixed, depl
 | Severity | Count | State |
 |----------|-------|-------|
 | S1 | 1 | verified (BUG-056, the rc12 blank page: rolled back in minutes, fixed in rc13) |
-| S2 | 26 | 25 verified (23 on prod or the phone, 2 by drill / CI); BUG-062 (Android share) fixed, waiting for the phone check |
-| S3 | 25 | 15 verified; BUG-070 (silent sign-in page vs the enforcing CSP, found before enforcing) fixed, to verify after the release; BUG-063 (Steam family help and errors) fixed, waiting for the retry; BUG-066 (phone on another ntfy topic) is the owner's HANDOFF-26; 4 deployed (BUG-001–004, CI-level lint/coverage gates — their proof is the green gates); 3 fixed locally (tooling/test infrastructure with no prod component) |
-| S4 | 19 | 9 verified; 4 fixed locally (developer tooling); BUG-064 and BUG-065 (Lighthouse findings) fixed, to re-measure after the release; BUG-067 and BUG-068 (found by the new axe check in CI) fixed, to verify after the release; BUG-069 (flaky `app-boot` Chrome start) fixed in CI tooling |
+| S2 | 26 | 25 verified (23 on prod or the phone, 2 by drill / CI); BUG-062 (Android share) deployed in rc19, waiting for the phone check |
+| S3 | 25 | 16 verified (BUG-066, the phone's ntfy subscription, on 2026-10-06); BUG-063 (Steam family help and errors) deployed in rc19, waiting for the retry; BUG-070 (silent sign-in page vs the enforcing CSP, found before enforcing) merged, ships with the next release; 4 deployed (BUG-001–004, CI-level lint/coverage gates — their proof is the green gates); 3 fixed locally (tooling/test infrastructure with no prod component) |
+| S4 | 19 | 9 verified; 4 fixed locally (developer tooling); BUG-064 and BUG-065 (Lighthouse findings) deployed in rc19, to re-measure (HANDOFF-29); BUG-067 and BUG-068 (found by the new axe check in CI) and BUG-069 (flaky `app-boot` Chrome start) merged, they ship with the next release |
 
 Highlights (all fixed): Keycloak URLs and the Users page chain (503 → 403 → 403), admin roles, nginx headers/compression,
 the whole release flow (tag → release → deploy → APK), APK signing verification (v1-only reader vs v2/v3-only signing),
@@ -39,7 +39,7 @@ Ollama removal (which exposed a hidden embedding-model dependency), Ntfy that ne
 and the EmuDeck scan cap, and two overlapping scans of one source (500 → serialized by an advisory lock).
 
 ## Still open
-- **Owner's manual runbook (done last):** MRB-01 to MRB-05 and MRB-09 (VPS reboot, 2026-10-05) are done; MRB-12 (colour contrast) passed (Lighthouse accessibility 100, two small findings fixed). MRB-06 (share target), MRB-07 (ntfy topic, HANDOFF-26) and MRB-08 (Steam family token, HANDOFF-27) failed on first try, their causes are fixed or explained and each needs one repeat; MRB-10 (point-in-time restore) is postponed by the owner; MRB-11 (CSP) is explained in detail and waits for a go-ahead; MRB-13 (full rebuild) was dropped by the owner.
+- **Owner's manual runbook (done last):** MRB-01 to MRB-05 and MRB-09 (VPS reboot, 2026-10-05) are done; MRB-12 (colour contrast) passed (Lighthouse accessibility 100, two small findings fixed). MRB-07 (push) passed on the repeat (2026-10-06) after the phone was pointed at the right server and topic; MRB-06 (share target) and MRB-08 (Steam family token) failed on first try, are fixed in rc19 and each needs one repeat (HANDOFF-27); MRB-10 (point-in-time restore) is postponed by the owner; MRB-11 (CSP) is explained in detail and waits for a go-ahead; MRB-13 (full rebuild) was dropped by the owner.
 - **Not built, by design out of scope here:** 010 (Eufy presence) and the `garmin-sync-service` sidecar; a scheduled smoke-suite Action; a report-only CSP.
 - **Accepted limits:** the matrix has 65 rows NOT TESTABLE (Eufy 010, native Android stories, the full VPS rebuild) and 410 rows at PASS-CI (named green suites plus the E2E passes) rather than a direct pass; BUG-001–004 are proven by the lint/coverage gates, not by a prod check.
 - **Dependabot:** done — 0 open (rc7). **Developer tooling:** `opencode.json`'s default model resolves. **CI:** the Build workflow now also boots the built app in headless Chrome (`app-boot`, BUG-061), the check that would have caught the rc12 blank page.
