@@ -1,15 +1,15 @@
 # Production E2E campaign — final report (spec 011, FR-026)
 
-2026-09-30 → 2026-10-05 · production `https://jordylab.be` · last release `v0.0.1-rc17` (`59cf697`)
+2026-09-30 → 2026-10-06 · production `https://jordylab.be` · last release `v0.0.1-rc19` (`1317020`)
 
 ## Verdict
-Production (rc17) is healthy. **Every S1 and S2 defect found (26) is fixed, deployed and verified** — on prod, on the owner's phone, or by a drill. What is left is the owner's manual runbook (MRB-06 to MRB-13: Android share target and push notifications, Steam family sync, VPS reboot, point-in-time restore, contrast, CSP and a full rebuild), which is done last. Nothing known is broken.
+Production (rc19) is healthy: 5 of 5 pods Running on the rc19 images, no backend errors after the rollout. **Every S1 and S2 defect found is fixed and deployed; all but one are verified** — on prod, on the owner's phone, or by a drill. The exception is BUG-062 (Android share target), deployed in rc19 and waiting for the owner's phone check (HANDOFF-27), like BUG-063 (Steam family sync). What is left of the owner's manual runbook: MRB-06 and MRB-08 repeats (HANDOFF-27), a Lighthouse re-run (HANDOFF-29) and the CSP enforcement decision (MRB-11); MRB-10 is postponed and MRB-13 dropped. Nothing known is broken.
 
 ## What was tested
 - **Production infrastructure and smoke (area A):** DNS, TLS (valid to 2026-12-29), redirects, security headers incl. HSTS,
   compression and caching, deep links, OIDC issuer, unauthenticated API, CORS, pods, image tags, app links — all PASS on
   rc6 (re-run in the plan §6).
-- **Releases and rollback:** seventeen release tags (rc1–rc17; rc12 was rolled back within minutes) through the tag-driven pipeline; rc6 and rc7 are the first with every job
+- **Releases and rollback:** nineteen release tags (rc1–rc19; rc12 was rolled back within minutes) through the tag-driven pipeline; rc6 and rc7 are the first with every job
   green (retag, release, deploy, publish, **APK built, signed, verified and published**). Rollback to rc5 and roll-forward
   to rc6 both succeeded (DEPLOY-11).
 - **Data durability:** base backups running; a restore drill recovered production into a scratch cluster in 1 min 55 s
