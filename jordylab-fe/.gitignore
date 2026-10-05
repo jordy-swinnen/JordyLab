@@ -49,3 +49,6 @@ vitest.config.*.timestamp*
 __screenshots__/
 
 .nx/migrate-runs
+
+# Per-run E2E credentials, logs and realm (never committed)
+e2e/.run/
