@@ -392,6 +392,13 @@ Playwright browser binaries are downloaded on install (size confirmed when askin
 - CI: job `e2e-web` in `build.yml` (Node 22, Java 25, Playwright browser with system dependencies, the runner, report and logs uploaded on failure, `sweep` and `verify-all` steps with `if: always()`);
   `build-and-push` now needs it. Making it a required check is a repository setting (T092).
 
+### C5b. Branch protection (T092, 2026-10-05)
+
+- `main` is protected by a repository **ruleset** ("main", id 20184530), not classic branch protection; before the change it only blocked deletion and non-fast-forward pushes and required no checks.
+  Done at Jordy's request ("do this"): a `required_status_checks` rule was added with the single context `e2e-web` (non-strict, any integration), everything else unchanged. The job passed in real
+  CI before the rule was added (Ubuntu, Docker, 4m11s). Consequence to know: a push to `main` that has not passed `e2e-web` is now rejected, so every change goes through a pull request.
+  Other checks (test-backend, test-frontend, ...) are still not required; adding them is a one-line change to the same rule.
+
 ### C4. Android specifics
 
 - The mobile build hardcodes production (`environment.mobile.ts`: `https://jordylab.be`) and the manifest App Link is

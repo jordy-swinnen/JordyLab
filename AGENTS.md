@@ -127,6 +127,7 @@ present in the repo.
 
 ## Shared Gotchas
 
+- Automated end-to-end tests (Playwright web journeys on a throwaway Postgres + Keycloak, required CI check `e2e-web`): how to run them, what they cover and how they relate to agent-browser are in `jordylab-fe/AGENTS.md`
 - Frontend lint is two tools with one owner per rule: ESLint (Angular, templates, module boundaries) and Oxlint (a fast extra pass for `oxc`/`unicorn` rules); details and the one-commit removal recipe in `jordylab-fe/AGENTS.md`
 
 - Spring Boot 4 Flyway: need `spring-boot-starter-flyway` explicitly, not just `flyway-core`

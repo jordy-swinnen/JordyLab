@@ -51,7 +51,7 @@ Campaign spec: [specs/011-prod-e2e-hardening](../../specs/011-prod-e2e-hardening
    deploy-prod.yml" is already done (pinned kubectl v1.36.4 / kustomize v5.8.1) → BUG-006.
 7. **Deploy approval**: `.claude/agents/jordylab-devops.md` requires Jordy's explicit yes for approving a deploy; the
    brief delegates it for the campaign's own merged, green commits. → Q-01.
-8. **No `browser-test` agent / `agent-browser`** exists; the built-in browser pane is used.
+8. **No `browser-test` agent / `agent-browser`** exists; the built-in browser pane is used. (Since spec 012 the main web journeys are also automated with Playwright, `jordylab-fe/e2e/run.sh web`; see `jordylab-fe/AGENTS.md`. This campaign's manual passes stay the tool for exploration.)
 9. **Backend health is not public** — the Gateway routes only `/api` and `/.well-known/assetlinks.json` to the backend,
    so `/actuator/health` is checked in-cluster (by design, not a bug).
 10. **Scanner Python**: brief/AGENTS say Python 3.12; the client targets `>=3.9` (macOS system Python 3.9.6 here). Not a
