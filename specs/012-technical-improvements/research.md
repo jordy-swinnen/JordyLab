@@ -113,6 +113,27 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
   the runner image's default.
 - Mac Node is 24.13.1: fine for Nx 23, **below** Angular 22's `^24.15.0` (handoff in T016).
 
+#### PR 1a record: Nx 22.7.12 → 23.2.1 (2026-10-05, branch `chore/nx-23-upgrade`)
+
+- `bunx nx migrate 23.2.1` is **not** Nx-only: it also proposed Angular 22.1.8, TypeScript 6.0.3, Vite 8.3.2, Analog 2.6.4,
+  `angular-eslint` 22.5.0 and 5 AI-prompt migrations. That is the "stop and report" case of T006; since the plan keeps Nx and
+  Angular as separate PRs, only the Nx packages were bumped (`nx` and every `@nx/*` to 23.2.1) and the generated
+  `migrations.json` was narrowed to Nx's own migrations. Full unfiltered output kept outside the repo for PR 1b.
+- Applied 26 migrations; changes: 11 `vite.config.mts` files (`__dirname` → `import.meta.dirname`) and `.nx/migrate-runs` in
+  `jordylab-fe/.gitignore`; the rest were no-ops. **Skipped on purpose** (for PR 1b or never): `@nx/js` TypeScript-6
+  migrations (`ignoreDeprecations: "6.0"` is invalid on TypeScript 5.9), `@nx/vite` Vite-8 and `rollupOptions`→`rolldownOptions`
+  migrations, the Vitest 3/4 prompt migrations (already on Vitest 4), the `@nx/eslint` prompt migrations (already flat
+  config), and all `@angular/*` migrations.
+- Nx 23 prints no task output for passing runs by default; `--output-style=stream` restores it (used for the test comparison).
+- Results versus the baseline: lint green (14 projects, 5.4 s); **441 tests, identical per-project coverage, every gate green**;
+  production build initial total 599.28 kB (152.03 kB transfer; was 599.28 / 152.01); mobile 599.37 kB (was 599.37); dist
+  984 kB both; the same two warnings as before plus a new deprecation notice (`@nx/angular/tailwind` removed in Nx 24);
+  dependency graph identical (20 nodes). A scratch import from `scope:fna` into `scope:gamecatalog` fails lint with
+  `@nx/enforce-module-boundaries` (the file was discarded).
+- Frontend image built from `deploy/containers/frontend/Containerfile` with Nx 23 (`oven/bun:1`, no Node): success (the
+  test image was removed). `bunx nx serve jordylab` boots (HTTP 200); `nx g @spartan-ng/nx:ui --help` runs.
+- Follow-up for Nx 24: replace `@nx/angular/tailwind` usage before upgrading past Nx 23.
+
 ### A4. Agent hook mechanics
 
 - Claude Code runs all hooks matching one event **in parallel**, so the existing `post-edit-format.sh` (Prettier) and a

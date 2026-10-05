@@ -60,6 +60,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      # Nx 23 needs Node 22+ (Angular 22 later needs 22.22.3+). Floating 22 resolves to the newest 22.x, which satisfies both;
+      # pinned here instead of relying on the runner image's default (spec 012 T008).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Install dependencies
         working-directory: jordylab-fe
         run: bun install --frozen-lockfile
