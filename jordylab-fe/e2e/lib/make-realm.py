@@ -23,12 +23,16 @@ def main() -> None:
 
     for client in realm["clients"]:
         if client["clientId"] == "jordylab-host":
-            client["redirectUris"] = [f"{web_origin}/*"]
+            client["redirectUris"] = [f"{web_origin}/*", web_origin]
             client["webOrigins"] = [web_origin]
+            # keycloak-js signs out with the bare origin as the redirect target; the dev realm lists its dev ports here.
+            client.setdefault("attributes", {})["post.logout.redirect.uris"] = f"{web_origin}/*##{web_origin}"
+
         if client["clientId"] == "jordylab-backend":
             client["secret"] = os.environ["E2E_BACKEND_CLIENT_SECRET"]  # per run, never the dev constant
         if client["clientId"] == "jordylab-mobile":
             client["redirectUris"] = [f"{web_origin}/mobile/callback"]
+            client.setdefault("attributes", {})["post.logout.redirect.uris"] = f"{web_origin}/mobile/*"
 
     realm["clients"].append({
         "clientId": "e2e-ingest",
