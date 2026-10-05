@@ -18,7 +18,7 @@ export const config: WebdriverIO.Config = {
       'appium',
       {
         command: 'appium',
-        args: { address: '127.0.0.1', port: 4723, basePath: '/', allowInsecure: ['uiautomator2:chromedriver_autodownload'] },
+        args: { address: '127.0.0.1', port: 4723, basePath: '/', allowInsecure: 'uiautomator2:chromedriver_autodownload' },
       },
     ],
   ],

@@ -1,15 +1,21 @@
 import { execFileSync } from 'node:child_process';
 import pins from '../pins.json' with { type: 'json' };
 
-/** The WebView package version the emulator reports, e.g. "133.0.6943.137", read with adb. */
-export function installedWebViewVersion(): string {
-  const report = execFileSync('adb', ['shell', 'dumpsys', 'webview'], { encoding: 'utf8' });
-  const match = /Current WebView package \(name, version\): \(([^,]+), ([^)]+)\)/.exec(report);
-  if (!match) {
-    throw new Error('Could not read the WebView version from `adb shell dumpsys webview`. Is exactly one emulator running?');
-  }
+const WEBVIEW_PACKAGES = ['com.google.android.webview', 'com.android.webview'];
 
-  return match[2].trim();
+/**
+ * The WebView package version the emulator reports, e.g. "124.0.6367.113". This image has no `webview` dumpsys service, so the version
+ * comes from the WebView implementation package itself (the Google build first, the AOSP one as the alternative).
+ */
+export function installedWebViewVersion(): string {
+  for (const packageName of WEBVIEW_PACKAGES) {
+    const report = execFileSync('adb', ['shell', 'dumpsys', 'package', packageName], { encoding: 'utf8' });
+    const match = /versionName=(\S+)/.exec(report);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  throw new Error(`Could not read the WebView version: none of ${WEBVIEW_PACKAGES.join(', ')} is installed. Is exactly one emulator running?`);
 }
 
 /**

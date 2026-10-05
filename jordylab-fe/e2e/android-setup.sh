@@ -37,4 +37,9 @@ adb shell pm set-app-links-user-selection --user 0 --package "$E2E_ANDROID_PACKA
   || log "could not set the App Link user selection (the login test falls back to delivering the callback by intent)"
 adb shell pm set-app-links-allowed --user 0 --package "$E2E_ANDROID_PACKAGE" true >/dev/null 2>&1
 
-log "emulator ready: API $(adb shell getprop ro.build.version.sdk | tr -d '\r'), WebView $(adb shell dumpsys webview 2>/dev/null | awk -F': ' '/Current WebView package/ {print $2; exit}' | tr -d '\r')"
+webview_version=""
+for webview_package in com.google.android.webview com.android.webview; do
+  webview_version="$(adb shell dumpsys package "$webview_package" 2>/dev/null | awk -F= '/versionName=/ {print $2; exit}' | tr -d '\r')"
+  [[ -n "$webview_version" ]] && break
+done
+log "emulator ready: API $(adb shell getprop ro.build.version.sdk | tr -d '\r'), WebView ${webview_version:-unknown} ($webview_package)"
