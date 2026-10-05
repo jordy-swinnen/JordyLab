@@ -38,6 +38,7 @@ public class SteamFamilyClient {
     private static final String BASE_URL = "https://api.steampowered.com";
     private static final String TOKEN_EXPIRED = "TOKEN_EXPIRED";
     private static final String UNKNOWN_RESPONSE = "UNKNOWN_RESPONSE";
+    private static final String NO_FAMILY_GROUP = "NO_FAMILY_GROUP";
 
     @Value("${jordylab.gamecatalog.library.family-base-url:" + BASE_URL + "}")
     String baseUrl;
@@ -72,6 +73,10 @@ public class SteamFamilyClient {
                 .toUri();
         JsonNode response = get(uri, accessToken).path("response");
         String groupId = firstText(response, "family_groupid", "family_group_id", "steamid");
+        if (!StringUtils.hasText(groupId) && response.path("is_not_member_of_any_group").asBoolean(false)) {
+            // A valid token for an account that is in no Steam Family: say so instead of "unreadable response".
+            throw new SteamFamilyException(NO_FAMILY_GROUP, "The Steam account is not in a family group");
+        }
         if (!StringUtils.hasText(groupId)) {
             throw new SteamFamilyException(UNKNOWN_RESPONSE, "Family group id missing from response");
         }

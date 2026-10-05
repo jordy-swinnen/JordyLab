@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
@@ -276,7 +277,51 @@ describe('ScanSourceStore', () => {
       expect(refreshPending).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('library sync failures', () => {
+    beforeEach(() => {
+      spectator = createService();
+    });
+
+    const rejected = (body: unknown, status = 502) =>
+      throwError(() => new HttpErrorResponse({ status, error: body }));
+
+    it('tells the user a family token was refused and how to get a new one', () => {
+      syncFamilyLibrary.mockReturnValue(rejected({ reason: 'FAMILY_SYNC_FAILED', errorCode: 'TOKEN_EXPIRED' }));
+
+      spectator.service.syncFamilyLibrary('token');
+
+      expect(spectator.service.error()).toContain('Steam rejected the token');
+      expect(spectator.service.error()).toContain('signed in to store.steampowered.com');
+      expect(spectator.service.librarySyncing()).toBeNull();
+    });
+
+    it('says when the account has no Steam Family group', () => {
+      syncFamilyLibrary.mockReturnValue(rejected({ reason: 'FAMILY_SYNC_FAILED', errorCode: 'NO_FAMILY_GROUP' }));
+
+      spectator.service.syncFamilyLibrary('token');
+
+      expect(spectator.service.error()).toContain('not in a Steam Family group');
+    });
+
+    it('says when the owned library cannot sync because Steam is not configured', () => {
+      syncOwnedLibrary.mockReturnValue(rejected({ reason: 'STEAM_NOT_CONFIGURED', errorCode: null }, 409));
+
+      spectator.service.syncOwnedLibrary();
+
+      expect(spectator.service.error()).toContain('not configured on the server');
+    });
+
+    it('falls back to a plain message when the failure has no reason', () => {
+      syncFamilyLibrary.mockReturnValue(throwError(() => new Error('offline')));
+
+      spectator.service.syncFamilyLibrary('token');
+
+      expect(spectator.service.error()).toBe('Failed to sync the family library.');
+    });
+  });
 });
+
 
 function anEmptyLibraryStatus(): LibraryStatus {
   const empty = {

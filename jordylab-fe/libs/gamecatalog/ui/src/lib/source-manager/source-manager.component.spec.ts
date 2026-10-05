@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import {
   aLibraryStatusMock,
+  aLibrarySyncRunMock,
   aScanSourceMock,
   LibraryStatus,
   LibrarySyncRun,
@@ -10,6 +11,9 @@ import {
   ScanSourceStore,
 } from '@jordylab-fe/gamecatalog/api';
 import { SourceManagerComponent } from './source-manager.component';
+
+// Built at run time: a literal JWT-shaped string is what the secret scan is there to catch.
+const A_TOKEN = ['eyJfake', 'x'.repeat(24), 'y'.repeat(24)].join('.');
 
 describe('SourceManagerComponent', () => {
   const sources = signal<ScanSource[]>([]);
@@ -197,16 +201,57 @@ describe('SourceManagerComponent', () => {
     it('sends the pasted family token to the store', () => {
       populate([aScanSourceMock()]);
 
-      spectator.typeInElement('family-token', 'input[type="password"]');
+      spectator.typeInElement(A_TOKEN, 'input[type="password"]');
       spectator.click('[data-testid="sync-family-library"]');
 
-      expect(syncFamilyLibrary).toHaveBeenCalledWith('family-token');
+      expect(syncFamilyLibrary).toHaveBeenCalledWith(A_TOKEN);
+    });
+
+    it('picks the token out of the whole Steam config page when that is what was pasted', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.typeInElement(
+        JSON.stringify({ success: 1, data: { webapi_token: A_TOKEN } }),
+        'input[type="password"]',
+      );
+      spectator.click('[data-testid="sync-family-library"]');
+
+      expect(syncFamilyLibrary).toHaveBeenCalledWith(A_TOKEN);
+    });
+
+    it('explains an empty Steam page instead of sending it', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.typeInElement('{"success":1,"data":[]}', 'input[type="password"]');
+      spectator.click('[data-testid="sync-family-library"]');
+
+      expect(syncFamilyLibrary).not.toHaveBeenCalled();
+      expect(spectator.query('[data-testid="family-token-problem"]')).toHaveText(
+        'not signed in to the Steam store',
+      );
+    });
+
+    it('asks for a token when nothing was pasted', () => {
+      populate([aScanSourceMock()]);
+
+      spectator.click('[data-testid="sync-family-library"]');
+
+      expect(syncFamilyLibrary).not.toHaveBeenCalled();
+      expect(spectator.query('[data-testid="family-token-problem"]')).toHaveText('Paste your Steam token first');
+    });
+
+    it('says in a sentence that a sync which changed nothing worked', () => {
+      populate([aScanSourceMock()]);
+      lastLibraryRun.set(aLibrarySyncRunMock({ outcome: 'NO_CHANGE' }));
+      spectator.detectChanges();
+
+      expect(spectator.query('[data-testid="library-run-summary"]')).toHaveText('already up to date');
     });
 
     it('clears the pasted family token from the input once it is sent', () => {
       populate([aScanSourceMock()]);
 
-      spectator.typeInElement('family-token', 'input[type="password"]');
+      spectator.typeInElement(A_TOKEN, 'input[type="password"]');
       spectator.click('[data-testid="sync-family-library"]');
 
       const input = spectator.query(

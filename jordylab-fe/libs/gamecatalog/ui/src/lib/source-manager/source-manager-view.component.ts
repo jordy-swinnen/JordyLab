@@ -11,6 +11,7 @@ import {
   SourceType,
 } from '@jordylab-fe/gamecatalog/api';
 import { platformTagClass } from '../cover';
+import { readSteamToken } from './steam-token';
 
 export type ScanClientType = 'steam' | 'emudeck';
 
@@ -46,6 +47,7 @@ export class SourceManagerViewComponent {
   syncFamilyLibrary = output<string>();
 
   protected readonly familyToken = signal('');
+  protected readonly tokenProblem = signal<string | null>(null);
 
   protected readonly tagClass = platformTagClass;
   protected readonly neutralTag =
@@ -57,16 +59,42 @@ export class SourceManagerViewComponent {
 
   onFamilyTokenInput(event: Event): void {
     this.familyToken.set((event.target as HTMLInputElement).value);
+    this.tokenProblem.set(null);
   }
 
   onSyncFamily(tokenInput: HTMLInputElement): void {
-    const token = this.familyToken().trim();
-    if (token.length > 0) {
-      this.syncFamilyLibrary.emit(token);
-      // The token is used only for this one request (FR-011) — clear it from both the signal
-      // and the (uncontrolled) input's own value rather than letting it linger in memory/DOM.
-      this.familyToken.set('');
-      tokenInput.value = '';
+    const pasted = this.familyToken().trim();
+    if (pasted.length === 0) {
+      this.tokenProblem.set('Paste your Steam token first.');
+
+      return;
+    }
+    const result = readSteamToken(pasted);
+    if ('problem' in result) {
+      this.tokenProblem.set(result.problem);
+
+      return;
+    }
+    this.tokenProblem.set(null);
+    this.syncFamilyLibrary.emit(result.token);
+    // The token is used only for this one request (FR-011) — clear it from both the signal
+    // and the (uncontrolled) input's own value rather than letting it linger in memory/DOM.
+    this.familyToken.set('');
+    tokenInput.value = '';
+  }
+
+  /** What the last sync did, in a sentence: a run that changed nothing must still read as "it worked". */
+  runSummary(run: LibrarySyncRun): string {
+    const library = run.librarySource === 'FAMILY' ? 'Family' : 'Owned';
+    switch (run.outcome) {
+      case 'NO_CHANGE':
+        return `${library} library is already up to date: Steam reported the same games as last time.`;
+      case 'APPLIED':
+        return `${library} library synced: ${run.entriesAdded} added, ${run.entriesRemoved} removed.`;
+      case 'SUSPICIOUS':
+        return `${library} library left unchanged: Steam reported far fewer games than before, which looks like a mistake.`;
+      default:
+        return `${library} library sync failed.`;
     }
   }
 
