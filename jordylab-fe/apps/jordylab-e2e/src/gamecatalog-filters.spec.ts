@@ -86,13 +86,20 @@ test.describe('Library filters', () => {
       const panel = page.getByRole('dialog', { name: 'Filters' });
       await expect(panel).toBeVisible();
 
-      const box = await panel.boundingBox();
-      // The visible width: a page scrollbar (classic scrollbars on CI) takes a few pixels from the viewport.
-      const visibleWidth = await page.evaluate(() => document.documentElement.clientWidth);
-      const viewportHeight = page.viewportSize()?.height ?? 0;
-      expect(box?.x).toBe(0);
-      expect(box?.width).toBe(visibleWidth);
-      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeCloseTo(viewportHeight, 0);
+      // Panel and viewport are measured in one synchronous call: a classic page scrollbar (CI) takes a few
+      // pixels from the viewport, and may appear or disappear while the sheet opens.
+      const measureSheet = (): Promise<{ left: number; widthGap: number; bottomGap: number }> =>
+        page.evaluate(() => {
+          const rect = document.querySelector('[data-testid="filters-panel"]')?.getBoundingClientRect();
+          const visibleWidth = document.documentElement.clientWidth;
+
+          return {
+            left: rect?.left ?? -1,
+            widthGap: Math.abs((rect?.width ?? 0) - visibleWidth),
+            bottomGap: Math.abs((rect?.bottom ?? 0) - window.innerHeight),
+          };
+        });
+      await expect.poll(measureSheet).toEqual({ left: 0, widthGap: 0, bottomGap: 0 });
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
