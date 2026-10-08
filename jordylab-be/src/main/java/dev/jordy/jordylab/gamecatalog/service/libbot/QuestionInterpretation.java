@@ -22,7 +22,7 @@ import java.util.UUID;
  */
 public record QuestionInterpretation(
         @NotNull @JsonPropertyDescription("What the person wants") Intent intent,
-        @NotNull @JsonPropertyDescription("Language of the question: en, nl or other") Language language,
+        @NotNull @JsonPropertyDescription("Language of the question: EN, NL or OTHER") Language language,
         @Size(max = 1000) @JsonPropertyDescription("The question rewritten so it stands alone, with 'those' and 'it' resolved")
         String standaloneQuestion,
         @Valid @JsonPropertyDescription("Facts the person stated; null for anything not stated") Facts facts,
