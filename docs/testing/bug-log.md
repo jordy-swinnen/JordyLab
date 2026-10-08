@@ -1148,7 +1148,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: n/a
 
 ### BUG-075: LibBot never answers in production — the Anthropic fallback rejects `temperature` and the configured router model returns invalid JSON
-- Status: OPEN (spec 013)
+- Status: VERIFIED-PROD (temperature fix `v0.0.1-rc21`; the remaining invalid-JSON cause was BUG-076, fixed in `v0.0.1-rc22`)
 - Severity: S2 (core feature broken — every LibBot question fails end-to-end)
 - Area/spec: shared AI layer + gamecatalog chat / 013
 - Env found: prod `v0.0.1-rc20`, 2026-10-08, signed-in pass on jordylab.be
@@ -1164,7 +1164,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending
 
 ### BUG-076: `QuestionInterpretation.language` — the generated schema says EN/NL/OTHER, the parser accepted only en/nl/other
-- Status: FIXED-LOCAL (spec 013)
+- Status: VERIFIED-PROD (`v0.0.1-rc22`)
 - Severity: S2 (every LibBot question failed to parse on every model, on top of BUG-075)
 - Area/spec: gamecatalog libbot / 013
 - Env found: prod `v0.0.1-rc21`, 2026-10-08, reproduced locally against real models
