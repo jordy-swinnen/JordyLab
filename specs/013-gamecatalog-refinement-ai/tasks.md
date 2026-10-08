@@ -404,9 +404,9 @@ Backend `jordylab-be/src/main/java/dev/jordy/jordylab/…` (tests `jordylab-be/s
 
 **Purpose**: Release candidate through the existing pipeline, with the cluster prerequisite first.
 
-- [ ] T151 Open the PR from this branch (CI: backend tests, frontend tests, lint, `e2e-web`, commit references with `Refs: 013 …`), resolve all review comments, merge when green (the owner's standing authority to merge once all review comments are resolved)
-- [ ] T152 Before the deploy: take an on-demand CNPG backup and confirm it completed; apply the `vector` extension `Database` resource through the deploy pipeline and verify with `kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -d jordylab -c '\dx'` that `vector` is listed (owner approved 2026-10-07; use the `jordylab-ops` skill, never print secrets or pod env values)
-- [ ] T153 Tag the release candidate and approve the production deploy per `docs/runbook.md` §20; watch `kubectl -n jordylab rollout status deploy/backend`; review the Flyway and merge log lines (titles only); if anything fails, roll back per runbook §11
+- [X] T151 Open the PR from this branch (CI: backend tests, frontend tests, lint, `e2e-web`, commit references with `Refs: 013 …`), resolve all review comments, merge when green (the owner's standing authority to merge once all review comments are resolved)
+- [X] T152 Before the deploy: take an on-demand CNPG backup and confirm it completed; apply the `vector` extension `Database` resource through the deploy pipeline and verify with `kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -d jordylab -c '\dx'` that `vector` is listed (owner approved 2026-10-07; use the `jordylab-ops` skill, never print secrets or pod env values)
+- [X] T153 Tag the release candidate and approve the production deploy per `docs/runbook.md` §20; watch `kubectl -n jordylab rollout status deploy/backend`; review the Flyway and merge log lines (titles only); if anything fails, roll back per runbook §11
 
 **Checkpoint**: Deploy healthy, migration log reviewed, extension present.
 
