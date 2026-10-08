@@ -313,14 +313,14 @@ class ResilientAiServiceTest {
     }
 
     @Test
-    void aConfiguredTemperatureIsSentToBothProviders() {
+    void aConfiguredTemperatureIsSentToTheGatewayButNotTheFallback() {
         serviceWith(AiPropertiesTestBuilder.aDefaultAiPropertiesWithTemperature(FEATURE, 0.0));
         when(modelResolver.resolveModel(FEATURE)).thenReturn(GATEWAY_MODEL);
         when(gatewayChatModel.call(new Prompt(List.of(new SystemMessage(SYSTEM_PROMPT), new UserMessage(USER_PROMPT)),
                 OpenAiChatOptions.builder().model(GATEWAY_MODEL).temperature(0.0).build())))
                 .thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "slow", null, null, null));
         when(fallbackChatModel.call(new Prompt(List.of(new SystemMessage(SYSTEM_PROMPT), new UserMessage(USER_PROMPT)),
-                AnthropicChatOptions.builder().model(AiPropertiesTestBuilder.FALLBACK_MODEL).temperature(0.0).build())))
+                AnthropicChatOptions.builder().model(AiPropertiesTestBuilder.FALLBACK_MODEL).build())))
                 .thenReturn(answer(AI_OUTPUT));
 
         AiCallResult result = service.call(FEATURE, SYSTEM_PROMPT, USER_PROMPT);
