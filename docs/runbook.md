@@ -29,6 +29,9 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 18. [Disk cleanup](#18-disk-cleanup)
 19. [k3s / OS upgrades](#19-k3s--os-upgrades)
 20. [Release a version (one tag → GitHub Release → deploy)](#20-release-a-version-one-tag--github-release--deploy)
+21. [Manual tests the E2E campaign could not run](#21-manual-tests-the-e2e-campaign-could-not-run)
+22. [Before a release that changes the database: backup and pgvector](#22-before-a-release-that-changes-the-database-backup-and-pgvector)
+23. [LibBot and the auto-fill: what to check](#23-libbot-and-the-auto-fill-what-to-check)
 
 ---
 
@@ -408,3 +411,57 @@ the Build checks.
 ## 21. Manual tests the E2E campaign could not run
 
 See [`docs/testing/manual-test-runbook.md`](testing/manual-test-runbook.md): Android app behaviour, a signed-in pass on production, the JordyBox scan, a VPS reboot, point-in-time restore, CSP rollout, colour contrast and a full rebuild.
+
+### Fingerprint sign-in: no error flash (spec 013 US14, SC-018)
+
+Do this on the phone with the build under test, with fingerprint unlock turned on. Repeat **20 times**, closing the app completely in between:
+
+1. Open the app and tap "Unlock with fingerprint" (or let the prompt appear), then touch the sensor with the registered finger.
+2. **Expected, every time:** the app opens the library. At **no moment** is a red message shown, not for a split second while the screen changes.
+3. Once, with the phone in aeroplane mode: "Unlock with fingerprint" shows only a message about the connection, nothing about a rejected session.
+4. Once, after an admin revoked your access in Settings → Users: one message that says the stored session is no longer accepted, shown once, and "Sign in" still works.
+
+A single red flash on any of the 20 is a failure: note the time and the app version in `docs/testing/bug-log.md`.
+
+---
+
+## 22. Before a release that changes the database: backup and pgvector
+
+Do these in order, the first time a release carrying the game-catalog refinement (spec 013) goes out. Both are safe to repeat.
+
+**1. An on-demand backup first** (the daily one is at 03:00 UTC; this release rewrites game identities, so take a fresh restore point right before it):
+
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+cat <<YAML | kubectl -n jordylab create -f -
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  name: pre-013-$(date -u +%Y%m%d%H%M)
+spec:
+  cluster:
+    name: cnpg-cluster
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+YAML
+kubectl -n jordylab get backup -w          # wait for phase: completed
+```
+
+**2. The pgvector `Database` resource.** The backend's migration runs `CREATE EXTENSION IF NOT EXISTS vector` as the app user, which may not create an extension; the CloudNativePG operator does it as a superuser, and the statement is then a no-op. `deploy/k8s/cluster/cnpg-database.yaml` is part of the cluster kustomization, so the normal deploy applies it, but it must exist **before** the backend version that contains the migration starts. Check it and, to rehearse on the restore-drill cluster first (§15), apply the same resource pointing at the drill cluster:
+
+```bash
+kubectl -n jordylab get database jordylab -o jsonpath='{.status.applied}{"\n"}'      # true when reconciled
+kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "select extname, extversion from pg_extension where extname = 'vector'"
+```
+
+Rehearsal: after `kubectl apply -f deploy/k8s/drills/restore-drill-cluster.yaml` (§15), apply a copy of `cnpg-database.yaml` whose `metadata.name` is `drill-jordylab` and whose `spec.cluster.name` is `cnpg-restore-drill`, run the same `pg_extension` query against `cnpg-restore-drill-1`, then tear the drill down as in §15.
+
+---
+
+## 23. LibBot and the auto-fill: what to check
+
+- **Covers or descriptions are missing.** The Sources page shows the library health (games without a cover, without a description, not yet searchable by LibBot) with the games behind each number. The background worker fills them after every scan, at start-up and daily at 04:30 (Europe/Brussels); it logs `Auto-fill handled N game(s)`. If the numbers do not fall: check `kubectl -n jordylab logs deploy/backend | grep -i "auto-fill"`; IGDB needs `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (without them non-Steam games only get libretro art); the AI descriptions need `OPENROUTER_API_KEY` (or `ANTHROPIC_API_KEY`).
+- **Admin buttons.** "Refresh game data" is free; "Regenerate AI data" asks for confirmation because every game is a paid call. A run shows its progress and can be stopped; five failures in a row with the same cause (credits, a rejected key) end it with the cause shown.
+- **LibBot says it cannot answer.** The model call failed (credits, key, provider down): the message says so and the guest's allowance is not spent. Check the AI call counters (`jordylab.ai.calls`) and Settings → AI Models. Questions in a language other than English or Dutch get a fixed request to rephrase.
+- **Search index.** `game_embedding` is rebuilt by the auto-fill sweep when a game changes or the embedding model changes. If it is empty, LibBot still answers (by structure and words), only without meaning-based ranking.

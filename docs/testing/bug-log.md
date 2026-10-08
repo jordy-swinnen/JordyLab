@@ -1086,3 +1086,63 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): the script moved to `silent-check-sso.js` next to the page (same origin, allowed by `script-src 'self'`; no hash to maintain).
 - Regression test added: `csp.spec.ts` › "the silent sign-in page runs its script under the policy" (fails with the old inline page, passes with the external script; the other journeys walk every signed-in page, a game detail and the login page).
 - Verified on prod: pending (after the release; then CSP step 5 can be considered)
+
+### BUG-071: The Content-Security-Policy allows only one of the three hosts game covers come from
+- Status: FIXED-LOCAL (spec 013); no prod impact today, the policy is Report-Only
+- Severity: S3 (it would have been S2 after enforcing: Steam and ROM covers would not load)
+- Area/spec: deploy / 013 (covers filled automatically)
+- Env found: local throwaway stack, `csp.spec.ts` after the auto-fill started putting external cover addresses on games, 2026-10-08
+- Coverage rows: —
+- Steps to reproduce:
+  1. `cd jordylab-fe && e2e/run.sh web` with the cover lookup on.
+- Expected (cite spec/story): 013 SC-001 / FR-020: covers from every source show, with nothing blocked by the production policy.
+- Actual (logs/screenshot, secrets redacted): `img-src blocked https://raw.githubusercontent.com/libretro/libretro-thumbnails/master/…/Named_Boxarts/Chrono%20Trigger%20(USA).png` on the library and the game page. The policy listed only `https://images.igdb.com`.
+- Root cause: `deploy/containers/frontend/security-headers.conf` was written when only IGDB covers were shown; Steam covers (`cdn.cloudflare.steamstatic.com`) and libretro box art (`raw.githubusercontent.com`) were never added.
+- Fix (PR / commit / tag): both hosts added to `img-src` and to the runbook text. The e2e backend now runs with the cover lookup off so no journey depends on the public internet.
+- Regression test added: `csp.spec.ts` (fails when an external cover host is not allowed).
+- Verified on prod: pending (after the release)
+
+### BUG-072: The game page scrolls sideways on a phone when a title has one very long word
+- Status: FIXED-LOCAL (spec 013)
+- Severity: S3
+- Area/spec: frontend / 013 US14 (no horizontal scroll)
+- Env found: local throwaway stack, new `layout.spec.ts` with a long-word title in the e2e catalog, 2026-10-08
+- Coverage rows: —
+- Steps to reproduce:
+  1. Open a game titled `Supercalifragilisticexpialidocious_Adventures_of_the_Unbreakable_Word_Quest` at 360 px.
+- Expected (cite spec/story): 013 SC-019: no page scrolls sideways from 360 px.
+- Actual (logs/screenshot, secrets redacted): `scrollWidth 1398 > clientWidth 360`; the heading (`clamp(3rem,7vw,7rem)`, no wrapping) pushed the whole page wider.
+- Root cause: the game title heading could not break inside a word.
+- Fix (PR / commit / tag): `overflow-wrap:anywhere` on the heading and a smaller minimum size (2.25 rem).
+- Regression test added: `layout.spec.ts` › "a game with one very long word in its title fits the screen" (360, 390, 430 px).
+- Verified on prod: pending (after the release)
+
+### BUG-073: A fingerprint sign-in flashes a red "session could not be refreshed" message
+- Status: FIXED-LOCAL (spec 013); owner's 20 phone sign-ins pending (HANDOFF)
+- Severity: S3
+- Area/spec: frontend shared auth / 013 US14
+- Env found: owner testing the Android app, 2026-10
+- Coverage rows: —
+- Steps to reproduce:
+  1. On the phone, with fingerprint unlock on, unlock with the fingerprint.
+- Expected (cite spec/story): 013 US14: no error message at any moment of a successful sign-in.
+- Actual (logs/screenshot, secrets redacted): a red message ("Your session could not be refreshed. Sign in again.") appears briefly while the app opens.
+- Root cause: while the unlock was running a request asked `AuthService.getToken()`; there was no session yet, the refresh failed, and the service reported a dead session and navigated to `/login`. `BiometricUnlockService.unlock()` also kept the previous attempt's failure on screen.
+- Fix (PR / commit / tag): `getToken()` returns `null` quietly until a session has existed; `unlock()` clears stale failures first (`clearNativeFailure()`).
+- Regression test added: `auth.service.spec.ts` and `biometric-unlock.service.spec.ts` (failed first, then green).
+- Verified on prod: pending (owner, 20 sign-ins)
+
+### BUG-074: Two scenario test classes shared one stopped database container
+- Status: FIXED-LOCAL (spec 013)
+- Severity: S4 (test infrastructure)
+- Area/spec: backend tests / 013
+- Env found: full local `./gradlew build`, 2026-10-08
+- Coverage rows: —
+- Steps to reproduce:
+  1. Run `DisabledSourceVisibilityTest` and `MultiPlacePlayScenariosTest` in one JVM.
+- Expected (cite spec/story): both pass.
+- Actual (logs/screenshot, secrets redacted): the first passes, the second fails with `Could not open JPA EntityManager for transaction`.
+- Root cause: both extend `ModuleScenarioSupport`, whose static container is stopped after the first class; Spring reused the cached context, which still pointed at it.
+- Fix (PR / commit / tag): `@DirtiesContext(AFTER_CLASS)` on the base class.
+- Regression test added: running both classes together.
+- Verified on prod: n/a

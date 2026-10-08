@@ -5,5 +5,6 @@ kind: Kustomization
 
 resources:
   - cnpg-cluster.yaml
+  - cnpg-database.yaml
   - ovh-object-storage.yaml
   - certificate.yaml

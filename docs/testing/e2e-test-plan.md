@@ -1036,6 +1036,20 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Expect: accessibility 100 with no failed audits (before: `label-content-name-mismatch` on the account menu) and *Cumulative Layout Shift* below 0.1 (before: 0.22).
 - Tell me the two numbers. (The axe check in CI now covers contrast and names on every page, so this is only the layout-shift number plus a final look.)
 
+#### HANDOFF-30: Bring up the local stack with your real data and run the live checks for spec 013 (T027, T072, T086, T100, T146, T148)
+- Machine: your Mac · Target env: local (dev stack) · Why you: the dev Postgres container is gone (the agent must not recreate the dev stack), the agent has no AI keys, and the real scans and the Linux box are yours.
+- 1. `cd jordylab-be && podman compose up -d` (Postgres with pgvector + Keycloak) and `./gradlew bootRun` on this branch with your own `.env` (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, `STEAM_WEB_API_KEY`/`STEAM_ID`); `cd jordylab-fe && bunx nx serve jordylab`. If you have a database dump from before this branch, restore it first and let Flyway migrate it: that is the migration rehearsal (T027) and it also shows whether the Switch entries became a console.
+- 2. Sign in as admin, **Sources → download the Steam client**, run it on this Mac (device-code login). Then the same for EmuDeck on the Linux box (cachyos-htpc) and tell me the counts it printed.
+- 3. Leave the app alone for ten minutes, then open **Sources**: the library health should show at least 90 % covers (SC-001) and the games should have descriptions without pressing anything (SC-007). Tell me the three health numbers and roughly how long it took.
+- 4. `cd jordylab-be && ./gradlew goldenLive` (needs the keys; never paste them). Tell me the pass rate and the token line it prints; also whether any model refused the `temperature` setting.
+- 5. Ask LibBot five questions of your own, for example "there are 6 people here, what can we play?", "wat kunnen we met vier spelen?", "something like what I liked" after marking a few games, and one off-topic question. Tell me if anything is wrong.
+- 6. Open ten games that have no Steam description and compare the AI text with a Steam blurb (SC-022): note which ones you would not accept.
+
+#### HANDOFF-31: Fingerprint sign-in and phone layout with a debug APK (T149, SC-018)
+- Machine: your Android phone · Target env: local debug build · Why you: only a real finger and screen can judge this.
+- Build and install the debug APK (`jordylab-fe/apps/jordylab-mobile`, see its README), turn fingerprint unlock on, then do the 20 sign-ins of `docs/runbook.md` §21 ("Fingerprint sign-in: no error flash"). A red message at any moment is a failure: tell me which attempt.
+- Open the library, a game page and Sources at the phone's normal width: nothing should scroll sideways; the game page should show the cover overlapping the corner of the banner like on a computer.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
