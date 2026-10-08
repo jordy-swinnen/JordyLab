@@ -86,20 +86,22 @@ test.describe('Library filters', () => {
       const panel = page.getByRole('dialog', { name: 'Filters' });
       await expect(panel).toBeVisible();
 
-      // Panel and viewport are measured in one synchronous call: a classic page scrollbar (CI) takes a few
-      // pixels from the viewport, and may appear or disappear while the sheet opens.
-      const measureSheet = (): Promise<{ left: number; widthGap: number; bottomGap: number }> =>
+      // Edge to edge and docked to the bottom. Linux CI draws a classic scrollbar (8px) beside the sheet, so the right edge is allowed to
+      // stop one scrollbar short of the window; a popover (680px at most, anchored under the bar) would fail by far more.
+      const scrollbarAllowance = 16;
+      const measureSheet = (): Promise<{ left: number; rightGap: number; bottomGap: number }> =>
         page.evaluate(() => {
           const rect = document.querySelector('[data-testid="filters-panel"]')?.getBoundingClientRect();
-          const visibleWidth = document.documentElement.clientWidth;
 
           return {
             left: rect?.left ?? -1,
-            widthGap: Math.abs((rect?.width ?? 0) - visibleWidth),
+            rightGap: window.innerWidth - (rect?.right ?? 0),
             bottomGap: Math.abs((rect?.bottom ?? 0) - window.innerHeight),
           };
         });
-      await expect.poll(measureSheet).toEqual({ left: 0, widthGap: 0, bottomGap: 0 });
+      await expect.poll(async () => (await measureSheet()).left).toBe(0);
+      await expect.poll(async () => (await measureSheet()).rightGap).toBeLessThanOrEqual(scrollbarAllowance);
+      await expect.poll(async () => (await measureSheet()).bottomGap).toBe(0);
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);
