@@ -137,7 +137,6 @@ public class ResilientAiService {
             log.warn("AI call falling back: feature={}, gateway reason={}, fallback model={}", feature.key(),
                     execution.call().failureReason(), fallbackModel);
             AnthropicChatOptions.Builder options = AnthropicChatOptions.builder().model(fallbackModel);
-            properties.temperature(feature).ifPresent(options::temperature);
             Execution<T> fallback = attempt(feature, FALLBACK, fallbackModel, fallbackChatModel, options.build(),
                     messages, verifier);
             execution = new Execution<>(fallback.call().withFallbackUsed(), fallback.value());
