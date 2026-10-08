@@ -2,7 +2,10 @@ package dev.jordy.jordylab.gamecatalog.service.libbot;
 
 import dev.jordy.jordylab.gamecatalog.service.libbot.GoldenFixtures.GoldenCase;
 import dev.jordy.jordylab.gamecatalog.service.libbot.GoldenFixtures.GoldenFile;
+import dev.jordy.jordylab.gamecatalog.service.DescriptionQualityValidator;
 import dev.jordy.jordylab.shared.ai.AiCallCompleted;
+import dev.jordy.jordylab.shared.ai.AiCallResult;
+import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -132,10 +135,10 @@ class GoldenLiveTest {
                     for (GoldenFixtures.DescriptionSample sample : samples) {
                         String prompt = "Game: " + sample.title() + "\nPlatform: " + sample.platform()
                                 + "\nKnown release year: " + sample.releaseYear();
-                        var result = aiService.call(dev.jordy.jordylab.shared.ai.AiFeature.GAMECATALOG_ENRICHMENT,
+                        AiCallResult result = aiService.call(AiFeature.GAMECATALOG_ENRICHMENT,
                                 systemPrompt, prompt);
                         String text = result.success() ? descriptionOf(result.content()) : null;
-                        var verdict = new dev.jordy.jordylab.gamecatalog.service.DescriptionQualityValidator()
+                        DescriptionQualityValidator.Verdict verdict = new DescriptionQualityValidator()
                                 .check(text, sample.releaseYear());
                         if (!verdict.accepted()) {
                             failures.add(sample.title() + ": " + verdict.reason());

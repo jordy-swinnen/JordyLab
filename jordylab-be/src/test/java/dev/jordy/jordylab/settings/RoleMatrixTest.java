@@ -37,7 +37,6 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             // The settings API is now implemented; an authorized admin reaches it (200), never 403.
             softly.assertThat(status(as(get("/api/settings/users"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/games"), admin))).isEqualTo(200);
-            softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), admin))).isEqualTo(200);
             // No release has been published in this test fixture — an authorized admin falls

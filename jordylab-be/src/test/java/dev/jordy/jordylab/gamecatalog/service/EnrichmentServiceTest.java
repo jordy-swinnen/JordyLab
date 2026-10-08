@@ -271,8 +271,11 @@ class EnrichmentServiceTest {
             softly.assertThat(game.getDescription()).isEqualTo(BLURB);
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
         });
+        ArgumentCaptor<String> prompts = ArgumentCaptor.forClass(String.class);
         verify(aiService, org.mockito.Mockito.times(2)).call(eq(AiFeature.GAMECATALOG_ENRICHMENT), eq(systemPrompt),
-                org.mockito.ArgumentMatchers.anyString());
+                prompts.capture());
+        assertThat(prompts.getAllValues().get(0)).isEqualTo(userPromptFor(game));
+        assertThat(prompts.getAllValues().get(1)).startsWith(userPromptFor(game)).contains("rejected because");
     }
 
     @Test

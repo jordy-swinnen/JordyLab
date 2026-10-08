@@ -13,6 +13,7 @@ import dev.jordy.jordylab.gamecatalog.service.GamePlatformService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,7 +32,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.mockito.Mockito.RETURNS_DEFAULTS;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -43,19 +46,14 @@ class RefreshRunServiceTest {
     private static final Instant NOW = Instant.parse("2026-10-07T12:00:00Z");
     private static final String ADMIN = "6e0f4d8a-3b21-4c57-9e8f-a1b2c3d4e5f6";
 
-    @Mock
     private RefreshRunRepository runs;
 
-    @Mock
     private GameRepository gameRepository;
 
-    @Mock
     private GamePlatformService platformService;
 
-    @Mock
     private FactsStep factsStep;
 
-    @Mock
     private ArtworkStep artworkStep;
 
     @Mock
@@ -68,28 +66,45 @@ class RefreshRunServiceTest {
     private final List<Runnable> launched = new ArrayList<>();
     private final List<Game> games = new ArrayList<>();
     private RefreshRunService service;
+    private boolean rejectNextStartAsConcurrent;
+    private final java.util.Set<UUID> gamesWhoseFactsLookupFails = new java.util.HashSet<>();
+    private final Map<UUID, FactsStep.Fetched> factsLookupResults = new HashMap<>();
 
     @BeforeEach
     void setUp() {
+        runs = mock(RefreshRunRepository.class, call -> switch (call.getMethod().getName()) {
+            case "saveAndFlush" -> {
+                if (rejectNextStartAsConcurrent) {
+                    throw new DataIntegrityViolationException("uq_refresh_run_running_kind");
+                }
+
+                yield remember(call.getArgument(0));
+            }
+            case "save" -> remember(call.getArgument(0));
+            case "findById" -> Optional.ofNullable(stored.get(call.<UUID>getArgument(0)));
+            default -> RETURNS_DEFAULTS.answer(call);
+        });
+        gameRepository = mock(GameRepository.class, call -> "findById".equals(call.getMethod().getName())
+                ? games.stream().filter(game -> game.getId().equals(call.<UUID>getArgument(0))).findFirst()
+                : RETURNS_DEFAULTS.answer(call));
+        platformService = mock(GamePlatformService.class, call -> "platformsOf".equals(call.getMethod().getName())
+                ? List.of("SNES") : RETURNS_DEFAULTS.answer(call));
+        factsStep = mock(FactsStep.class, call -> {
+            if (!"fetch".equals(call.getMethod().getName())) {
+                return RETURNS_DEFAULTS.answer(call);
+            }
+            UUID gameId = call.<Game>getArgument(0).getId();
+            if (gamesWhoseFactsLookupFails.contains(gameId)) {
+                throw new IllegalStateException(gamesWhoseFactsLookupFails.size() > 1 ? "x" : "boom");
+            }
+
+            return factsLookupResults.getOrDefault(gameId, FactsStep.Fetched.none());
+        });
+        artworkStep = mock(ArtworkStep.class, call -> "fetch".equals(call.getMethod().getName())
+                ? ArtworkStep.Fetched.none() : RETURNS_DEFAULTS.answer(call));
         service = new RefreshRunService(runs, gameRepository, platformService, factsStep, artworkStep, enrichmentService,
                 embeddingService, TransactionOperations.withoutTransaction(), launched::add,
                 Clock.fixed(NOW, ZoneOffset.UTC));
-        lenient().when(runs.saveAndFlush(org.mockito.ArgumentMatchers.any(RefreshRun.class)))
-                .thenAnswer(call -> remember(call.getArgument(0)));
-        lenient().when(runs.save(org.mockito.ArgumentMatchers.any(RefreshRun.class)))
-                .thenAnswer(call -> remember(call.getArgument(0)));
-        lenient().when(runs.findById(org.mockito.ArgumentMatchers.any(UUID.class)))
-                .thenAnswer(call -> Optional.ofNullable(stored.get(call.<UUID>getArgument(0))));
-        lenient().when(gameRepository.findById(org.mockito.ArgumentMatchers.any(UUID.class)))
-                .thenAnswer(call -> games.stream().filter(game -> game.getId().equals(call.<UUID>getArgument(0))).findFirst());
-        lenient().when(platformService.platformsOf(org.mockito.ArgumentMatchers.any(UUID.class)))
-                .thenReturn(List.of("SNES"));
-        lenient().when(factsStep.fetch(org.mockito.ArgumentMatchers.any(Game.class),
-                org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyBoolean()))
-                .thenReturn(FactsStep.Fetched.none());
-        lenient().when(artworkStep.fetch(org.mockito.ArgumentMatchers.any(Game.class),
-                org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any(FactsStep.Fetched.class),
-                org.mockito.ArgumentMatchers.anyBoolean())).thenReturn(ArtworkStep.Fetched.none());
     }
 
     private RefreshRun remember(RefreshRun run) {
@@ -137,7 +152,10 @@ class RefreshRunServiceTest {
             softly.assertThat(run.getFinishedAt()).isEqualTo(NOW);
             softly.assertThat(run.getStartedBy()).isEqualTo(ADMIN);
         });
-        verify(embeddingService, times(3)).embed(org.mockito.ArgumentMatchers.anyList());
+        ArgumentCaptor<List<UUID>> embedded = ArgumentCaptor.forClass(List.class);
+        verify(embeddingService, times(3)).embed(embedded.capture());
+        assertThat(embedded.getAllValues()).containsExactlyInAnyOrder(
+                games.stream().map(game -> List.of(game.getId())).toArray(List[]::new));
     }
 
     @Test
@@ -169,8 +187,7 @@ class RefreshRunServiceTest {
     void theDatabaseGuardAgainstTwoSimultaneousStartsAlsoRefuses() {
         visibleGames(1);
         dataRunSeesEveryGame();
-        when(runs.saveAndFlush(org.mockito.ArgumentMatchers.any(RefreshRun.class)))
-                .thenThrow(new DataIntegrityViolationException("uq_refresh_run_running_kind"));
+        rejectNextStartAsConcurrent = true;
 
         assertThatThrownBy(() -> service.start(RefreshRunKind.DATA, ADMIN, false))
                 .isInstanceOf(RefreshAlreadyActiveException.class);
@@ -229,7 +246,7 @@ class RefreshRunServiceTest {
     void oneFailingGameDoesNotStopTheRun() {
         visibleGames(3);
         dataRunSeesEveryGame();
-        when(factsStep.fetch(games.get(1), List.of("SNES"), false)).thenThrow(new IllegalStateException("boom"));
+        gamesWhoseFactsLookupFails.add(games.get(1).getId());
 
         RefreshRun run = runNow(RefreshRunKind.DATA, false);
 
@@ -306,7 +323,7 @@ class RefreshRunServiceTest {
     void aRunWhereEveryGameFailedEndsFailed() {
         visibleGames(2);
         dataRunSeesEveryGame();
-        games.forEach(game -> when(factsStep.fetch(game, List.of("SNES"), false)).thenThrow(new IllegalStateException("x")));
+        games.forEach(game -> gamesWhoseFactsLookupFails.add(game.getId()));
 
         RefreshRun run = runNow(RefreshRunKind.DATA, false);
 
@@ -317,8 +334,7 @@ class RefreshRunServiceTest {
     void aSteamRateLimitCountsAsAFailureWithItsOwnCause() {
         visibleGames(1);
         dataRunSeesEveryGame();
-        when(factsStep.fetch(games.get(0), List.of("SNES"), false))
-                .thenReturn(new FactsStep.Fetched(Optional.empty(), Optional.empty(), false, true));
+        factsLookupResults.put(games.get(0).getId(), new FactsStep.Fetched(Optional.empty(), Optional.empty(), false, true));
 
         RefreshRun run = runNow(RefreshRunKind.DATA, false);
 

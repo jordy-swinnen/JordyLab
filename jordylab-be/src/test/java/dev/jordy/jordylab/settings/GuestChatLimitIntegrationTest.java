@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.mockito.Mockito;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 /**
@@ -73,7 +74,10 @@ class GuestChatLimitIntegrationTest extends KeycloakIntegrationTest {
             softly.assertThat(result.getResponse().getStatus()).isEqualTo(429);
             softly.assertThat(body).contains("CHAT_LIMIT_REACHED");
         });
-        verifyNoInteractions(resilientAiService);
+        // Start-up housekeeping may ask the AI layer for its embedding model name; a refused question must make no model call.
+        assertThat(Mockito.mockingDetails(resilientAiService).getInvocations().stream()
+                .map(invocation -> invocation.getMethod().getName())
+                .filter(name -> List.of("call", "callStructured", "embed").contains(name))).isEmpty();
 
         // A fresh persistence context still finds the seeded count — it is a stored row,
         // not an in-memory counter that a restart would silently reset.

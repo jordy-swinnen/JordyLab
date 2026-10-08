@@ -87,10 +87,12 @@ test.describe('Library filters', () => {
       await expect(panel).toBeVisible();
 
       const box = await panel.boundingBox();
-      const viewport = page.viewportSize();
+      // The visible width: a page scrollbar (classic scrollbars on CI) takes a few pixels from the viewport.
+      const visibleWidth = await page.evaluate(() => document.documentElement.clientWidth);
+      const viewportHeight = page.viewportSize()?.height ?? 0;
       expect(box?.x).toBe(0);
-      expect(box?.width).toBe(viewport?.width);
-      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeCloseTo(viewport?.height ?? 0, 0);
+      expect(box?.width).toBe(visibleWidth);
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeCloseTo(viewportHeight, 0);
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow).toBeLessThanOrEqual(0);

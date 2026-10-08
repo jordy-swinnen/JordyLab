@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -294,7 +295,7 @@ class GameFilterQueryTest {
         install(gameWithPlayers("Party solo", 1, true), emulator, "SNES");
         GameFilter filter = all().search("party").platforms(List.of("SNES")).minLocalPlayers(4).build();
 
-        var firstPage = gameRepository.findFiltered(filter, PageRequest.of(0, 2));
+        Page<Game> firstPage = gameRepository.findFiltered(filter, PageRequest.of(0, 2));
 
         assertSoftly(softly -> {
             softly.assertThat(firstPage.getContent()).extracting(Game::getTitle).containsExactly("Party 0", "Party 1");
