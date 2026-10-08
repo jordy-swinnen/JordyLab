@@ -1162,3 +1162,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): temperature is set on the OpenAI-compatible gateway only and omitted on the Anthropic fallback (rule updated in `shared/ai/AGENTS.md`); the router model choice stays the owner's (Settings → AI Models).
 - Regression test added: `ResilientAiServiceTest` — a configured temperature reaches the gateway prompt and the fallback prompt carries none.
 - Verified on prod: pending
+
+### BUG-076: `QuestionInterpretation.language` — the generated schema says EN/NL/OTHER, the parser accepted only en/nl/other
+- Status: FIXED-LOCAL (spec 013)
+- Severity: S2 (every LibBot question failed to parse on every model, on top of BUG-075)
+- Area/spec: gamecatalog libbot / 013
+- Env found: prod `v0.0.1-rc21`, 2026-10-08, reproduced locally against real models
+- Coverage rows: 013 US1-US3, SC-006
+- Steps to reproduce:
+  1. Call `callStructured(…, QuestionInterpretation.class)` with any question, any model (`anthropic/claude-haiku-4.5` via OpenRouter and `claude-sonnet-5` both fail).
+- Expected (cite spec/story): the interpretation parses (spec 013 research A1 step 1).
+- Actual (logs/screenshot, secrets redacted): `the reply was not valid JSON for QuestionInterpretation (InvalidFormatException)`; with debug printing: `Cannot deserialize value of type Language from String "EN": not one of the values accepted for Enum class: [other, en, nl]`.
+- Root cause: `BeanOutputConverter` generates the JSON schema from the enum constant names (`[ "EN", "NL", "OTHER" ]`) while `Language` renamed its wire values with `@JsonProperty("en")` etc. Models obey the schema and answer `"EN"`; Jackson accepted only the renamed values. The prompt (`libbot-interpret.st`) also spelled the lowercase codes, contradicting the schema. The recorded goldens use `"en"`, so `GoldenReplayTest` never caught it — only real models do. (This invalid-JSON failure is also what BUG-075's second root cause actually was: the router model was not at fault.)
+- Fix (PR / commit / tag): `Language` now takes the constant names as wire values (schema = deserialiser) with a `@JsonCreator` factory that also accepts the lowercase codes in any case and folds anything unrecognised into `OTHER`; the field description and the prompt now say EN/NL/OTHER.
+- Regression test added: `QuestionInterpretationTest` (schema form `EN`, golden form `nl`, unrecognised `fr` → OTHER) through `BeanOutputConverter`, the production parse path.
+- Verified on prod: pending
