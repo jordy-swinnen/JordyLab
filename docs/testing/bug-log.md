@@ -1146,3 +1146,19 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): `@DirtiesContext(AFTER_CLASS)` on the base class.
 - Regression test added: running both classes together.
 - Verified on prod: n/a
+
+### BUG-075: LibBot never answers in production — the Anthropic fallback rejects `temperature` and the configured router model returns invalid JSON
+- Status: OPEN (spec 013)
+- Severity: S2 (core feature broken — every LibBot question fails end-to-end)
+- Area/spec: shared AI layer + gamecatalog chat / 013
+- Env found: prod `v0.0.1-rc20`, 2026-10-08, signed-in pass on jordylab.be
+- Coverage rows: 013 US1-US3, SC-006
+- Steps to reproduce:
+  1. Sign in on https://jordylab.be, open LibBot.
+  2. Ask e.g. "Which games support local multiplayer?".
+- Expected (cite spec/story): an answer with cited games from the library (spec 013 US1-US3).
+- Actual (logs/screenshot, secrets redacted): every question ends in "LibBot can't answer right now. Nothing was counted against your messages." Backend log: `gamecatalog.chat.query` via OpenRouter `typesafe/jev-router` returns a reply that is not valid JSON for `QuestionInterpretation` (repair retry included) → `INVALID_OUTPUT` → fallback `claude-sonnet-5` fails with `400: {"type":"invalid_request_error","message":"`temperature` is deprecated for this model."}` → `LibBot could not answer: The question could not be interpreted: UNKNOWN`. Guest allowance is correctly not spent.
+- Root cause: two independent faults. (1) `ResilientAiService` sends `temperature` on the Anthropic fallback options (`application.yaml` sets 0 for `gamecatalog.chat.query` and 0.3 for `.chat.answer`); the current Anthropic model line returns a hard 400 for that parameter, so the fallback can never answer any temperature-configured feature. (2) The model set for `gamecatalog.chat.query` on Settings → AI Models (`typesafe/jev-router`) does not emit strict JSON, so every question pays two gateway calls before falling back. Same model family often fails the enrichment output validator in the auto-fill worker (`Enrichment output invalid for '…'`, descriptions rejected for length).
+- Fix (PR / commit / tag): temperature is set on the OpenAI-compatible gateway only and omitted on the Anthropic fallback (rule updated in `shared/ai/AGENTS.md`); the router model choice stays the owner's (Settings → AI Models).
+- Regression test added: `ResilientAiServiceTest` — a configured temperature reaches the gateway prompt and the fallback prompt carries none.
+- Verified on prod: pending
