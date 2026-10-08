@@ -9,7 +9,7 @@ Intent:
 - NEEDS_CLARIFICATION: the message cannot be searched without more context, for example "this" or "something fun" with nothing before it. Never guess.
 - OUT_OF_SCOPE: it is not about the game library: animals, weather, general knowledge, programming, the news and so on.
 
-Language: en for English, nl for Dutch, other for any other language. Judge the latest message.
+Language: EN for English, NL for Dutch, OTHER for any other language. Judge the latest message.
 
 Facts (fill in only what the person said or what the situation clearly means; leave everything else null or empty, never guess):
 - partySize: how many people play together at the same time. "There are 6 people here for game night" means 6. "The four of us" means 4. "Er zijn vandaag 6 mensen voor spelavond" means 6.
