@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
+import dev.jordy.jordylab.gamecatalog.CatalogChanged;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -58,24 +60,18 @@ class SteamLibrarySyncServiceTest {
     private LibrarySyncRunRepository librarySyncRunRepository;
 
     @Mock
-    private ArtworkService artworkService;
+    private GameIdentityService gameIdentityService;
 
     @Mock
-    private SteamMetadataService steamMetadataService;
-
-    @Mock
-    private EnrichmentService enrichmentService;
-
-    @Mock
-    private MultiplayerService multiplayerService;
+    private ApplicationEventPublisher eventPublisher;
 
     private SteamLibrarySyncService service;
 
     @BeforeEach
     void setUp() {
-        service = new SteamLibrarySyncService(ownedGamesClient, familyClient, reconciliationService, gameRepository,
-                libraryEntryRepository, librarySyncRunRepository, artworkService, steamMetadataService,
-                enrichmentService, multiplayerService, properties());
+        service = new SteamLibrarySyncService(ownedGamesClient, familyClient, reconciliationService, gameIdentityService,
+                gameRepository,
+                libraryEntryRepository, librarySyncRunRepository, eventPublisher, properties());
     }
 
     @Test
@@ -86,12 +82,10 @@ class SteamLibrarySyncServiceTest {
         when(librarySyncRunRepository.findFirstByLibrarySourceAndOutcomeOrderByFinishedAtDesc(LibrarySource.OWNED,
                 LibrarySyncOutcome.APPLIED)).thenReturn(Optional.empty());
         when(libraryEntryRepository.countActiveByLibrarySource(LibrarySource.OWNED)).thenReturn(1L);
-        when(reconciliationService.resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY)).thenReturn(existing);
+        when(gameIdentityService.resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY)).thenReturn(existing);
         when(libraryEntryRepository.findByGameIdAndLibrarySource(existing.getId(), LibrarySource.OWNED))
                 .thenReturn(Optional.of(anEntry(existing)));
         when(libraryEntryRepository.findAllByLibrarySourceAndRemovedAtIsNull(LibrarySource.OWNED)).thenReturn(List.of());
-        when(steamMetadataService.fetchPending(25, 1500L)).thenReturn(0);
-        when(enrichmentService.enrichPending(8)).thenReturn(0);
 
         when(ownedGamesClient.isConfigured()).thenReturn(true);
 
@@ -105,7 +99,7 @@ class SteamLibrarySyncServiceTest {
             softly.assertThat(runCaptor.getValue().getMetadataCalls()).isZero();
             softly.assertThat(runCaptor.getValue().getAiCalls()).isZero();
         });
-        verify(reconciliationService).resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY);
+        verify(gameIdentityService).resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY);
     }
 
     @Test
@@ -116,7 +110,7 @@ class SteamLibrarySyncServiceTest {
                 LibrarySyncOutcome.APPLIED)).thenReturn(Optional.empty());
         when(libraryEntryRepository.countActiveByLibrarySource(LibrarySource.OWNED)).thenReturn(1L);
         Game existing = aSteamGame();
-        when(reconciliationService.resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY)).thenReturn(existing);
+        when(gameIdentityService.resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY)).thenReturn(existing);
         when(libraryEntryRepository.findByGameIdAndLibrarySource(existing.getId(), LibrarySource.OWNED))
                 .thenReturn(Optional.of(anEntry(existing)));
         when(libraryEntryRepository.findAllByLibrarySourceAndRemovedAtIsNull(LibrarySource.OWNED)).thenReturn(List.of());
@@ -135,9 +129,8 @@ class SteamLibrarySyncServiceTest {
         ArgumentCaptor<LibrarySyncRun> secondRun = ArgumentCaptor.forClass(LibrarySyncRun.class);
         verify(librarySyncRunRepository, times(2)).save(secondRun.capture());
         assertThat(secondRun.getAllValues().get(1).getOutcome()).isEqualTo(LibrarySyncOutcome.NO_CHANGE);
-        verify(reconciliationService, times(1)).resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY);
-        verify(steamMetadataService, times(1)).fetchPending(25, 1500L);
-        verify(enrichmentService, times(1)).enrichPending(8);
+        verify(gameIdentityService, times(1)).resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY);
+        verify(eventPublisher, times(1)).publishEvent(new CatalogChanged("steam library"));
     }
 
     @Test
@@ -202,7 +195,7 @@ class SteamLibrarySyncServiceTest {
                 LibrarySyncOutcome.APPLIED)).thenReturn(Optional.empty());
         when(libraryEntryRepository.countActiveByLibrarySource(LibrarySource.FAMILY)).thenReturn(0L);
         Game game = aSteamGame();
-        when(reconciliationService.resolveOrCreateSteamGame("730", "Counter-Strike 2", TitleSource.LIBRARY))
+        when(gameIdentityService.resolveOrCreateSteamGame("730", "Counter-Strike 2", TitleSource.LIBRARY))
                 .thenReturn(game);
         when(libraryEntryRepository.findByGameIdAndLibrarySource(game.getId(), LibrarySource.FAMILY))
                 .thenReturn(Optional.empty());
@@ -210,9 +203,9 @@ class SteamLibrarySyncServiceTest {
 
         service.syncFamily("token", false);
 
-        verify(reconciliationService, never()).resolveOrCreateSteamGame(eq("999"), eq("Not Shareable"),
+        verify(gameIdentityService, never()).resolveOrCreateSteamGame(eq("999"), eq("Not Shareable"),
                 eq(TitleSource.LIBRARY));
-        verify(reconciliationService).resolveOrCreateSteamGame("730", "Counter-Strike 2", TitleSource.LIBRARY);
+        verify(gameIdentityService).resolveOrCreateSteamGame("730", "Counter-Strike 2", TitleSource.LIBRARY);
     }
 
     @Test
@@ -240,7 +233,7 @@ class SteamLibrarySyncServiceTest {
                 LibrarySyncOutcome.APPLIED)).thenReturn(Optional.empty());
         when(libraryEntryRepository.countActiveByLibrarySource(LibrarySource.OWNED)).thenReturn(0L);
         Game game = aSteamGame();
-        when(reconciliationService.resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY)).thenReturn(game);
+        when(gameIdentityService.resolveOrCreateSteamGame(APP_ID, TITLE, TitleSource.LIBRARY)).thenReturn(game);
         when(libraryEntryRepository.findByGameIdAndLibrarySource(game.getId(), LibrarySource.OWNED))
                 .thenReturn(Optional.empty());
         when(libraryEntryRepository.findAllByLibrarySourceAndRemovedAtIsNull(LibrarySource.OWNED)).thenReturn(List.of());
@@ -249,7 +242,7 @@ class SteamLibrarySyncServiceTest {
 
         service.syncOwned(false);
 
-        verify(reconciliationService, never()).resolveOrCreateSteamGame(eq("228980"), eq("Steamworks Common Redistributables"),
+        verify(gameIdentityService, never()).resolveOrCreateSteamGame(eq("228980"), eq("Steamworks Common Redistributables"),
                 eq(TitleSource.LIBRARY));
     }
 
@@ -265,7 +258,7 @@ class SteamLibrarySyncServiceTest {
     }
 
     private Game aSteamGame() {
-        return Game.builder().platform("Steam").steamAppId(APP_ID).title(TITLE).titleSource(TitleSource.MANIFEST).build();
+        return Game.builder().steamAppId(APP_ID).title(TITLE).titleSource(TitleSource.MANIFEST).build();
     }
 
     private GameLibraryEntry anEntry(Game game) {

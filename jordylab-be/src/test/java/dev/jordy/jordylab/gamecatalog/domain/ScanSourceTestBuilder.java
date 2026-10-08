@@ -22,7 +22,7 @@ class ScanSourceTestBuilder {
     public static ScanSource.ScanSourceBuilder aScanSource() {
         return ScanSource.builder()
                 .id(DEFAULT_ID)
-                .hostname(DEFAULT_HOSTNAME)
+                .host(Host.builder().hostname(DEFAULT_HOSTNAME).build())
                 .sourceType(DEFAULT_SOURCE_TYPE)
                 .machineId(DEFAULT_MACHINE_ID)
                 .enabled(true);

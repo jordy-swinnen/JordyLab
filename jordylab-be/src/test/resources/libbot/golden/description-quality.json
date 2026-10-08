@@ -1,0 +1,76 @@
+{
+ "games": [
+  {
+   "title": "Hades",
+   "platform": "PC",
+   "releaseYear": 2020,
+   "recorded": "Hades is an action roguelike in which the player fights out of the underworld as Zagreus, the son of the god of the dead. Each escape attempt ends in defeat and a return to the house, where new weapons, upgrades and conversations carry over to the next run. Combat is fast and built around dashing, attacking and choosing boons granted by the gods of Olympus.",
+   "expectAccepted": true,
+   "reasonContains": null
+  },
+  {
+   "title": "Celeste",
+   "platform": "PC",
+   "releaseYear": 2018,
+   "recorded": "Celeste is a precision platformer about a young woman named Madeline who climbs a mountain while facing her own doubts. The player dashes, jumps and clings to walls across hundreds of hand-built screens, each one a short puzzle of timing and movement. Optional collectibles and a harder set of B-side levels reward players who want a bigger challenge.",
+   "expectAccepted": true,
+   "reasonContains": null
+  },
+  {
+   "title": "Mario Kart 8 Deluxe",
+   "platform": "PC",
+   "releaseYear": 2017,
+   "recorded": "Mario Kart 8 Deluxe is a kart racing game in which Mario and his friends drive through colourful tracks, some of which defy gravity. Players collect items to slow rivals or speed ahead, and up to four people can race on one screen. The package also includes a battle mode and every track and character released for the original version.",
+   "expectAccepted": true,
+   "reasonContains": null
+  },
+  {
+   "title": "Portal 2",
+   "platform": "PC",
+   "releaseYear": 2011,
+   "recorded": "Portal 2 is a first-person puzzle game set in the ruined Aperture Science laboratory. The player uses a portal gun to link two surfaces and carries momentum through them to reach exits, while a talkative robot companion comments on every step. A separate cooperative campaign lets two players solve additional chambers together.",
+   "expectAccepted": true,
+   "reasonContains": null
+  },
+  {
+   "title": "One liner",
+   "platform": "PC",
+   "releaseYear": 2020,
+   "recorded": "A classic platformer.",
+   "expectAccepted": false,
+   "reasonContains": "two to four sentences"
+  },
+  {
+   "title": "First person",
+   "platform": "PC",
+   "releaseYear": 2020,
+   "recorded": "I played this for hours and found the combat fast. The story is dark and the music is good. You should try it with a controller if you can find one, because it feels much better that way than with a keyboard. I would call it a fine roguelike overall.",
+   "expectAccepted": false,
+   "reasonContains": "third person"
+  },
+  {
+   "title": "Marketing filler",
+   "platform": "PC",
+   "releaseYear": 2020,
+   "recorded": "This stunning, immersive and epic adventure is an unforgettable masterpiece that every player must experience. Its breathtaking worlds and thrilling combat make it the ultimate action game. Fans of the genre will be captivated from the first minute to the last, and nobody who tries it will ever forget what they saw. It is a legendary title.",
+   "expectAccepted": false,
+   "reasonContains": "marketing adjectives"
+  },
+  {
+   "title": "Invented score",
+   "platform": "PC",
+   "releaseYear": 2020,
+   "recorded": "Hades is an action roguelike in which the player fights out of the underworld as Zagreus, the son of the god of the dead. It scored 9/10 on review sites for its fast combat and its characters. Each run ends in a return to the house, where upgrades and conversations carry over to the next attempt, and the Olympian gods grant boons that change how the player fights.",
+   "expectAccepted": false,
+   "reasonContains": "scores"
+  },
+  {
+   "title": "Wrong year",
+   "platform": "PC",
+   "releaseYear": 2020,
+   "recorded": "Hades is an action roguelike released in 2018 in which the player fights out of the underworld as Zagreus, the son of the god of the dead. Each run ends in a return to the house, where upgrades and conversations carry over to the next attempt, and the Olympian gods grant boons that change how the player fights in every room.",
+   "expectAccepted": false,
+   "reasonContains": "2020"
+  }
+ ]
+}

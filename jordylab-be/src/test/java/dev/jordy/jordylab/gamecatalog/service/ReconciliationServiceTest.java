@@ -1,36 +1,30 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
-import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
+import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
+import dev.jordy.jordylab.gamecatalog.domain.AiAuthorship;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
-import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
-import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
-import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
+import dev.jordy.jordylab.gamecatalog.domain.Host;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.TitleSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameLibraryEntryRepository;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,33 +39,31 @@ class ReconciliationServiceTest {
     private static final Instant NOW = Instant.parse("2026-08-02T12:00:00Z");
     private static final int GRACE_PERIOD_DAYS = 30;
     private static final String PLATFORM = "SNES";
-
-    @Mock
-    private GameRepository gameRepository;
+    private static final AiAuthorship AUTHORSHIP = AiAuthorship.of("model", "model", NOW);
 
     @Mock
     private GameInstallationRepository gameInstallationRepository;
 
     @Mock
-    private GameLibraryEntryRepository gameLibraryEntryRepository;
+    private GameIdentityService gameIdentityService;
 
-    @TempDir
-    private Path artworkDir;
+    @Mock
+    private PlaceRemovalService placeRemovalService;
 
     private ReconciliationService reconciliationService;
 
     @BeforeEach
     void setUp() {
-        reconciliationService = new ReconciliationService(gameRepository, gameInstallationRepository,
-                gameLibraryEntryRepository, properties());
+        reconciliationService = new ReconciliationService(gameInstallationRepository, gameIdentityService,
+                placeRemovalService, properties(), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
-    void addsNewGameWithInstallation() {
+    void addsNewInstallationOnTheGameTheIdentityServiceResolves() {
         ScanSource source = aSource();
+        Game resolved = Game.builder().title("Some Game").build();
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of());
-        ArgumentCaptor<Game> gameCaptor = ArgumentCaptor.forClass(Game.class);
-        when(gameRepository.save(gameCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(gameIdentityService.resolveOrCreateByTitle("Some Game", TitleSource.ROM)).thenReturn(resolved);
 
         ReconciliationCounts counts = reconciliationService.applySnapshot(source,
                 List.of(payload("rom.smc", "Some Game")), NOW);
@@ -80,9 +72,9 @@ class ReconciliationServiceTest {
         verify(gameInstallationRepository).save(installationCaptor.capture());
         assertThat(counts.added()).isEqualTo(1);
         SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(gameCaptor.getValue().getTitle()).isEqualTo("Some Game");
-            softly.assertThat(gameCaptor.getValue().getPlatform()).isEqualTo(PLATFORM);
+            softly.assertThat(installationCaptor.getValue().getGame()).isSameAs(resolved);
             softly.assertThat(installationCaptor.getValue().getExternalRef()).isEqualTo("rom.smc");
+            softly.assertThat(installationCaptor.getValue().getPlatform()).isEqualTo(PLATFORM);
             softly.assertThat(installationCaptor.getValue().getPresence()).isEqualTo(Presence.INSTALLED);
             softly.assertThat(installationCaptor.getValue().getFirstSeenAt()).isEqualTo(NOW);
             softly.assertThat(installationCaptor.getValue().getSource()).isSameAs(source);
@@ -90,14 +82,28 @@ class ReconciliationServiceTest {
     }
 
     @Test
+    void platformNamesAreCanonicalisedBeforeTheyAreStored() {
+        ScanSource source = aSource();
+        when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of());
+        when(gameIdentityService.resolveOrCreateByTitle("Super Mario 64", TitleSource.ROM))
+                .thenReturn(Game.builder().title("Super Mario 64").build());
+
+        reconciliationService.applySnapshot(source,
+                List.of(new GamePayload("sm64.z64", "Super Mario 64", "N64", false)), NOW);
+
+        ArgumentCaptor<GameInstallation> captor = ArgumentCaptor.forClass(GameInstallation.class);
+        verify(gameInstallationRepository).save(captor.capture());
+        assertThat(captor.getValue().getPlatform()).isEqualTo("Nintendo 64");
+    }
+
+    @Test
     void sameSteamGameFromAnotherHostIsAdoptedWithoutTouchingTheGame() {
-        Game existing = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
-                .titleSource(TitleSource.MANIFEST).build();
-        existing.applyEnrichment("Puzzle", true, true, "A classic.");
+        Game existing = Game.builder().steamAppId("620").title("Portal 2").titleSource(TitleSource.MANIFEST).build();
+        existing.applyEnrichment("Puzzle", true, true, "A classic.", AUTHORSHIP);
         existing.applyDeterministicMetadata("Puzzle, Adventure", "Valve", "Valve", 2011);
         ScanSource secondHost = aSource(SourceType.STEAM);
         when(gameInstallationRepository.findAllBySourceId(secondHost.getId())).thenReturn(List.of());
-        when(gameRepository.findBySteamAppId("620")).thenReturn(Optional.of(existing));
+        when(gameIdentityService.resolveOrCreateSteamGame("620", "Portal 2", TitleSource.MANIFEST)).thenReturn(existing);
 
         reconciliationService.applySnapshot(secondHost,
                 List.of(new GamePayload("620", "Portal 2", "Steam", false)), NOW);
@@ -107,30 +113,11 @@ class ReconciliationServiceTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(captor.getValue().getGame()).isSameAs(existing);
             softly.assertThat(captor.getValue().getSource()).isSameAs(secondHost);
-            softly.assertThat(existing.getEnrichmentStatus())
-                    .isEqualTo(dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus.ENRICHED);
+            softly.assertThat(captor.getValue().getPlatform()).isEqualTo("Steam");
+            softly.assertThat(existing.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.ENRICHED);
             softly.assertThat(existing.getDescription()).isEqualTo("A classic.");
             softly.assertThat(existing.getReleaseYear()).isEqualTo(2011);
-            softly.assertThat(existing.getTitle()).isEqualTo("Portal 2");
         });
-        verify(gameRepository, never()).save(existing);
-    }
-
-    @Test
-    void sameRomTitleOnAnotherHostIsAdoptedByPlatformAndNormalizedTitle() {
-        Game existing = Game.builder().platform(PLATFORM).title("Super Mario World").build();
-        ScanSource secondHost = aSource();
-        when(gameInstallationRepository.findAllBySourceId(secondHost.getId())).thenReturn(List.of());
-        when(gameRepository.findByPlatformAndLowercaseTitle(eq(PLATFORM), eq("Super Mario World"),
-                eq(PageRequest.of(0, 1))))
-                .thenReturn(List.of(existing));
-
-        reconciliationService.applySnapshot(secondHost, List.of(payload("other-host/smw.smc", "Super Mario World")),
-                NOW);
-
-        ArgumentCaptor<GameInstallation> captor = ArgumentCaptor.forClass(GameInstallation.class);
-        verify(gameInstallationRepository).save(captor.capture());
-        assertThat(captor.getValue().getGame()).isSameAs(existing);
     }
 
     @Test
@@ -147,7 +134,7 @@ class ReconciliationServiceTest {
             softly.assertThat(counts.added()).isZero();
             softly.assertThat(existing.getLastSeenAt()).isEqualTo(NOW);
         });
-        verifyNoInteractions(gameRepository);
+        verifyNoInteractions(gameIdentityService);
     }
 
     @Test
@@ -166,10 +153,37 @@ class ReconciliationServiceTest {
     }
 
     @Test
+    void aSpellingOfTheSamePlatformIsNoUpdateButARealPlatformChangeIs() {
+        ScanSource source = aSource();
+        GameInstallation existing = anInstallation(source, "rom.smc", "Some Game");
+
+        when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of(existing));
+
+        ReconciliationCounts counts = reconciliationService.applySnapshot(source,
+                List.of(new GamePayload("rom.smc", "Some Game", "Super Nintendo", false)), NOW);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(counts.updated()).isZero();
+            softly.assertThat(existing.getPlatform()).isEqualTo("SNES");
+        });
+        ScanSource otherSource = aSource();
+        GameInstallation moved = anInstallation(otherSource, "gb.gb", "Some GB Game");
+        when(gameInstallationRepository.findAllBySourceId(otherSource.getId())).thenReturn(List.of(moved));
+
+        ReconciliationCounts movedCounts = reconciliationService.applySnapshot(otherSource,
+                List.of(new GamePayload("gb.gb", "Some GB Game", "Game Boy", false)), NOW);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(movedCounts.updated()).isEqualTo(1);
+            softly.assertThat(moved.getPlatform()).isEqualTo("Game Boy");
+        });
+    }
+
+    @Test
     void rediscoveredGameWithinGraceIsRestoredWithDataIntact() {
         ScanSource source = aSource();
         GameInstallation existing = anInstallation(source, "rom.smc", "Some Game");
-        existing.getGame().applyEnrichment("Platformer", false, true, "A classic.");
+        existing.getGame().applyEnrichment("Platformer", false, true, "A classic.", AUTHORSHIP);
         existing.markUninstalled(NOW.minusSeconds(86400));
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of(existing));
 
@@ -199,131 +213,45 @@ class ReconciliationServiceTest {
     }
 
     @Test
-    void snapshotNeverHidesAManualInstallation() {
-        ScanSource source = aSource(SourceType.SWITCH);
-        GameInstallation manual = aManualInstallation(source);
-        when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of(manual));
-
-        ReconciliationCounts counts = reconciliationService.applySnapshot(source, List.of(), NOW);
-
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(counts.removed()).isZero();
-            softly.assertThat(manual.getPresence()).isEqualTo(Presence.INSTALLED);
-            softly.assertThat(manual.getUninstalledAt()).isNull();
-        });
-    }
-
-    @Test
     void duplicateRefsInPayloadKeepFirstEntry() {
         ScanSource source = aSource();
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(List.of());
-        ArgumentCaptor<Game> gameCaptor = ArgumentCaptor.forClass(Game.class);
-        when(gameRepository.save(gameCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(gameIdentityService.resolveOrCreateByTitle("First", TitleSource.ROM))
+                .thenReturn(Game.builder().title("First").build());
 
         ReconciliationCounts counts = reconciliationService.applySnapshot(source,
                 List.of(payload("rom.smc", "First"), payload("rom.smc", "Second")), NOW);
 
         assertThat(counts.added()).isEqualTo(1);
-        assertThat(gameCaptor.getValue().getTitle()).isEqualTo("First");
+        verify(gameIdentityService, never()).resolveOrCreateByTitle("Second", TitleSource.ROM);
     }
 
     @Test
-    void purgeDeletesExpiredInstallationsAndOrphanedGameWithArtwork() throws Exception {
-        Game game = Game.builder().platform(PLATFORM).title("Old Game").build();
-        game.applyCoverArtwork(ArtworkStatus.LOCAL_UPLOAD, "snes/abc.png");
+    void purgeDeletesExpiredInstallationsAndReleasesEachAffectedGame() {
+        Game game = Game.builder().title("Old Game").build();
         GameInstallation expired = anInstallation(aSource(), game, "old.smc");
         expired.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
-        Path artworkFile = artworkDir.resolve("snes/abc.png");
-        Files.createDirectories(artworkFile.getParent());
-        Files.writeString(artworkFile, "fake-image");
         ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
         when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
                 cutoffCaptor.capture())).thenReturn(List.of(expired));
-        when(gameInstallationRepository.countByGameId(game.getId())).thenReturn(0L);
-        when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
-        Instant before = Instant.now();
+        when(placeRemovalService.releaseGameIfOrphaned(game.getId())).thenReturn(true);
 
         reconciliationService.purgeUninstalledGames();
 
-        Instant after = Instant.now();
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(Files.exists(artworkFile)).isFalse();
-            softly.assertThat(cutoffCaptor.getValue()).isBetween(
-                    before.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS),
-                    after.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS));
-        });
+        assertThat(cutoffCaptor.getValue()).isEqualTo(NOW.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS));
         verify(gameInstallationRepository).deleteAll(List.of(expired));
-        verify(gameRepository).delete(game);
-    }
-
-    @Test
-    void purgeDeletesExpiredLibraryEntryBeforeDeletingTheGame() {
-        Game game = Game.builder().platform(PLATFORM).title("Old Game").build();
-        GameInstallation expiredInstallation = anInstallation(aSource(), game, "old.smc");
-        expiredInstallation.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
-        GameLibraryEntry expiredEntry = GameLibraryEntry.builder()
-                .game(game)
-                .librarySource(LibrarySource.OWNED)
-                .firstSeenAt(NOW.minusSeconds(60L * 24 * 3600))
-                .lastSeenAt(NOW.minusSeconds(40L * 24 * 3600))
-                .removedAt(NOW.minusSeconds(40L * 24 * 3600))
-                .build();
-        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                cutoffCaptor.capture())).thenReturn(List.of(expiredInstallation));
-        when(gameInstallationRepository.countByGameId(game.getId())).thenReturn(0L);
-        when(gameLibraryEntryRepository.findAllByGameId(game.getId())).thenReturn(List.of(expiredEntry));
-        when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
-
-        reconciliationService.purgeUninstalledGames();
-
-        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
-        verify(gameLibraryEntryRepository).deleteAll(List.of(expiredEntry));
-        verify(gameRepository).delete(game);
-    }
-
-    @Test
-    void purgeKeepsGameWhenAnotherHostInstallationRemains() {
-        Game game = Game.builder().platform(PLATFORM).title("Shared Game").build();
-        GameInstallation expired = anInstallation(aSource(), game, "old.smc");
-        expired.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
-        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                cutoffCaptor.capture())).thenReturn(List.of(expired));
-        when(gameInstallationRepository.countByGameId(game.getId())).thenReturn(1L);
-
-        reconciliationService.purgeUninstalledGames();
-
-        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
-        verify(gameRepository, never()).delete(game);
-        verify(gameRepository, never()).findById(game.getId());
+        verify(placeRemovalService).releaseGameIfOrphaned(game.getId());
     }
 
     @Test
     void purgeDoesNothingWhenNothingExpired() {
-        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
         when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                cutoffCaptor.capture())).thenReturn(List.of());
+                eq(NOW.minus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS)))).thenReturn(List.of());
 
         reconciliationService.purgeUninstalledGames();
 
-        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
         verify(gameInstallationRepository, never()).deleteAll(List.of());
-    }
-
-    @Test
-    void purgeNeverDeletesAManualInstallation() {
-        GameInstallation manual = aManualInstallation(aSource(SourceType.SWITCH));
-        manual.markUninstalled(NOW.minusSeconds(40L * 24 * 3600));
-        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(gameInstallationRepository.findByPresenceAndUninstalledAtBefore(eq(Presence.UNINSTALLED),
-                cutoffCaptor.capture())).thenReturn(List.of(manual));
-
-        reconciliationService.purgeUninstalledGames();
-
-        assertThat(cutoffCaptor.getValue()).isBefore(Instant.now());
-        verifyNoInteractions(gameRepository);
-        verify(gameInstallationRepository, never()).deleteAll(List.of(manual));
+        verifyNoInteractions(placeRemovalService);
     }
 
     private ScanSource aSource() {
@@ -332,7 +260,7 @@ class ReconciliationServiceTest {
 
     private ScanSource aSource(SourceType sourceType) {
         return ScanSource.builder()
-                .hostname("jordybox")
+                .host(Host.builder().hostname("jordybox").build())
                 .sourceType(sourceType)
                 .platform(sourceType.platform())
                 .enabled(true)
@@ -340,7 +268,7 @@ class ReconciliationServiceTest {
     }
 
     private GameInstallation anInstallation(ScanSource source, String externalRef, String title) {
-        return anInstallation(source, Game.builder().platform(PLATFORM).title(title).build(), externalRef);
+        return anInstallation(source, Game.builder().title(title).build(), externalRef);
     }
 
     private GameInstallation anInstallation(ScanSource source, Game game, String externalRef) {
@@ -348,16 +276,10 @@ class ReconciliationServiceTest {
                 .game(game)
                 .source(source)
                 .externalRef(externalRef)
+                .platform(PLATFORM)
                 .firstSeenAt(NOW.minusSeconds(172800))
                 .lastSeenAt(NOW.minusSeconds(86400))
                 .build();
-    }
-
-    private GameInstallation aManualInstallation(ScanSource source) {
-        Game game = Game.builder().platform(source.getPlatform()).title("Mario Kart 8 Deluxe").build();
-
-        return GameInstallation.createManual(game, source, "switch:mario-kart-8-deluxe", InstallationFormat.PHYSICAL,
-                NOW.minusSeconds(172800));
     }
 
     private GamePayload payload(String externalRef, String title) {
@@ -366,7 +288,7 @@ class ReconciliationServiceTest {
 
     private GameCatalogProperties properties() {
         return new GameCatalogProperties(
-                new GameCatalogProperties.Artwork(artworkDir.toString(), 2097152L, true, 2000L),
+                new GameCatalogProperties.Artwork("/tmp/unused", 2097152L, true, 2000L),
                 GRACE_PERIOD_DAYS,
                 new GameCatalogProperties.Enrichment(50, 3),
                 new GameCatalogProperties.Chat(50),

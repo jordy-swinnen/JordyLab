@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
@@ -37,7 +36,6 @@ public class MultiplayerService {
     private final GameCatalogProperties properties;
 
     /** Derives multiplayer data for up to {@code maxGames} backlog games. Invoked inline — no scheduler. */
-    @Transactional
     public int derivePending(int maxGames) {
         int maxAttempts = properties.metadata().maxAttempts();
         List<Game> backlog = gameRepository.findMultiplayerBacklog(maxAttempts, PageRequest.of(0, maxGames));
@@ -58,6 +56,7 @@ public class MultiplayerService {
             if (!resolved) {
                 game.recordMultiplayerFailure();
             }
+            gameRepository.save(game);
             processed++;
         }
 
@@ -65,12 +64,12 @@ public class MultiplayerService {
     }
 
     /** Force re-derives one game's multiplayer data, clearing its attempt counter first. */
-    @Transactional
     public void refresh(Game game) {
         game.resetMultiplayerForRetry();
         if (!deriveOne(game, new HashMap<>(), true)) {
             game.recordMultiplayerFailure();
         }
+        gameRepository.save(game);
     }
 
     /**

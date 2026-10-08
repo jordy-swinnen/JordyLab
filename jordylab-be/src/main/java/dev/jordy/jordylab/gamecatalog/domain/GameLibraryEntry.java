@@ -75,9 +75,8 @@ public class GameLibraryEntry extends BaseEntity<GameLibraryEntry> {
 
     public static class GameLibraryEntryBuilder {
         public GameLibraryEntry build() {
+            Preconditions.checkArgument(librarySource != null, "librarySource is required");
             Preconditions.checkArgument(game != null, "game is required");
-            Preconditions.checkArgument(librarySource == LibrarySource.OWNED || librarySource == LibrarySource.FAMILY,
-                    "librarySource must be OWNED or FAMILY");
             Preconditions.checkArgument(firstSeenAt != null, "firstSeenAt is required");
             Preconditions.checkArgument(lastSeenAt != null, "lastSeenAt is required");
             Preconditions.checkArgument(familyOwnerNames == null

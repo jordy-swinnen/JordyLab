@@ -66,11 +66,16 @@ class AiModelSettingsServiceTest {
     @BeforeEach
     void setUp() {
         Map<String, AiProperties.Feature> features = Arrays.stream(AiFeature.values())
-                .collect(Collectors.toMap(AiFeature::key, feature -> new AiProperties.Feature(DEFAULT_MODEL)));
+                .collect(Collectors.toMap(AiFeature::key, feature -> new AiProperties.Feature(DEFAULT_MODEL, null)));
         AiProperties properties = new AiProperties(30, 120, new AiProperties.Gateway("https://gateway.test", "k"),
-                new AiProperties.Fallback("anthropic", "claude-sonnet-5"), features);
+                new AiProperties.Fallback("anthropic", "claude-sonnet-5"), features,
+                new AiProperties.Embedding("openai/text-embedding-3-small"));
         service = new AiModelSettingsService(settingRepository, lastRunRepository, catalogClient, properties,
                 transactionManager);
+    }
+
+    private static List<AiFeature> selectableFeatures() {
+        return Arrays.stream(AiFeature.values()).filter(AiFeature::selectable).toList();
     }
 
     private static OpenRouterModelCatalogClient.Catalog catalog(boolean fresh, String... ids) {
@@ -82,7 +87,7 @@ class AiModelSettingsServiceTest {
 
     /** listFeatures reads every feature: only {@code FEATURE} has a saved model, none has run yet. */
     private void givenOnlyFeatureHasASavedModel(String modelId) {
-        for (AiFeature feature : AiFeature.values()) {
+        for (AiFeature feature : selectableFeatures()) {
             when(settingRepository.findByFeatureKey(feature.key())).thenReturn(feature == FEATURE
                     ? Optional.of(AiFeatureModelSettingTestBuilder.anAiFeatureModelSetting().modelId(modelId).build())
                     : Optional.empty());
@@ -185,7 +190,7 @@ class AiModelSettingsServiceTest {
         AiModelSettingsService.FeatureModelView view = views.stream()
                 .filter(candidate -> candidate.feature() == FEATURE).findFirst().orElseThrow();
         assertSoftly(softly -> {
-            softly.assertThat(views).hasSize(AiFeature.values().length);
+            softly.assertThat(views).hasSize(selectableFeatures().size());
             softly.assertThat(view.currentModel()).isEqualTo("gone/model");
             softly.assertThat(view.defaultModel()).isEqualTo(DEFAULT_MODEL);
             softly.assertThat(view.fallbackModel()).isEqualTo("claude-sonnet-5");
@@ -210,7 +215,7 @@ class AiModelSettingsServiceTest {
         ArgumentCaptor<AiFeatureLastRun> runCaptor = ArgumentCaptor.forClass(AiFeatureLastRun.class);
 
         service.onAiCallCompleted(new AiCallCompleted(FEATURE, "anthropic", "claude-sonnet-5", false, true,
-                ProviderFailureReason.TIMEOUT, NOW));
+                ProviderFailureReason.TIMEOUT, NOW, "claude-sonnet-5", 120, 45));
 
         verify(lastRunRepository).save(runCaptor.capture());
         assertSoftly(softly -> {
@@ -229,7 +234,7 @@ class AiModelSettingsServiceTest {
                 == TransactionDefinition.PROPAGATION_REQUIRES_NEW))).thenReturn(new SimpleTransactionStatus());
         when(lastRunRepository.findByFeatureKey(FEATURE.key())).thenReturn(Optional.of(existing));
 
-        service.onAiCallCompleted(new AiCallCompleted(FEATURE, "openrouter", CHOSEN_MODEL, true, false, null, NOW));
+        service.onAiCallCompleted(new AiCallCompleted(FEATURE, "openrouter", CHOSEN_MODEL, true, false, null, NOW, CHOSEN_MODEL, null, null));
 
         assertSoftly(softly -> {
             softly.assertThat(existing.getModel()).isEqualTo(CHOSEN_MODEL);
@@ -244,8 +249,23 @@ class AiModelSettingsServiceTest {
                 == TransactionDefinition.PROPAGATION_REQUIRES_NEW))).thenReturn(new SimpleTransactionStatus());
         when(lastRunRepository.findByFeatureKey(FEATURE.key())).thenThrow(new IllegalStateException("db down"));
 
-        service.onAiCallCompleted(new AiCallCompleted(FEATURE, "openrouter", CHOSEN_MODEL, true, false, null, NOW));
+        service.onAiCallCompleted(new AiCallCompleted(FEATURE, "openrouter", CHOSEN_MODEL, true, false, null, NOW, CHOSEN_MODEL, null, null));
 
         verify(lastRunRepository, never()).save(argThat(run -> true));
+    }
+
+    @Test
+    void theSearchIndexModelIsConfigurationAndNeverListedOrSelectable() {
+        when(catalogClient.catalog()).thenReturn(catalog(true, DEFAULT_MODEL));
+        givenOnlyFeatureHasASavedModel(DEFAULT_MODEL);
+
+        assertSoftly(softly -> {
+            softly.assertThat(service.listFeatures()).extracting(view -> view.feature())
+                    .doesNotContain(AiFeature.GAMECATALOG_EMBEDDING);
+            softly.assertThat(service.resolveModel(AiFeature.GAMECATALOG_EMBEDDING))
+                    .isEqualTo("openai/text-embedding-3-small");
+        });
+        assertThatThrownBy(() -> service.saveModel(AiFeature.GAMECATALOG_EMBEDDING.key(), CHOSEN_MODEL, "subject"))
+                .isInstanceOf(AiModelSettingsService.UnknownAiFeatureException.class);
     }
 }

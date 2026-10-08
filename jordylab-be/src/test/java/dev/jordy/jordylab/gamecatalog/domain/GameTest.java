@@ -5,10 +5,16 @@ import nl.jqno.equalsverifier.Warning;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class GameTest {
+
+    private static final Instant WRITTEN_AT = Instant.parse("2026-10-07T10:12:00Z");
+    private static final AiAuthorship AUTHORSHIP =
+            AiAuthorship.of("anthropic/claude-haiku-4.5", "anthropic/claude-haiku-4.5", WRITTEN_AT);
 
     @Test
     void buildGame() {
@@ -17,7 +23,8 @@ class GameTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(game.getId()).isNotNull();
             softly.assertThat(game.getTitle()).isEqualTo(GameTestBuilder.DEFAULT_TITLE);
-            softly.assertThat(game.getPlatform()).isEqualTo(GameTestBuilder.DEFAULT_PLATFORM);
+            softly.assertThat(game.getTitleKey()).isEqualTo("super mario world");
+            softly.assertThat(game.getDescriptionSource()).isNull();
             softly.assertThat(game.getEnrichmentStatus()).isEqualTo(EnrichmentStatus.PENDING);
             softly.assertThat(game.getMetadataStatus()).isEqualTo(MetadataStatus.PENDING);
             softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.PENDING);
@@ -34,12 +41,6 @@ class GameTest {
     @Test
     void buildWithBlankTitle() {
         assertThatThrownBy(() -> GameTestBuilder.aGame().title(" ").build())
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void buildWithoutPlatform() {
-        assertThatThrownBy(() -> GameTestBuilder.aGame().platform(null).build())
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -111,7 +112,7 @@ class GameTest {
     void applyEnrichmentStoresFactsAndProse() {
         Game game = GameTestBuilder.aDefaultGame();
 
-        game.applyEnrichment("Platformer", false, true, "A classic side-scrolling platformer.");
+        game.applyEnrichment("Platformer", false, true, "A classic side-scrolling platformer.", AUTHORSHIP);
 
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(game.getGenre()).isEqualTo("Platformer");
@@ -141,7 +142,7 @@ class GameTest {
 
     @Test
     void applyDeterministicMultiplayerKeepsMaxPlayersWhenNull() {
-        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+        Game game = Game.builder().steamAppId("620").title("Portal 2")
                 .maxLocalPlayers(4).build();
 
         game.applyDeterministicMultiplayer(true, true, null, MultiplayerSource.STEAM);
@@ -219,24 +220,24 @@ class GameTest {
 
     @Test
     void updateCatalogInfoRespectsTitleAuthority() {
-        Game game = Game.builder().platform("Steam").steamAppId("620").title("Library Name")
+        Game game = Game.builder().steamAppId("620").title("Library Name")
                 .titleSource(TitleSource.LIBRARY).build();
 
-        game.updateCatalogInfo("Manifest Name", "Steam", TitleSource.MANIFEST);
+        game.updateCatalogInfo("Manifest Name", TitleSource.MANIFEST);
 
         assertThat(game.getTitle()).isEqualTo("Library Name");
 
-        game.updateCatalogInfo("New Library Name", "Steam", TitleSource.LIBRARY);
+        game.updateCatalogInfo("New Library Name", TitleSource.LIBRARY);
 
         assertThat(game.getTitle()).isEqualTo("New Library Name");
     }
 
     @Test
     void manualTitleSourceOutranksLibrary() {
-        Game game = Game.builder().platform("Nintendo Switch").title("Library Name")
+        Game game = Game.builder().title("Library Name")
                 .titleSource(TitleSource.LIBRARY).build();
 
-        game.updateCatalogInfo("Handheld Name", "Nintendo Switch", TitleSource.MANUAL);
+        game.updateCatalogInfo("Handheld Name", TitleSource.MANUAL);
 
         assertThat(game.getTitle()).isEqualTo("Handheld Name");
         assertThat(game.getTitleSource()).isEqualTo(TitleSource.MANUAL);
@@ -266,6 +267,101 @@ class GameTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.LOCAL_FALLBACK_REQUESTED);
             softly.assertThat(game.getArtworkFallbackRequests()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void applyEnrichmentRecordsTheAnsweringModelAndTheTime() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.applyEnrichment("Platformer", false, true, "A classic platformer.", AUTHORSHIP);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getDescriptionSource()).isEqualTo(DescriptionSource.AI);
+            softly.assertThat(game.getDescriptionModel()).isEqualTo("anthropic/claude-haiku-4.5");
+            softly.assertThat(game.getDescriptionRequestedModel()).isNull();
+            softly.assertThat(game.getDescriptionWrittenAt()).isEqualTo(WRITTEN_AT);
+        });
+    }
+
+    @Test
+    void applyEnrichmentKeepsTheRouterThatWasSelectedWhenItPickedAnotherModel() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.applyEnrichment("Platformer", false, true, "A classic platformer.",
+                AiAuthorship.of("anthropic/claude-sonnet-5", "jev-router", WRITTEN_AT));
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getDescriptionModel()).isEqualTo("anthropic/claude-sonnet-5");
+            softly.assertThat(game.getDescriptionRequestedModel()).isEqualTo("jev-router");
+        });
+    }
+
+    @Test
+    void applyEnrichmentWithoutAReportedModelStoresNoModelButKeepsTheSelectedId() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.applyEnrichment("Platformer", false, true, "A classic platformer.",
+                AiAuthorship.of(null, "jev-router", WRITTEN_AT));
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getDescriptionModel()).isNull();
+            softly.assertThat(game.getDescriptionRequestedModel()).isEqualTo("jev-router");
+        });
+    }
+
+    @Test
+    void aSteamDescriptionIsRecordedAsSteamWithNoModel() {
+        Game game = Game.builder().steamAppId("620").title("Portal 2").build();
+
+        game.applyDeterministicDescription("Portal 2 is a puzzle game.");
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getDescription()).isEqualTo("Portal 2 is a puzzle game.");
+            softly.assertThat(game.getDescriptionSource()).isEqualTo(DescriptionSource.STEAM);
+            softly.assertThat(game.getDescriptionModel()).isNull();
+            softly.assertThat(game.getDescriptionRequestedModel()).isNull();
+        });
+    }
+
+    @Test
+    void aSteamDescriptionNeverReplacesAnExistingOne() {
+        Game game = GameTestBuilder.aDefaultGame();
+        game.applyEnrichment("Platformer", false, true, "AI text.", AUTHORSHIP);
+
+        game.applyDeterministicDescription("Steam text.");
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getDescription()).isEqualTo("AI text.");
+            softly.assertThat(game.getDescriptionSource()).isEqualTo(DescriptionSource.AI);
+        });
+    }
+
+    @Test
+    void theTitleKeyFollowsTheTitleWhenTheTitleChanges() {
+        Game game = Game.builder().steamAppId("620").title("Library Name")
+                .titleSource(TitleSource.LIBRARY).build();
+
+        game.updateCatalogInfo("New Library Name (USA)", TitleSource.LIBRARY);
+
+        assertThat(game.getTitleKey()).isEqualTo("new library name");
+    }
+
+    @Test
+    void theTitleKeyFallsBackToTheLowerCasedTitleWhenNormalisingEmptiesIt() {
+        assertThat(Game.builder().title("(USA)").build().getTitleKey()).isEqualTo("(usa)");
+    }
+
+    @Test
+    void recordFactsAndArtworkChecksStoreTheTimes() {
+        Game game = GameTestBuilder.aDefaultGame();
+
+        game.recordFactsChecked(WRITTEN_AT);
+        game.recordArtworkChecked(WRITTEN_AT.plusSeconds(60));
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getFactsCheckedAt()).isEqualTo(WRITTEN_AT);
+            softly.assertThat(game.getArtworkCheckedAt()).isEqualTo(WRITTEN_AT.plusSeconds(60));
         });
     }
 

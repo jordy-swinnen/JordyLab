@@ -78,4 +78,30 @@ class AiGatewayWiringTest {
                 .withHeader("Authorization", equalTo("Bearer test-gateway-key"))
                 .withRequestBody(matchingJsonPath("$.model", equalTo("anthropic/claude-haiku-4.5"))));
     }
+
+    /**
+     * A router model (spec 013 FR-059) is chosen by id, but the provider answers with the model it actually picked.
+     * That reported model is what a game page must show, so it has to survive the Spring AI client.
+     */
+    @Test
+    void aRouterRequestExposesTheModelTheProviderActuallyUsed() {
+        stubFor(post(urlPathEqualTo("/api/v1/chat/completions")).willReturn(okJson("""
+                {"id":"gen-2","object":"chat.completion","created":1790000001,"model":"anthropic/claude-sonnet-5",
+                 "choices":[{"index":0,"finish_reason":"stop",
+                             "message":{"role":"assistant","content":"Routed answer"}}],
+                 "usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}
+                """)));
+
+        runner.run(context -> {
+            OpenAiChatModel gateway = context.getBean(OpenAiChatModel.class);
+
+            String answeredModel = gateway.call(new Prompt(List.of(new UserMessage("hi")),
+                    OpenAiChatOptions.builder().model("jev-router").build()))
+                    .getMetadata().getModel();
+
+            assertThat(answeredModel).isEqualTo("anthropic/claude-sonnet-5");
+        });
+        verify(postRequestedFor(urlPathEqualTo("/api/v1/chat/completions"))
+                .withRequestBody(matchingJsonPath("$.model", equalTo("jev-router"))));
+    }
 }

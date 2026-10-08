@@ -1,30 +1,30 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
+import dev.jordy.jordylab.gamecatalog.domain.DescriptionSource;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
+import dev.jordy.jordylab.gamecatalog.domain.GameSource;
 import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
-import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
-import dev.jordy.jordylab.gamecatalog.domain.SourceType;
-import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatGameRef;
-import dev.jordy.jordylab.gamecatalog.rest.controller.model.ChatResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.DescriptionResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.FactSourcesResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameSummaryResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
-import dev.jordy.jordylab.gamecatalog.rest.controller.model.HostRef;
-import dev.jordy.jordylab.gamecatalog.rest.controller.model.HostsResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlacesResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.RomSummaryResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.VoteTotalsResponse;
+import dev.jordy.jordylab.gamecatalog.domain.MarkType;
+import dev.jordy.jordylab.gamecatalog.domain.RomStatus;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameFilter;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlaceResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformChip;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformsResponse;
-import dev.jordy.jordylab.gamecatalog.rest.controller.model.RefreshAllResponse;
-import dev.jordy.jordylab.gamecatalog.rest.controller.model.RefreshCountResponse;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkContent;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkService;
 import dev.jordy.jordylab.gamecatalog.service.CatalogRefreshService;
-import dev.jordy.jordylab.gamecatalog.service.ChatAttachmentException;
-import dev.jordy.jordylab.gamecatalog.service.ChatService;
-import dev.jordy.jordylab.gamecatalog.service.ChatUnavailableException;
 import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
 import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
-import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -36,7 +36,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -68,27 +67,34 @@ class GameCatalogControllerTest {
     private ArtworkService artworkService;
 
     @MockitoBean
-    private ChatService chatService;
-
-    @MockitoBean
     private CatalogRefreshService catalogRefreshService;
 
     @Test
     void gamesReturnsPaginatedSummaries() throws Exception {
-        when(gameQueryService.getGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(0), eq(60)))
+        when(gameQueryService.getGames(eq(GameFilter.builder().build()), eq(0), eq(60)))
                 .thenReturn(new GamesPageResponse(List.of(
-                        new GameSummaryResponse(GAME_ID, "Super Mario World", "SNES", ArtworkStatus.EXTERNAL_URL,
-                                "https://example.com/smw.png", null, InstallStatus.INSTALLED, LibrarySource.LOCAL, null)),
-                        0, 60, 312, 6));
+                        new GameSummaryResponse(GAME_ID, "Super Mario World", List.of(PlatformChip.of("SNES")),
+                                List.of(GameSource.EMULATED), ArtworkStatus.EXTERNAL_URL,
+                                "https://example.com/smw.png", null, InstallStatus.INSTALLED, null,
+                                new VoteTotalsResponse(3, 1, 0), MarkType.WANT_TO_PLAY,
+                                new RomSummaryResponse(RomSummaryResponse.State.MIXED, 1, 0, 1, 2))),
+                        0, 60, 312, 6, null));
 
         mockMvc.perform(get("/api/gamecatalog/games"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(GAME_ID.toString()))
                 .andExpect(jsonPath("$.content[0].title").value("Super Mario World"))
-                .andExpect(jsonPath("$.content[0].platform").value("SNES"))
+                .andExpect(jsonPath("$.content[0].platforms[0].name").value("SNES"))
+                .andExpect(jsonPath("$.content[0].platforms[0].family").value("NINTENDO"))
+                .andExpect(jsonPath("$.content[0].platforms[0].background").value("#E60012"))
+                .andExpect(jsonPath("$.content[0].sources[0]").value("EMULATED"))
                 .andExpect(jsonPath("$.content[0].coverStatus").value("EXTERNAL_URL"))
                 .andExpect(jsonPath("$.content[0].coverUrl").value("https://example.com/smw.png"))
                 .andExpect(jsonPath("$.content[0].coverEndpoint").doesNotExist())
+                .andExpect(jsonPath("$.content[0].votes.wantToPlay").value(3))
+                .andExpect(jsonPath("$.content[0].myMark").value("WANT_TO_PLAY"))
+                .andExpect(jsonPath("$.content[0].romSummary.state").value("MIXED"))
+                .andExpect(jsonPath("$.unknownPlayerCount").doesNotExist())
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(60))
                 .andExpect(jsonPath("$.totalElements").value(312))
@@ -96,69 +102,108 @@ class GameCatalogControllerTest {
     }
 
     @Test
-    void gamesPassesSearchPlatformHostAndPagination() throws Exception {
-        when(gameQueryService.getGames(eq("mario"), eq("SNES"), eq("jordybox"), eq("INSTALLED"), isNull(), isNull(), eq(2), eq(30)))
-                .thenReturn(new GamesPageResponse(List.of(), 2, 30, 0, 0));
+    void gamesPassesEveryFilterAndPaginationToTheService() throws Exception {
+        UUID livingRoom = UUID.fromString("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+        GameFilter expected = GameFilter.builder().search("mario").platforms(List.of("SNES", "Steam"))
+                .whereIds(List.of(livingRoom)).installStatus("ALL").sources(List.of(GameSource.EMULATED))
+                .minLocalPlayers(6).romStatuses(List.of(RomStatus.BROKEN)).marks(List.of(MarkType.WANT_TO_PLAY))
+                .markScope(GameFilter.MarkScope.MINE).sort(GameFilter.Sort.MOST_WANTED).build();
+        when(gameQueryService.getGames(eq(expected), eq(2), eq(30)))
+                .thenReturn(new GamesPageResponse(List.of(), 2, 30, 0, 0, 31L));
 
         mockMvc.perform(get("/api/gamecatalog/games")
-                        .param("search", "mario")
-                        .param("platform", "SNES")
-                        .param("host", "jordybox")
+                        .param("search", " mario ")
+                        .param("platform", "SNES", "Steam")
+                        .param("where", livingRoom.toString())
+                        .param("installStatus", "all")
+                        .param("source", "EMULATED")
+                        .param("minLocalPlayers", "6")
+                        .param("romStatus", "BROKEN")
+                        .param("mark", "WANT_TO_PLAY")
+                        .param("markScope", "MINE")
+                        .param("sort", "MOST_WANTED")
                         .param("page", "2")
                         .param("size", "30"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unknownPlayerCount").value(31));
+    }
 
-        verify(gameQueryService).getGames("mario", "SNES", "jordybox", "INSTALLED", null, null, 2, 30);
+    @Test
+    void gamesFallBackToInstalledForAnUnknownInstallStatus() throws Exception {
+        when(gameQueryService.getGames(eq(GameFilter.builder().build()), eq(0), eq(60)))
+                .thenReturn(new GamesPageResponse(List.of(), 0, 60, 0, 0, null));
+
+        mockMvc.perform(get("/api/gamecatalog/games").param("installStatus", "bogus"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void gamesRejectsAPlayerCountOutsideOneToEight() throws Exception {
+        mockMvc.perform(get("/api/gamecatalog/games").param("minLocalPlayers", "9"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     void gamesCapsPageSizeAtTwoHundred() throws Exception {
-        when(gameQueryService.getGames(isNull(), isNull(), isNull(), eq("INSTALLED"), isNull(), isNull(), eq(0), eq(200)))
-                .thenReturn(new GamesPageResponse(List.of(), 0, 200, 0, 0));
+        when(gameQueryService.getGames(eq(GameFilter.builder().build()), eq(0), eq(200)))
+                .thenReturn(new GamesPageResponse(List.of(), 0, 200, 0, 0, null));
 
         mockMvc.perform(get("/api/gamecatalog/games").param("size", "5000"))
                 .andExpect(status().isOk());
 
-        verify(gameQueryService).getGames(null, null, null, "INSTALLED", null, null, 0, 200);
+        verify(gameQueryService).getGames(GameFilter.builder().build(), 0, 200);
     }
 
     @Test
     void platformsReturnsDistinctVisiblePlatforms() throws Exception {
         when(gameQueryService.getPlatforms())
-                .thenReturn(new PlatformsResponse(List.of("SNES", "PlayStation 2", "Steam")));
+                .thenReturn(new PlatformsResponse(List.of(PlatformChip.of("SNES"), PlatformChip.of("PlayStation 2"),
+                        PlatformChip.of("Steam"))));
 
         mockMvc.perform(get("/api/gamecatalog/platforms"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.platforms.length()").value(3))
-                .andExpect(jsonPath("$.platforms[1]").value("PlayStation 2"));
+                .andExpect(jsonPath("$.platforms[1].name").value("PlayStation 2"))
+                .andExpect(jsonPath("$.platforms[1].background").value("#0070D1"))
+                .andExpect(jsonPath("$.platforms[2].foreground").value("#66C0F4"));
     }
 
     @Test
-    void hostsReturnsDistinctVisibleHosts() throws Exception {
-        when(gameQueryService.getHosts()).thenReturn(new HostsResponse(List.of("jordybox", "ryzen-desktop")));
+    void placesReturnsHostsAndConsolesByLabel() throws Exception {
+        UUID hostId = UUID.fromString("11111111-2222-4333-8444-555555555555");
+        UUID consoleId = UUID.fromString("66666666-7777-4888-9999-000000000000");
+        when(gameQueryService.getPlaces()).thenReturn(new PlacesResponse(List.of(
+                new PlacesResponse.PlaceOption(hostId, PlacesResponse.Kind.HOST, "Living room PC"),
+                new PlacesResponse.PlaceOption(consoleId, PlacesResponse.Kind.CONSOLE, "Nintendo Switch"))));
 
-        mockMvc.perform(get("/api/gamecatalog/hosts"))
+        mockMvc.perform(get("/api/gamecatalog/places"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.hosts.length()").value(2))
-                .andExpect(jsonPath("$.hosts[0]").value("jordybox"));
+                .andExpect(jsonPath("$.places.length()").value(2))
+                .andExpect(jsonPath("$.places[0].kind").value("HOST"))
+                .andExpect(jsonPath("$.places[0].label").value("Living room PC"))
+                .andExpect(jsonPath("$.places[1].kind").value("CONSOLE"));
     }
 
     @Test
     void gameDetailReturnsEnrichedGameWithHostsMetadataAndBanner() throws Exception {
-        when(gameQueryService.getGameDetail(GAME_ID))
-                .thenReturn(Optional.of(new GameDetailResponse(GAME_ID, "Portal 2", "Steam",
-                        List.of(new HostRef("jordybox", SourceType.STEAM)), Map.of(),
+        when(gameQueryService.getGameDetail(GAME_ID, null))
+                .thenReturn(Optional.of(new GameDetailResponse(GAME_ID, "Portal 2", List.of(PlatformChip.of("Steam")),
+                        List.of(GameSource.STEAM_OWNED), List.of(aSteamPlace()),
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                         EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
-                        2, false, true, "A classic.", FIRST_SEEN_AT, InstallStatus.INSTALLED, LibrarySource.OWNED, List.of("jordy"), null, null, null, MultiplayerSource.UNKNOWN)));
+                        2, false, true, new DescriptionResponse("A classic.", DescriptionSource.AI, "claude-haiku-4.5", "jev-router",
+                        Instant.parse("2026-10-07T10:12:00Z")), FIRST_SEEN_AT, InstallStatus.INSTALLED, null, null, null,
+                MultiplayerSource.UNKNOWN, new FactSourcesResponse("STEAM", null), VoteTotalsResponse.none(), null)));
 
         mockMvc.perform(get("/api/gamecatalog/games/{id}", GAME_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(GAME_ID.toString()))
                 .andExpect(jsonPath("$.title").value("Portal 2"))
-                .andExpect(jsonPath("$.hosts[0].hostname").value("jordybox"))
-                .andExpect(jsonPath("$.hosts[0].sourceType").value("STEAM"))
+                .andExpect(jsonPath("$.platforms[0].name").value("Steam"))
+                .andExpect(jsonPath("$.sources[0]").value("STEAM_OWNED"))
+                .andExpect(jsonPath("$.places[0].kind").value("STEAM_LIBRARY"))
+                .andExpect(jsonPath("$.places[0].librarySource").value("OWNED"))
                 .andExpect(jsonPath("$.coverUrl").value("https://example.com/cover.png"))
                 .andExpect(jsonPath("$.bannerUrl").value("https://example.com/banner.png"))
                 .andExpect(jsonPath("$.enrichmentStatus").value("ENRICHED"))
@@ -170,13 +215,19 @@ class GameCatalogControllerTest {
                 .andExpect(jsonPath("$.metadataSource").value("STEAM"))
                 .andExpect(jsonPath("$.maxLocalPlayers").value(2))
                 .andExpect(jsonPath("$.singlePlayer").value(true))
-                .andExpect(jsonPath("$.description").value("A classic."))
+                .andExpect(jsonPath("$.description.text").value("A classic."))
+                .andExpect(jsonPath("$.description.source").value("AI"))
+                .andExpect(jsonPath("$.description.model").value("claude-haiku-4.5"))
+                .andExpect(jsonPath("$.description.requestedModel").value("jev-router"))
+                .andExpect(jsonPath("$.description.writtenAt").value("2026-10-07T10:12:00Z"))
+                .andExpect(jsonPath("$.factSources.facts").value("STEAM"))
+                .andExpect(jsonPath("$.factSources.multiplayer").doesNotExist())
                 .andExpect(jsonPath("$.firstSeenAt").value("2026-08-02T10:15:00Z"));
     }
 
     @Test
     void gameDetailIsNotFoundWhenNotVisible() throws Exception {
-        when(gameQueryService.getGameDetail(GAME_ID)).thenReturn(Optional.empty());
+        when(gameQueryService.getGameDetail(GAME_ID, null)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/gamecatalog/games/{id}", GAME_ID))
                 .andExpect(status().isNotFound());
@@ -184,7 +235,7 @@ class GameCatalogControllerTest {
 
     @Test
     void refreshMetadataReturnsTheUpdatedDetail() throws Exception {
-        when(catalogRefreshService.refreshMetadata(GAME_ID)).thenReturn(Optional.of(aDetail()));
+        when(catalogRefreshService.refreshMetadata(GAME_ID, null)).thenReturn(Optional.of(aDetail()));
 
         mockMvc.perform(post("/api/gamecatalog/games/{id}/metadata/refresh", GAME_ID))
                 .andExpect(status().isOk())
@@ -194,7 +245,7 @@ class GameCatalogControllerTest {
 
     @Test
     void refreshMetadataForANonSteamGameIsBadRequest() throws Exception {
-        when(catalogRefreshService.refreshMetadata(GAME_ID))
+        when(catalogRefreshService.refreshMetadata(GAME_ID, null))
                 .thenThrow(new MetadataNotSupportedException("deterministic metadata is Steam-only"));
 
         mockMvc.perform(post("/api/gamecatalog/games/{id}/metadata/refresh", GAME_ID))
@@ -204,7 +255,7 @@ class GameCatalogControllerTest {
 
     @Test
     void refreshMetadataForAnInvisibleGameIsNotFound() throws Exception {
-        when(catalogRefreshService.refreshMetadata(GAME_ID)).thenReturn(Optional.empty());
+        when(catalogRefreshService.refreshMetadata(GAME_ID, null)).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/api/gamecatalog/games/{id}/metadata/refresh", GAME_ID))
                 .andExpect(status().isNotFound());
@@ -212,115 +263,25 @@ class GameCatalogControllerTest {
 
     @Test
     void refreshEnrichmentReturnsTheUpdatedDetail() throws Exception {
-        when(catalogRefreshService.refreshEnrichment(GAME_ID)).thenReturn(Optional.of(aDetail()));
+        when(catalogRefreshService.refreshEnrichment(GAME_ID, null)).thenReturn(Optional.of(aDetail()));
 
         mockMvc.perform(post("/api/gamecatalog/games/{id}/enrichment/refresh", GAME_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.description").value("A classic."));
+                .andExpect(jsonPath("$.description.text").value("A classic."))
+                .andExpect(jsonPath("$.description.source").value("AI"))
+                .andExpect(jsonPath("$.description.model").value("claude-haiku-4.5"))
+                .andExpect(jsonPath("$.description.requestedModel").value("jev-router"))
+                .andExpect(jsonPath("$.description.writtenAt").value("2026-10-07T10:12:00Z"))
+                .andExpect(jsonPath("$.factSources.facts").value("STEAM"))
+                .andExpect(jsonPath("$.factSources.multiplayer").doesNotExist());
     }
 
     @Test
     void refreshEnrichmentForAnInvisibleGameIsNotFound() throws Exception {
-        when(catalogRefreshService.refreshEnrichment(GAME_ID)).thenReturn(Optional.empty());
+        when(catalogRefreshService.refreshEnrichment(GAME_ID, null)).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/api/gamecatalog/games/{id}/enrichment/refresh", GAME_ID))
                 .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void refreshPendingReturnsProcessedAndRemainingCounts() throws Exception {
-        when(catalogRefreshService.refreshPending())
-                .thenReturn(new RefreshAllResponse(new RefreshCountResponse(3, 0), new RefreshCountResponse(2, 5), new RefreshCountResponse(1, 4)));
-
-        mockMvc.perform(post("/api/gamecatalog/games/refresh"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.metadata.processed").value(3))
-                .andExpect(jsonPath("$.metadata.remaining").value(0))
-                .andExpect(jsonPath("$.enrichment.processed").value(2))
-                .andExpect(jsonPath("$.enrichment.remaining").value(5));
-    }
-
-    @Test
-    void chatReturnsAnswerWithCitations() throws Exception {
-        when(chatService.ask("which games support 4-player co-op?", List.of()))
-                .thenReturn(new ChatResponse("One game supports 4-player local co-op.",
-                        List.of(new ChatGameRef(GAME_ID, "Super Mario World", "SNES", null, null)), false));
-
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validChatBody()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.answer").value("One game supports 4-player local co-op."))
-                .andExpect(jsonPath("$.games[0].id").value(GAME_ID.toString()))
-                .andExpect(jsonPath("$.games[0].title").value("Super Mario World"))
-                .andExpect(jsonPath("$.noMatch").value(false));
-    }
-
-    @Test
-    void chatPassesAttachedGameIdsToTheService() throws Exception {
-        when(chatService.ask("is this good for 4 players?", List.of(GAME_ID)))
-                .thenReturn(new ChatResponse("Yes.",
-                        List.of(new ChatGameRef(GAME_ID, "Portal 2", "Steam", null, null)), false));
-
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\": \"is this good for 4 players?\", \"gameIds\": [\""
-                                + GAME_ID + "\"]}"))
-                .andExpect(status().isOk());
-
-        verify(chatService).ask("is this good for 4 players?", List.of(GAME_ID));
-    }
-
-    @Test
-    void chatBlankQuestionIsBadRequest() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\": \" \"}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.reason").value("QUESTION_INVALID"));
-    }
-
-    @Test
-    void chatInvalidAttachmentIsBadRequest() throws Exception {
-        when(chatService.ask("is this good for 4 players?", List.of(GAME_ID)))
-                .thenThrow(new ChatAttachmentException("attached game is not visible"));
-
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\": \"is this good for 4 players?\", \"gameIds\": [\""
-                                + GAME_ID + "\"]}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.reason").value("GAME_IDS_INVALID"));
-    }
-
-    @Test
-    void chatWithMalformedGameIdIsBadRequest() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\": \"which games?\", \"gameIds\": [\"not-a-uuid\"]}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.reason").value("GAME_IDS_INVALID"));
-    }
-
-    @Test
-    void chatWithNonTextQuestionIsBadRequest() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"question\": {\"nested\": true}}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.reason").value("QUESTION_INVALID"));
-    }
-
-    @Test
-    void chatUnavailableIsServiceUnavailable() throws Exception {
-        when(chatService.ask("which games support 4-player co-op?", List.of()))
-                .thenThrow(new ChatUnavailableException("chat translation failed: TIMEOUT"));
-
-        mockMvc.perform(post("/api/gamecatalog/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validChatBody()))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.reason").value("CHAT_UNAVAILABLE"));
     }
 
     @Test
@@ -346,18 +307,18 @@ class GameCatalogControllerTest {
     }
 
     private GameDetailResponse aDetail() {
-        return new GameDetailResponse(GAME_ID, "Portal 2", "Steam",
-                List.of(new HostRef("jordybox", SourceType.STEAM)), Map.of(),
+        return new GameDetailResponse(GAME_ID, "Portal 2", List.of(PlatformChip.of("Steam")),
+                List.of(GameSource.STEAM_OWNED), List.of(aSteamPlace()),
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                 EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
-                2, false, true, "A classic.", FIRST_SEEN_AT, InstallStatus.INSTALLED, LibrarySource.OWNED, List.of("jordy"), null, null, null, MultiplayerSource.UNKNOWN);
+                2, false, true, new DescriptionResponse("A classic.", DescriptionSource.AI, "claude-haiku-4.5", "jev-router",
+                        Instant.parse("2026-10-07T10:12:00Z")), FIRST_SEEN_AT, InstallStatus.INSTALLED, null, null, null,
+                MultiplayerSource.UNKNOWN, new FactSourcesResponse("STEAM", null), VoteTotalsResponse.none(), null);
     }
 
-    @Language("JSON")
-    private String validChatBody() {
-        return """
-                { "question": "which games support 4-player co-op?" }
-                """;
+    private PlaceResponse aSteamPlace() {
+        return new PlaceResponse(PlaceResponse.PlaceKind.STEAM_LIBRARY, null, null, null, "Steam", "Steam", null, null,
+                dev.jordy.jordylab.gamecatalog.domain.LibrarySource.OWNED, null);
     }
 }

@@ -9,9 +9,13 @@ import java.util.UUID;
 public record ScanSourceResponse(
         UUID id,
         String sourceKey,
+        UUID hostId,
         String hostname,
+        String displayName,
+        String label,
         SourceType sourceType,
         String platform,
+        PlatformChip platformChip,
         boolean enabled,
         Instant lastAttemptAt,
         Instant lastSuccessAt,

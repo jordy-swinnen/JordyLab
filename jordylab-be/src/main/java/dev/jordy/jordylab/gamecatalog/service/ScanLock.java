@@ -20,6 +20,14 @@ public class ScanLock {
 
     private final EntityManager entityManager;
 
+    /** Serialises the creation of a host: two sources of one new machine can be announced at the same moment. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void acquireHostCreation(String hostname) {
+        entityManager.createNativeQuery("select cast(pg_advisory_xact_lock(hashtextextended(:key, 0)) as text)")
+                .setParameter("key", "gamecatalog-host:" + hostname.toLowerCase(java.util.Locale.ROOT))
+                .getSingleResult();
+    }
+
     /** Blocks until no other transaction holds the lock for this source; must run inside the scan's transaction. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void acquire(String hostname, SourceType libraryType) {

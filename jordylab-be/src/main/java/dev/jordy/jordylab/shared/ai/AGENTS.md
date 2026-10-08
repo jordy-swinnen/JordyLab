@@ -12,7 +12,9 @@ What the repo does not do yet is listed in `docs/research/spring-ai-gap-analysis
   `"[feature.name]"`), and stays selectable on Settings → AI Models.
 - OpenAI and Anthropic run on their vendor SDKs: the SDKs retry, and `spring.ai.retry.*`, `RestClientCustomizer` and
   `spring.http.client.*` do not apply to them.
-- Set the temperature explicitly where determinism matters (Spring AI 2.0 removed the 0.7 default).
+- Set the temperature explicitly where determinism matters (Spring AI 2.0 removed the 0.7 default): `AiProperties.Feature(model, temperature)`, e.g. LibBot's interpretation runs at 0.
+- Typed output: `callStructured(feature, messages, Type.class)` appends the schema, validates with Jakarta Validation, repairs once, then falls back to the second provider; a reply that never validates is `INVALID_OUTPUT`. Embeddings: `embed(...)` (feature `GAMECATALOG_EMBEDDING`, `NOT_CONFIGURED` without a gateway key).
+- Authorship: `AiCallResult.answeredModel()` is the model the provider says answered (for a router, the one it picked); keep it with the text it wrote, and show "model not reported" rather than guessing.
 
 ## Output and prompts
 

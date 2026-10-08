@@ -72,7 +72,7 @@ class GuestChatLimitFilterTest {
         filter = new GuestChatLimitFilter(guestChatUsageRepository, properties, objectMapper, CLOCK);
 
         when(request.getMethod()).thenReturn("POST");
-        when(request.getRequestURI()).thenReturn("/api/gamecatalog/chat");
+        when(request.getRequestURI()).thenReturn("/api/gamecatalog/libbot/ask");
     }
 
     @AfterEach
@@ -91,18 +91,16 @@ class GuestChatLimitFilterTest {
     }
 
     @Test
-    void guestUnderTheLimitProceedsAndIncrementsOnceOnSuccess() throws Exception {
+    void guestUnderTheLimitProceedsAndTheFilterNeverCounts() throws Exception {
         authenticateAs(GUEST_SUBJECT, "ROLE_guest");
         when(guestChatUsageRepository.findByUserSubjectAndUsageDate(GUEST_SUBJECT, TODAY))
                 .thenReturn(Optional.of(usageWithCount(1)));
-        when(response.getStatus()).thenReturn(200);
 
         filter.doFilter(request, response, chain);
 
         verify(chain).doFilter(request, response);
         ArgumentCaptor<UUID> idCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(guestChatUsageRepository).incrementUsage(idCaptor.capture(), eq(GUEST_SUBJECT), eq(TODAY));
-        assertSoftly(softly -> softly.assertThat(idCaptor.getValue()).isNotNull());
+        verify(guestChatUsageRepository, never()).incrementUsage(idCaptor.capture(), eq(GUEST_SUBJECT), eq(TODAY));
     }
 
     @Test
@@ -118,6 +116,7 @@ class GuestChatLimitFilterTest {
         assertSoftly(softly -> {
             softly.assertThat(body.toString()).contains("\"reason\":\"CHAT_LIMIT_REACHED\"");
             softly.assertThat(body.toString()).contains("2026-09-28T00:00:00Z");
+            softly.assertThat(body.toString()).contains("\"limit\":3");
         });
         verify(response).setStatus(429);
         verify(chain, never()).doFilter(request, response);
@@ -130,7 +129,6 @@ class GuestChatLimitFilterTest {
         authenticateAs(GUEST_SUBJECT, "ROLE_guest");
         when(guestChatUsageRepository.findByUserSubjectAndUsageDate(GUEST_SUBJECT, TODAY))
                 .thenReturn(Optional.empty());
-        when(response.getStatus()).thenReturn(503);
 
         filter.doFilter(request, response, chain);
 

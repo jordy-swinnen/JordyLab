@@ -1,24 +1,22 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller.model;
 
-import dev.jordy.jordylab.gamecatalog.domain.InstallationFormat;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
 import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
-import dev.jordy.jordylab.gamecatalog.domain.LibrarySource;
+import dev.jordy.jordylab.gamecatalog.domain.MarkType;
+import dev.jordy.jordylab.gamecatalog.domain.GameSource;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public record GameDetailResponse(
         UUID id,
         String title,
-        String platform,
-        List<HostRef> hosts,
-        // Format per manually tracked host, e.g. Nintendo Switch -> PHYSICAL; scanned hosts omitted (009 catalog-api).
-        Map<String, InstallationFormat> hostFormats,
+        List<PlatformChip> platforms,
+        List<GameSource> sources,
+        List<PlaceResponse> places,
         ArtworkStatus coverStatus,
         String coverUrl,
         String coverEndpoint,
@@ -35,13 +33,14 @@ public record GameDetailResponse(
         Integer maxLocalPlayers,
         Boolean onlineMultiplayer,
         Boolean singlePlayer,
-        String description,
+        DescriptionResponse description,
         Instant firstSeenAt,
         InstallStatus installStatus,
-        LibrarySource librarySource,
-        List<String> familyOwners,
         Boolean localMultiplayer,
         Boolean splitScreen,
         Boolean onlineOnly,
-        MultiplayerSource multiplayerSource) {
+        MultiplayerSource multiplayerSource,
+        FactSourcesResponse factSources,
+        VoteTotalsResponse votes,
+        MarkType myMark) {
 }

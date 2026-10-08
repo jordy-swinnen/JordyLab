@@ -21,6 +21,10 @@ services:
     ports:
       - '5432:5432'
     volumes:
+      # A NAMED volume on purpose. Without it the image's own anonymous volume holds the data, and it is lost for good when
+      # the container is removed (`rm -v`, `compose down -v`, a prune): that is how the dev database vanished before.
+      # A named volume survives `compose down` and container removal; only `compose down -v` or `volume rm jordylab-be_pgdata` deletes it.
+      - 'pgdata:/var/lib/postgresql/data'
       - './compose/keycloak-init.sql:/docker-entrypoint-initdb.d/00-keycloak-schema.sql:ro'
   keycloak:
     image: 'quay.io/keycloak/keycloak:26.7.4'
@@ -45,3 +49,6 @@ services:
     volumes:
       - './compose/keycloak-realm-export.json:/opt/keycloak/data/import/jordylab-realm.json:ro'
       - './compose/keycloak-theme/jordylab:/opt/keycloak/themes/jordylab:ro'
+
+volumes:
+  pgdata:

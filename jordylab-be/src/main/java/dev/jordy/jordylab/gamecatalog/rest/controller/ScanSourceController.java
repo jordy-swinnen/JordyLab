@@ -1,8 +1,11 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.HideImpactResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SetSourceEnabledRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourcesResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.HealthExceptionsResponse;
+import dev.jordy.jordylab.gamecatalog.service.LibraryHealthService;
 import dev.jordy.jordylab.gamecatalog.service.ScanSourceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -22,10 +26,23 @@ import java.util.UUID;
 public class ScanSourceController {
 
     private final ScanSourceService scanSourceService;
+    private final LibraryHealthService libraryHealthService;
 
     @GetMapping
     public SourcesResponse getSources() {
         return scanSourceService.listSources();
+    }
+
+    @GetMapping("/health/exceptions")
+    public HealthExceptionsResponse getHealthExceptions(@RequestParam LibraryHealthService.Kind kind) {
+        return libraryHealthService.exceptions(kind);
+    }
+
+    @GetMapping("/{id}/hide-impact")
+    public ResponseEntity<HideImpactResponse> getHideImpact(@PathVariable UUID id) {
+        return scanSourceService.hideImpact(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}/enabled")

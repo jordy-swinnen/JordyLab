@@ -51,7 +51,8 @@ class OpenRouterModelCatalogClientTest {
     private OpenRouterModelCatalogClient client() {
         AiProperties aiProperties = new AiProperties(30, 120,
                 new AiProperties.Gateway("http://localhost:9996/api/v1", null),
-                new AiProperties.Fallback("anthropic", "claude-sonnet-5"), Map.of());
+                new AiProperties.Fallback("anthropic", "claude-sonnet-5"), Map.of(),
+                new AiProperties.Embedding("openai/text-embedding-3-small"));
         SettingsProperties settingsProperties = new SettingsProperties(null, new SettingsProperties.ModelCatalog(60));
 
         return new OpenRouterModelCatalogClient(aiProperties, settingsProperties, RestClient.create(),

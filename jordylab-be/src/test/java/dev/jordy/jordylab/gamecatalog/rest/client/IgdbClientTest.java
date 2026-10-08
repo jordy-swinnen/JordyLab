@@ -148,7 +148,7 @@ class IgdbClientTest {
     }
 
     @Test
-    void searchSwitchGamesReturnsSwitchMatchesWithImageUrls() {
+    void searchGamesReturnsMatchesOnThePlatformWithImageUrls() {
         stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
                 [
                   {
@@ -163,10 +163,10 @@ class IgdbClientTest {
                 ]
                 """)));
 
-        List<IgdbClient.SwitchSearchResult> results = igdbClient.searchSwitchGames("mario kart");
+        List<IgdbClient.IgdbSearchResult> results = igdbClient.searchGames("mario kart", 130L);
 
         assertThat(results).hasSize(1);
-        IgdbClient.SwitchSearchResult result = results.get(0);
+        IgdbClient.IgdbSearchResult result = results.get(0);
         assertSoftly(softly -> {
             softly.assertThat(result.igdbGameId()).isEqualTo(1111L);
             softly.assertThat(result.title()).isEqualTo("Mario Kart 8 Deluxe");
@@ -181,10 +181,10 @@ class IgdbClientTest {
     }
 
     @Test
-    void searchSwitchGamesKeepsPortsAndExpandedGamesButNotDlcOrBundles() {
+    void searchGamesKeepsPortsAndExpandedGamesButNotDlcOrBundles() {
         stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("[]")));
 
-        igdbClient.searchSwitchGames("mario kart 8 deluxe");
+        igdbClient.searchGames("mario kart 8 deluxe", 130L);
 
         verify(postRequestedFor(urlPathEqualTo("/v4/games"))
                 .withRequestBody(containing("platforms = (130)"))
@@ -192,14 +192,14 @@ class IgdbClientTest {
     }
 
     @Test
-    void searchSwitchGamesEmptyWhenUnconfigured() {
+    void searchGamesEmptyWhenUnconfigured() {
         igdbClient.clientId = "";
 
-        assertThat(igdbClient.searchSwitchGames("mario kart")).isEmpty();
+        assertThat(igdbClient.searchGames("mario kart", 130L)).isEmpty();
     }
 
     @Test
-    void fetchSwitchGameDetailsReturnsMetadataAndMultiplayer() {
+    void fetchGameDetailsReturnsMetadataAndMultiplayer() {
         stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
                 [
                   {
@@ -216,7 +216,7 @@ class IgdbClientTest {
                 [ {"game": 1111, "platform": 130, "offlinecoop": true, "offlinecoopmax": 4, "splitscreen": true} ]
                 """)));
 
-        Optional<IgdbClient.SwitchGameDetails> details = igdbClient.fetchSwitchGameDetails(1111L);
+        Optional<IgdbClient.IgdbGameDetails> details = igdbClient.fetchGameDetails(1111L);
 
         assertThat(details).isPresent();
         assertSoftly(softly -> {
@@ -245,5 +245,108 @@ class IgdbClientTest {
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
                 .withBody(body);
+    }
+
+    @Test
+    void findsTheGameOnTheGivenPlatformIgnoringRegionalTagsAndPunctuation() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 77, "name": "Super Mario World 2: Yoshi's Island"}, {"id": 76, "name": "Super Mario World"} ]
+                """)));
+
+        Optional<IgdbClient.IgdbGame> game = igdbClient.findGame("Super Mario World (USA)", 19L);
+
+        assertThat(game).contains(new IgdbClient.IgdbGame(76L, "Super Mario World"));
+        verify(postRequestedFor(urlPathEqualTo("/v4/games")).withRequestBody(containing("platforms = (19)")));
+    }
+
+    @Test
+    void fallsBackToATitleOnlySearchWhenThePlatformHoldsNoMatch() {
+        stubFor(post(urlPathEqualTo("/v4/games")).inScenario("fallback").whenScenarioStateIs("Started")
+                .willSetStateTo("second").willReturn(json("[]")));
+        stubFor(post(urlPathEqualTo("/v4/games")).inScenario("fallback").whenScenarioStateIs("second")
+                .willReturn(json("[ {\"id\": 5, \"name\": \"Hades\"} ]")));
+
+        assertThat(igdbClient.findGame("Hades", 130L)).contains(new IgdbClient.IgdbGame(5L, "Hades"));
+    }
+
+    @Test
+    void findGameIsEmptyWhenNothingMatchesExactlyOrTheClientIsUnconfigured() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 1, "name": "Hades II"} ]
+                """)));
+
+        assertThat(igdbClient.findGame("Hades", null)).isEmpty();
+
+        igdbClient.clientId = "";
+        assertThat(igdbClient.findGame("Hades", null)).isEmpty();
+    }
+
+    @Test
+    void fetchesTheFactsCoverAndBannerOfOneGame() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 119133, "name": "Hades", "first_release_date": 1600387200,
+                   "genres": [{"name": "Roguelike"}, {"name": "Action"}],
+                   "summary": "Defy the god of the dead.",
+                   "involved_companies": [
+                     {"developer": false, "publisher": true, "company": {"name": "Supergiant Games"}},
+                     {"developer": true, "publisher": false, "company": {"name": "Supergiant Games Dev"}}],
+                   "cover": {"image_id": "co2abc"}, "artworks": [{"image_id": "ar1xyz"}]} ]
+                """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("[]")));
+
+        Optional<IgdbClient.IgdbFacts> facts = igdbClient.fetchFacts(119133L);
+
+        assertSoftly(softly -> {
+            softly.assertThat(facts).isPresent();
+            softly.assertThat(facts.get().releaseYear()).isEqualTo(2020);
+            softly.assertThat(facts.get().genres()).containsExactly("Roguelike", "Action");
+            softly.assertThat(facts.get().developer()).isEqualTo("Supergiant Games Dev");
+            softly.assertThat(facts.get().publisher()).isEqualTo("Supergiant Games");
+            softly.assertThat(facts.get().summary()).isEqualTo("Defy the god of the dead.");
+            softly.assertThat(facts.get().coverUrl()).isEqualTo(
+                    "https://images.igdb.com/igdb/image/upload/t_cover_big/co2abc.jpg");
+            softly.assertThat(facts.get().bannerUrl()).isEqualTo(
+                    "https://images.igdb.com/igdb/image/upload/t_screenshot_big/ar1xyz.jpg");
+            softly.assertThat(facts.get().multiplayerMode()).isNull();
+        });
+    }
+
+    @Test
+    void aScreenshotBecomesTheBannerWhenThereIsNoArtwork() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 1, "name": "Celeste", "screenshots": [{"image_id": "sc1"}]} ]
+                """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("[]")));
+
+        assertThat(igdbClient.fetchFacts(1L)).get().extracting(IgdbClient.IgdbFacts::bannerUrl)
+                .isEqualTo("https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc1.jpg");
+    }
+
+    @Test
+    void unknownIdAndUnconfiguredClientYieldNoFacts() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("[]")));
+
+        assertThat(igdbClient.fetchFacts(404L)).isEmpty();
+
+        igdbClient.clientSecret = "";
+        assertThat(igdbClient.fetchFacts(1L)).isEmpty();
+    }
+
+    @Test
+    void readsThePlatformNamesOfTheGivenIds() {
+        stubFor(post(urlPathEqualTo("/v4/platforms")).willReturn(json("""
+                [ {"id": 130, "name": "Nintendo Switch"}, {"id": 167, "name": "PlayStation 5"} ]
+                """)));
+
+        assertThat(igdbClient.fetchPlatformNames(List.of(130L, 167L)))
+                .containsEntry(130L, "Nintendo Switch").containsEntry(167L, "PlayStation 5");
+    }
+
+    @Test
+    void noPlatformNamesWithoutIdsOrConfiguration() {
+        assertThat(igdbClient.fetchPlatformNames(List.of())).isEmpty();
+
+        igdbClient.clientId = "";
+        assertThat(igdbClient.fetchPlatformNames(List.of(130L))).isEmpty();
     }
 }

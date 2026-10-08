@@ -69,10 +69,12 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/mobile/releases/*/download-link")
                     .hasAnyRole("admin", "guest")
                     .requestMatchers(HttpMethod.GET, "/api/gamecatalog/games/**",
-                            "/api/gamecatalog/platforms", "/api/gamecatalog/hosts")
+                            "/api/gamecatalog/platforms", "/api/gamecatalog/places")
                     .hasAnyRole("admin", "guest")
-                    .requestMatchers(HttpMethod.POST, "/api/gamecatalog/chat")
+                    .requestMatchers(HttpMethod.PUT, "/api/gamecatalog/games/*/mark",
+                            "/api/gamecatalog/games/*/installations/*/rom-status")
                     .hasAnyRole("admin", "guest")
+                    .requestMatchers("/api/gamecatalog/libbot/**").hasAnyRole("admin", "guest")
                     .requestMatchers("/api/gamecatalog/**").hasRole("admin")
                     .requestMatchers("/api/**").denyAll()
                 .anyRequest().denyAll())

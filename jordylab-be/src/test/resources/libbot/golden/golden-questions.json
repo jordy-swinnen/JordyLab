@@ -1,0 +1,1912 @@
+{
+ "vocabulary": {
+  "platforms": [
+   "Nintendo Switch",
+   "PlayStation 5",
+   "Steam",
+   "Xbox Series X|S"
+  ],
+  "places": [
+   "Living room PC",
+   "Switch dock"
+  ]
+ },
+ "library": [
+  {
+   "id": "00000000-0000-0000-0000-000000000001",
+   "title": "Overcooked! All You Can Eat",
+   "platforms": [
+    "PlayStation 5",
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 4,
+   "singlePlayer": true,
+   "onlineMultiplayer": true,
+   "genres": "Party, Cooking",
+   "releaseYear": 2020,
+   "installed": true,
+   "wantVotes": 3,
+   "likedVotes": 2,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000002",
+   "title": "Mario Kart 8 Deluxe",
+   "platforms": [
+    "Nintendo Switch"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 4,
+   "singlePlayer": true,
+   "onlineMultiplayer": true,
+   "genres": "Racing",
+   "releaseYear": 2017,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 4,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000003",
+   "title": "Jackbox Party Pack 9",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2022,
+   "installed": true,
+   "wantVotes": 2,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000004",
+   "title": "Gang Beasts",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": true,
+   "onlineMultiplayer": true,
+   "genres": "Party, Fighting",
+   "releaseYear": 2017,
+   "installed": false,
+   "wantVotes": 0,
+   "likedVotes": 1,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000005",
+   "title": "Hades",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Roguelike, Action",
+   "releaseYear": 2020,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 5,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000006",
+   "title": "Celeste",
+   "platforms": [
+    "Steam",
+    "Nintendo Switch"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Platformer",
+   "releaseYear": 2018,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 3,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000007",
+   "title": "Portal 2",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 2,
+   "singlePlayer": true,
+   "onlineMultiplayer": true,
+   "genres": "Puzzle",
+   "releaseYear": 2011,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000008",
+   "title": "Forza Horizon 5",
+   "platforms": [
+    "Xbox Series X|S"
+   ],
+   "localMultiplayer": null,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": true,
+   "genres": "Racing",
+   "releaseYear": 2021,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000009",
+   "title": "Mystery Brawler",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": null,
+   "singlePlayer": null,
+   "onlineMultiplayer": null,
+   "genres": null,
+   "releaseYear": null,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000010",
+   "title": "Unlisted Party Game",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": null,
+   "maxLocalPlayers": null,
+   "singlePlayer": null,
+   "onlineMultiplayer": null,
+   "genres": "Party",
+   "releaseYear": null,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000011",
+   "title": "Rocket League",
+   "platforms": [
+    "Steam",
+    "PlayStation 5"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 4,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Sports, Racing",
+   "releaseYear": 2015,
+   "installed": true,
+   "wantVotes": 1,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000020",
+   "title": "Party Game 1",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000021",
+   "title": "Party Game 2",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000022",
+   "title": "Party Game 3",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000023",
+   "title": "Party Game 4",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000024",
+   "title": "Party Game 5",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000025",
+   "title": "Party Game 6",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000026",
+   "title": "Party Game 7",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000027",
+   "title": "Party Game 8",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000028",
+   "title": "Party Game 9",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000029",
+   "title": "Party Game 10",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000030",
+   "title": "Party Game 11",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000031",
+   "title": "Party Game 12",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 8,
+   "singlePlayer": false,
+   "onlineMultiplayer": true,
+   "genres": "Party",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000012",
+   "title": "Stardew Valley",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Simulation, Farming",
+   "releaseYear": 2016,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 2,
+   "dislikedVotes": 0,
+   "myMark": "PLAYED_LIKED",
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000013",
+   "title": "Slay the Spire",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Roguelike, Card",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 1,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000014",
+   "title": "Wishlist Wonder",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Adventure",
+   "releaseYear": 2021,
+   "installed": true,
+   "wantVotes": 3,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": "WANT_TO_PLAY",
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000015",
+   "title": "Regret Racer",
+   "platforms": [
+    "Steam"
+   ],
+   "localMultiplayer": true,
+   "maxLocalPlayers": 4,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Racing",
+   "releaseYear": 2019,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 2,
+   "myMark": "PLAYED_DISLIKED",
+   "romCopies": []
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000016",
+   "title": "Broken Dream",
+   "platforms": [
+    "SNES"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Puzzle",
+   "releaseYear": 1994,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": [
+    {
+     "machine": "Living room PC",
+     "status": "BROKEN"
+    }
+   ]
+  },
+  {
+   "id": "00000000-0000-0000-0000-000000000017",
+   "title": "Two Machines Quest",
+   "platforms": [
+    "SNES"
+   ],
+   "localMultiplayer": false,
+   "maxLocalPlayers": null,
+   "singlePlayer": true,
+   "onlineMultiplayer": false,
+   "genres": "Puzzle",
+   "releaseYear": 1995,
+   "installed": true,
+   "wantVotes": 0,
+   "likedVotes": 0,
+   "dislikedVotes": 0,
+   "myMark": null,
+   "romCopies": [
+    {
+     "machine": "Living room PC",
+     "status": "VALIDATED"
+    },
+    {
+     "machine": "Switch dock",
+     "status": "BROKEN"
+    }
+   ]
+  }
+ ],
+ "cases": [
+  {
+   "name": "owner-reported: a question about cats is declined with no references",
+   "tags": [
+    "owner-reported",
+    "us1"
+   ],
+   "conversation": [],
+   "message": "how many cats are there in the world?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "OUT_OF_SCOPE",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {},
+     "reply": "That is outside what I can help with. I know your game library: try \"What can we play with four people?\""
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "OUT_OF_SCOPE",
+    "language": "en",
+    "applied": [],
+    "maxReferences": 0
+   }
+  },
+  {
+   "name": "owner-reported: which games can I play with four people",
+   "tags": [
+    "owner-reported",
+    "us1",
+    "us2"
+   ],
+   "conversation": [],
+   "message": "which games can i play with four people",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "Which games can I play with four people?",
+     "facts": {
+      "partySize": 4
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "With four people these work on one screen: Overcooked! All You Can Eat, Mario Kart 8 Deluxe and Jackbox Party Pack 9.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000003"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "4+ local players",
+     "local multiplayer"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Overcooked! All You Can Eat",
+     "Mario Kart 8 Deluxe",
+     "Jackbox Party Pack 9",
+     "Gang Beasts",
+     "Rocket League",
+     "Party Game 1",
+     "Party Game 2",
+     "Party Game 3",
+     "Party Game 4",
+     "Party Game 5",
+     "Party Game 6",
+     "Party Game 7",
+     "Party Game 8",
+     "Party Game 9",
+     "Party Game 10",
+     "Party Game 11",
+     "Party Game 12"
+    ],
+    "unknownCount": 3
+   }
+  },
+  {
+   "name": "owner-reported: how many other games like this with no context asks what is meant",
+   "tags": [
+    "owner-reported",
+    "us1",
+    "us3"
+   ],
+   "conversation": [],
+   "message": "how many other games like this",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "NEEDS_CLARIFICATION",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {},
+     "reply": "Which game do you mean? Tell me a title or open one from your library."
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "CLARIFY",
+    "language": "en",
+    "applied": [],
+    "maxReferences": 0
+   }
+  },
+  {
+   "name": "owner-reported: a long answer never lists more than ten references",
+   "tags": [
+    "owner-reported",
+    "us1"
+   ],
+   "conversation": [],
+   "message": "what party games do we have for eight people",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "What party games do we have for eight people?",
+     "facts": {
+      "partySize": 8,
+      "genres": [
+       "party"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Plenty: Party Game 1, Party Game 2, Party Game 3, Party Game 4, Party Game 5, Party Game 6, Party Game 7, Party Game 8, Party Game 9, Party Game 10, Party Game 11, Party Game 12.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000021",
+      "00000000-0000-0000-0000-000000000022",
+      "00000000-0000-0000-0000-000000000023",
+      "00000000-0000-0000-0000-000000000024",
+      "00000000-0000-0000-0000-000000000025",
+      "00000000-0000-0000-0000-000000000026",
+      "00000000-0000-0000-0000-000000000027",
+      "00000000-0000-0000-0000-000000000028",
+      "00000000-0000-0000-0000-000000000029",
+      "00000000-0000-0000-0000-000000000030",
+      "00000000-0000-0000-0000-000000000031"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "8+ local players",
+     "local multiplayer",
+     "party"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10
+   }
+  },
+  {
+   "name": "six people at game night means six local players and unknown counts are reported separately",
+   "tags": [
+    "us2"
+   ],
+   "conversation": [],
+   "message": "There are 6 people here tonight for game night, what should we play?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "There are 6 people here for game night, what should we play?",
+     "facts": {
+      "partySize": 6
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "For six people on one screen, try Jackbox Party Pack 9 or Gang Beasts.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000004"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "6+ local players",
+     "local multiplayer"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Jackbox Party Pack 9",
+     "Gang Beasts",
+     "Party Game 1",
+     "Party Game 2",
+     "Party Game 3",
+     "Party Game 4",
+     "Party Game 5",
+     "Party Game 6",
+     "Party Game 7",
+     "Party Game 8",
+     "Party Game 9",
+     "Party Game 10",
+     "Party Game 11",
+     "Party Game 12"
+    ],
+    "unknownCount": 3,
+    "textMustNotContain": [
+     "Overcooked",
+     "Mystery Brawler"
+    ]
+   }
+  },
+  {
+   "name": "six people at game night, in Dutch",
+   "tags": [
+    "us2",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "Er zijn vandaag 6 mensen voor spelavond, wat gaan we spelen?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "nl",
+     "standaloneQuestion": "Er zijn vandaag 6 mensen voor spelavond, wat gaan we spelen?",
+     "facts": {
+      "partySize": 6
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Met zes mensen op één scherm passen Jackbox Party Pack 9 en Gang Beasts.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000004"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "6+ lokale spelers",
+     "lokale multiplayer"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "unknownCount": 3
+   }
+  },
+  {
+   "name": "a party of forty exceeds every known group and nothing is confirmed",
+   "tags": [
+    "us2"
+   ],
+   "conversation": [],
+   "message": "we are 40 people, what can we play",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "partySize": 40
+     },
+     "reply": null
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "NO_MATCH",
+    "language": "en",
+    "applied": [
+     "40+ local players",
+     "local multiplayer"
+    ],
+    "maxReferences": 0,
+    "textContains": [
+     "8"
+    ],
+    "unknownCount": 3
+   }
+  },
+  {
+   "name": "playing alone means single player",
+   "tags": [
+    "us2"
+   ],
+   "conversation": [],
+   "message": "I'm on my own tonight, something relaxing?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "I'm on my own tonight, something relaxing?",
+     "facts": {
+      "playingAlone": true,
+      "semanticQuery": "relaxing"
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Celeste is a gentle platformer, and Hades is great if you want something more intense.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000006",
+      "00000000-0000-0000-0000-000000000005"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "single player"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10
+   }
+  },
+  {
+   "name": "online with friends means online multiplayer",
+   "tags": [
+    "us2"
+   ],
+   "conversation": [],
+   "message": "we want to play online with friends",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "online": true
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Online you can play Overcooked! All You Can Eat, Rocket League or Mario Kart 8 Deluxe.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000011",
+      "00000000-0000-0000-0000-000000000002"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "online multiplayer"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10
+   }
+  },
+  {
+   "name": "a host named by its display name narrows to that place",
+   "tags": [
+    "us2"
+   ],
+   "conversation": [],
+   "message": "what is on the Living room PC?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "places": [
+       "living room pc",
+       "The attic"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "On the Living room PC you have Hades and Celeste.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000005",
+      "00000000-0000-0000-0000-000000000006"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "Living room PC"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10
+   }
+  },
+  {
+   "name": "a platform alias is resolved and an unknown platform is dropped",
+   "tags": [
+    "us2"
+   ],
+   "conversation": [],
+   "message": "any games on ps5 or dreamcast",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "platforms": [
+       "PS5",
+       "Dreamcast"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "On PlayStation 5 you have Overcooked! All You Can Eat and Rocket League.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000011"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "PlayStation 5"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10
+   }
+  },
+  {
+   "name": "something installed and racing",
+   "tags": [
+    "us1"
+   ],
+   "conversation": [],
+   "message": "which racing games can I play right now?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "genres": [
+       "racing"
+      ],
+      "installStatus": "INSTALLED"
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Racing games you can play right now: Mario Kart 8 Deluxe, Forza Horizon 5 and Rocket League.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000008",
+      "00000000-0000-0000-0000-000000000011"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "installed",
+     "racing"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Mario Kart 8 Deluxe",
+     "Forza Horizon 5",
+     "Rocket League"
+    ]
+   }
+  },
+  {
+   "name": "a follow-up resolves those from the previous answer",
+   "tags": [
+    "us3"
+   ],
+   "conversation": [
+    {
+     "user": "party games for four?",
+     "answer": "Overcooked! All You Can Eat, Mario Kart 8 Deluxe and Gang Beasts all work.",
+     "cited": [
+      {
+       "id": "00000000-0000-0000-0000-000000000001",
+       "title": "Overcooked! All You Can Eat"
+      },
+      {
+       "id": "00000000-0000-0000-0000-000000000002",
+       "title": "Mario Kart 8 Deluxe"
+      },
+      {
+       "id": "00000000-0000-0000-0000-000000000004",
+       "title": "Gang Beasts"
+      }
+     ],
+     "outcome": "ANSWERED"
+    }
+   ],
+   "message": "which of those are installed?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "FOLLOW_UP",
+     "language": "en",
+     "standaloneQuestion": "Which of Overcooked! All You Can Eat, Mario Kart 8 Deluxe and Gang Beasts are installed?",
+     "facts": {
+      "installStatus": "INSTALLED",
+      "referencedGameIds": [
+       "00000000-0000-0000-0000-000000000001",
+       "00000000-0000-0000-0000-000000000002",
+       "00000000-0000-0000-0000-000000000004"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Overcooked! All You Can Eat and Mario Kart 8 Deluxe are installed.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "installed"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Overcooked! All You Can Eat",
+     "Mario Kart 8 Deluxe"
+    ]
+   }
+  },
+  {
+   "name": "a question about one attached game answers from that game",
+   "tags": [
+    "us1"
+   ],
+   "conversation": [],
+   "message": "how many players does this support?",
+   "attachedGameIds": [
+    "00000000-0000-0000-0000-000000000001"
+   ],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "GAME_QUESTION",
+     "language": "en",
+     "standaloneQuestion": "How many players does Overcooked! All You Can Eat support?",
+     "facts": {
+      "referencedGameIds": [
+       "00000000-0000-0000-0000-000000000001"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Overcooked! All You Can Eat supports up to 4 players on one screen.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [],
+    "minReferences": 1,
+    "maxReferences": 1,
+    "referenceTitlesSubsetOf": [
+     "Overcooked! All You Can Eat"
+    ]
+   }
+  },
+  {
+   "name": "German is answered with one fixed English request to rephrase",
+   "tags": [
+    "us1"
+   ],
+   "conversation": [],
+   "message": "Welche Spiele kann ich mit vier Leuten spielen?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "other",
+     "standaloneQuestion": "Which games can I play with four people?",
+     "facts": {},
+     "reply": null
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "OUT_OF_SCOPE",
+    "language": "en",
+    "applied": [],
+    "maxReferences": 0,
+    "textContains": [
+     "English or Dutch"
+    ]
+   }
+  },
+  {
+   "name": "the cat question in Dutch is declined with no references",
+   "tags": [
+    "us1",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "hoeveel katten zijn er op de wereld?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "OUT_OF_SCOPE",
+     "language": "nl",
+     "standaloneQuestion": null,
+     "facts": {},
+     "reply": "Daar kan ik je niet mee helpen. Probeer: \"Wat kunnen we spelen met vier mensen?\""
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "OUT_OF_SCOPE",
+    "language": "nl",
+    "applied": [],
+    "maxReferences": 0
+   }
+  },
+  {
+   "name": "a model that recommends a game the text never names or that is not a candidate gets those dropped",
+   "tags": [
+    "us1"
+   ],
+   "conversation": [],
+   "message": "what can we play with four",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "partySize": 4
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Jackbox Party Pack 9 is the pick for four people.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "99999999-9999-9999-9999-999999999999"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "minReferences": 1,
+    "maxReferences": 1,
+    "referenceTitlesSubsetOf": [
+     "Jackbox Party Pack 9"
+    ]
+   }
+  },
+  {
+   "name": "a requirement nothing satisfies yields no match without a model-written answer",
+   "tags": [
+    "us1"
+   ],
+   "conversation": [],
+   "message": "single player games for eight people at once",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "partySize": 8,
+      "playingAlone": true,
+      "genres": [
+       "strategy"
+      ]
+     },
+     "reply": null
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "NO_MATCH",
+    "language": "en",
+    "maxReferences": 0
+   }
+  },
+  {
+   "name": "an empty library says so",
+   "tags": [
+    "us1"
+   ],
+   "conversation": [],
+   "message": "what can we play with four people?",
+   "attachedGameIds": [],
+   "library": "empty",
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": null,
+     "facts": {
+      "partySize": 4
+     },
+     "reply": null
+    },
+    "answer": null
+   },
+   "expect": {
+    "outcome": "EMPTY_LIBRARY",
+    "language": "en",
+    "applied": [],
+    "maxReferences": 0
+   }
+  },
+  {
+   "name": "a follow-up in Dutch resolves 'die' from the previous answer",
+   "tags": [
+    "us3",
+    "dutch"
+   ],
+   "conversation": [
+    {
+     "user": "partyspellen voor vier?",
+     "answer": "Overcooked! All You Can Eat en Mario Kart 8 Deluxe werken allebei.",
+     "cited": [
+      {
+       "id": "00000000-0000-0000-0000-000000000001",
+       "title": "Overcooked! All You Can Eat"
+      },
+      {
+       "id": "00000000-0000-0000-0000-000000000002",
+       "title": "Mario Kart 8 Deluxe"
+      }
+     ],
+     "outcome": "ANSWERED"
+    }
+   ],
+   "message": "welke van die zijn geïnstalleerd?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "FOLLOW_UP",
+     "language": "nl",
+     "standaloneQuestion": "Welke van Overcooked! All You Can Eat en Mario Kart 8 Deluxe zijn geïnstalleerd?",
+     "facts": {
+      "installStatus": "INSTALLED",
+      "referencedGameIds": [
+       "00000000-0000-0000-0000-000000000001",
+       "00000000-0000-0000-0000-000000000002"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Overcooked! All You Can Eat en Mario Kart 8 Deluxe zijn allebei geïnstalleerd.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "geïnstalleerd"
+    ],
+    "minReferences": 1,
+    "maxReferences": 2
+   }
+  },
+  {
+   "name": "a game named earlier that is no longer visible is silently left out",
+   "tags": [
+    "us3"
+   ],
+   "conversation": [
+    {
+     "user": "a cooking game?",
+     "answer": "Try Hidden Kitchen.",
+     "cited": [
+      {
+       "id": "11111111-1111-1111-1111-111111111111",
+       "title": "Hidden Kitchen"
+      }
+     ],
+     "outcome": "ANSWERED"
+    }
+   ],
+   "message": "and is it multiplayer?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "FOLLOW_UP",
+     "language": "en",
+     "standaloneQuestion": "Is Hidden Kitchen multiplayer?",
+     "facts": {
+      "referencedGameIds": [
+       "11111111-1111-1111-1111-111111111111"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Overcooked! All You Can Eat is a cooking game for up to four players.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000001"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "minReferences": 1,
+    "maxReferences": 1,
+    "referenceTitlesSubsetOf": [
+     "Overcooked! All You Can Eat"
+    ]
+   }
+  },
+  {
+   "name": "my want-to-play list returns only games I marked, never the others",
+   "tags": [
+    "us10"
+   ],
+   "conversation": [],
+   "message": "what is on my want-to-play list?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "what is on my want-to-play list?",
+     "facts": {
+      "markFilter": "WANT_TO_PLAY",
+      "markScope": "MINE"
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Wishlist Wonder is on your list.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000014"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "my want-to-play list"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Wishlist Wonder"
+    ],
+    "textMustNotContain": [
+     "Hades"
+    ]
+   }
+  },
+  {
+   "name": "my want-to-play list, in Dutch",
+   "tags": [
+    "us10",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "wat staat er op mijn wil-ik-spelen-lijst?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "nl",
+     "standaloneQuestion": "wat staat er op mijn wil-ik-spelen-lijst?",
+     "facts": {
+      "markFilter": "WANT_TO_PLAY",
+      "markScope": "MINE"
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Wishlist Wonder staat op je lijst.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000014"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "mijn wil-ik-spelen-lijst"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Wishlist Wonder"
+    ]
+   }
+  },
+  {
+   "name": "something like what I liked never offers the games I already liked",
+   "tags": [
+    "us10"
+   ],
+   "conversation": [],
+   "message": "something like the games I liked",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "something like the games I liked",
+     "facts": {
+      "likeMyLiked": true
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Slay the Spire fits, and so would Stardew Valley.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000013",
+      "00000000-0000-0000-0000-000000000012"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "like the games I liked"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Slay the Spire"
+    ]
+   }
+  },
+  {
+   "name": "something like what I liked, in Dutch",
+   "tags": [
+    "us10",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "iets zoals de spellen die ik leuk vond",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "nl",
+     "standaloneQuestion": "iets zoals de spellen die ik leuk vond",
+     "facts": {
+      "likeMyLiked": true
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Slay the Spire past erbij, en Stardew Valley ook.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000013",
+      "00000000-0000-0000-0000-000000000012"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "zoals de spellen die ik leuk vond"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Slay the Spire"
+    ]
+   }
+  },
+  {
+   "name": "a game I played and disliked is never offered again",
+   "tags": [
+    "us10"
+   ],
+   "conversation": [],
+   "message": "what racing games do we have?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "what racing games do we have?",
+     "facts": {
+      "genres": [
+       "racing"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Mario Kart 8 Deluxe is a great pick, and Regret Racer is another racer.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000015"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "racing"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Mario Kart 8 Deluxe",
+     "Rocket League",
+     "Forza Horizon 5"
+    ]
+   }
+  },
+  {
+   "name": "a game I played and disliked is never offered again, in Dutch",
+   "tags": [
+    "us10",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "welke racegames hebben we?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "nl",
+     "standaloneQuestion": "welke racegames hebben we?",
+     "facts": {
+      "genres": [
+       "racing"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Mario Kart 8 Deluxe is een goede keuze, en Regret Racer is nog een racer.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000015"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "racing"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Mario Kart 8 Deluxe",
+     "Rocket League",
+     "Forza Horizon 5"
+    ]
+   }
+  },
+  {
+   "name": "a popular game that fails the requirement is never offered however many votes it has",
+   "tags": [
+    "us10"
+   ],
+   "conversation": [],
+   "message": "we are 6, what can we play?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "we are 6, what can we play?",
+     "facts": {
+      "partySize": 6
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Hades is a favourite, but for six try Jackbox Party Pack 9.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000005",
+      "00000000-0000-0000-0000-000000000003"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "6+ local players",
+     "local multiplayer"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Jackbox Party Pack 9",
+     "Gang Beasts",
+     "Party Game 1",
+     "Party Game 2",
+     "Party Game 3",
+     "Party Game 4",
+     "Party Game 5",
+     "Party Game 6",
+     "Party Game 7",
+     "Party Game 8",
+     "Party Game 9",
+     "Party Game 10",
+     "Party Game 11",
+     "Party Game 12"
+    ]
+   }
+  },
+  {
+   "name": "a popular game that fails the requirement is never offered, in Dutch",
+   "tags": [
+    "us10",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "we zijn met 6, wat kunnen we spelen?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "nl",
+     "standaloneQuestion": "we zijn met 6, wat kunnen we spelen?",
+     "facts": {
+      "partySize": 6
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Hades is een favoriet, maar met zes past Jackbox Party Pack 9.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000005",
+      "00000000-0000-0000-0000-000000000003"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "6+ lokale spelers",
+     "lokale multiplayer"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Jackbox Party Pack 9",
+     "Gang Beasts",
+     "Party Game 1",
+     "Party Game 2",
+     "Party Game 3",
+     "Party Game 4",
+     "Party Game 5",
+     "Party Game 6",
+     "Party Game 7",
+     "Party Game 8",
+     "Party Game 9",
+     "Party Game 10",
+     "Party Game 11",
+     "Party Game 12"
+    ]
+   }
+  },
+  {
+   "name": "a game whose only copy is broken is never offered, and a validated copy is welcome",
+   "tags": [
+    "us13"
+   ],
+   "conversation": [],
+   "message": "any puzzle games?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "en",
+     "standaloneQuestion": "any puzzle games?",
+     "facts": {
+      "genres": [
+       "puzzle"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Portal 2 and Two Machines Quest are puzzle games, and Broken Dream is another one.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000007",
+      "00000000-0000-0000-0000-000000000017",
+      "00000000-0000-0000-0000-000000000016"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "en",
+    "applied": [
+     "puzzle"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Portal 2",
+     "Two Machines Quest"
+    ]
+   }
+  },
+  {
+   "name": "a game whose only copy is broken is never offered, in Dutch",
+   "tags": [
+    "us13",
+    "dutch"
+   ],
+   "conversation": [],
+   "message": "zijn er puzzelspellen?",
+   "attachedGameIds": [],
+   "library": null,
+   "recorded": {
+    "interpretation": {
+     "intent": "LIBRARY_QUERY",
+     "language": "nl",
+     "standaloneQuestion": "zijn er puzzelspellen?",
+     "facts": {
+      "genres": [
+       "puzzle"
+      ]
+     },
+     "reply": null
+    },
+    "answer": {
+     "text": "Portal 2 en Two Machines Quest zijn puzzelspellen, en Broken Dream ook.",
+     "recommendedGameIds": [
+      "00000000-0000-0000-0000-000000000007",
+      "00000000-0000-0000-0000-000000000017",
+      "00000000-0000-0000-0000-000000000016"
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ANSWERED",
+    "language": "nl",
+    "applied": [
+     "puzzle"
+    ],
+    "minReferences": 1,
+    "maxReferences": 10,
+    "referenceTitlesSubsetOf": [
+     "Portal 2",
+     "Two Machines Quest"
+    ]
+   }
+  }
+ ]
+}

@@ -84,9 +84,9 @@ class GuestChatLimitIntegrationTest extends KeycloakIntegrationTest {
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder chatRequest() {
-        return post("/api/gamecatalog/chat")
+        return post("/api/gamecatalog/libbot/ask")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"question\":\"anything\"}");
+                .content("{\"conversationId\":\"c1\",\"message\":\"anything\"}");
     }
 
     private String subjectOf(String accessToken) throws Exception {
