@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
-import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { aGameDetailMock, aSwitchSearchResultMock, GameDetail, GameDetailStore, SwitchSearchResult } from '@jordylab-fe/gamecatalog/api';
+import { aGameDetailMock, aPlatformChipMock, GameDetail, GameDetailStore, MarkStore } from '@jordylab-fe/gamecatalog/api';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { GameDetailComponent } from './game-detail.component';
 
@@ -12,17 +12,23 @@ describe('GameDetailComponent', () => {
   const error = signal<string | null>(null);
   const refreshingMetadata = signal(false);
   const refreshingEnrichment = signal(false);
+  const savingRomStatus = signal<ReadonlySet<string>>(new Set());
+  const romStatusError = signal<string | null>(null);
+  const setRomStatus = vi.fn<GameDetailStore['setRomStatus']>();
+  const dismissRomStatusError = vi.fn<GameDetailStore['dismissRomStatusError']>();
   const load = vi.fn<GameDetailStore['load']>();
   const refreshMetadata = vi.fn<GameDetailStore['refreshMetadata']>();
   const refreshEnrichment = vi.fn<GameDetailStore['refreshEnrichment']>();
-  const savingSwitch = signal(false);
-  const removed = signal(false);
-  const relinkCandidates = signal<SwitchSearchResult[]>([]);
-  const changeSwitchFormat = vi.fn<GameDetailStore['changeSwitchFormat']>();
-  const relinkSwitchGame = vi.fn<GameDetailStore['relinkSwitchGame']>();
-  const searchRelinkCandidates = vi.fn<GameDetailStore['searchRelinkCandidates']>();
-  const removeSwitchGame = vi.fn<GameDetailStore['removeSwitchGame']>();
   const isAdmin = signal(false);
+  const markPendingIds = signal<ReadonlySet<string>>(new Set());
+  const markError = signal<string | null>(null);
+  const toggleMark = vi.fn<MarkStore['toggle']>();
+  const markStoreMock = {
+    stateOf: <T>(loaded: T) => loaded,
+    pending: markPendingIds.asReadonly(),
+    error: markError.asReadonly(),
+    toggle: toggleMark,
+  };
 
   const storeMock = {
     game: game.asReadonly(),
@@ -31,16 +37,13 @@ describe('GameDetailComponent', () => {
     error: error.asReadonly(),
     refreshingMetadata: refreshingMetadata.asReadonly(),
     refreshingEnrichment: refreshingEnrichment.asReadonly(),
+    savingRomStatus: savingRomStatus.asReadonly(),
+    romStatusError: romStatusError.asReadonly(),
+    setRomStatus,
+    dismissRomStatusError,
     load,
     refreshMetadata,
     refreshEnrichment,
-    savingSwitch: savingSwitch.asReadonly(),
-    removed: removed.asReadonly(),
-    relinkCandidates: relinkCandidates.asReadonly(),
-    changeSwitchFormat,
-    relinkSwitchGame,
-    searchRelinkCandidates,
-    removeSwitchGame,
   };
 
   let spectator: Spectator<GameDetailComponent>;
@@ -50,6 +53,7 @@ describe('GameDetailComponent', () => {
     providers: [
       provideRouter([]),
       { provide: GameDetailStore, useValue: storeMock },
+      { provide: MarkStore, useValue: markStoreMock },
       { provide: AuthService, useValue: { isAdmin: isAdmin.asReadonly() } },
       {
         provide: ActivatedRoute,
@@ -67,17 +71,17 @@ describe('GameDetailComponent', () => {
     error.set(null);
     refreshingMetadata.set(false);
     refreshingEnrichment.set(false);
+    savingRomStatus.set(new Set());
+    romStatusError.set(null);
+    setRomStatus.mockReset();
+    dismissRomStatusError.mockReset();
     load.mockReset();
     refreshMetadata.mockReset();
     refreshEnrichment.mockReset();
-    savingSwitch.set(false);
-    removed.set(false);
-    relinkCandidates.set([]);
-    changeSwitchFormat.mockReset();
-    relinkSwitchGame.mockReset();
-    searchRelinkCandidates.mockReset();
-    removeSwitchGame.mockReset();
     isAdmin.set(false);
+    markPendingIds.set(new Set());
+    markError.set(null);
+    toggleMark.mockReset();
     spectator = createComponent();
   });
 
@@ -102,7 +106,34 @@ describe('GameDetailComponent', () => {
     expect(spectator.query('dl')).toHaveText('up to 2 players');
     expect(spectator.query('dl')).toHaveText('Platformer, Action');
     expect(spectator.query('p.max-w-prose')).toHaveText('A classic SNES platformer.');
+    expect(spectator.query('[data-testid="about-heading"]')).toHaveText('About · written by claude-haiku-4.5');
     expect(spectator.element).not.toHaveText('Description unavailable.');
+  });
+
+  it('shows where the facts came from as the last line of the spec sheet, not in the About heading', () => {
+    show(aGameDetailMock({ factSources: { facts: 'STEAM', multiplayer: 'IGDB' } }));
+
+    expect(spectator.query('[data-testid="fact-sources"]')).toHaveText('Source · facts from Steam · multiplayer from IGDB');
+    expect(spectator.query('[data-testid="about-heading"]')).not.toHaveText('facts from');
+  });
+
+  it('credits Steam when the description is Steam\'s own', () => {
+    const detail = aGameDetailMock();
+    show({ ...detail, description: { ...(detail.description as NonNullable<GameDetail['description']>), source: 'STEAM', model: null } });
+
+    expect(spectator.query('[data-testid="about-heading"]')).toHaveText('About · description from Steam');
+  });
+
+  it('puts the cover over the corner of the banner on every width, with room below it', () => {
+    show(aGameDetailMock());
+
+    const cover = spectator.query('img[alt="Super Mario World cover"]')?.parentElement;
+    expect(cover?.className).toContain('absolute');
+    expect(cover?.className).toContain('-bottom-10');
+    expect(cover?.className).not.toContain('static');
+    expect(spectator.query('img[alt="Super Mario World banner"]')?.className).toContain('aspect-[16/9]');
+    expect(spectator.query('img[alt="Super Mario World banner"]')?.className).toContain('sm:aspect-[16/5]');
+    expect(spectator.query('.mt-16')).toBeTruthy();
   });
 
   it('renders deterministic metadata and hosts in the spec sheet', () => {
@@ -119,15 +150,15 @@ describe('GameDetailComponent', () => {
 
     const askLink = spectator
       .queryAll('a')
-      .find((anchor) => anchor.textContent?.includes('Ask the catalog'));
+      .find((anchor) => anchor.textContent?.includes('Ask LibBot'));
     expect(askLink).toBeTruthy();
-    expect(askLink?.getAttribute('href')).toContain('/games/chat');
+    expect(askLink?.getAttribute('href')).toContain('/games/libbot');
     expect(askLink?.getAttribute('href')).toContain('attach=1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
   });
 
   it('forwards the refresh actions to the store', () => {
     isAdmin.set(true);
-    show(aGameDetailMock({ platform: 'Steam' }));
+    show(aGameDetailMock({ platforms: [aPlatformChipMock({ name: 'Steam', family: 'STEAM' })] }));
 
     const buttons = spectator.queryAll('button');
     const facts = buttons.find((button) => button.textContent?.includes('Refresh facts'));
@@ -141,7 +172,7 @@ describe('GameDetailComponent', () => {
 
   it('shows a refreshing label while a refresh is in flight', () => {
     isAdmin.set(true);
-    show(aGameDetailMock({ platform: 'Steam' }));
+    show(aGameDetailMock({ platforms: [aPlatformChipMock({ name: 'Steam', family: 'STEAM' })] }));
     refreshingMetadata.set(true);
     refreshingEnrichment.set(true);
     spectator.detectChanges();
@@ -152,7 +183,7 @@ describe('GameDetailComponent', () => {
 
   it('hides the deterministic refresh button for non-Steam games', () => {
     isAdmin.set(true);
-    show(aGameDetailMock({ platform: 'SNES' }));
+    show(aGameDetailMock());
 
     const buttons = spectator.queryAll('button');
     expect(buttons.find((button) => button.textContent?.includes('Refresh facts'))).toBeUndefined();
@@ -226,90 +257,113 @@ describe('GameDetailComponent', () => {
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
   });
 
-  describe('admin-only actions and Switch games', () => {
-    const switchGame = aGameDetailMock({
-      platform: 'Nintendo Switch',
-      hosts: [{ hostname: 'Nintendo Switch', sourceType: 'SWITCH' }],
-      hostFormats: { 'Nintendo Switch': 'PHYSICAL' },
-    });
+  describe('admin-only actions', () => {
+    it('hides the refresh actions from guests', () => {
+      show(aGameDetailMock());
 
-    it('hides refresh and Switch management from guests but still shows the format', () => {
-      show(switchGame);
-
-      expect(spectator.query('[data-testid="switch-format"]')).toHaveText('Physical');
-      expect(spectator.query('[data-testid="switch-admin"]')).toBeNull();
       expect(spectator.queryAll('button').map((button) => button.textContent?.trim())).not.toContain(
-        'Regenerate description'
+        'Regenerate description',
       );
     });
 
-    it('shows refresh and Switch management to the admin', () => {
+    it('shows the refresh actions to the admin', () => {
       isAdmin.set(true);
-      show(switchGame);
+      show(aGameDetailMock());
 
-      expect(spectator.query('[data-testid="switch-admin"]')).toExist();
       expect(spectator.queryAll('button').map((button) => button.textContent?.trim())).toContain(
-        'Regenerate description'
+        'Regenerate description',
       );
     });
 
-    it('preselects the current format of the game in the admin select', () => {
-      isAdmin.set(true);
-      show({ ...switchGame, hostFormats: { 'Nintendo Switch': 'DIGITAL' } });
-
-      expect(spectator.query<HTMLSelectElement>('#switch-detail-format')?.value).toBe('DIGITAL');
-    });
-
-    it('changes the format', () => {
-      isAdmin.set(true);
-      show(switchGame);
-
-      spectator.selectOption('#switch-detail-format', 'DIGITAL');
-
-      expect(changeSwitchFormat).toHaveBeenCalledWith('DIGITAL');
-    });
-
-    it('searches relink candidates and relinks to the chosen one', () => {
-      isAdmin.set(true);
-      show(switchGame);
-
-      spectator.typeInElement('Mario Kart', '#switch-relink-search');
-      expect(searchRelinkCandidates).toHaveBeenCalledWith('Mario Kart');
-
-      relinkCandidates.set([aSwitchSearchResultMock({ igdbGameId: 4321, title: 'Mario Kart 8 Deluxe' })]);
-      spectator.detectChanges();
-      spectator.click('[data-testid="relink-candidate"]');
-
-      expect(relinkSwitchGame).toHaveBeenCalledWith(4321);
-    });
-
-    it('removes only after a second, confirming click', () => {
-      isAdmin.set(true);
-      show(switchGame);
-
-      spectator.click('[data-testid="remove-switch"]');
-      expect(removeSwitchGame).not.toHaveBeenCalled();
-
-      spectator.click('[data-testid="remove-switch-confirm"]');
-      expect(removeSwitchGame).toHaveBeenCalled();
-    });
-
-    it('goes back to the library once the game is removed', () => {
-      const navigateByUrl = vi.spyOn(spectator.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-      show(switchGame);
-
-      removed.set(true);
-      spectator.detectChanges();
-
-      expect(navigateByUrl).toHaveBeenCalledWith('/games/grid');
-    });
-
-    it('shows no Switch section for a scanned game', () => {
+    it('has no Switch or format section any more', () => {
       isAdmin.set(true);
       show(aGameDetailMock());
 
       expect(spectator.query('[data-testid="switch-format"]')).toBeNull();
       expect(spectator.query('[data-testid="switch-admin"]')).toBeNull();
+      expect(spectator.element).not.toHaveText('Format');
     });
+  });
+
+  it('shows every platform of the game as a coloured chip', () => {
+    show(
+      aGameDetailMock({
+        platforms: [aPlatformChipMock({ name: 'SNES' }), aPlatformChipMock({ name: 'Steam', family: 'STEAM' })],
+        sources: ['EMULATED', 'STEAM_OWNED'],
+      }),
+    );
+
+    const chips = spectator.queryAll('lib-platform-chip').map((chip) => chip.textContent?.trim());
+    expect(chips).toEqual(['SNES', 'Steam']);
+    expect(spectator.element).toHaveText('Emulated');
+    expect(spectator.element).toHaveText('Steam (Owned)');
+  });
+
+  describe('ROM status per machine', () => {
+    it('lists each emulated copy with its chip and a control, and nothing for a game with no emulated copy', () => {
+      show(aGameDetailMock());
+      expect(spectator.queryAll('[data-testid="rom-copy"]')).toHaveLength(1);
+      expect(spectator.query('[data-testid="rom-copy"] lib-rom-chip')).toHaveText('Unknown');
+
+      const detail = aGameDetailMock();
+      show({ ...detail, places: [{ ...detail.places[0], romStatus: null, installationId: null }] });
+      expect(spectator.query('[data-testid="rom-section"]')).toBeNull();
+    });
+
+    it('presses the current status and sends a chosen one with the copy it belongs to', () => {
+      const detail = aGameDetailMock();
+      show({ ...detail, places: [{ ...detail.places[0], romStatus: 'VALIDATED' }] });
+      const copyId = detail.places[0].installationId as string;
+
+      expect(spectator.query('[data-testid="rom-copy"] [data-status="VALIDATED"]')?.getAttribute('aria-pressed')).toBe('true');
+
+      spectator.click('[data-testid="rom-copy"] [data-status="BROKEN"]');
+
+      expect(setRomStatus).toHaveBeenCalledWith(copyId, 'BROKEN');
+    });
+
+    it('disables the controls of a copy that is being saved and shows a failure', () => {
+      const detail = aGameDetailMock();
+      savingRomStatus.set(new Set([detail.places[0].installationId as string]));
+      romStatusError.set('Could not save the ROM status. Try again.');
+      show(detail);
+
+      const buttons = spectator.queryAll<HTMLButtonElement>('[data-testid="rom-copy"] button');
+      expect(buttons.every((button) => button.disabled)).toBe(true);
+      expect(spectator.query('[data-testid="rom-error"]')).toHaveText('Could not save the ROM status');
+    });
+  });
+
+  describe('marks', () => {
+    it('shows the three totals and the buttons, with my mark pressed and outlined', () => {
+      show(aGameDetailMock({ votes: { wantToPlay: 3, playedLiked: 1, playedDisliked: 0 }, myMark: 'PLAYED_LIKED' }));
+
+      expect(spectator.query('[data-testid="mark-totals"]')).toHaveText('3');
+      expect(spectator.query('[data-testid="mark-totals"] [data-mark="PLAYED_LIKED"]')?.getAttribute('data-mine')).toBe('true');
+      expect(spectator.query('[data-mark="PLAYED_LIKED"][aria-pressed]')?.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('sends a tapped mark with the game to the store', () => {
+      const detail = aGameDetailMock();
+      show(detail);
+
+      spectator.click('[data-testid="mark-buttons"] [data-mark="WANT_TO_PLAY"]');
+
+      expect(toggleMark).toHaveBeenCalledWith(detail, 'WANT_TO_PLAY');
+    });
+
+    it('says when saving the mark failed', () => {
+      markError.set('Could not save your mark. Try again.');
+      show(aGameDetailMock());
+
+      expect(spectator.query('[data-testid="mark-error"]')).toHaveText('Could not save your mark');
+    });
+  });
+
+  it('names a host by the label the admin chose', () => {
+    const detail = aGameDetailMock();
+    show({ ...detail, places: [{ ...detail.places[0], label: 'Living room PC' }] });
+
+    expect(spectator.element).toHaveText('Installed on · Living room PC');
   });
 });

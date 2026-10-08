@@ -7,11 +7,36 @@ export type ArtworkStatus =
 
 export type EnrichmentStatus = 'PENDING' | 'ENRICHED' | 'FAILED';
 
-export type SourceType = 'STEAM' | 'EMUDECK' | 'SWITCH';
+export type SourceType = 'STEAM' | 'EMUDECK';
 
-export type SwitchGameFormat = 'PHYSICAL' | 'DIGITAL';
+/** A console an admin registered: a platform (from the catalog or custom text) and the name shown for it. */
+export interface GameConsole {
+  id: string;
+  platform: string;
+  family: BrandFamily;
+  chip: PlatformChip;
+  name: string;
+  label: string;
+  gameCount: number;
+}
 
-export interface SwitchSearchResult {
+/** A well-known console offered by the add-console autocomplete (fifth generation onward). */
+export interface KnownConsole {
+  name: string;
+  family: BrandFamily;
+  generation: number;
+  handheld: boolean;
+}
+
+/** What removing a console would do, for its confirmation dialog. */
+export interface ConsoleImpact {
+  games: number;
+  alsoElsewhere: number;
+  wouldBeRemoved: number;
+}
+
+/** One IGDB match for a search on a console's platform. */
+export interface ConsoleSearchResult {
   igdbGameId: number;
   title: string;
   releaseYear: number | null;
@@ -19,51 +44,42 @@ export interface SwitchSearchResult {
   developer: string | null;
   coverUrl: string | null;
   bannerUrl: string | null;
+  alreadyOnConsole: boolean;
 }
 
-/** Review status of one pasted line in a Switch bulk add (009 US3). */
-export type SwitchBulkStatus = 'MATCH' | 'NO_MATCH' | 'ALREADY_PRESENT' | 'NEEDS_REVIEW';
+export interface ConsoleGameResponse {
+  gameId: string;
+  title: string;
+  /** True when the game was already in the catalog (Steam, an emulator, another console) and was linked, not duplicated. */
+  linkedExisting: boolean;
+}
 
-/** POST /api/gamecatalog/switch/bulk/preview: one reviewed line; nothing is saved yet. */
-export interface SwitchBulkLine {
+export interface ConsoleGameListItem {
+  gameId: string;
+  title: string;
+  releaseYear: number | null;
+  coverUrl: string | null;
+  coverEndpoint: string | null;
+}
+
+export type ConsoleBulkStatus = 'MATCHED' | 'NO_MATCH' | 'ALREADY_PRESENT';
+
+export interface ConsoleBulkLine {
   line: string;
-  status: SwitchBulkStatus;
-  /** IGDB matches, best first. */
-  candidates: SwitchSearchResult[];
-  existingGameId: string | null;
-  /** Ticked by default. */
-  include: boolean;
+  status: ConsoleBulkStatus;
+  match: ConsoleSearchResult | null;
 }
 
-export interface SwitchBulkPreview {
-  lines: SwitchBulkLine[];
-}
-
-/** One ticked line sent to POST /api/gamecatalog/switch/bulk/confirm; without igdbGameId it is added by title. */
-export interface SwitchBulkItem {
+export interface ConsoleBulkItem {
   line: string;
   igdbGameId: number | null;
   title: string | null;
-  format: SwitchGameFormat;
 }
 
-export interface SwitchBulkSummary {
-  added: SwitchGameResponse[];
-  alreadyPresent: string[];
-  skipped: { line: string; reason: string }[];
-}
-
-/** PATCH /api/gamecatalog/switch/games/{id}: change the format and/or relink to another IGDB game (009 switch-api). */
-export interface SwitchGameUpdate {
-  format?: SwitchGameFormat;
-  igdbGameId?: number;
-}
-
-export interface SwitchGameResponse {
-  gameId: string;
-  title: string;
-  platform: string;
-  format: SwitchGameFormat;
+export interface ConsoleBulkSummary {
+  added: ConsoleGameResponse[];
+  skipped: string[];
+  failed: { line: string; reason: string }[];
 }
 
 export type SyncOutcome =
@@ -80,25 +96,95 @@ export type MultiplayerSource = 'STEAM' | 'IGDB' | 'UNKNOWN';
 
 export type InstallStatus = 'INSTALLED' | 'NOT_INSTALLED' | 'ALL';
 
-export type LibrarySource = 'OWNED' | 'FAMILY' | 'LOCAL';
+export type LibrarySource = 'OWNED' | 'FAMILY';
+
+/** The four labels a game can carry about where it comes from (derived on the server, never stored). */
+export type GameSource = 'STEAM_OWNED' | 'STEAM_FAMILY' | 'EMULATED' | 'CONSOLE';
+
+export type RomStatus = 'UNKNOWN' | 'VALIDATED' | 'BROKEN';
+
+export type BrandFamily = 'PLAYSTATION' | 'XBOX' | 'NINTENDO' | 'SEGA' | 'STEAM' | 'OTHER';
+
+/** A platform with the chip colours the server chose for it (official brand colours, contrast-checked). */
+export interface PlatformChip {
+  name: string;
+  family: BrandFamily;
+  background: string;
+  foreground: string;
+  border: string | null;
+}
+
+export type PlaceKind = 'HOST_COPY' | 'STEAM_LIBRARY' | 'CONSOLE';
+
+/** One place a game lives: a scanned host copy, Steam library membership, or a console. */
+export interface Place {
+  kind: PlaceKind;
+  installationId: string | null;
+  hostId: string | null;
+  consoleId: string | null;
+  /** Host display name (else hostname) or console name; never a raw hostname when a display name exists. */
+  label: string;
+  platform: string;
+  installed: boolean | null;
+  romStatus: RomStatus | null;
+  librarySource: LibrarySource | null;
+  familyOwners: string | null;
+}
 
 export type LibrarySyncOutcome = 'APPLIED' | 'NO_CHANGE' | 'FAILED' | 'SUSPICIOUS';
 
-export interface HostRef {
-  hostname: string;
-  sourceType: SourceType;
+/** The three exclusive marks a person can give a game; totals are public, voters are never shown. */
+export type MarkType = 'WANT_TO_PLAY' | 'PLAYED_LIKED' | 'PLAYED_DISLIKED';
+
+export interface VoteTotals {
+  wantToPlay: number;
+  playedLiked: number;
+  playedDisliked: number;
 }
+
+/** What setting or clearing a mark answers: the new public totals and the caller's own mark. */
+export interface MarkResult {
+  votes: VoteTotals;
+  myMark: MarkType | null;
+}
+
+export type RomSummaryState = 'UNKNOWN' | 'VALIDATED' | 'BROKEN' | 'MIXED';
+
+/** How the emulated copies of a game stand; absent for a game with no emulated copy. */
+export interface RomSummary {
+  state: RomSummaryState;
+  validated: number;
+  broken: number;
+  unknown: number;
+  total: number;
+}
+
+export type PlaceOptionKind = 'HOST' | 'CONSOLE';
+
+/** A host or console that holds visible games, offered by the "Where" filter. */
+export interface PlaceOption {
+  id: string;
+  kind: PlaceOptionKind;
+  label: string;
+}
+
+export type MarkScope = 'ALL' | 'MINE';
+
+export type GameSort = 'TITLE' | 'MOST_WANTED' | 'MOST_LIKED';
 
 export interface GameSummary {
   id: string;
   title: string;
-  platform: string;
+  platforms: PlatformChip[];
+  sources: GameSource[];
   coverStatus: ArtworkStatus;
   coverUrl: string | null;
   coverEndpoint: string | null;
   installStatus: InstallStatus;
-  librarySource: LibrarySource;
   localMultiplayer: boolean | null;
+  votes: VoteTotals;
+  myMark: MarkType | null;
+  romSummary: RomSummary | null;
 }
 
 export interface GamesPage {
@@ -107,15 +193,33 @@ export interface GamesPage {
   size: number;
   totalElements: number;
   totalPages: number;
+  /** Only present when a minimum number of local players was asked for: games left out because their count is unknown. */
+  unknownPlayerCount?: number | null;
+}
+
+/** A description and where it came from; the page builds its heading from these fields alone. */
+export interface GameDescription {
+  text: string;
+  source: 'AI' | 'STEAM' | null;
+  /** The model the provider reported as answering (a router's pick); null for older text or when none was reported. */
+  model: string | null;
+  /** The selected id, present only when it differs from {@code model} (a router, or the fallback provider). */
+  requestedModel: string | null;
+  writtenAt: string | null;
+}
+
+/** Where the Spec sheet's facts came from. */
+export interface FactSources {
+  facts: 'STEAM' | 'AI' | null;
+  multiplayer: 'STEAM' | 'IGDB' | null;
 }
 
 export interface GameDetail {
   id: string;
   title: string;
-  platform: string;
-  hosts: HostRef[];
-  /** Format per manually tracked host (e.g. Nintendo Switch → PHYSICAL); empty for scanned hosts (009 catalog-api). */
-  hostFormats: Record<string, SwitchGameFormat>;
+  platforms: PlatformChip[];
+  sources: GameSource[];
+  places: Place[];
   coverStatus: ArtworkStatus;
   coverUrl: string | null;
   coverEndpoint: string | null;
@@ -132,23 +236,44 @@ export interface GameDetail {
   maxLocalPlayers: number | null;
   onlineMultiplayer: boolean | null;
   singlePlayer: boolean | null;
-  description: string | null;
+  description: GameDescription | null;
+  factSources: FactSources;
   firstSeenAt: string;
   installStatus: InstallStatus;
-  librarySource: LibrarySource;
-  familyOwners: string[];
   localMultiplayer: boolean | null;
   splitScreen: boolean | null;
   onlineOnly: boolean | null;
   multiplayerSource: MultiplayerSource;
+  votes: VoteTotals;
+  myMark: MarkType | null;
+}
+
+/** A scanning machine with the name an admin gave it (spec 013 FR-030). */
+export interface Host {
+  id: string;
+  hostname: string;
+  displayName: string | null;
+  label: string;
+}
+
+/** What turning a source off would do; nothing is deleted either way. */
+export interface HideImpact {
+  hiddenGames: number;
+  stillVisibleElsewhere: number;
 }
 
 export interface ScanSource {
   id: string;
   sourceKey: string;
+  hostId: string;
   hostname: string;
+  /** The name an admin gave the host, if any. */
+  displayName: string | null;
+  /** What to show: the display name when set, else the hostname. */
+  label: string;
   sourceType: SourceType;
   platform: string;
+  platformChip: PlatformChip;
   enabled: boolean;
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
@@ -157,14 +282,7 @@ export interface ScanSource {
   installedGameCount: number;
 }
 
-export interface ChatGameRef {
-  id: string;
-  title: string;
-  platform: string;
-  coverUrl: string | null;
-  coverEndpoint: string | null;
-}
-
+/** A game the person points LibBot at (the "ask about this game" entry on the game page). */
 export interface AttachedGame {
   id: string;
   title: string;
@@ -172,33 +290,88 @@ export interface AttachedGame {
   coverEndpoint: string | null;
 }
 
-export interface ChatAnswer {
-  answer: string;
-  games: ChatGameRef[];
-  noMatch: boolean;
+export type LibBotStage = 'UNDERSTANDING' | 'SEARCHING' | 'WRITING';
+
+export type LibBotOutcome = 'ANSWERED' | 'NO_MATCH' | 'CLARIFY' | 'OUT_OF_SCOPE' | 'EMPTY_LIBRARY';
+
+export interface LibBotReference {
+  gameId: string;
+  title: string;
+  platforms: PlatformChip[];
+  cover: { status: ArtworkStatus; externalUrl: string | null; localUrl: string | null };
 }
 
-export type ChatAskResponse =
-  | { kind: 'answered'; answer: ChatAnswer }
-  | { kind: 'unavailable' }
-  | { kind: 'limitReached'; resetsAt: string };
+/** The one `answer` event of a LibBot stream. `applied` and `unknown.note` are server-written, in the question's language. */
+export interface LibBotAnswer {
+  outcome: LibBotOutcome;
+  language: 'en' | 'nl';
+  text: string;
+  applied: string[];
+  unknown: { count: number; note: string } | null;
+  references: LibBotReference[];
+}
 
-export interface ChatMessage {
+export interface LibBotQuota {
+  limit: number | null;
+  remaining: number | null;
+  resetsAt: string;
+  exempt: boolean;
+}
+
+export type LibBotAskEvent =
+  | { kind: 'stage'; stage: LibBotStage }
+  | { kind: 'answer'; answer: LibBotAnswer }
+  | { kind: 'error'; code: 'UNAVAILABLE' | 'INTERNAL'; retryable: boolean }
+  | { kind: 'limitReached'; resetsAt: string }
+  | { kind: 'rejected' };
+
+export interface LibBotMessage {
   role: 'user' | 'assistant';
   text: string;
-  games?: ChatGameRef[];
-  unavailable?: boolean;
+  /** Assistant messages only. */
+  answer?: LibBotAnswer;
+  /** An assistant message that stands for a failure (shown with a Try again action). */
+  failed?: boolean;
 }
 
-export interface RefreshCount {
+/** How complete the visible library is: what the background fill has not managed to supply yet. */
+export interface LibraryHealth {
+  totalGames: number;
+  gamesWithoutCover: number;
+  gamesWithoutDescription: number;
+  gamesPendingIndex: number;
+}
+
+export type HealthKind = 'COVER' | 'DESCRIPTION' | 'INDEX';
+
+export interface HealthExceptions {
+  kind: HealthKind;
+  total: number;
+  games: { id: string; title: string }[];
+}
+
+/** GET /api/gamecatalog/sources: the scan sources and the library health in one call. */
+export interface SourcesOverview {
+  sources: ScanSource[];
+  health: LibraryHealth;
+}
+
+export type RefreshRunKind = 'DATA' | 'AI';
+
+export type RefreshRunStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'STOPPED' | 'INTERRUPTED';
+
+/** An admin-started bulk refresh over every game: its progress, and why it ended early if it did. */
+export interface RefreshRun {
+  id: string;
+  kind: RefreshRunKind;
+  status: RefreshRunStatus;
+  total: number;
   processed: number;
-  remaining: number;
-}
-
-export interface RefreshAll {
-  metadata: RefreshCount;
-  enrichment: RefreshCount;
-  multiplayer: RefreshCount;
+  failed: number;
+  stopRequested: boolean;
+  failureSummary: string | null;
+  startedAt: string;
+  finishedAt: string | null;
 }
 
 export interface LibrarySyncRun {

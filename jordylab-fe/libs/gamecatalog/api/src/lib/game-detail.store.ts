@@ -1,12 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, map, of } from 'rxjs';
+import { catchError, of } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { GameDetail, SwitchGameFormat, SwitchGameUpdate, SwitchSearchResult } from './gamecatalog.models';
+import { GameDetail, RomStatus } from './gamecatalog.models';
+import { MarkStore } from './mark.store';
 
 @Injectable({ providedIn: 'root' })
 export class GameDetailStore {
   readonly #api = inject(GameCatalogApiService);
+  readonly #marks = inject(MarkStore);
 
   readonly #game = signal<GameDetail | null>(null);
   readonly #loading = signal(true);
@@ -14,9 +16,8 @@ export class GameDetailStore {
   readonly #error = signal<string | null>(null);
   readonly #refreshingMetadata = signal(false);
   readonly #refreshingEnrichment = signal(false);
-  readonly #savingSwitch = signal(false);
-  readonly #removed = signal(false);
-  readonly #relinkCandidates = signal<SwitchSearchResult[]>([]);
+  readonly #savingRomStatus = signal<ReadonlySet<string>>(new Set());
+  readonly #romStatusError = signal<string | null>(null);
 
   readonly game = this.#game.asReadonly();
   readonly loading = this.#loading.asReadonly();
@@ -24,18 +25,15 @@ export class GameDetailStore {
   readonly error = this.#error.asReadonly();
   readonly refreshingMetadata = this.#refreshingMetadata.asReadonly();
   readonly refreshingEnrichment = this.#refreshingEnrichment.asReadonly();
-  readonly savingSwitch = this.#savingSwitch.asReadonly();
-  /** True once the Switch game was removed — the page navigates back to the library. */
-  readonly removed = this.#removed.asReadonly();
-  readonly relinkCandidates = this.#relinkCandidates.asReadonly();
+  /** Copies (by installation id) whose ROM status is being saved. */
+  readonly savingRomStatus = this.#savingRomStatus.asReadonly();
+  readonly romStatusError = this.#romStatusError.asReadonly();
 
   load(id: string): void {
     this.#game.set(null);
     this.#loading.set(true);
     this.#notFound.set(false);
     this.#error.set(null);
-    this.#removed.set(false);
-    this.#relinkCandidates.set([]);
 
     this.#api
       .getGame(id)
@@ -51,9 +49,47 @@ export class GameDetailStore {
         })
       )
       .subscribe((game) => {
+        this.#marks.forget();
         this.#game.set(game);
         this.#loading.set(false);
       });
+  }
+
+  /** Says whether the ROM of one machine's copy launches; the page shows the saved answer, not a guess. */
+  setRomStatus(installationId: string, status: RomStatus): void {
+    const gameId = this.#game()?.id;
+    if (!gameId || this.#savingRomStatus().has(installationId)) {
+      return;
+    }
+    this.#romStatusError.set(null);
+    this.#savingRomStatus.update((saving) => new Set(saving).add(installationId));
+    this.#api.setRomStatus(gameId, installationId, status).subscribe({
+      next: (place) => {
+        this.#game.update((game) =>
+          game
+            ? { ...game, places: game.places.map((existing) => (existing.installationId === installationId ? place : existing)) }
+            : game,
+        );
+        this.#doneSaving(installationId);
+      },
+      error: () => {
+        this.#romStatusError.set('Could not save the ROM status. Try again.');
+        this.#doneSaving(installationId);
+      },
+    });
+  }
+
+  dismissRomStatusError(): void {
+    this.#romStatusError.set(null);
+  }
+
+  #doneSaving(installationId: string): void {
+    this.#savingRomStatus.update((saving) => {
+      const remaining = new Set(saving);
+      remaining.delete(installationId);
+
+      return remaining;
+    });
   }
 
   refreshMetadata(): void {
@@ -100,89 +136,6 @@ export class GameDetailStore {
       )
       .subscribe((game) => {
         this.#refreshingEnrichment.set(false);
-        if (game) {
-          this.#game.set(game);
-        }
-      });
-  }
-
-  changeSwitchFormat(format: SwitchGameFormat): void {
-    this.#saveSwitch({ format });
-  }
-
-  relinkSwitchGame(igdbGameId: number): void {
-    this.#saveSwitch({ igdbGameId });
-  }
-
-  searchRelinkCandidates(query: string): void {
-    if (query.trim().length < 3) {
-      this.#relinkCandidates.set([]);
-
-      return;
-    }
-
-    this.#api
-      .searchSwitchGames(query.trim())
-      .pipe(catchError(() => of([])))
-      .subscribe((results) => this.#relinkCandidates.set(results));
-  }
-
-  removeSwitchGame(): void {
-    const id = this.#game()?.id;
-    if (!id || this.#savingSwitch()) {
-      return;
-    }
-
-    this.#savingSwitch.set(true);
-    this.#error.set(null);
-    // HttpClient emits null for 204 No Content, so success is an explicit flag rather than the body.
-    this.#api
-      .deleteSwitchGame(id)
-      .pipe(
-        map(() => true),
-        catchError(() => {
-          this.#error.set('Failed to remove the Switch game.');
-
-          return of(false);
-        })
-      )
-      .subscribe((deleted) => {
-        this.#savingSwitch.set(false);
-        this.#removed.set(deleted);
-      });
-  }
-
-  #saveSwitch(update: SwitchGameUpdate): void {
-    const id = this.#game()?.id;
-    if (!id || this.#savingSwitch()) {
-      return;
-    }
-
-    this.#savingSwitch.set(true);
-    this.#error.set(null);
-    this.#api
-      .updateSwitchGame(id, update)
-      .pipe(
-        catchError(() => {
-          this.#error.set('Failed to save the Switch game.');
-
-          return of(null);
-        })
-      )
-      .subscribe((response) => {
-        this.#savingSwitch.set(false);
-        if (response) {
-          this.#relinkCandidates.set([]);
-          this.#reload(id);
-        }
-      });
-  }
-
-  #reload(id: string): void {
-    this.#api
-      .getGame(id)
-      .pipe(catchError(() => of(null)))
-      .subscribe((game) => {
         if (game) {
           this.#game.set(game);
         }

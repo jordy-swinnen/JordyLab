@@ -8,125 +8,69 @@
   </div>
 </div>
 
-<div class="mt-10 flex flex-col gap-5 md:flex-row md:items-center">
-  <div class="relative w-full md:max-w-md">
-    <svg
-      class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-      width="19"
-      height="19"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.7"
-      stroke-linecap="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-4-4" />
-    </svg>
-    <input
-      hlmInput
-      type="search"
-      placeholder="Search by title…"
-      aria-label="Search games by title"
-      class="h-[50px] w-full rounded-[13px] border-input bg-card pl-12 text-[15px]"
-      (input)="onSearchInput($event)"
-    />
-  </div>
-  @if (platforms().length > 0) {
-    <div class="flex flex-wrap gap-2.5">
-      <button
-        type="button"
-        hlmBadge
-        variant="outline"
-        [class]="selectedPlatform() === null ? chipActive : chipIdle"
-        (click)="onPlatformClick(null)"
-      >
-        All platforms
-      </button>
-      @for (platform of platforms(); track platform) {
-        <button
-          type="button"
-          hlmBadge
-          variant="outline"
-          [class]="selectedPlatform() === platform ? chipActive : chipIdle"
-          (click)="onPlatformClick(platform)"
-        >
-          {{ platform }}
-        </button>
-      }
+<div class="mt-10">
+  <lib-filter-bar
+    [searchTerm]="searchTerm()"
+    [activeCount]="activeFilters().length"
+    [sort]="sort()"
+    [(open)]="panelOpen"
+    (searchChange)="searchChange.emit($event)"
+    (sortChange)="sortChange.emit($event)"
+  >
+    @if (panelOpen()) {
+      <lib-filters-panel
+        [platforms]="platforms()"
+        [places]="places()"
+        [selectedPlatforms]="selectedPlatforms()"
+        [selectedPlaces]="selectedPlaces()"
+        [installStatus]="selectedInstallStatus()"
+        [selectedSources]="selectedSources()"
+        [minLocalPlayers]="minLocalPlayers()"
+        [selectedRomStatuses]="selectedRomStatuses()"
+        [selectedMarks]="selectedMarks()"
+        [markScope]="markScope()"
+        [sort]="sort()"
+        [resultCount]="totalElements()"
+        [hasFilters]="activeFilters().length > 0"
+        (platformToggle)="platformToggle.emit($event)"
+        (placeToggle)="placeToggle.emit($event)"
+        (installStatusChange)="installStatusChange.emit($event)"
+        (sourceToggle)="sourceToggle.emit($event)"
+        (minLocalPlayersChange)="minLocalPlayersChange.emit($event)"
+        (romStatusToggle)="romStatusToggle.emit($event)"
+        (markToggle)="markToggle.emit($event)"
+        (markScopeChange)="markScopeChange.emit($event)"
+        (sortChange)="sortChange.emit($event)"
+        (clearAll)="clearAll.emit()"
+        (done)="closePanel()"
+      />
+    }
+  </lib-filter-bar>
+
+  @if (activeFilters().length > 0) {
+    <div class="mt-4">
+      <lib-active-filters
+        [filters]="activeFilters()"
+        [totalElements]="totalElements()"
+        [unknownPlayerCount]="unknownPlayerCount()"
+        (clearAll)="clearAll.emit()"
+      />
     </div>
   }
 </div>
 
-@if (hosts().length > 0 && hostFilterAvailable()) {
-  <div class="mt-5 flex flex-wrap items-center gap-2.5">
-    <span class="mono-label mr-1">Host</span>
-    <button
-      type="button"
-      hlmBadge
-      variant="outline"
-      [class]="selectedHost() === null ? chipActive : chipIdle"
-      (click)="onHostClick(null)"
-    >
-      Any
+@if (markError(); as problem) {
+  <div
+    role="alert"
+    class="mt-6 flex items-center justify-between gap-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+    data-testid="mark-error"
+  >
+    {{ problem }}
+    <button type="button" class="cursor-pointer font-semibold underline underline-offset-4" (click)="markErrorDismiss.emit()">
+      Dismiss
     </button>
-    @for (host of hosts(); track host) {
-      <button
-        type="button"
-        hlmBadge
-        variant="outline"
-        [class]="selectedHost() === host ? chipActive : chipIdle"
-        (click)="onHostClick(host)"
-      >
-        {{ host }}
-      </button>
-    }
   </div>
 }
-
-<div class="mt-5 flex flex-wrap items-center gap-2.5">
-  <span class="mono-label mr-1">Status</span>
-  @for (status of installStatuses; track status.value) {
-    <button
-      type="button"
-      hlmBadge
-      variant="outline"
-      [class]="selectedInstallStatus() === status.value ? chipActive : chipIdle"
-      (click)="onInstallStatusClick(status.value)"
-    >
-      {{ status.label }}
-    </button>
-  }
-</div>
-
-<div class="mt-5 flex flex-wrap items-center gap-2.5">
-  <span class="mono-label mr-1">Source</span>
-  @for (source of librarySources; track source.value) {
-    <button
-      type="button"
-      hlmBadge
-      variant="outline"
-      [class]="selectedLibrarySource() === source.value ? chipActive : chipIdle"
-      (click)="onLibrarySourceClick(source.value)"
-    >
-      {{ source.label }}
-    </button>
-  }
-</div>
-
-<div class="mt-5 flex flex-wrap items-center gap-2.5">
-  <button
-    type="button"
-    hlmBadge
-    variant="outline"
-    [class]="localMultiplayerOnly() ? chipActive : chipIdle"
-    (click)="onLocalMultiplayerOnlyClick()"
-    data-testid="local-multiplayer-toggle"
-  >
-    Local multiplayer only
-  </button>
-</div>
 
 <div class="mt-9">
   @if (loading()) {
@@ -152,69 +96,106 @@
     </div>
   } @else if (games().length === 0) {
     <div
-      class="rounded-2xl border border-dashed border-input py-20 text-center text-muted-foreground"
+      class="rounded-2xl border border-dashed border-input px-4 py-20 text-center text-muted-foreground"
+      data-testid="empty-library"
     >
-      <p class="text-sm">No games discovered yet.</p>
-      <p class="mt-1 text-xs">
-        Once JordyBox syncs your libraries, installed games will appear here.
-      </p>
+      @if (activeFilters().length > 0 || searchTerm()) {
+        <p class="text-sm">No games match these filters.</p>
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
+          @if (filterToRelax(); as relax) {
+            <button
+              type="button"
+              class="h-10 cursor-pointer rounded-full border border-input px-4 text-sm font-semibold text-foreground"
+              (click)="relax.remove()"
+            >
+              Try removing {{ relax.key }}: {{ relax.value }}
+            </button>
+          }
+          @if (activeFilters().length > 1) {
+            <button
+              type="button"
+              class="cursor-pointer px-2 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-primary underline underline-offset-4"
+              (click)="clearAll.emit()"
+            >
+              Clear all
+            </button>
+          }
+        </div>
+      } @else {
+        <p class="text-sm">No games discovered yet.</p>
+        <p class="mt-1 text-xs">
+          Once JordyBox syncs your libraries, installed games will appear here.
+        </p>
+      }
     </div>
   } @else {
     <div
       class="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
     >
       @for (game of games(); track game.id; let i = $index) {
-        <a
-          [routerLink]="['/games', game.id]"
-          class="card-link group flex flex-col gap-3.5 outline-none"
-        >
-          <div class="cover-frame">
-            @if (coverUrl(game); as artworkSrc) {
-              <img
-                [src]="artworkSrc"
-                [alt]="game.title + ' artwork'"
-                class="aspect-[2/3] w-full object-cover"
-                loading="lazy"
-              />
-            } @else {
-              <div
-                class="plate"
-                [style.background]="palette(game.title).background"
-                [style.color]="palette(game.title).color"
-                [attr.aria-label]="'No artwork for ' + game.title"
-                role="img"
-              >
+        <article class="flex flex-col gap-3" data-testid="game-card">
+          <a
+            [routerLink]="['/games', game.id]"
+            class="card-link group flex flex-col gap-3.5 outline-none"
+          >
+            <div class="cover-frame relative">
+              @if (coverUrl(game); as artworkSrc) {
+                <img
+                  [src]="artworkSrc"
+                  [alt]="game.title + ' artwork'"
+                  class="aspect-[2/3] w-full object-cover"
+                  loading="lazy"
+                />
+              } @else {
                 <div
-                  class="flex justify-between font-mono text-[10.5px] tracking-[0.12em]"
+                  class="plate"
+                  [style.background]="palette(game.title).background"
+                  [style.color]="palette(game.title).color"
+                  [attr.aria-label]="'No artwork for ' + game.title"
+                  role="img"
                 >
-                  <span>№ {{ catalogNumber(i) }}</span>
-                  <span aria-hidden="true">◦ ◦ ◦</span>
+                  <div
+                    class="flex justify-between font-mono text-[10.5px] tracking-[0.12em]"
+                  >
+                    <span>№ {{ catalogNumber(i) }}</span>
+                    <span aria-hidden="true">◦ ◦ ◦</span>
+                  </div>
+                  <div class="plate-initials">{{ initials(game.title) }}</div>
                 </div>
-                <div class="plate-initials">{{ initials(game.title) }}</div>
+              }
+              <div class="absolute bottom-2 right-2">
+                <lib-vote-rail [votes]="game.votes" [myMark]="game.myMark" />
               </div>
-            }
-          </div>
-          <div class="flex flex-col gap-2.5">
-            <h3
-              class="line-clamp-2 font-display text-[17px] font-semibold leading-tight tracking-[-0.01em] text-foreground"
-            >
-              {{ game.title }}
-            </h3>
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                hlmBadge
-                variant="secondary"
-                static
-                [class]="tagClass(game.platform)"
-                >{{ game.platform }}</span
-              >
-              <span hlmBadge variant="outline" static>
-                {{ game.installStatus === 'INSTALLED' ? 'Installed' : 'Not installed' }}
-              </span>
-              <span hlmBadge variant="outline" static>{{ sourceLabel(game.librarySource) }}</span>
             </div>
-          </div>
-        </a>
+            <div class="flex flex-col gap-2.5">
+              <h3
+                class="line-clamp-2 font-display text-[17px] font-semibold leading-tight tracking-[-0.01em] text-foreground [overflow-wrap:anywhere]"
+              >
+                {{ game.title }}
+              </h3>
+              <div class="flex flex-wrap items-center gap-2">
+                @for (platform of game.platforms; track platform.name) {
+                  <lib-platform-chip [chip]="platform" />
+                }
+                <lib-status-chip [status]="game.installStatus === 'INSTALLED' ? 'INSTALLED' : 'NOT_INSTALLED'" />
+              </div>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                @for (source of game.sources; track source) {
+                  <lib-source-label [source]="source" />
+                }
+                @if (game.romSummary; as rom) {
+                  <lib-rom-chip [state]="rom.state" [detail]="romDetail(rom)" />
+                }
+              </div>
+            </div>
+          </a>
+          <lib-mark-buttons
+            [myMark]="game.myMark"
+            [disabled]="markPending().has(game.id)"
+            [compact]="true"
+            (markChange)="gameMarkChange.emit({ game, mark: $event })"
+          />
+        </article>
       }
     </div>
 

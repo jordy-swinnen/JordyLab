@@ -99,6 +99,9 @@ export class BiometricUnlockService {
    * token rejected by Keycloak.
    */
   async unlock(): Promise<boolean> {
+    // A new attempt starts clean: whatever an earlier one reported must not show while this one works.
+    this.#failure.set(null);
+    this.#auth.clearNativeFailure();
     let refreshToken: string;
     try {
       const result = await NativeBiometric.getSecureData({

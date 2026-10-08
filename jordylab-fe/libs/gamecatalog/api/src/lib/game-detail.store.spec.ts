@@ -5,29 +5,24 @@ import { GameCatalogApiService } from './gamecatalog-api.service';
 import { GameDetail } from './gamecatalog.models';
 import { GameDetailStore } from './game-detail.store';
 import { aGameDetailMock } from './mocks/game-detail.model.mock';
-import { aSwitchSearchResultMock } from './mocks/switch-search-result.model.mock';
 
 describe('GameDetailStore', () => {
   let spectator: SpectatorService<GameDetailStore>;
   const getGame = vi.fn<GameCatalogApiService['getGame']>();
   const refreshGameMetadata = vi.fn<GameCatalogApiService['refreshGameMetadata']>();
   const refreshGameEnrichment = vi.fn<GameCatalogApiService['refreshGameEnrichment']>();
-  const updateSwitchGame = vi.fn<GameCatalogApiService['updateSwitchGame']>();
-  const deleteSwitchGame = vi.fn<GameCatalogApiService['deleteSwitchGame']>();
-  const searchSwitchGames = vi.fn<GameCatalogApiService['searchSwitchGames']>();
+  const setRomStatus = vi.fn<GameCatalogApiService['setRomStatus']>();
 
   const createService = createServiceFactory({
     service: GameDetailStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment, updateSwitchGame, deleteSwitchGame, searchSwitchGames } }],
+    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment, setRomStatus } }],
   });
 
   beforeEach(() => {
     getGame.mockReset();
     refreshGameMetadata.mockReset();
     refreshGameEnrichment.mockReset();
-    updateSwitchGame.mockReset();
-    deleteSwitchGame.mockReset();
-    searchSwitchGames.mockReset();
+    setRomStatus.mockReset();
     spectator = createService();
   });
 
@@ -168,72 +163,45 @@ describe('GameDetailStore', () => {
     expect(refreshGameEnrichment).not.toHaveBeenCalled();
   });
 
-  describe('Switch management', () => {
-    const switchGame = aGameDetailMock({ platform: 'Nintendo Switch', hostFormats: { 'Nintendo Switch': 'PHYSICAL' } });
+  describe('ROM status', () => {
+    const detail = aGameDetailMock();
+    const copyId = detail.places[0].installationId as string;
 
     beforeEach(() => {
-      getGame.mockReturnValue(of(switchGame));
-      spectator.service.load(switchGame.id);
+      getGame.mockReturnValue(of(detail));
+      spectator.service.load('abc');
     });
 
-    it('changes the format and reloads the game', () => {
-      const changed = aGameDetailMock({ ...switchGame, hostFormats: { 'Nintendo Switch': 'DIGITAL' } });
-      updateSwitchGame.mockReturnValue(of({ gameId: switchGame.id, title: switchGame.title, platform: 'Nintendo Switch', format: 'DIGITAL' }));
-      getGame.mockReturnValue(of(changed));
+    it('shows the saved place instead of guessing', () => {
+      setRomStatus.mockReturnValue(of({ ...detail.places[0], romStatus: 'BROKEN' }));
 
-      spectator.service.changeSwitchFormat('DIGITAL');
+      spectator.service.setRomStatus(copyId, 'BROKEN');
 
-      expect(updateSwitchGame).toHaveBeenCalledWith(switchGame.id, { format: 'DIGITAL' });
-      expect(spectator.service.game()).toEqual(changed);
-      expect(spectator.service.savingSwitch()).toBe(false);
+      expect(setRomStatus).toHaveBeenCalledWith(detail.id, copyId, 'BROKEN');
+      expect(spectator.service.game()?.places[0].romStatus).toBe('BROKEN');
+      expect(spectator.service.savingRomStatus().size).toBe(0);
     });
 
-    it('relinks to another IGDB game and reloads the game', () => {
-      updateSwitchGame.mockReturnValue(of({ gameId: switchGame.id, title: 'Relinked', platform: 'Nintendo Switch', format: 'PHYSICAL' }));
+    it('marks the copy as saving while the request is out and ignores a second tap', () => {
+      const answer = new Subject<GameDetail['places'][number]>();
+      setRomStatus.mockReturnValue(answer.asObservable());
 
-      spectator.service.relinkSwitchGame(4321);
+      spectator.service.setRomStatus(copyId, 'VALIDATED');
+      spectator.service.setRomStatus(copyId, 'BROKEN');
 
-      expect(updateSwitchGame).toHaveBeenCalledWith(switchGame.id, { igdbGameId: 4321 });
-      expect(getGame).toHaveBeenLastCalledWith(switchGame.id);
+      expect(setRomStatus).toHaveBeenCalledTimes(1);
+      expect(spectator.service.savingRomStatus().has(copyId)).toBe(true);
     });
 
-    it('shows an error when saving a Switch change fails', () => {
-      updateSwitchGame.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    it('keeps the old status and says so when saving fails', () => {
+      setRomStatus.mockReturnValue(throwError(() => new Error('offline')));
 
-      spectator.service.changeSwitchFormat('DIGITAL');
+      spectator.service.setRomStatus(copyId, 'BROKEN');
 
-      expect(spectator.service.error()).toBe('Failed to save the Switch game.');
-      expect(spectator.service.savingSwitch()).toBe(false);
-    });
-
-    it('marks the game removed after deleting it', () => {
-      // HttpClient emits null for the 204 No Content the endpoint returns.
-      deleteSwitchGame.mockReturnValue(of(null as unknown as void));
-
-      spectator.service.removeSwitchGame();
-
-      expect(deleteSwitchGame).toHaveBeenCalledWith(switchGame.id);
-      expect(spectator.service.removed()).toBe(true);
-    });
-
-    it('keeps the game and shows an error when removing fails', () => {
-      deleteSwitchGame.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-
-      spectator.service.removeSwitchGame();
-
-      expect(spectator.service.removed()).toBe(false);
-      expect(spectator.service.error()).toBe('Failed to remove the Switch game.');
-    });
-
-    it('searches relink candidates from three characters', () => {
-      searchSwitchGames.mockReturnValue(of([aSwitchSearchResultMock()]));
-
-      spectator.service.searchRelinkCandidates('Ma');
-      expect(searchSwitchGames).not.toHaveBeenCalled();
-
-      spectator.service.searchRelinkCandidates('Mario');
-      expect(searchSwitchGames).toHaveBeenCalledWith('Mario');
-      expect(spectator.service.relinkCandidates()).toEqual([aSwitchSearchResultMock()]);
+      expect(spectator.service.game()?.places[0].romStatus).toBe('UNKNOWN');
+      expect(spectator.service.romStatusError()).toBe('Could not save the ROM status. Try again.');
+      spectator.service.dismissRomStatusError();
+      expect(spectator.service.romStatusError()).toBeNull();
     });
   });
 });

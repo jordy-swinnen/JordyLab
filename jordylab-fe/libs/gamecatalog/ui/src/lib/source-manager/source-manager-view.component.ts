@@ -1,16 +1,23 @@
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Component, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
 import {
+  HealthExceptions,
+  HealthKind,
+  HideImpact,
+  LibraryHealth,
   LibraryStatus,
   LibrarySyncRun,
   ScanSource,
   SourceType,
 } from '@jordylab-fe/gamecatalog/api';
-import { platformTagClass } from '../cover';
+import { PlatformChipComponent } from '../chips/platform-chip.component';
+import { ConfirmDialogComponent } from '../dialogs/confirm-dialog.component';
+import { HostNameEditorComponent } from './host-name-editor.component';
 import { readSteamToken } from './steam-token';
 
 export type ScanClientType = 'steam' | 'emudeck';
@@ -20,38 +27,62 @@ export type ScanClientType = 'steam' | 'emudeck';
   standalone: true,
   imports: [
     DatePipe,
+    RouterLink,
     HlmBadgeDirective,
     HlmButtonDirective,
     HlmInputDirective,
     HlmSkeletonComponent,
+    HostNameEditorComponent,
+    ConfirmDialogComponent,
+    PlatformChipComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './source-manager-view.component.html',
 })
 export class SourceManagerViewComponent {
   sources = input.required<ScanSource[]>();
+  health = input.required<LibraryHealth | null>();
+  healthExceptions = input.required<HealthExceptions | null>();
+  loadingExceptions = input.required<HealthKind | null>();
   loading = input.required<boolean>();
   error = input.required<string | null>();
   togglingId = input.required<string | null>();
+  disableQuote = input<{ source: ScanSource; impact: HideImpact } | null>(null);
+  editingSourceId = input<string | null>(null);
+  renamingHostId = input<string | null>(null);
+  hostNameProblem = input<string | null>(null);
   downloading = input.required<ScanClientType | null>();
-  refreshingPending = input.required<boolean>();
-  refreshProgress = input.required<string | null>();
   libraryStatus = input.required<LibraryStatus | null>();
   librarySyncing = input.required<'OWNED' | 'FAMILY' | null>();
   lastLibraryRun = input.required<LibrarySyncRun | null>();
 
   toggleSource = output<ScanSource>();
+  confirmDisable = output<void>();
+  cancelDisable = output<void>();
+  editHostName = output<string>();
+  cancelHostName = output<void>();
+  renameHost = output<{ hostId: string; displayName: string }>();
+  showExceptions = output<HealthKind>();
+  hideExceptions = output<void>();
   downloadClient = output<ScanClientType>();
-  refreshPending = output<void>();
   syncOwnedLibrary = output<void>();
   syncFamilyLibrary = output<string>();
 
   protected readonly familyToken = signal('');
   protected readonly tokenProblem = signal<string | null>(null);
 
-  protected readonly tagClass = platformTagClass;
   protected readonly neutralTag =
     'rounded-[7px] border-transparent px-2 py-[5px] font-mono text-[10.5px] font-medium uppercase tracking-[0.08em]';
+
+  protected readonly healthRows: { kind: HealthKind; label: string; count: (health: LibraryHealth) => number }[] = [
+    { kind: 'COVER', label: 'Without a cover', count: (health) => health.gamesWithoutCover },
+    { kind: 'DESCRIPTION', label: 'Without a description', count: (health) => health.gamesWithoutDescription },
+    { kind: 'INDEX', label: 'Not yet searchable by LibBot', count: (health) => health.gamesPendingIndex },
+  ];
+
+  protected percentOf(count: number, health: LibraryHealth): string {
+    return health.totalGames === 0 ? '0 %' : `${Math.round((count / health.totalGames) * 100)} %`;
+  }
 
   onSyncOwned(): void {
     this.syncOwnedLibrary.emit();

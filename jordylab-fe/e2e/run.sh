@@ -200,7 +200,8 @@ start_backend() {
   # The backend refuses to start without profile `local` or `prod`, and `local` hard-codes the DEV stack (database on
   # localhost:5432, Keycloak on 8180, a dev client secret, dev CORS origins). Environment variables beat profile files, so
   # every one of those values is overridden below; nothing may fall back to the dev stack (see the port guard in main).
-  # -u: the throwaway backend must have no AI provider keys, whatever the developer's shell exports.
+  # -u: the throwaway backend must have no AI provider keys, whatever the developer's shell exports. The cover lookup is off:
+  # the auto-fill would otherwise ask the public internet, and a journey must not depend on a third party being up.
   env -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
     SPRING_PROFILES_ACTIVE=local \
     SERVER_PORT="$API_PORT" \
@@ -218,6 +219,7 @@ start_backend() {
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="http://localhost:$KEYCLOAK_PORT/realms/jordylab" \
     JORDYLAB_CORS_ALLOWED_ORIGINS="http://localhost:$WEB_PORT${CORS_EXTRA_ORIGINS:-}" \
     GAMECATALOG_ARTWORK_DIR="$RUN_DIRECTORY/artwork" \
+    JORDYLAB_GAMECATALOG_ARTWORK_EXTERNAL_LOOKUP_ENABLED=false \
     MOBILE_APPLICATION_ID="$ANDROID_PACKAGE" \
     MOBILE_PRODUCTION_DOMAIN="$ANDROID_APP_LINK_HOST" \
     MOBILE_RELEASE_STORAGE_DIR="$RUN_DIRECTORY/releases" \

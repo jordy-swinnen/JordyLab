@@ -19,10 +19,10 @@ export const gamecatalogRoutes: Route[] = [
           import('./game-grid/game-grid.component').then((m) => m.GameGridComponent),
       },
       {
-        path: 'chat',
-        loadComponent: () =>
-          import('./game-chat/game-chat.component').then((m) => m.GameChatComponent),
+        path: 'libbot',
+        loadComponent: () => import('./libbot/libbot.component').then((m) => m.LibBotComponent),
       },
+      { path: 'chat', redirectTo: 'libbot' },
       {
         path: 'sources',
         canActivate: [roleGuard('admin')],
@@ -32,17 +32,17 @@ export const gamecatalogRoutes: Route[] = [
           ),
       },
       {
-        path: 'switch',
+        path: 'consoles',
         canActivate: [roleGuard('admin')],
-        loadComponent: () =>
-          import('./switch-game/switch-game.component').then((m) => m.SwitchGameComponent),
+        loadComponent: () => import('./consoles/consoles.component').then((m) => m.ConsolesComponent),
       },
       {
-        path: 'switch/bulk',
+        path: 'consoles/:id/games/bulk',
         canActivate: [roleGuard('admin')],
-        loadComponent: () =>
-          import('./switch-bulk/switch-bulk.component').then((m) => m.SwitchBulkComponent),
+        loadComponent: () => import('./consoles/consoles-bulk.component').then((m) => m.ConsolesBulkComponent),
       },
+      { path: 'switch', redirectTo: 'consoles' },
+      { path: 'switch/bulk', redirectTo: 'consoles' },
       {
         path: ':id',
         loadComponent: () =>

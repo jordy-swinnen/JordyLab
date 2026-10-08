@@ -31,6 +31,7 @@ describe('BiometricUnlockService', () => {
   const getRefreshToken = vi.fn();
   const unlockWithRefreshToken = vi.fn();
   const nativeFailure = signal<string | null>(null);
+  const clearNativeFailure = vi.fn(() => nativeFailure.set(null));
 
   const createService = createServiceFactory({
     service: BiometricUnlockService,
@@ -41,6 +42,7 @@ describe('BiometricUnlockService', () => {
           getRefreshToken,
           unlockWithRefreshToken,
           nativeFailure: nativeFailure.asReadonly(),
+          clearNativeFailure,
         },
       },
     ],
@@ -48,6 +50,7 @@ describe('BiometricUnlockService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    nativeFailure.set(null);
     spectator = createService();
   });
 
@@ -169,10 +172,11 @@ describe('BiometricUnlockService', () => {
 
     it('keeps the server reason when the stored session is rejected', async () => {
       getSecureData.mockResolvedValueOnce({ value: 'revoked-refresh-token' });
-      unlockWithRefreshToken.mockResolvedValueOnce(false);
-      nativeFailure.set(
-        'The server no longer accepts the stored fingerprint session (HTTP 400).',
-      );
+      unlockWithRefreshToken.mockImplementationOnce(async () => {
+        nativeFailure.set('The server no longer accepts the stored fingerprint session (HTTP 400).');
+
+        return false;
+      });
 
       await spectator.service.unlock();
 
@@ -194,6 +198,39 @@ describe('BiometricUnlockService', () => {
       await spectator.service.unlock();
 
       expect(spectator.service.failure()).toBeNull();
+    });
+
+    it('forgets an earlier failure the moment a new attempt starts, so none shows while it works', async () => {
+      getSecureData.mockRejectedValueOnce(new Error('User canceled'));
+      await spectator.service.unlock();
+      expect(spectator.service.failure()).not.toBeNull();
+      nativeFailure.set('An older native failure.');
+      let shownDuringAttempt: string | null = 'not read';
+      getSecureData.mockImplementationOnce(async () => {
+        shownDuringAttempt = spectator.service.failure();
+
+        return { value: 'good-refresh-token' };
+      });
+      unlockWithRefreshToken.mockResolvedValueOnce(true);
+
+      await spectator.service.unlock();
+
+      expect(shownDuringAttempt).toBeNull();
+      expect(clearNativeFailure).toHaveBeenCalled();
+      expect(nativeFailure()).toBeNull();
+    });
+
+    it('shows only the connection message when the server cannot be reached', async () => {
+      getSecureData.mockResolvedValueOnce({ value: 'good-refresh-token' });
+      unlockWithRefreshToken.mockImplementationOnce(async () => {
+        nativeFailure.set('Could not reach the server to restore your session. Check your connection.');
+
+        return false;
+      });
+
+      await spectator.service.unlock();
+
+      expect(spectator.service.failure()).toBe('Could not reach the server to restore your session. Check your connection.');
     });
   });
 });

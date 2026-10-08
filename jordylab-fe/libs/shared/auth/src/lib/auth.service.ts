@@ -60,6 +60,8 @@ export class AuthService {
   #roles = signal<string[]>([]);
   #pendingNativeLogin: PendingNativeLogin | null = null;
   #nativeFailure = signal<string | null>(null);
+  /** True once a session really existed (sign-in, fingerprint unlock or silent SSO); only then can one "die". */
+  #hadSession = false;
 
   readonly isAuthenticated = this.#authenticated.asReadonly();
   readonly username: Signal<string | null> = this.#username.asReadonly();
@@ -261,8 +263,18 @@ export class AuthService {
     return true;
   }
 
+  /** Forgets a failure that no longer applies, such as one from an attempt that is being replaced by a new one. */
+  clearNativeFailure(): void {
+    this.#nativeFailure.set(null);
+  }
+
   async getToken(): Promise<string | null> {
     if (!this.#keycloak) {
+      return null;
+    }
+    if (!this.#hadSession) {
+      // Nobody has signed in yet (a fingerprint unlock may be running right now): there is no session to refresh, so
+      // there is nothing to fail. Reporting one here is what flashed a red message during a successful unlock.
       return null;
     }
     try {
@@ -274,6 +286,7 @@ export class AuthService {
         // the login page, which says what happened and offers fingerprint unlock again.
         this.#nativeFailure.set('Your session could not be refreshed. Sign in again.');
         this.#keycloak.clearToken();
+        this.#hadSession = false;
         this.#authenticated.set(false);
         this.#applyToken();
         await this.#injector.get(Router).navigateByUrl('/login');
@@ -319,6 +332,7 @@ export class AuthService {
       const authenticated = await this.#settleWithin(initialization, KEYCLOAK_INIT_TIMEOUT_MS);
       this.#authenticated.set(authenticated);
       if (authenticated) {
+        this.#hadSession = true;
         this.#applyToken();
       }
 
@@ -386,6 +400,7 @@ export class AuthService {
     // this clears local state immediately rather than waiting on a round trip through the system
     // browser the user may not even see complete.
     void Browser.open({ url: this.#keycloak.createLogoutUrl({ redirectUri: this.#config.mobileCallbackUri }) });
+    this.#hadSession = false;
     this.#keycloak.clearToken();
     this.#authenticated.set(false);
     this.#applyToken();
@@ -424,6 +439,7 @@ export class AuthService {
       this.#keycloak.idTokenParsed = decodeJwtPayload(idToken) as KeycloakTokenParsed;
     }
 
+    this.#hadSession = true;
     this.#authenticated.set(true);
     this.#applyToken();
   }

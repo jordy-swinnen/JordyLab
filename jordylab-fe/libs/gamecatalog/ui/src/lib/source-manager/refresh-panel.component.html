@@ -1,0 +1,100 @@
+<section class="mb-2 mt-12" aria-labelledby="refresh-heading" data-testid="refresh-panel">
+  <h2 id="refresh-heading" class="section-title mb-5">Refresh everything</h2>
+
+  @if (error(); as problem) {
+    <div
+      role="alert"
+      class="mb-4 flex items-center justify-between gap-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+      data-testid="refresh-error"
+    >
+      {{ problem }}
+      <button type="button" class="cursor-pointer font-semibold underline underline-offset-4" (click)="dismissError.emit()">
+        Dismiss
+      </button>
+    </div>
+  }
+
+  <div class="grid gap-4 md:grid-cols-2">
+    @for (card of cards(); track card.kind) {
+      <div class="panel flex flex-col gap-4 px-6 py-5" [attr.data-testid]="'refresh-card-' + card.kind">
+        <div>
+          <h3 class="font-display text-lg font-semibold">{{ card.title }}</h3>
+          <p class="mt-1 text-sm text-secondary-foreground">{{ card.explanation }}</p>
+        </div>
+
+        @if (card.run; as run) {
+          @if (isRunning(run)) {
+            <div>
+              <div
+                class="h-2 overflow-hidden rounded-full bg-secondary"
+                role="progressbar"
+                [attr.aria-valuenow]="percent(run)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-label]="card.title + ' progress'"
+              >
+                <div class="h-full rounded-full bg-primary transition-[width]" [style.width.%]="percent(run)"></div>
+              </div>
+              <p class="mono-label mt-2" aria-live="polite" data-testid="refresh-progress">
+                {{ run.processed }} of {{ run.total }} games
+                @if (run.failed > 0) {
+                  · {{ run.failed }} failed
+                }
+                @if (run.stopRequested) {
+                  · stopping…
+                }
+              </p>
+            </div>
+          } @else {
+            <p
+              class="text-sm"
+              [class]="run.status === 'FAILED' ? 'text-destructive' : 'text-secondary-foreground'"
+              data-testid="refresh-outcome"
+            >
+              {{ outcome(run) }}
+            </p>
+          }
+        }
+
+        <div class="flex flex-wrap items-center gap-3">
+          @if (isRunning(card.run)) {
+            <button
+              type="button"
+              class="h-11 cursor-pointer rounded-xl border border-input px-5 text-[14px] font-semibold hover:bg-secondary disabled:opacity-50"
+              [disabled]="card.run?.stopRequested"
+              [attr.data-testid]="'refresh-stop-' + card.kind"
+              (click)="stopRun.emit(card.run!)"
+            >
+              Stop
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="h-11 cursor-pointer rounded-xl border border-input px-5 text-[14px] font-semibold hover:bg-secondary disabled:opacity-50"
+              [disabled]="starting() !== null"
+              [attr.data-testid]="'refresh-start-' + card.kind"
+              (click)="start(card)"
+            >
+              {{ starting() === card.kind ? 'Starting…' : card.actionLabel }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <lib-confirm-dialog
+    heading="Regenerate AI data?"
+    confirmLabel="Yes, regenerate"
+    [warning]="true"
+    [open]="aiCostQuote() !== null"
+    (confirmed)="confirmAi.emit()"
+    (cancelled)="cancelAi.emit()"
+  >
+    <p>
+      This asks the AI to write the description again for <strong>{{ aiCostQuote() }}</strong>
+      {{ aiCostQuote() === 1 ? 'game' : 'games' }}. <strong>Every one is a paid AI call and it costs real money.</strong>
+    </p>
+    <p class="mt-2">Games with a Steam description are left alone. You can stop the run at any time; what it has done stays.</p>
+  </lib-confirm-dialog>
+</section>

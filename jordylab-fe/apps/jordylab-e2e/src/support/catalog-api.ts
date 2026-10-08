@@ -12,6 +12,15 @@ export const CATALOG_GAMES: readonly CatalogGame[] = [
   { externalRef: 'snes/chrono-trigger.sfc', title: 'Chrono Trigger', platform: 'Super Nintendo' },
   { externalRef: 'snes/super-metroid.sfc', title: 'Super Metroid', platform: 'Super Nintendo' },
   { externalRef: 'n64/ocarina-of-time.z64', title: 'Ocarina of Time', platform: 'Nintendo 64' },
+  // One game per brand family the chips colour (PlayStation, Sega), so the axe journeys judge the real chip contrast.
+  { externalRef: 'ps2/gran-turismo-3.iso', title: 'Gran Turismo 3', platform: 'PlayStation 2' },
+  { externalRef: 'dreamcast/sonic-adventure.cdi', title: 'Sonic Adventure', platform: 'Dreamcast' },
+  // A title with one very long word, the way a phone screen breaks first (the layout journeys check it fits).
+  {
+    externalRef: 'dreamcast/long-title.cdi',
+    title: 'Supercalifragilisticexpialidocious_Adventures_of_the_Unbreakable_Word_Quest',
+    platform: 'Dreamcast',
+  },
 ];
 
 async function serviceAccountToken(request: APIRequestContext, environment: E2eEnvironment): Promise<string> {

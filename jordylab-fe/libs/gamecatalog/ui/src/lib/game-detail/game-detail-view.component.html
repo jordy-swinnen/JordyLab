@@ -22,9 +22,9 @@
   @if (loading()) {
     <div class="flex flex-col gap-10">
       <div class="relative">
-        <hlm-skeleton class="aspect-[16/5] w-full rounded-[20px]" />
+        <hlm-skeleton class="aspect-[16/9] w-full rounded-[20px] sm:aspect-[16/5]" />
         <hlm-skeleton
-          class="static mt-4 aspect-[2/3] w-24 rounded-2xl border-4 border-background sm:absolute sm:-bottom-10 sm:left-6 sm:mt-0 sm:w-32 md:left-8 md:w-40"
+          class="absolute -bottom-10 left-4 aspect-[2/3] w-24 rounded-2xl border-4 border-background sm:left-6 sm:w-32 md:left-8 md:w-40"
         />
       </div>
       <div class="mt-4 flex-1 space-y-4">
@@ -51,25 +51,25 @@
         <img
           [src]="bannerSrc"
           [alt]="game.title + ' banner'"
-          class="aspect-[16/5] w-full rounded-[20px] border border-input object-cover"
+          class="aspect-[16/9] w-full rounded-[20px] border border-input object-cover sm:aspect-[16/5]"
         />
       } @else {
         <div
-          class="plate aspect-[16/5] w-full rounded-[20px]"
+          class="plate aspect-[16/9] w-full rounded-[20px] sm:aspect-[16/5]"
           [style.background]="palette(game.title).background"
           [style.color]="palette(game.title).color"
           [attr.aria-label]="'No banner for ' + game.title"
           role="img"
         >
           <div class="font-mono text-[10.5px] uppercase tracking-[0.12em]">
-            {{ game.platform }}
+            {{ game.platforms[0]?.name }}
           </div>
           <div class="plate-initials !text-[4rem]">{{ initials(game.title) }}</div>
         </div>
       }
 
       <div
-        class="static mt-4 aspect-[2/3] w-24 overflow-hidden rounded-2xl border-4 border-background shadow-xl sm:absolute sm:-bottom-10 sm:left-6 sm:mt-0 sm:w-32 md:left-8 md:w-40"
+        class="absolute -bottom-10 left-4 aspect-[2/3] w-24 overflow-hidden rounded-2xl border-4 border-background shadow-xl sm:left-6 sm:w-32 md:left-8 md:w-40"
       >
         @if (coverUrl(game); as coverSrc) {
           <img
@@ -91,119 +91,85 @@
       </div>
     </div>
 
-    <div class="mt-6 flex flex-col gap-10 sm:mt-16 md:mt-20">
+    <div class="mt-16 flex flex-col gap-10 md:mt-20">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2.5">
-          <span
-            hlmBadge
-            variant="secondary"
-            static
-            [class]="tagClass(game.platform)"
-            >{{ game.platform }}</span
-          >
+          @for (platform of game.platforms; track platform.name) {
+            <lib-platform-chip [chip]="platform" />
+          }
           @if (game.enrichmentStatus === 'ENRICHED') {
             <span class="pill">Enriched</span>
           }
         </div>
         <h2
-          class="mt-5 font-display text-[clamp(3rem,7vw,7rem)] font-bold leading-[0.9] tracking-[-0.045em]"
+          class="mt-5 font-display text-[clamp(2.25rem,7vw,7rem)] font-bold leading-[0.95] tracking-[-0.045em] [overflow-wrap:anywhere]"
           style="font-variation-settings: 'wdth' 84"
         >
           {{ game.title }}
         </h2>
-        @if (game.hosts.length > 0) {
-          <div class="mono-label mt-4">Installed on · {{ hostnames(game) }}</div>
+        @if (hostLabels(game).length > 0) {
+          <div class="mono-label mt-4">Installed on · {{ hostLabels(game).join(', ') }}</div>
         }
-        @if (switchFormat(game); as format) {
-          <div class="mono-label mt-2">
-            Format · <span data-testid="switch-format">{{ formatLabel(format) }}</span>
-          </div>
-          @if (canAdminister()) {
-            <section
-              data-testid="switch-admin"
-              class="mt-6 flex max-w-xl flex-col gap-4 rounded-2xl border border-input p-5"
-              aria-label="Manage this Switch game"
-            >
-              <div class="flex flex-col gap-1.5">
-                <label for="switch-detail-format" class="mono-label">Format</label>
-                <select
-                  id="switch-detail-format"
-                  class="h-10 rounded-xl border border-input bg-background text-foreground px-3"
-                  [disabled]="savingSwitch()"
-                  (change)="onFormatChange($event)"
-                >
-                  <!-- [selected] per option, not [value] on the select: the options render after the select's value
-                       binding, so a DIGITAL game showed PHYSICAL (spec 011 BUG-043). -->
-                  @for (option of switchFormats; track option) {
-                    <option [value]="option" [selected]="option === format">{{ formatLabel(option) }}</option>
-                  }
-                </select>
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label for="switch-relink-search" class="mono-label">Relink to another IGDB match</label>
-                <input
-                  id="switch-relink-search"
-                  type="search"
-                  class="h-10 rounded-xl border border-input bg-background px-3"
-                  placeholder="Search IGDB (3+ characters)"
-                  [disabled]="savingSwitch()"
-                  (input)="onRelinkSearch($event)"
-                />
-                @for (candidate of relinkCandidates(); track candidate.igdbGameId) {
-                  <button
-                    type="button"
-                    data-testid="relink-candidate"
-                    class="rounded-xl border border-input px-3 py-2 text-left text-[14px] hover:bg-card"
-                    [disabled]="savingSwitch()"
-                    (click)="relink.emit(candidate.igdbGameId)"
-                  >
-                    {{ candidate.title }}@if (candidate.releaseYear) { · {{ candidate.releaseYear }} }
-                  </button>
-                }
-              </div>
-              @if (confirmingRemove()) {
-                <div class="flex flex-wrap items-center gap-3">
-                  <span class="text-[14px]">Remove {{ game.title }} from the catalog?</span>
-                  <button
-                    type="button"
-                    data-testid="remove-switch-confirm"
-                    class="inline-flex h-10 items-center rounded-xl bg-destructive px-4 text-[14px] font-semibold text-destructive-foreground disabled:opacity-50"
-                    [disabled]="savingSwitch()"
-                    (click)="onConfirmRemove()"
-                  >
-                    Yes, remove
-                  </button>
-                  <button
-                    type="button"
-                    class="inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold"
-                    (click)="confirmingRemove.set(false)"
-                  >
-                    Cancel
-                  </button>
+        <div class="mono-label mt-2 flex flex-wrap items-center gap-2">
+          <lib-status-chip [status]="game.installStatus === 'INSTALLED' ? 'INSTALLED' : 'NOT_INSTALLED'" />
+          @for (source of game.sources; track source) {
+            <lib-source-label [source]="source" />
+          }
+        </div>
+        @if (familyOwners(game); as owners) {
+          <div class="mono-label mt-2">Family · {{ owners }}</div>
+        }
+
+        @if (emulatedCopies(game); as copies) {
+          @if (copies.length > 0) {
+            <section class="mt-6 flex flex-col gap-3" aria-labelledby="rom-heading" data-testid="rom-section">
+              <h3 id="rom-heading" class="mono-label">Does it run? (per machine)</h3>
+              @for (copy of copies; track copy.installationId) {
+                <div class="flex flex-wrap items-center gap-3" data-testid="rom-copy">
+                  <span class="min-w-32 text-[15px] font-medium">{{ copy.label }}</span>
+                  <lib-rom-chip [state]="copy.romStatus ?? 'UNKNOWN'" />
+                  <div class="inline-flex flex-wrap gap-0.5 rounded-full border border-input p-[3px]" role="group" [attr.aria-label]="'ROM status on ' + copy.label">
+                    @for (option of romStatuses; track option.value) {
+                      <button
+                        type="button"
+                        class="inline-flex min-h-[34px] cursor-pointer items-center rounded-full px-3.5 text-[13.5px] font-semibold text-secondary-foreground outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-60 aria-pressed:bg-foreground aria-pressed:text-background"
+                        [attr.aria-pressed]="copy.romStatus === option.value"
+                        [attr.data-status]="option.value"
+                        [disabled]="savingRomStatus().has(copy.installationId ?? '')"
+                        (click)="romStatusChange.emit({ installationId: copy.installationId ?? '', status: option.value })"
+                      >
+                        {{ option.label }}
+                      </button>
+                    }
+                  </div>
                 </div>
-              } @else {
-                <button
-                  type="button"
-                  data-testid="remove-switch"
-                  class="inline-flex h-10 w-fit items-center rounded-xl border border-destructive/50 px-4 text-[14px] font-semibold text-destructive"
-                  [disabled]="savingSwitch()"
-                  (click)="confirmingRemove.set(true)"
-                >
-                  Remove from catalog
-                </button>
+              }
+              @if (romStatusError(); as problem) {
+                <p role="alert" class="text-sm text-destructive" data-testid="rom-error">
+                  {{ problem }}
+                  <button type="button" class="ml-2 cursor-pointer font-semibold underline underline-offset-4" (click)="romStatusErrorDismiss.emit()">Dismiss</button>
+                </p>
               }
             </section>
           }
         }
-        <div class="mono-label mt-2 flex flex-wrap items-center gap-2">
-          <span hlmBadge variant="outline" static>
-            {{ game.installStatus === 'INSTALLED' ? 'Installed' : 'Not installed' }}
-          </span>
-          <span hlmBadge variant="outline" static>{{ sourceLabel(game) }}</span>
-        </div>
-        @if (game.familyOwners.length > 0) {
-          <div class="mono-label mt-2">Family · {{ game.familyOwners.join(', ') }}</div>
-        }
+
+        <section class="mt-6 flex flex-col gap-3" aria-labelledby="marks-heading" data-testid="marks-section">
+          <h3 id="marks-heading" class="mono-label">Your mark</h3>
+          <lib-mark-buttons
+            [myMark]="game.myMark"
+            [disabled]="markPending()"
+            (markChange)="markToggle.emit($event)"
+          />
+          <div class="flex flex-wrap items-center gap-2" data-testid="mark-totals">
+            <lib-mark-chip mark="WANT_TO_PLAY" [count]="game.votes.wantToPlay" [mine]="game.myMark === 'WANT_TO_PLAY'" />
+            <lib-mark-chip mark="PLAYED_LIKED" [count]="game.votes.playedLiked" [mine]="game.myMark === 'PLAYED_LIKED'" />
+            <lib-mark-chip mark="PLAYED_DISLIKED" [count]="game.votes.playedDisliked" [mine]="game.myMark === 'PLAYED_DISLIKED'" />
+          </div>
+          @if (markError(); as problem) {
+            <p role="alert" class="text-sm text-destructive" data-testid="mark-error">{{ problem }}</p>
+          }
+        </section>
 
         @if (game.enrichmentStatus === 'ENRICHED' || game.metadataSource !== null) {
           <div class="mt-10 flex flex-col gap-10 xl:flex-row xl:items-start">
@@ -315,36 +281,38 @@
                     </dd>
                   </div>
                 }
-                @if (game.hosts.length > 0) {
-                  <div class="flex items-baseline justify-between gap-4 py-4">
+                @if (hostLabels(game).length > 0) {
+                  <div class="flex items-baseline justify-between gap-4 border-b border-border py-4">
                     <dt class="mono-label">Hosts</dt>
                     <dd class="text-base font-medium text-foreground">
-                      {{ hostnames(game) }}
+                      {{ hostLabels(game).join(', ') }}
                     </dd>
                   </div>
                 }
               </dl>
+              @if (factSourcesLine(game.factSources); as sourceLine) {
+                <p class="mono-label py-4" data-testid="fact-sources">{{ sourceLine }}</p>
+              }
             </div>
 
             <div class="min-w-0 flex-1 pt-1.5">
-              <div class="mono-label">
-                @if (game.enrichmentStatus === 'ENRICHED') {
-                  About · written by Claude
-                  @if (game.metadataSource) {
-                    · facts from {{ game.metadataSource === 'STEAM' ? 'Steam' : 'AI' }}
-                  }
-                } @else {
-                  About · from Steam
+              @if (game.description; as description) {
+                @if (descriptionHeading(description); as heading) {
+                  <div
+                    class="mono-label flex flex-wrap gap-x-2 [overflow-wrap:anywhere]"
+                    [attr.title]="heading.tooltip"
+                    data-testid="about-heading"
+                  >
+                    About · {{ heading.text }}
+                  </div>
                 }
-              </div>
-              <p
-                class="mt-4 max-w-prose text-[19px] leading-[1.65] text-foreground"
-              >
-                {{ game.description }}
-              </p>
+                <p class="mt-4 max-w-prose text-[19px] leading-[1.65] text-foreground">
+                  {{ description.text }}
+                </p>
+              }
               @if (canAdminister()) {
               <div class="mt-6 flex flex-wrap gap-3">
-                @if (game.platform === 'Steam') {
+                @if (isSteam(game)) {
                   <button
                     type="button"
                     class="inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
@@ -365,7 +333,7 @@
               </div>
               }
               <a
-                [routerLink]="['/games/chat']"
+                [routerLink]="['/games/libbot']"
                 [queryParams]="{ attach: game.id }"
                 class="mt-8 inline-flex h-11 items-center gap-2.5 rounded-xl border border-input px-5 text-[15px] font-semibold transition-colors hover:bg-card"
               >
@@ -382,7 +350,7 @@
                 >
                   <path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" />
                 </svg>
-                Ask the catalog
+                Ask LibBot
               </a>
             </div>
           </div>
@@ -410,7 +378,7 @@
               </button>
             }
             <a
-              [routerLink]="['/games/chat']"
+              [routerLink]="['/games/libbot']"
               [queryParams]="{ attach: game.id }"
               class="mt-4 inline-flex h-11 items-center gap-2.5 rounded-xl border border-input px-5 text-[15px] font-semibold transition-colors hover:bg-card"
             >
@@ -427,7 +395,7 @@
               >
                 <path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" />
               </svg>
-              Ask the catalog
+              Ask LibBot
             </a>
           </div>
         }

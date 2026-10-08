@@ -319,6 +319,41 @@ describe('AuthService', () => {
       );
     });
 
+    it('says nothing and goes nowhere when a request asks for a token before any sign-in ever happened (the fingerprint unlock is still running)', async () => {
+      keycloakInit.mockResolvedValueOnce(false);
+      keycloakUpdateToken.mockRejectedValueOnce(new Error('Unauthenticated'));
+      await spectator.service.init();
+
+      const token = await spectator.service.getToken();
+
+      expect(token).toBeNull();
+      expect(spectator.service.nativeFailure()).toBeNull();
+      expect(navigateByUrl).not.toHaveBeenCalled();
+      expect(keycloakClearToken).not.toHaveBeenCalled();
+    });
+
+    it('still reports a session that existed and then died, once', async () => {
+      keycloakInit.mockResolvedValueOnce(false);
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: makeJwt({ sub: 'u1', iat: Math.floor(Date.now() / 1000) }), refresh_token: makeJwt({ sub: 'u1' }) }),
+      } as Response);
+      await spectator.service.unlockWithRefreshToken('stored-refresh-token');
+      keycloakUpdateToken.mockRejectedValueOnce(new Error('invalid_grant'));
+
+      await spectator.service.getToken();
+      await spectator.service.getToken();
+
+      expect(spectator.service.nativeFailure()).toContain('could not be refreshed');
+      expect(navigateByUrl).toHaveBeenCalledTimes(1);
+    });
+
+    it('can forget a failure that no longer applies', () => {
+      spectator.service.clearNativeFailure();
+
+      expect(spectator.service.nativeFailure()).toBeNull();
+    });
+
     it('records the server status when the stored fingerprint session is rejected', async () => {
       keycloakInit.mockResolvedValueOnce(false);
       vi.mocked(fetch).mockResolvedValueOnce({

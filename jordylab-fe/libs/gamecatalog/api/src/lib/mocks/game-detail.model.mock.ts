@@ -1,12 +1,26 @@
 import { GameDetail } from '../gamecatalog.models';
+import { aPlatformChipMock } from './platform-chip.model.mock';
 
 export function aGameDetailMock(overrides: Partial<GameDetail> = {}): GameDetail {
   return {
     id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
     title: 'Super Mario World',
-    platform: 'SNES',
-    hosts: [{ hostname: 'jordybox', sourceType: 'EMUDECK' }],
-    hostFormats: {},
+    platforms: [aPlatformChipMock()],
+    sources: ['EMULATED'],
+    places: [
+      {
+        kind: 'HOST_COPY',
+        installationId: '3c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
+        hostId: '4c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
+        consoleId: null,
+        label: 'jordybox',
+        platform: 'SNES',
+        installed: true,
+        romStatus: 'UNKNOWN',
+        librarySource: null,
+        familyOwners: null,
+      },
+    ],
     coverStatus: 'EXTERNAL_URL',
     coverUrl: 'https://example.com/smw.png',
     coverEndpoint: null,
@@ -23,15 +37,22 @@ export function aGameDetailMock(overrides: Partial<GameDetail> = {}): GameDetail
     maxLocalPlayers: 2,
     onlineMultiplayer: false,
     singlePlayer: true,
-    description: 'A classic SNES platformer.',
+    description: {
+      text: 'A classic SNES platformer.',
+      source: 'AI',
+      model: 'claude-haiku-4.5',
+      requestedModel: null,
+      writtenAt: '2026-10-07T10:12:00Z',
+    },
+    factSources: { facts: 'AI', multiplayer: 'IGDB' },
     firstSeenAt: '2026-08-02T10:15:00Z',
     installStatus: 'INSTALLED',
-    librarySource: 'LOCAL',
-    familyOwners: [],
     localMultiplayer: false,
     splitScreen: false,
     onlineOnly: false,
     multiplayerSource: 'STEAM',
+    votes: { wantToPlay: 0, playedLiked: 0, playedDisliked: 0 },
+    myMark: null,
     ...overrides,
   };
 }

@@ -1,34 +1,56 @@
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { catchError, map, Observable, of } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { inject, Injectable, Injector } from '@angular/core';
+import { AuthService } from '@jordylab-fe/shared/auth';
+import { from, map, Observable, switchMap } from 'rxjs';
+import { askLibBot, LibBotAskRequest } from './libbot-stream';
 import {
-  ChatAnswer,
-  ChatAskResponse,
+  GameConsole,
+  ConsoleBulkItem,
+  ConsoleBulkLine,
+  ConsoleBulkSummary,
+  ConsoleGameListItem,
+  ConsoleGameResponse,
+  ConsoleImpact,
+  ConsoleSearchResult,
   GameDetail,
+  GameSource,
   GamesPage,
+  HealthExceptions,
+  HealthKind,
+  HideImpact,
+  Host,
   InstallStatus,
-  LibrarySource,
+  KnownConsole,
+  GameSort,
+  MarkResult,
+  MarkScope,
+  MarkType,
+  Place,
+  PlaceOption,
+  RomStatus,
+  LibBotAskEvent,
+  LibBotQuota,
+  PlatformChip,
   LibraryStatus,
   LibrarySyncRun,
-  RefreshAll,
+  RefreshRun,
+  RefreshRunKind,
   ScanLibraryType,
   ScanSource,
-  SwitchBulkItem,
-  SwitchBulkPreview,
-  SwitchBulkSummary,
-  SwitchGameFormat,
-  SwitchGameResponse,
-  SwitchGameUpdate,
-  SwitchSearchResult,
+  SourcesOverview,
 } from './gamecatalog.models';
 
 export interface GamesQuery {
   search?: string;
-  platform?: string;
-  host?: string;
+  platform?: string[];
+  where?: string[];
   installStatus?: InstallStatus;
-  librarySource?: LibrarySource[];
-  localMultiplayer?: boolean;
+  source?: GameSource[];
+  minLocalPlayers?: number;
+  romStatus?: RomStatus[];
+  mark?: MarkType[];
+  markScope?: MarkScope;
+  sort?: GameSort;
   page?: number;
   size?: number;
 }
@@ -36,26 +58,40 @@ export interface GamesQuery {
 @Injectable({ providedIn: 'root' })
 export class GameCatalogApiService {
   #http = inject(HttpClient);
+  // Resolved only when LibBot is asked, so the other calls (and their tests) do not need the sign-in configuration.
+  #injector = inject(Injector);
 
   getGames(query: GamesQuery = {}): Observable<GamesPage> {
     let params = new HttpParams();
     if (query.search) {
       params = params.set('search', query.search);
     }
-    if (query.platform) {
-      params = params.set('platform', query.platform);
+    for (const platform of query.platform ?? []) {
+      params = params.append('platform', platform);
     }
-    if (query.host) {
-      params = params.set('host', query.host);
+    for (const placeId of query.where ?? []) {
+      params = params.append('where', placeId);
     }
     if (query.installStatus) {
       params = params.set('installStatus', query.installStatus);
     }
-    if (query.librarySource && query.librarySource.length > 0) {
-      params = params.set('librarySource', query.librarySource.join(','));
+    for (const source of query.source ?? []) {
+      params = params.append('source', source);
     }
-    if (query.localMultiplayer) {
-      params = params.set('localMultiplayer', 'true');
+    if (query.minLocalPlayers) {
+      params = params.set('minLocalPlayers', query.minLocalPlayers);
+    }
+    for (const romStatus of query.romStatus ?? []) {
+      params = params.append('romStatus', romStatus);
+    }
+    for (const mark of query.mark ?? []) {
+      params = params.append('mark', mark);
+    }
+    if (query.mark?.length && query.markScope) {
+      params = params.set('markScope', query.markScope);
+    }
+    if (query.sort && query.sort !== 'TITLE') {
+      params = params.set('sort', query.sort);
     }
     if (query.page !== undefined) {
       params = params.set('page', query.page);
@@ -67,26 +103,46 @@ export class GameCatalogApiService {
     return this.#http.get<GamesPage>('/api/gamecatalog/games', { params });
   }
 
-  getPlatforms(): Observable<string[]> {
+  getPlatforms(): Observable<PlatformChip[]> {
     return this.#http
-      .get<{ platforms: string[] }>('/api/gamecatalog/platforms')
+      .get<{ platforms: PlatformChip[] }>('/api/gamecatalog/platforms')
       .pipe(map((response) => response.platforms));
   }
 
-  getHosts(): Observable<string[]> {
+  getPlaces(): Observable<PlaceOption[]> {
     return this.#http
-      .get<{ hosts: string[] }>('/api/gamecatalog/hosts')
-      .pipe(map((response) => response.hosts));
+      .get<{ places: PlaceOption[] }>('/api/gamecatalog/places')
+      .pipe(map((response) => response.places));
   }
 
   getGame(id: string): Observable<GameDetail> {
     return this.#http.get<GameDetail>(`/api/gamecatalog/games/${id}`);
   }
 
-  getSources(): Observable<ScanSource[]> {
-    return this.#http
-      .get<{ sources: ScanSource[] }>('/api/gamecatalog/sources')
-      .pipe(map((response) => response.sources));
+  getSources(): Observable<SourcesOverview> {
+    return this.#http.get<SourcesOverview>('/api/gamecatalog/sources');
+  }
+
+  getHealthExceptions(kind: HealthKind): Observable<HealthExceptions> {
+    return this.#http.get<HealthExceptions>('/api/gamecatalog/sources/health/exceptions', {
+      params: new HttpParams().set('kind', kind),
+    });
+  }
+
+  setHostDisplayName(hostId: string, displayName: string | null): Observable<Host> {
+    return this.#http.put<Host>(`/api/gamecatalog/hosts/${hostId}/display-name`, { displayName });
+  }
+
+  setMark(gameId: string, mark: MarkType | null): Observable<MarkResult> {
+    return this.#http.put<MarkResult>(`/api/gamecatalog/games/${gameId}/mark`, { mark });
+  }
+
+  getHideImpact(id: string): Observable<HideImpact> {
+    return this.#http.get<HideImpact>(`/api/gamecatalog/sources/${id}/hide-impact`);
+  }
+
+  setRomStatus(gameId: string, installationId: string, status: RomStatus): Observable<Place> {
+    return this.#http.put<Place>(`/api/gamecatalog/games/${gameId}/installations/${installationId}/rom-status`, { status });
   }
 
   setSourceEnabled(id: string, enabled: boolean): Observable<{ id: string; enabled: boolean }> {
@@ -101,8 +157,19 @@ export class GameCatalogApiService {
     return this.#http.post<GameDetail>(`/api/gamecatalog/games/${id}/enrichment/refresh`, {});
   }
 
-  refreshPending(): Observable<RefreshAll> {
-    return this.#http.post<RefreshAll>('/api/gamecatalog/games/refresh', {});
+  startRefreshRun(kind: RefreshRunKind, confirmCost: boolean): Observable<RefreshRun> {
+    return this.#http.post<RefreshRun>('/api/gamecatalog/refresh-runs', { kind, confirmCost });
+  }
+
+  /** The latest run of a kind, or null when none was ever started (the server answers 204). */
+  getCurrentRefreshRun(kind: RefreshRunKind): Observable<RefreshRun | null> {
+    return this.#http.get<RefreshRun | null>('/api/gamecatalog/refresh-runs/current', {
+      params: new HttpParams().set('kind', kind),
+    });
+  }
+
+  stopRefreshRun(id: string): Observable<RefreshRun> {
+    return this.#http.post<RefreshRun>(`/api/gamecatalog/refresh-runs/${id}/stop`, {});
   }
 
   syncOwnedLibrary(force = false): Observable<LibrarySyncRun> {
@@ -123,51 +190,73 @@ export class GameCatalogApiService {
     });
   }
 
-  chat(question: string, gameIds: string[] = []): Observable<ChatAskResponse> {
-    const body = gameIds.length > 0 ? { question, gameIds } : { question };
-
-    return this.#http.post<ChatAnswer>('/api/gamecatalog/chat', body).pipe(
-      map((answer): ChatAskResponse => ({ kind: 'answered', answer })),
-      catchError((error: HttpErrorResponse) => {
-        if (error.status === 429) {
-          const resetsAt = (error.error as { resetsAt?: string } | null)?.resetsAt ?? '';
-
-          return of<ChatAskResponse>({ kind: 'limitReached', resetsAt });
-        }
-        if (error.status === 503 || error.status === 400) {
-          return of<ChatAskResponse>({ kind: 'unavailable' });
-        }
-        throw error;
-      })
-    );
+  /** Asks LibBot; emits stage events, then one answer or error (see {@link askLibBot}). */
+  askLibBot(request: LibBotAskRequest): Observable<LibBotAskEvent> {
+    return from(this.#injector.get(AuthService).getToken()).pipe(switchMap((token) => askLibBot(request, token)));
   }
 
-  searchSwitchGames(query: string): Observable<SwitchSearchResult[]> {
-    const params = new HttpParams().set('query', query);
-
-    return this.#http.get<SwitchSearchResult[]>('/api/gamecatalog/switch/search', { params });
+  getLibBotQuota(): Observable<LibBotQuota> {
+    return this.#http.get<LibBotQuota>('/api/gamecatalog/libbot/quota');
   }
 
-  addSwitchGame(igdbGameId: number | null, title: string | null, format: SwitchGameFormat): Observable<SwitchGameResponse> {
-    const body = igdbGameId != null ? { igdbGameId, format } : { title, format };
-
-    return this.#http.post<SwitchGameResponse>('/api/gamecatalog/switch/games', body);
+  forgetLibBotConversation(conversationId: string): Observable<void> {
+    return this.#http.delete<void>(`/api/gamecatalog/libbot/conversations/${conversationId}`);
   }
 
-  updateSwitchGame(gameId: string, update: SwitchGameUpdate): Observable<SwitchGameResponse> {
-    return this.#http.patch<SwitchGameResponse>(`/api/gamecatalog/switch/games/${gameId}`, update);
+  getKnownConsoles(query: string): Observable<KnownConsole[]> {
+    return this.#http.get<KnownConsole[]>('/api/gamecatalog/consoles/known', { params: new HttpParams().set('q', query) });
   }
 
-  deleteSwitchGame(gameId: string): Observable<void> {
-    return this.#http.delete<void>(`/api/gamecatalog/switch/games/${gameId}`);
+  getConsoles(): Observable<GameConsole[]> {
+    return this.#http.get<GameConsole[]>('/api/gamecatalog/consoles');
   }
 
-  previewSwitchBulk(text: string): Observable<SwitchBulkPreview> {
-    return this.#http.post<SwitchBulkPreview>('/api/gamecatalog/switch/bulk/preview', { text });
+  addConsole(platform: string, name: string | null): Observable<GameConsole> {
+    return this.#http.post<GameConsole>('/api/gamecatalog/consoles', name ? { platform, name } : { platform });
   }
 
-  confirmSwitchBulk(items: SwitchBulkItem[]): Observable<SwitchBulkSummary> {
-    return this.#http.post<SwitchBulkSummary>('/api/gamecatalog/switch/bulk/confirm', { items });
+  renameConsole(id: string, name: string): Observable<GameConsole> {
+    return this.#http.patch<GameConsole>(`/api/gamecatalog/consoles/${id}`, { name });
+  }
+
+  getConsoleImpact(id: string): Observable<ConsoleImpact> {
+    return this.#http.get<ConsoleImpact>(`/api/gamecatalog/consoles/${id}/impact`);
+  }
+
+  removeConsole(id: string): Observable<void> {
+    return this.#http.delete<void>(`/api/gamecatalog/consoles/${id}`);
+  }
+
+  getConsoleGames(id: string): Observable<ConsoleGameListItem[]> {
+    return this.#http.get<ConsoleGameListItem[]>(`/api/gamecatalog/consoles/${id}/games`);
+  }
+
+  searchConsoleGames(id: string, query: string): Observable<ConsoleSearchResult[]> {
+    return this.#http.get<ConsoleSearchResult[]>(`/api/gamecatalog/consoles/${id}/search`, {
+      params: new HttpParams().set('q', query),
+    });
+  }
+
+  addConsoleGame(id: string, game: { igdbGameId: number } | { title: string }): Observable<ConsoleGameResponse> {
+    return this.#http.post<ConsoleGameResponse>(`/api/gamecatalog/consoles/${id}/games`, game);
+  }
+
+  relinkConsoleGame(id: string, gameId: string, igdbGameId: number): Observable<ConsoleGameResponse> {
+    return this.#http.patch<ConsoleGameResponse>(`/api/gamecatalog/consoles/${id}/games/${gameId}`, { igdbGameId });
+  }
+
+  removeConsoleGame(id: string, gameId: string): Observable<void> {
+    return this.#http.delete<void>(`/api/gamecatalog/consoles/${id}/games/${gameId}`);
+  }
+
+  previewConsoleBulk(id: string, lines: string[]): Observable<ConsoleBulkLine[]> {
+    return this.#http
+      .post<{ lines: ConsoleBulkLine[] }>(`/api/gamecatalog/consoles/${id}/games/bulk/preview`, { lines })
+      .pipe(map((response) => response.lines));
+  }
+
+  confirmConsoleBulk(id: string, items: ConsoleBulkItem[]): Observable<ConsoleBulkSummary> {
+    return this.#http.post<ConsoleBulkSummary>(`/api/gamecatalog/consoles/${id}/games/bulk/confirm`, { items });
   }
 }
 

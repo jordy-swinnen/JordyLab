@@ -44,11 +44,14 @@ describe('gamecatalogRoutes', () => {
   const child = (path: string) =>
     shell().children?.find((route) => route.path === path);
 
-  it('lists grid, chat, sources, switch, bulk switch and detail under the shell route', () => {
+  it('lists grid, libbot, chat redirect, sources, consoles, bulk consoles, the old switch redirects and detail under the shell route', () => {
     expect(shell().children?.map((route) => route.path)).toEqual([
       'grid',
+      'libbot',
       'chat',
       'sources',
+      'consoles',
+      'consoles/:id/games/bulk',
       'switch',
       'switch/bulk',
       ':id',
@@ -82,22 +85,27 @@ describe('gamecatalogRoutes', () => {
     await expect(runGuard(child('sources')?.canActivate)).resolves.toBe(true);
   });
 
-  it('guards the switch children to admin only', async () => {
+  it('guards the consoles children to admin only', async () => {
     roles.set(['guest']);
 
-    for (const path of ['switch', 'switch/bulk']) {
+    for (const path of ['consoles', 'consoles/:id/games/bulk']) {
       await expect(runGuard(child(path)?.canActivate)).resolves.toBe('parsed:/games/grid');
     }
   });
 
-  it('lets an admin reach switch', async () => {
+  it('lets an admin reach consoles', async () => {
     roles.set(['admin']);
 
-    await expect(runGuard(child('switch')?.canActivate)).resolves.toBe(true);
+    await expect(runGuard(child('consoles')?.canActivate)).resolves.toBe(true);
   });
 
-  it('leaves grid, chat and detail open to whatever the shell already let through', () => {
-    for (const path of ['grid', 'chat', ':id']) {
+  it('sends the old switch addresses to consoles', () => {
+    expect(child('switch')?.redirectTo).toBe('consoles');
+    expect(child('switch/bulk')?.redirectTo).toBe('consoles');
+  });
+
+  it('leaves grid, libbot and detail open to whatever the shell already let through', () => {
+    for (const path of ['grid', 'libbot', ':id']) {
       expect(child(path)?.canActivate).toBeUndefined();
     }
   });

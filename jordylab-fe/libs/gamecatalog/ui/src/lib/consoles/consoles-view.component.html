@@ -1,0 +1,352 @@
+<div class="flex flex-col gap-3.5">
+  <div class="eyebrow">Game Catalog · consoles</div>
+  <h2 class="page-title">Consoles</h2>
+</div>
+<p class="mt-5 max-w-2xl text-[15px] leading-relaxed text-secondary-foreground">
+  Register the consoles you own, then add the games that live on them. The same game on Steam, an emulator and a
+  console stays one game.
+</p>
+
+@if (error(); as message) {
+  <p class="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm" role="alert" data-testid="consoles-error">
+    {{ message }}
+  </p>
+}
+
+<div class="mt-10 grid gap-10 lg:grid-cols-2">
+  <!-- ------------------------------------------------------------------------------------------ your consoles -->
+  <section aria-labelledby="your-consoles-title" class="flex flex-col gap-5">
+    <h3 id="your-consoles-title" class="section-title">Your consoles</h3>
+
+    @if (loading()) {
+      <p class="text-sm text-muted-foreground">Loading…</p>
+    } @else if (consoles().length === 0) {
+      <p class="rounded-2xl border border-dashed border-input p-5 text-sm text-muted-foreground" data-testid="no-consoles">
+        No consoles yet. Add your first one below, for example Nintendo Switch.
+      </p>
+    } @else {
+      <ul class="flex flex-col gap-3" data-testid="console-list">
+        @for (console of consoles(); track console.id) {
+          <li
+            class="panel flex flex-col gap-3 px-5 py-4"
+            [class.ring-1]="console.id === selectedId()"
+            [class.ring-primary]="console.id === selectedId()"
+          >
+            <div class="flex flex-wrap items-center gap-3">
+              <lib-platform-chip [chip]="console.chip" />
+              @if (renamingId() === console.id) {
+                <input
+                  #renameInput
+                  type="text"
+                  maxlength="40"
+                  [value]="console.name"
+                  [attr.aria-label]="'New name for ' + console.name"
+                  class="h-10 min-w-0 flex-1 rounded-xl border border-input bg-background px-3"
+                  (keydown.enter)="onRename(console, renameInput)"
+                  (keydown.escape)="renamingId.set(null)"
+                />
+                <button type="button" class="text-sm font-semibold text-primary" (click)="onRename(console, renameInput)">
+                  Save
+                </button>
+                <button type="button" class="text-sm text-muted-foreground" (click)="renamingId.set(null)">Cancel</button>
+              } @else {
+                <span class="min-w-0 flex-1 truncate font-display text-lg font-semibold" data-testid="console-name">
+                  {{ console.name }}
+                </span>
+                <span class="mono-label">{{ console.gameCount }} {{ console.gameCount === 1 ? 'game' : 'games' }}</span>
+              }
+            </div>
+            @if (renamingId() !== console.id) {
+              <div class="flex flex-wrap gap-4 text-sm">
+                <button
+                  type="button"
+                  class="font-semibold text-primary"
+                  [attr.aria-pressed]="console.id === selectedId()"
+                  (click)="selectConsole.emit(console.id)"
+                >
+                  Manage games
+                </button>
+                <button type="button" class="text-secondary-foreground hover:text-foreground" (click)="renamingId.set(console.id)">
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  class="text-destructive"
+                  [attr.data-testid]="'remove-console-' + console.name"
+                  (click)="requestRemoval.emit(console)"
+                >
+                  Remove
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <form
+      id="add-console"
+      class="panel flex flex-col gap-3 px-5 py-5"
+      aria-labelledby="add-console-title"
+      (submit)="$event.preventDefault(); onAddConsole(platformInput, nameInput)"
+    >
+      <h4 id="add-console-title" class="eyebrow">Add a console</h4>
+      <label class="flex flex-col gap-1.5">
+        <span class="mono-label">Console</span>
+        <input
+          #platformInput
+          type="text"
+          list="known-consoles"
+          autocomplete="off"
+          placeholder="Start typing: PlayStation, Nintendo 64, Dreamcast…"
+          class="h-11 rounded-xl border border-input bg-background px-3"
+          data-testid="console-platform-input"
+          (input)="onSuggest($event)"
+        />
+        <datalist id="known-consoles">
+          @for (known of suggestions(); track known.name) {
+            <option [value]="known.name">Generation {{ known.generation }}</option>
+          }
+        </datalist>
+        <span class="text-xs text-muted-foreground">Pick a well-known console, or type any name for something else.</span>
+      </label>
+      <label class="flex flex-col gap-1.5">
+        <span class="mono-label">Name (optional)</span>
+        <input
+          #nameInput
+          type="text"
+          maxlength="40"
+          placeholder="Defaults to the console, for example “Living room Switch”"
+          class="h-11 rounded-xl border border-input bg-background px-3"
+          data-testid="console-name-input"
+        />
+      </label>
+      <button
+        type="submit"
+        class="h-11 w-fit rounded-xl bg-primary px-5 text-[15px] font-semibold text-primary-foreground disabled:opacity-50"
+        [disabled]="busy()"
+        data-testid="add-console-button"
+      >
+        Add console
+      </button>
+    </form>
+  </section>
+
+  <!-- ----------------------------------------------------------------------------------------------- add a game -->
+  <section aria-labelledby="add-game-title" class="flex flex-col gap-5">
+    <h3 id="add-game-title" class="section-title">Add a game</h3>
+
+    @if (consoles().length === 0 && !loading()) {
+      <div class="rounded-2xl border border-dashed border-input p-5 text-sm" data-testid="add-game-disabled">
+        <p class="text-muted-foreground">A game lives on a console, so add a console first.</p>
+        <a href="#add-console" class="mt-2 inline-block font-semibold text-primary">Add a console</a>
+      </div>
+    } @else if (selected(); as current) {
+      <label class="flex flex-col gap-1.5">
+        <span class="mono-label">Console</span>
+        <select
+          class="h-11 rounded-xl border border-input bg-background px-3"
+          data-testid="console-picker"
+          (change)="onSelectConsole($event)"
+        >
+          @for (console of consoles(); track console.id) {
+            <option [value]="console.id" [selected]="console.id === current.id">{{ console.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="mono-label">Search {{ current.platform }} games</span>
+        <input
+          type="search"
+          placeholder="e.g. Mario Kart"
+          class="h-11 rounded-xl border border-input bg-background px-3"
+          data-testid="game-search-input"
+          (input)="onSearch($event)"
+        />
+      </label>
+
+      @if (lastAdded(); as title) {
+        <p class="text-sm text-primary" role="status" data-testid="game-added">Added “{{ title }}”.</p>
+      }
+      @if (searching()) {
+        <p class="text-sm text-muted-foreground" role="status">Searching…</p>
+      }
+
+      <ul class="flex flex-col gap-3" data-testid="search-results">
+        @for (result of results(); track result.igdbGameId) {
+          <li class="panel flex items-center gap-4 px-4 py-3">
+            @if (result.coverUrl) {
+              <img [src]="result.coverUrl" alt="" class="h-16 w-12 shrink-0 rounded-lg object-cover" />
+            } @else {
+              <span class="h-16 w-12 shrink-0 rounded-lg" [style.background]="palette(result.title).background" aria-hidden="true"></span>
+            }
+            <div class="min-w-0 flex-1">
+              <div class="truncate font-semibold">{{ result.title }}</div>
+              <div class="truncate text-sm text-muted-foreground">
+                {{ result.releaseYear ?? 'Year unknown' }}@if (result.developer) { · {{ result.developer }} }
+              </div>
+            </div>
+            <button
+              type="button"
+              class="h-10 shrink-0 rounded-xl border border-input px-4 text-sm font-semibold disabled:opacity-50"
+              [disabled]="busy() || result.alreadyOnConsole"
+              [attr.data-testid]="'add-result-' + result.igdbGameId"
+              (click)="addGameFromSearch.emit(result)"
+            >
+              {{ result.alreadyOnConsole ? 'Already here' : 'Add' }}
+            </button>
+          </li>
+        }
+      </ul>
+
+      @if (noMatchFor(); as query) {
+        <p class="rounded-2xl border border-dashed border-input p-4 text-sm" data-testid="no-match">
+          IGDB has no match for “{{ query }}” on {{ current.platform }}.
+          <button type="button" class="font-semibold text-primary" (click)="addGameByTitle.emit(query)">
+            Add “{{ query }}” by title
+          </button>
+        </p>
+      }
+
+      <div class="flex flex-col gap-1.5">
+        <label for="add-by-title" class="mono-label">Or add by title</label>
+        <div class="flex gap-3">
+          <input
+            #titleInput
+            id="add-by-title"
+            type="text"
+            placeholder="Exact game title"
+            class="h-11 min-w-0 flex-1 rounded-xl border border-input bg-background px-3"
+            data-testid="add-by-title-input"
+            (keydown.enter)="onAddByTitle(titleInput)"
+          />
+          <button
+            type="button"
+            class="h-11 shrink-0 rounded-xl border border-input px-4 text-sm font-semibold disabled:opacity-50"
+            [disabled]="busy()"
+            data-testid="add-by-title-button"
+            (click)="onAddByTitle(titleInput)"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <a
+        [routerLink]="['/games/consoles', current.id, 'games', 'bulk']"
+        class="w-fit text-sm font-semibold text-primary"
+        data-testid="bulk-link"
+        >Paste a list of titles</a
+      >
+    }
+  </section>
+</div>
+
+<!-- ---------------------------------------------------------------------------------------- games on a console -->
+@if (selected(); as current) {
+  <section class="mt-12" aria-labelledby="console-games-title">
+    <h3 id="console-games-title" class="section-title">Games on {{ current.name }}</h3>
+    @if (loadingGames()) {
+      <p class="mt-4 text-sm text-muted-foreground">Loading…</p>
+    } @else if (games().length === 0) {
+      <p class="mt-4 text-sm text-muted-foreground" data-testid="no-games">Nothing here yet.</p>
+    } @else {
+      <ul class="mt-5 grid gap-3 md:grid-cols-2" data-testid="console-games">
+        @for (game of games(); track game.gameId) {
+          <li class="panel flex flex-col gap-3 px-4 py-3">
+            <div class="flex items-center gap-4">
+              <a [routerLink]="['/games', game.gameId]" class="flex min-w-0 flex-1 items-center gap-4">
+                @if (game.coverUrl ?? game.coverEndpoint; as src) {
+                  <img [src]="src" alt="" class="h-16 w-12 shrink-0 rounded-lg object-cover" />
+                } @else {
+                  <span
+                    class="flex h-16 w-12 shrink-0 items-center justify-center rounded-lg font-display text-sm font-bold"
+                    [style.background]="palette(game.title).background"
+                    [style.color]="palette(game.title).color"
+                    aria-hidden="true"
+                    >{{ initials(game.title) }}</span
+                  >
+                }
+                <span class="min-w-0">
+                  <span class="block truncate font-semibold">{{ game.title }}</span>
+                  <span class="block text-sm text-muted-foreground">{{ game.releaseYear ?? 'Year unknown' }}</span>
+                </span>
+              </a>
+              <button type="button" class="text-sm text-secondary-foreground hover:text-foreground" (click)="startRelink(game.gameId)">
+                {{ relinkingGameId() === game.gameId ? 'Cancel' : 'Fix match' }}
+              </button>
+              <button
+                type="button"
+                class="text-sm text-destructive"
+                [attr.aria-label]="'Remove ' + game.title + ' from ' + current.name"
+                (click)="removeGame.emit(game.gameId)"
+              >
+                Remove
+              </button>
+            </div>
+            @if (relinkingGameId() === game.gameId) {
+              <div class="flex flex-col gap-2 border-t border-border pt-3">
+                <label class="mono-label" [attr.for]="'relink-' + game.gameId">Search for the right game</label>
+                <input
+                  [id]="'relink-' + game.gameId"
+                  type="search"
+                  class="h-10 rounded-xl border border-input bg-background px-3"
+                  (input)="onSearch($event)"
+                />
+                @for (result of results(); track result.igdbGameId) {
+                  <button
+                    type="button"
+                    class="rounded-xl border border-input px-3 py-2 text-left text-sm hover:bg-card"
+                    [attr.data-testid]="'relink-result-' + result.igdbGameId"
+                    (click)="onRelink(result)"
+                  >
+                    {{ result.title }}@if (result.releaseYear) { · {{ result.releaseYear }} }
+                  </button>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}
+
+@if (removal(); as pending) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" data-testid="removal-dialog">
+    <div
+      class="panel w-full max-w-md px-6 py-6"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="removal-title"
+      aria-describedby="removal-text"
+    >
+      <h4 id="removal-title" class="font-display text-xl font-bold">Remove {{ pending.console.name }}?</h4>
+      <p id="removal-text" class="mt-3 text-[15px] leading-relaxed text-secondary-foreground">
+        @if (pending.impact.games === 0) {
+          This console has no games.
+        } @else {
+          It holds {{ pending.impact.games }} {{ pending.impact.games === 1 ? 'game' : 'games' }}.
+          {{ pending.impact.alsoElsewhere }} also {{ pending.impact.alsoElsewhere === 1 ? 'lives' : 'live' }} on Steam, an
+          emulator or another console and stay. {{ pending.impact.wouldBeRemoved }}
+          {{ pending.impact.wouldBeRemoved === 1 ? 'game is' : 'games are' }} removed from the library, with their marks.
+        }
+      </p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" class="h-10 rounded-xl border border-input px-4 text-sm font-semibold" (click)="cancelRemoval.emit()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="h-10 rounded-xl bg-destructive px-4 text-sm font-semibold text-destructive-foreground disabled:opacity-50"
+          [disabled]="busy()"
+          data-testid="confirm-removal"
+          (click)="confirmRemoval.emit()"
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  </div>
+}

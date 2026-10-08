@@ -1,19 +1,42 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
-import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
 import {
+  ActiveFilter,
   coverUrl,
   GAME_LIBRARY_PAGE_SIZE,
+  GameSort,
+  GameSource,
   GameSummary,
   InstallStatus,
-  LibrarySource,
+  MarkScope,
+  MarkType,
+  PlaceOption,
+  PlatformChip,
+  RomStatus,
+  RomSummary,
 } from '@jordylab-fe/gamecatalog/api';
-import { coverInitials, coverPalette, platformTagClass } from '../cover';
+import { PlatformChipComponent } from '../chips/platform-chip.component';
+import { MarkButtonsComponent } from '../marks/mark-buttons.component';
+import { VoteRailComponent } from '../marks/vote-rail.component';
+import { RomChipComponent } from '../chips/rom-chip.component';
+import { SourceLabelComponent } from '../chips/source-label.component';
+import { StatusChipComponent } from '../chips/status-chip.component';
+import { coverInitials, coverPalette } from '../cover';
+import { ActiveFiltersComponent } from './active-filters.component';
+import { FilterBarComponent } from './filter-bar.component';
+import { FiltersPanelComponent } from './filters-panel.component';
 
 const SKELETON_CARD_COUNT = 10;
-const CHIP = 'h-10 cursor-pointer px-4 text-sm font-semibold';
 
 @Component({
   selector: 'lib-game-grid-view',
@@ -21,35 +44,62 @@ const CHIP = 'h-10 cursor-pointer px-4 text-sm font-semibold';
   imports: [
     RouterLink,
     HlmBadgeDirective,
-    HlmInputDirective,
     HlmSkeletonComponent,
+    PlatformChipComponent,
+    RomChipComponent,
+    MarkButtonsComponent,
+    VoteRailComponent,
+    SourceLabelComponent,
+    StatusChipComponent,
+    FilterBarComponent,
+    FiltersPanelComponent,
+    ActiveFiltersComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-grid-view.component.html',
 })
 export class GameGridViewComponent {
+  protected readonly filterBar = viewChild.required(FilterBarComponent);
+
   games = input.required<GameSummary[]>();
-  platforms = input.required<string[]>();
-  hosts = input.required<string[]>();
+  platforms = input.required<PlatformChip[]>();
+  places = input.required<PlaceOption[]>();
   loading = input.required<boolean>();
   error = input.required<string | null>();
-  selectedPlatform = input.required<string | null>();
-  selectedHost = input.required<string | null>();
+  searchTerm = input.required<string>();
+  selectedPlatforms = input.required<string[]>();
+  selectedPlaces = input.required<string[]>();
   selectedInstallStatus = input.required<InstallStatus>();
-  selectedLibrarySource = input.required<LibrarySource | null>();
-  localMultiplayerOnly = input.required<boolean>();
-  hostFilterAvailable = input.required<boolean>();
+  selectedSources = input.required<GameSource[]>();
+  minLocalPlayers = input.required<number | null>();
+  selectedRomStatuses = input.required<RomStatus[]>();
+  selectedMarks = input.required<MarkType[]>();
+  markScope = input.required<MarkScope>();
+  sort = input.required<GameSort>();
+  activeFilters = input.required<ActiveFilter[]>();
+  unknownPlayerCount = input<number | null>(null);
   page = input.required<number>();
   totalPages = input.required<number>();
   totalElements = input.required<number>();
+  markPending = input<ReadonlySet<string>>(new Set());
+  markError = input<string | null>(null);
 
   searchChange = output<string>();
-  platformChange = output<string | null>();
-  hostChange = output<string | null>();
+  platformToggle = output<string>();
+  placeToggle = output<string>();
   installStatusChange = output<InstallStatus>();
-  librarySourceChange = output<LibrarySource | null>();
-  localMultiplayerOnlyChange = output<void>();
+  sourceToggle = output<GameSource>();
+  minLocalPlayersChange = output<number | null>();
+  romStatusToggle = output<RomStatus>();
+  markToggle = output<MarkType>();
+  markScopeChange = output<MarkScope>();
+  sortChange = output<GameSort>();
+  clearAll = output<void>();
   pageChange = output<number>();
+  gameMarkChange = output<{ game: GameSummary; mark: MarkType }>();
+  markErrorDismiss = output<void>();
+
+  protected readonly panelOpen = signal(false);
 
   protected readonly skeletonCards = Array.from(
     { length: SKELETON_CARD_COUNT },
@@ -58,62 +108,25 @@ export class GameGridViewComponent {
   protected readonly coverUrl = coverUrl;
   protected readonly initials = coverInitials;
   protected readonly palette = coverPalette;
-  protected readonly tagClass = platformTagClass;
 
-  protected readonly installStatuses: { value: InstallStatus; label: string }[] = [
-    { value: 'INSTALLED', label: 'Installed' },
-    { value: 'NOT_INSTALLED', label: 'Not installed' },
-    { value: 'ALL', label: 'All' },
-  ];
-  protected readonly librarySources: { value: LibrarySource; label: string }[] = [
-    { value: 'OWNED', label: 'Owned' },
-    { value: 'FAMILY', label: 'Family' },
-    { value: 'LOCAL', label: 'Local' },
-  ];
-
-  protected readonly chipActive = `${CHIP} border-foreground bg-foreground text-background`;
-  protected readonly chipIdle = `${CHIP} text-secondary-foreground hover:text-foreground`;
+  /** The filter to offer for removal when nothing matches: the status first, since it is the one most often forgotten. */
+  protected readonly filterToRelax = computed(
+    () => this.activeFilters().find((filter) => filter.id === 'status') ?? this.activeFilters()[0] ?? null,
+  );
 
   /** Catalogue number shown on cover plates, continuing across pages. */
   protected catalogNumber(index: number): string {
     return String(this.page() * GAME_LIBRARY_PAGE_SIZE + index + 1).padStart(3, '0');
   }
 
-  protected sourceLabel(source: LibrarySource): string {
-    switch (source) {
-      case 'OWNED':
-        return 'Owned';
-      case 'FAMILY':
-        return 'Family';
-      default:
-        return 'Local';
-    }
+  /** "Validated on 1 of 2" only when machines disagree; a single clear state needs no extra words. */
+  protected romDetail(rom: RomSummary): string | null {
+    return rom.state === 'MIXED' ? `Validated on ${rom.validated} of ${rom.total}` : null;
   }
 
-  onSearchInput(event: Event) {
-    this.searchChange.emit((event.target as HTMLInputElement).value);
-  }
-
-  onPlatformClick(platform: string | null) {
-    this.platformChange.emit(platform);
-  }
-
-  onHostClick(host: string | null) {
-    this.hostChange.emit(host);
-  }
-
-  onInstallStatusClick(status: InstallStatus) {
-    this.installStatusChange.emit(status);
-  }
-
-  onLibrarySourceClick(source: LibrarySource) {
-    this.librarySourceChange.emit(
-      this.selectedLibrarySource() === source ? null : source,
-    );
-  }
-
-  onLocalMultiplayerOnlyClick() {
-    this.localMultiplayerOnlyChange.emit();
+  protected closePanel(): void {
+    this.panelOpen.set(false);
+    this.filterBar().focusFiltersButton();
   }
 
   onPreviousPage() {

@@ -1,0 +1,41 @@
+<div class="flex min-h-9 flex-wrap items-center gap-2" data-testid="active-filters">
+  @for (filter of filters(); track filter.id) {
+    <span
+      class="inline-flex h-9 max-w-full items-center gap-2 rounded-full border border-foreground/50 bg-foreground/5 pl-3.5 pr-1.5 text-[13.5px] font-semibold"
+      data-testid="active-filter"
+    >
+      <span class="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{{ filter.key }}</span>
+      <span class="truncate">{{ filter.value }}</span>
+      <button
+        type="button"
+        class="grid size-[26px] shrink-0 cursor-pointer place-items-center rounded-full text-secondary-foreground outline-none hover:bg-foreground/15 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        [attr.aria-label]="'Remove filter ' + filter.key + ': ' + filter.value"
+        (click)="filter.remove()"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </span>
+  }
+  @if (showClearAll()) {
+    <button
+      type="button"
+      class="cursor-pointer px-2 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-primary underline underline-offset-4"
+      data-testid="clear-all-filters"
+      (click)="clearAll.emit()"
+    >
+      Clear all
+    </button>
+  }
+  <span
+    class="w-full font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-secondary-foreground min-[641px]:ml-auto min-[641px]:w-auto"
+    aria-live="polite"
+    data-testid="result-count"
+  >
+    <b class="text-foreground">{{ totalElements() }}</b> {{ totalElements() === 1 ? 'game' : 'games' }}
+    @if (unknownPlayerCount(); as unknown) {
+      · {{ unknown }} more with unknown player count
+    }
+  </span>
+</div>

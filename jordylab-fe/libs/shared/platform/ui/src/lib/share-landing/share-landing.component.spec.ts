@@ -41,13 +41,13 @@ describe('ShareLandingComponent', () => {
     expect(spectator.query('.jordylab-share-landing')).toBeFalsy();
   });
 
-  it('shows the shared text and only "Ask the catalog" for a guest', () => {
+  it('shows the shared text and only "Ask LibBot" for a guest', () => {
     pendingShare.set({ title: 'A page', texts: ['https://example.com'], files: [] });
     spectator.detectChanges();
 
     expect(spectator.element).toHaveText('https://example.com');
     const buttons = spectator.queryAll('button').map((button) => button.textContent?.trim());
-    expect(buttons).toEqual(['Ask the catalog']);
+    expect(buttons).toEqual(['Ask LibBot']);
   });
 
   it('also shows "Save to FNA" for the admin', () => {
@@ -56,17 +56,17 @@ describe('ShareLandingComponent', () => {
     spectator.detectChanges();
 
     const buttons = spectator.queryAll('button').map((button) => button.textContent?.trim());
-    expect(buttons).toEqual(['Ask the catalog', 'Save to FNA']);
+    expect(buttons).toEqual(['Ask LibBot', 'Save to FNA']);
   });
 
-  it('clears the share and navigates to the pre-filled chat on "Ask the catalog"', () => {
+  it('clears the share and navigates to the pre-filled chat on "Ask LibBot"', () => {
     pendingShare.set({ title: 'A page', texts: ['https://example.com'], files: [] });
     spectator.detectChanges();
 
     spectator.click('button');
 
     expect(clear).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith(['/games/chat'], {
+    expect(navigate).toHaveBeenCalledWith(['/games/libbot'], {
       queryParams: { prefill: 'https://example.com' },
     });
   });
