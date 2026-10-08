@@ -38,3 +38,5 @@ Fingerprint prompts cannot be driven by Appium, so check these by hand on a real
 2. Close and reopen the app: "Unlock with fingerprint" appears on the login page and unlocks without the Keycloak page.
 3. Cancel the prompt: the app stays locked and tells you the fingerprint check failed or was cancelled.
 4. Disable the setting: the unlock button is gone after the next start.
+5. Repeat steps 2 to 4 **20 times in a row** (spec 013 US14): after every fingerprint sign-in the library opens and no red message is
+   shown at any moment, not even briefly. Once in aeroplane mode only the connection message may appear. Full wording: `docs/runbook.md` §21.

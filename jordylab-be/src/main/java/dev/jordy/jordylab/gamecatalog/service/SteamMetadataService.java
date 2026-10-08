@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,10 +25,9 @@ public class SteamMetadataService {
     private final GameCatalogProperties properties;
 
     /**
-     * Fetches deterministic metadata for up to {@code maxGames} PENDING Steam games, unpaced.
-     * Invoked inline by the scan flow — there is no scheduler.
+     * Fetches deterministic metadata for up to {@code maxGames} PENDING Steam games, unpaced. No transaction spans the
+     * store calls (spec 013 FR-017): each game is saved on its own once its facts are in.
      */
-    @Transactional
     public int fetchPending(int maxGames) {
         return fetchPending(maxGames, 0L);
     }
@@ -39,7 +37,6 @@ public class SteamMetadataService {
      * {@code minIntervalMs} apart and pausing the batch on HTTP 429 without recording a failure.
      * Used by the library sync so a large first sync respects Steam's store rate limit.
      */
-    @Transactional
     public int fetchPending(int maxGames, long minIntervalMs) {
         List<Game> pending = gameRepository.findMetadataBacklog(MetadataStatus.PENDING, PageRequest.of(0, maxGames));
         if (pending.isEmpty()) {
@@ -64,14 +61,18 @@ public class SteamMetadataService {
     }
 
     /** Force re-fetches one Steam game's metadata, clearing its failure counter first. */
-    @Transactional
     public void refresh(Game game) {
         game.resetMetadataForRetry();
         fetchOne(game);
     }
 
     private void fetchOne(Game game) {
-        Optional<SteamAppDetailsClient.SteamMetadata> metadata = steamAppDetailsClient.fetch(game.getSteamAppId());
+        apply(game, steamAppDetailsClient.fetch(game.getSteamAppId()));
+        gameRepository.save(game);
+    }
+
+    /** Applies what Steam answered (or its silence) to a game: facts fill only what is still empty, a miss counts an attempt. */
+    public void apply(Game game, Optional<SteamAppDetailsClient.SteamMetadata> metadata) {
         if (metadata.isEmpty()) {
             log.warn("Steam metadata fetch failed for '{}' (appid {})", game.getTitle(), game.getSteamAppId());
             game.recordMetadataFailure(properties.metadata().maxAttempts());

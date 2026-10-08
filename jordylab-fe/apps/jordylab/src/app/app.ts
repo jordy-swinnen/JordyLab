@@ -53,7 +53,7 @@ interface NavGroup {
 
 const ICONS = {
   grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
-  chat: 'M4 5h16v11H9l-5 4z',
+  sparkle: 'M10 3l1.6 4.7 4.7 1.6-4.7 1.6L10 15.6 8.4 10.9 3.7 9.3l4.7-1.6zM18 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z',
   plug: 'M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4',
   gamepad: 'M6 12h4M8 10v4M15 11h.01M18 13h.01M7 6h10a5 5 0 0 1 5 5v2a4 4 0 0 1-7 2.6L14 14h-4l-1 1.6A4 4 0 0 1 2 13v-2a5 5 0 0 1 5-5z',
   news: 'M5 4h11v16H6a1 1 0 0 1-1-1zM16 8h3v11a1 1 0 0 1-1 1M8 8h5M8 12h5M8 16h3',
@@ -179,15 +179,15 @@ export class App {
           // Game detail lives at /games/:id, so anything under /games that is not another section counts.
           isActive: (url) =>
             url.startsWith('/games') &&
-            !url.startsWith('/games/chat') &&
+            !url.startsWith('/games/libbot') &&
             !url.startsWith('/games/sources') &&
-            !url.startsWith('/games/switch'),
+            !url.startsWith('/games/consoles'),
         },
         {
-          label: 'Chat',
-          path: '/games/chat',
-          icon: ICONS.chat,
-          isActive: startsWith('/games/chat'),
+          label: 'LibBot',
+          path: '/games/libbot',
+          icon: ICONS.sparkle,
+          isActive: startsWith('/games/libbot'),
         },
         {
           label: 'Sources',
@@ -197,10 +197,10 @@ export class App {
           requiredRole: 'admin',
         },
         {
-          label: 'Switch games',
-          path: '/games/switch',
+          label: 'Consoles',
+          path: '/games/consoles',
           icon: ICONS.gamepad,
-          isActive: startsWith('/games/switch'),
+          isActive: startsWith('/games/consoles'),
           requiredRole: 'admin',
         },
       ],

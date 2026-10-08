@@ -134,6 +134,24 @@ class ArtworkLookupClientTest {
         assertThat(url).isEmpty();
     }
 
+    @Test
+    void libretroTriesRegionTaggedNamesAndTakesTheFirstThatExists() {
+        stubFor(head(urlEqualTo("/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Boxarts/Super%20Mario%20World%20(Europe).png"))
+                .willReturn(aResponse().withStatus(200)));
+
+        Optional<String> url = artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "SNES", null,
+                "Super Mario World");
+
+        assertThat(url).contains(LOOKUP_BASE_URL
+                + "/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Boxarts/Super%20Mario%20World%20(Europe).png");
+    }
+
+    @Test
+    void libretroIsEmptyWhenEveryNameVariantMisses() {
+        assertThat(artworkLookupClient.findCoverArtworkUrl(SourceType.EMUDECK, "SNES", null, "Nonexistent Game"))
+                .isEmpty();
+    }
+
     private GameCatalogProperties properties() {
         return new GameCatalogProperties(
                 new GameCatalogProperties.Artwork("/tmp/artwork", 2097152L, true, 2000L),

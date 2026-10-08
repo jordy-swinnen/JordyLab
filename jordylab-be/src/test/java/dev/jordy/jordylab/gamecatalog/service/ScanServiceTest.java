@@ -1,12 +1,15 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jordy.jordylab.gamecatalog.CatalogChanged;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
+import dev.jordy.jordylab.gamecatalog.domain.Host;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.SyncReport;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.HostRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ClientGame;
@@ -22,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.List;
@@ -43,6 +47,7 @@ import static org.mockito.Mockito.when;
 class ScanServiceTest {
 
     private static final String HOSTNAME = "jordybox";
+    private static final Host HOST = Host.builder().hostname(HOSTNAME).build();
     private static final String MACHINE_ID = "9f1c0a7e-2b3d-4c5e-8f90-1a2b3c4d5e6f";
     private static final String DIGEST = "sha256:abc123";
     private static final Instant CAPTURED_AT = Instant.parse("2026-08-02T10:20:00Z");
@@ -58,6 +63,9 @@ class ScanServiceTest {
     private ScanSourceRepository scanSourceRepository;
 
     @Mock
+    private HostRepository hostRepository;
+
+    @Mock
     private SyncReportRepository syncReportRepository;
 
     @Mock
@@ -70,16 +78,10 @@ class ScanServiceTest {
     private ArtworkService artworkService;
 
     @Mock
-    private SteamMetadataService steamMetadataService;
-
-    @Mock
-    private EnrichmentService enrichmentService;
-
-    @Mock
     private SteamLibrarySyncService steamLibrarySyncService;
 
     @Mock
-    private MultiplayerService multiplayerService;
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private LibraryParser emuDeckParser;
@@ -103,8 +105,7 @@ class ScanServiceTest {
         ScanService service = serviceWithLimits(1, 1_000_000);
         ScanSource source = anEnabledSource();
         ScanRequest request = aScanRequest(null, false, null);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO, ZELDA));
 
         ScanResponse response = service.submitScan(request);
@@ -122,8 +123,7 @@ class ScanServiceTest {
         ScanSource source = spy(anEnabledSource());
         ScanRequest request = aScanRequest(null, false, null);
         ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
@@ -148,12 +148,11 @@ class ScanServiceTest {
     }
 
     @Test
-    void appliedScanPopulatesCatalogDataInlineAndPurges() {
+    void appliedScanReturnsWithoutLookupsAnnouncesTheChangeAndPurges() {
         ScanService service = serviceWithLimits(100, 1_000_000);
         ScanSource source = anEnabledSource();
         ScanRequest request = aScanRequest(null, false, null);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
@@ -164,18 +163,16 @@ class ScanServiceTest {
 
         Instant after = Instant.now();
         assertThat(snapshotCaptor.getValue()).isBetween(before, after);
-        verify(steamMetadataService).fetchPending(25);
-        verify(enrichmentService).enrichPending(8);
+        verify(eventPublisher).publishEvent(new CatalogChanged("scan"));
         verify(reconciliationService).purgeUninstalledGames();
     }
 
     @Test
-    void noChangeScanSkipsInlinePopulationAndPurge() {
+    void noChangeScanAnnouncesNothingAndDoesNotPurge() {
         ScanService service = serviceWithLimits(100, 1_000_000);
         ScanSource source = anEnabledSource();
         ScanRequest request = aScanRequest(null, false, null);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         ArgumentCaptor<Instant> snapshotCaptor = ArgumentCaptor.forClass(Instant.class);
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), snapshotCaptor.capture()))
@@ -188,8 +185,7 @@ class ScanServiceTest {
         Instant after = Instant.now();
         assertThat(snapshotCaptor.getValue()).isBetween(before, after);
         assertThat(duplicate.outcome()).isEqualTo(SyncOutcome.NO_CHANGE);
-        verify(steamMetadataService, times(1)).fetchPending(25);
-        verify(enrichmentService, times(1)).enrichPending(8);
+        verify(eventPublisher, times(1)).publishEvent(new CatalogChanged("scan"));
         verify(reconciliationService, times(1)).purgeUninstalledGames();
     }
 
@@ -200,8 +196,7 @@ class ScanServiceTest {
         ScanRequest first = aScanRequest(null, false, null);
         ScanRequest second = aScanRequest(null, false, null, CAPTURED_AT.plusSeconds(3600));
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(first)).thenReturn(List.of(MARIO));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
@@ -223,8 +218,7 @@ class ScanServiceTest {
     void checkReportsScanNeededWhenNoDigestIsStored() {
         ScanService service = serviceWithLimits(100, 1_000_000);
         ScanSource source = anEnabledSource();
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
 
         ScanCheckResponse response = service.submitCheck(aCheckRequest(null));
 
@@ -241,8 +235,7 @@ class ScanServiceTest {
         ScanSource source = anEnabledSource();
         source.recordClientDigest(DIGEST, ScanService.CURRENT_INGEST_VERSION);
         source.recordAttempt(SyncOutcome.APPLIED, CAPTURED_AT);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
 
         ScanCheckResponse response = service.submitCheck(aCheckRequest(DIGEST));
 
@@ -255,8 +248,7 @@ class ScanServiceTest {
         ScanSource source = anEnabledSource();
         source.recordClientDigest(DIGEST, 0);
         source.recordAttempt(SyncOutcome.APPLIED, CAPTURED_AT);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
 
         ScanCheckResponse response = service.submitCheck(aCheckRequest(DIGEST));
 
@@ -269,8 +261,7 @@ class ScanServiceTest {
         ScanSource source = anEnabledSource();
         source.recordClientDigest(DIGEST, ScanService.CURRENT_INGEST_VERSION);
         source.recordAttempt(SyncOutcome.SCAN_FAILED, CAPTURED_AT);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
 
         ScanCheckResponse response = service.submitCheck(aCheckRequest(DIGEST));
 
@@ -282,8 +273,7 @@ class ScanServiceTest {
         ScanService service = serviceWithLimits(100, 1_000_000);
         ScanSource source = anEnabledSource();
         source.setEnabled(false);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
 
         ScanCheckResponse response = service.submitCheck(aCheckRequest(null));
 
@@ -298,8 +288,7 @@ class ScanServiceTest {
         ScanService service = serviceWithLimits(100, 1_000_000);
         ScanSource source = anEnabledSource();
         ScanRequest request = aScanRequest(null, false, null);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of());
 
         ScanResponse response = service.submitScan(request);
@@ -316,8 +305,7 @@ class ScanServiceTest {
         ScanService service = serviceWithLimits(100, 1_000_000);
         ScanSource source = anEnabledSource();
         ScanRequest request = aScanRequest(null, false, null);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         when(gameInstallationRepository.countInstalledBySourceId(source.getId())).thenReturn(100L);
 
@@ -336,8 +324,7 @@ class ScanServiceTest {
         ScanSource source = anEnabledSource();
         ScanRequest request = aScanRequest(null, true, null);
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(0, 1, 0));
@@ -357,8 +344,7 @@ class ScanServiceTest {
         List<ClientGame> games = List.of(new ClientGame("snes/Super Mario World.sfc", "Super Mario World", "SNES"));
         ScanRequest request = aScanRequest(null, false, games);
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(CLIENT_MARIO)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
 
@@ -381,8 +367,7 @@ class ScanServiceTest {
         ScanRequest request = aScanRequest(null, false, games);
         GamePayload expected = new GamePayload("snes/Caf\u00e9.sfc", "Caf\u00e9", "SNES", null);
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(expected)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
 
@@ -402,8 +387,7 @@ class ScanServiceTest {
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
         when(scanSourceRepository.findByMachineIdAndSourceType(MACHINE_ID, SourceType.EMUDECK))
                 .thenReturn(Optional.empty());
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
@@ -422,8 +406,7 @@ class ScanServiceTest {
         ScanSource applied = anEnabledSource();
         ScanRequest appliedRequest = aScanRequest(null, false, null, DIGEST);
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(applied));
+        stubSource(SourceType.EMUDECK, Optional.of(applied));
         when(emuDeckParser.parse(appliedRequest)).thenReturn(List.of(MARIO));
         when(reconciliationService.applySnapshot(eq(applied), eq(List.of(MARIO)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
@@ -444,8 +427,7 @@ class ScanServiceTest {
         source.recordClientDigest(DIGEST, ScanService.CURRENT_INGEST_VERSION);
         ScanRequest request = aScanRequest(null, false, null);
         ArgumentCaptor<Instant> receivedAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        when(scanSourceRepository.findByHostnameAndSourceType(HOSTNAME, SourceType.EMUDECK))
-                .thenReturn(Optional.of(source));
+        stubSource(SourceType.EMUDECK, Optional.of(source));
         when(emuDeckParser.parse(request)).thenReturn(List.of(MARIO));
         when(reconciliationService.applySnapshot(eq(source), eq(List.of(MARIO)), receivedAtCaptor.capture()))
                 .thenReturn(new ReconciliationCounts(1, 0, 0));
@@ -467,8 +449,8 @@ class ScanServiceTest {
                 new GameCatalogProperties.Metadata(25, 3),
                 new GameCatalogProperties.Scan(maxGamesPerSource, maxPayloadBytes, 262_144, 0.5), null);
 
-        return new ScanService(scanSourceRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
-                artworkService, steamMetadataService, enrichmentService, steamLibrarySyncService, multiplayerService, properties,
+        return new ScanService(scanSourceRepository, hostRepository, syncReportRepository, gameInstallationRepository, reconciliationService,
+                artworkService, steamLibrarySyncService, eventPublisher, properties,
                 new ObjectMapper().findAndRegisterModules(), Map.of("EMUDECK", emuDeckParser), scanLock);
     }
 
@@ -490,10 +472,15 @@ class ScanServiceTest {
         return new ScanCheckRequest(null, HOSTNAME, SourceType.EMUDECK, clientDigest);
     }
 
+    private void stubSource(SourceType sourceType, Optional<ScanSource> source) {
+        when(hostRepository.findByHostnameIgnoreCase(HOSTNAME)).thenReturn(Optional.of(HOST));
+        when(scanSourceRepository.findByHostIdAndSourceType(HOST.getId(), sourceType)).thenReturn(source);
+    }
+
     private ScanSource anEnabledSource() {
         return ScanSource.builder()
                 .id(UUID.fromString("4f675aad-fa21-4b3b-9555-1b698b4e0c0a"))
-                .hostname(HOSTNAME)
+                .host(HOST)
                 .sourceType(SourceType.EMUDECK)
                 .enabled(true)
                 .build();

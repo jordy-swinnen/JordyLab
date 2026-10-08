@@ -25,7 +25,7 @@ test.describe('Game catalog grid and detail', () => {
 
     await expect(page).toHaveURL(/\/games\/[0-9a-f-]+$/);
     await expect(page.getByRole('heading', { level: 2, name: 'Chrono Trigger' })).toBeVisible();
-    await expect(page.getByText('Super Nintendo').first()).toBeVisible();
+    await expect(page.locator('lib-platform-chip', { hasText: 'SNES' })).toBeVisible();
     await expect(page.getByText(/Installed on · e2e-host/)).toBeVisible();
 
     await page.getByRole('link', { name: /Back to library/ }).click();

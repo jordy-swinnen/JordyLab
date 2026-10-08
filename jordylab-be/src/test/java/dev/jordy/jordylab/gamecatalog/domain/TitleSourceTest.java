@@ -24,4 +24,15 @@ class TitleSourceTest {
     void manifestDoesNotOutrankLibrary() {
         assertThat(TitleSource.MANIFEST.outranks(TitleSource.LIBRARY)).isFalse();
     }
+
+    @Test
+    void equalRankedScansDoNotRenameEachOtherButALibraryOrAPersonCan() {
+        assertThat(TitleSource.ROM.replaces(TitleSource.MANIFEST)).isFalse();
+        assertThat(TitleSource.MANIFEST.replaces(TitleSource.MANIFEST)).isFalse();
+        assertThat(TitleSource.LIBRARY.replaces(TitleSource.LIBRARY)).isTrue();
+        assertThat(TitleSource.MANUAL.replaces(TitleSource.MANUAL)).isTrue();
+        assertThat(TitleSource.MANIFEST.replaces(null)).isTrue();
+        assertThat(TitleSource.LIBRARY.replaces(TitleSource.ROM)).isTrue();
+        assertThat(TitleSource.ROM.replaces(TitleSource.LIBRARY)).isFalse();
+    }
 }

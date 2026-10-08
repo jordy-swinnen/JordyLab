@@ -1,0 +1,14 @@
+<lib-libbot-view
+  [messages]="messages()"
+  [busy]="busy()"
+  [stage]="stage()"
+  [failure]="failure()"
+  [failedQuestion]="failedQuestion()"
+  [quota]="quota()"
+  [attachedGame]="attachedGame()"
+  [prefillQuestion]="prefillQuestion()"
+  (ask)="onAsk($event)"
+  (retry)="onRetry()"
+  (newConversation)="onNewConversation()"
+  (removeAttachment)="onRemoveAttachment()"
+/>

@@ -32,12 +32,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GameCatalogPropertiesTest {
 
     @Configuration
-    @EnableConfigurationProperties(GameCatalogProperties.class)
+    @EnableConfigurationProperties({GameCatalogProperties.class, AutoFillProperties.class, LibBotProperties.class})
     static class TestConfig {
     }
 
     @Autowired
     private GameCatalogProperties properties;
+
+    @Autowired
+    private AutoFillProperties autoFillProperties;
+
+    @Autowired
+    private LibBotProperties libBotProperties;
 
     @Test
     void bindsScanProperties() {
@@ -63,6 +69,35 @@ class GameCatalogPropertiesTest {
             softly.assertThat(properties.enrichment().batchSize()).isEqualTo(25);
             softly.assertThat(properties.enrichment().maxAttempts()).isEqualTo(5);
             softly.assertThat(properties.chat().maxResultGames()).isEqualTo(20);
+        });
+    }
+
+    @Test
+    void bindsTheAutoFillAndLibBotSectionsOfTheRealApplicationYaml() {
+        org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(autoFillProperties.batchSize()).isEqualTo(10);
+            softly.assertThat(autoFillProperties.aiMaxAttempts()).isEqualTo(3);
+            softly.assertThat(autoFillProperties.freeLookupRetryHours()).isEqualTo(24);
+            softly.assertThat(autoFillProperties.sweepCron()).isEqualTo("0 30 4 * * *");
+            softly.assertThat(libBotProperties.memoryExchanges()).isEqualTo(10);
+            softly.assertThat(libBotProperties.memoryIdleHours()).isEqualTo(2);
+            softly.assertThat(libBotProperties.maxReferences()).isEqualTo(10);
+            softly.assertThat(libBotProperties.maxCandidates()).isEqualTo(15);
+            softly.assertThat(libBotProperties.maxUnknownTitles()).isEqualTo(5);
+            softly.assertThat(libBotProperties.maxMessageLength()).isEqualTo(1000);
+        });
+    }
+
+    @Test
+    void appliesDocumentedDefaultsToTheAutoFillAndLibBotRecords() {
+        AutoFillProperties autoFill = new AutoFillProperties(0, 0, 0, null, null);
+        LibBotProperties libBot = new LibBotProperties(0, 0, 0, 0, 0, 0);
+
+        org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(autoFill.batchSize()).isEqualTo(10);
+            softly.assertThat(autoFill.zone()).isEqualTo("Europe/Brussels");
+            softly.assertThat(libBot.memoryExchanges()).isEqualTo(10);
+            softly.assertThat(libBot.maxReferences()).isEqualTo(10);
         });
     }
 

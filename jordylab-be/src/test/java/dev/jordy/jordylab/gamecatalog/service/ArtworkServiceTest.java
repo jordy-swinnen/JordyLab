@@ -68,7 +68,8 @@ class ArtworkServiceTest {
         when(artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
                 .thenReturn(Optional.of("https://cdn.example/steam/apps/620/library_hero.jpg"));
 
-        List<String> requested = artworkService.processArtworkAfterSync(source, List.of(payload("620", true)));
+        List<String> requested = artworkService.processArtworkAfterSync(source,
+                List.of(new GamePayload("620", "Portal 2", "Steam", true)));
 
         assertSoftly(softly -> {
             softly.assertThat(requested).isEmpty();
@@ -268,6 +269,7 @@ class ArtworkServiceTest {
                         .game(game)
                         .source(source)
                         .externalRef(game.getSteamAppId() == null ? game.getTitle() + ".smc" : game.getSteamAppId())
+                        .platform(game.getSteamAppId() == null ? PLATFORM : "Steam")
                         .firstSeenAt(SEEN_AT)
                         .lastSeenAt(SEEN_AT)
                         .build())
@@ -275,53 +277,9 @@ class ArtworkServiceTest {
         when(gameInstallationRepository.findAllBySourceId(source.getId())).thenReturn(installations);
     }
 
-    @Test
-    void resolvesLibraryGameArtworkFromSteamCdn() {
-        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2").build();
-        when(artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
-                .thenReturn(Optional.of("https://cdn.example/620/library_600x900.jpg"));
-        when(artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "620", "Portal 2"))
-                .thenReturn(Optional.of("https://cdn.example/620/library_hero.jpg"));
-
-        int processed = artworkService.processLibraryGames(List.of(game));
-
-        assertSoftly(softly -> {
-            softly.assertThat(processed).isEqualTo(1);
-            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-            softly.assertThat(game.getCoverRef()).isEqualTo("https://cdn.example/620/library_600x900.jpg");
-            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.EXTERNAL_URL);
-        });
-    }
-
-    @Test
-    void libraryGameWithoutCdnArtBecomesPlaceholder() {
-        Game game = Game.builder().platform("Steam").steamAppId("999999").title("Obscure").build();
-        when(artworkLookupClient.findCoverArtworkUrl(SourceType.STEAM, "Steam", "999999", "Obscure"))
-                .thenReturn(Optional.empty());
-        when(artworkLookupClient.findBannerArtworkUrl(SourceType.STEAM, "Steam", "999999", "Obscure"))
-                .thenReturn(Optional.empty());
-
-        artworkService.processLibraryGames(List.of(game));
-
-        assertSoftly(softly -> {
-            softly.assertThat(game.getCoverStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
-            softly.assertThat(game.getBannerStatus()).isEqualTo(ArtworkStatus.PLACEHOLDER);
-        });
-    }
-
-    @Test
-    void libraryArtworkSkipsGamesWithoutSteamAppId() {
-        Game game = Game.builder().platform("SNES").title("Super Mario World").build();
-
-        int processed = artworkService.processLibraryGames(List.of(game));
-
-        assertThat(processed).isZero();
-        verifyNoInteractions(artworkLookupClient);
-    }
-
     private ScanSource aSource(SourceType sourceType) {
         return ScanSource.builder()
-                .hostname(HOSTNAME)
+                .host(dev.jordy.jordylab.gamecatalog.domain.Host.builder().hostname(HOSTNAME).build())
                 .sourceType(sourceType)
                 .enabled(true)
                 .build();
@@ -329,7 +287,6 @@ class ArtworkServiceTest {
 
     private Game aGame(ScanSource source, String externalRef, String title, String steamAppId) {
         return Game.builder()
-                .platform(steamAppId == null ? PLATFORM : "Steam")
                 .steamAppId(steamAppId)
                 .title(title)
                 .build();

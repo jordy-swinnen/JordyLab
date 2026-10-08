@@ -3,7 +3,13 @@ import { bannerUrl, coverUrl, GameCatalogApiService } from './gamecatalog-api.se
 import { GamesPage } from './gamecatalog.models';
 import { aGameDetailMock } from './mocks/game-detail.model.mock';
 import { aGameSummaryMock } from './mocks/game-summary.model.mock';
-import { aRefreshAllMock } from './mocks/refresh-all.model.mock';
+import { aConsoleMock } from './mocks/console.model.mock';
+import { aKnownConsoleMock } from './mocks/known-console.model.mock';
+import { aLibBotQuotaMock } from './mocks/libbot-quota.model.mock';
+import { aPlaceOptionMock } from './mocks/place-option.model.mock';
+import { aPlatformChipMock } from './mocks/platform-chip.model.mock';
+import { aSourcesOverviewMock } from './mocks/sources-overview.model.mock';
+import { aRefreshRunMock } from './mocks/refresh-run.model.mock';
 
 describe('GameCatalogApiService', () => {
   let spectator: SpectatorHttp<GameCatalogApiService>;
@@ -29,17 +35,45 @@ describe('GameCatalogApiService', () => {
     spectator.expectOne('/api/gamecatalog/games', HttpMethod.GET).flush(expectedPage);
   });
 
-  it('passes search, platform, host, page and size as query params', () => {
-    spectator.service
-      .getGames({ search: 'mario', platform: 'SNES', host: 'jordybox', page: 2, size: 30 })
-      .subscribe();
+  it('passes search, platform, page and size as query params', () => {
+    spectator.service.getGames({ search: 'mario', platform: ['SNES'], page: 2, size: 30 }).subscribe();
 
     spectator
-      .expectOne('/api/gamecatalog/games?search=mario&platform=SNES&host=jordybox&page=2&size=30', HttpMethod.GET)
+      .expectOne('/api/gamecatalog/games?search=mario&platform=SNES&page=2&size=30', HttpMethod.GET)
       .flush({ content: [], page: 2, size: 30, totalElements: 0, totalPages: 0 });
   });
 
-  it('omits empty search, platform and host params', () => {
+  it('repeats a param once per value for the multi-select filters', () => {
+    spectator.service
+      .getGames({
+        platform: ['SNES', 'Steam'],
+        where: ['host-1', 'console-1'],
+        source: ['STEAM_OWNED', 'EMULATED'],
+        romStatus: ['BROKEN'],
+        mark: ['WANT_TO_PLAY', 'PLAYED_LIKED'],
+        markScope: 'MINE',
+        minLocalPlayers: 6,
+        sort: 'MOST_WANTED',
+      })
+      .subscribe();
+
+    spectator
+      .expectOne(
+        '/api/gamecatalog/games?platform=SNES&platform=Steam&where=host-1&where=console-1&source=STEAM_OWNED&source=EMULATED&minLocalPlayers=6&romStatus=BROKEN&mark=WANT_TO_PLAY&mark=PLAYED_LIKED&markScope=MINE&sort=MOST_WANTED',
+        HttpMethod.GET,
+      )
+      .flush({ content: [], page: 0, size: 60, totalElements: 0, totalPages: 0 });
+  });
+
+  it('leaves out the mark scope when no mark is asked for and the default sort', () => {
+    spectator.service.getGames({ markScope: 'MINE', sort: 'TITLE' }).subscribe();
+
+    spectator
+      .expectOne('/api/gamecatalog/games', HttpMethod.GET)
+      .flush({ content: [], page: 0, size: 60, totalElements: 0, totalPages: 0 });
+  });
+
+  it('omits an empty search', () => {
     spectator.service.getGames({ search: '', page: 0 }).subscribe();
 
     spectator
@@ -58,24 +92,36 @@ describe('GameCatalogApiService', () => {
       .flush('Server error', { status: 500, statusText: 'Internal Server Error' });
   });
 
-  it('maps the platforms response to a plain string list', () => {
+  it('maps the platforms response to a list of coloured platform chips', () => {
+    const chips = [aPlatformChipMock({ name: 'SNES' }), aPlatformChipMock({ name: 'Steam', family: 'STEAM' })];
     spectator.service.getPlatforms().subscribe((platforms) => {
-      expect(platforms).toEqual(['SNES', 'PlayStation 2', 'Steam']);
+      expect(platforms).toEqual(chips);
     });
 
     spectator
       .expectOne('/api/gamecatalog/platforms', HttpMethod.GET)
-      .flush({ platforms: ['SNES', 'PlayStation 2', 'Steam'] });
+      .flush({ platforms: chips });
   });
 
-  it('maps the hosts response to a plain string list', () => {
-    spectator.service.getHosts().subscribe((hosts) => {
-      expect(hosts).toEqual(['jordybox', 'ryzen-desktop']);
+  it('maps the places response to a list of hosts and consoles', () => {
+    const places = [aPlaceOptionMock(), aPlaceOptionMock({ id: 'c-1', kind: 'CONSOLE', label: 'Nintendo Switch' })];
+    spectator.service.getPlaces().subscribe((result) => {
+      expect(result).toEqual(places);
     });
 
-    spectator
-      .expectOne('/api/gamecatalog/hosts', HttpMethod.GET)
-      .flush({ hosts: ['jordybox', 'ryzen-desktop'] });
+    spectator.expectOne('/api/gamecatalog/places', HttpMethod.GET).flush({ places });
+  });
+
+  it('puts the display name of a host, or null to clear it', () => {
+    spectator.service.setHostDisplayName('host-1', 'Living room PC').subscribe();
+    const request = spectator.expectOne('/api/gamecatalog/hosts/host-1/display-name', HttpMethod.PUT);
+    expect(request.request.body).toEqual({ displayName: 'Living room PC' });
+    request.flush({});
+
+    spectator.service.setHostDisplayName('host-1', null).subscribe();
+    const clearing = spectator.expectOne('/api/gamecatalog/hosts/host-1/display-name', HttpMethod.PUT);
+    expect(clearing.request.body).toEqual({ displayName: null });
+    clearing.flush({});
   });
 
   it('requests a game detail by id', () => {
@@ -101,72 +147,18 @@ describe('GameCatalogApiService', () => {
       .flush('Not Found', { status: 404, statusText: 'Not Found' });
   });
 
-  it('posts a chat question and maps the answered response', () => {
-    const expectedAnswer = {
-      answer: 'One game supports local co-op.',
-      games: [{ id: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', title: 'Super Mario World', platform: 'SNES' }],
-      noMatch: false,
-    };
-
-    spectator.service.chat('which games support local co-op?').subscribe((response) => {
-      expect(response).toEqual({ kind: 'answered', answer: expectedAnswer });
+  it('reads the LibBot allowance', () => {
+    spectator.service.getLibBotQuota().subscribe((quota) => {
+      expect(quota).toEqual(aLibBotQuotaMock());
     });
 
-    const request = spectator.expectOne('/api/gamecatalog/chat', HttpMethod.POST);
-    expect(request.request.body).toEqual({ question: 'which games support local co-op?' });
-    request.flush(expectedAnswer);
+    spectator.expectOne('/api/gamecatalog/libbot/quota', HttpMethod.GET).flush(aLibBotQuotaMock());
   });
 
-  it('includes attached game ids when present', () => {
-    spectator.service.chat('is this good for 4 players?', ['game-1']).subscribe();
+  it('asks the server to forget a LibBot conversation', () => {
+    spectator.service.forgetLibBotConversation('c-1').subscribe();
 
-    const request = spectator.expectOne('/api/gamecatalog/chat', HttpMethod.POST);
-    expect(request.request.body).toEqual({ question: 'is this good for 4 players?', gameIds: ['game-1'] });
-    request.flush({ answer: 'Yes.', games: [], noMatch: false });
-  });
-
-  it('maps a 429 chat response to the limit-reached state with resetsAt', () => {
-    spectator.service.chat('anything').subscribe((response) => {
-      expect(response).toEqual({ kind: 'limitReached', resetsAt: '2026-09-28T00:00:00Z' });
-    });
-
-    spectator
-      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
-      .flush(
-        { reason: 'CHAT_LIMIT_REACHED', resetsAt: '2026-09-28T00:00:00Z' },
-        { status: 429, statusText: 'Too Many Requests' },
-      );
-  });
-
-  it('maps a 503 chat response to the unavailable state', () => {
-    spectator.service.chat('anything').subscribe((response) => {
-      expect(response).toEqual({ kind: 'unavailable' });
-    });
-
-    spectator
-      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
-      .flush({ reason: 'CHAT_UNAVAILABLE' }, { status: 503, statusText: 'Service Unavailable' });
-  });
-
-  it('maps a 400 invalid-attachment response to the unavailable state', () => {
-    spectator.service.chat('anything', ['hidden']).subscribe((response) => {
-      expect(response).toEqual({ kind: 'unavailable' });
-    });
-
-    spectator
-      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
-      .flush({ reason: 'GAME_IDS_INVALID' }, { status: 400, statusText: 'Bad Request' });
-  });
-
-  it('propagates non-503 chat errors', () => {
-    spectator.service.chat('anything').subscribe({
-      next: () => fail('expected an error'),
-      error: (error) => expect(error.status).toBe(500),
-    });
-
-    spectator
-      .expectOne('/api/gamecatalog/chat', HttpMethod.POST)
-      .flush('Server error', { status: 500, statusText: 'Internal Server Error' });
+    spectator.expectOne('/api/gamecatalog/libbot/conversations/c-1', HttpMethod.DELETE).flush(null);
   });
 
   it('maps the sources response to a plain list', () => {
@@ -186,11 +178,21 @@ describe('GameCatalogApiService', () => {
       },
     ];
 
-    spectator.service.getSources().subscribe((sources) => {
-      expect(sources).toEqual(expectedSources);
+    spectator.service.getSources().subscribe((overview) => {
+      expect(overview).toEqual(aSourcesOverviewMock({ sources: expectedSources }));
     });
 
-    spectator.expectOne('/api/gamecatalog/sources', HttpMethod.GET).flush({ sources: expectedSources });
+    spectator
+      .expectOne('/api/gamecatalog/sources', HttpMethod.GET)
+      .flush(aSourcesOverviewMock({ sources: expectedSources }));
+  });
+
+  it('asks for the games behind one health count', () => {
+    spectator.service.getHealthExceptions('COVER').subscribe();
+
+    spectator
+      .expectOne('/api/gamecatalog/sources/health/exceptions?kind=COVER', HttpMethod.GET)
+      .flush({ kind: 'COVER', total: 0, games: [] });
   });
 
   it('puts the enabled toggle for a source', () => {
@@ -204,6 +206,78 @@ describe('GameCatalogApiService', () => {
     );
     expect(request.request.body).toEqual({ enabled: false });
     request.flush({ id: '2c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f', enabled: false });
+  });
+
+  describe('consoles', () => {
+    it('asks for the well-known consoles matching a query', () => {
+      spectator.service.getKnownConsoles('nin').subscribe();
+
+      spectator.expectOne('/api/gamecatalog/consoles/known?q=nin', HttpMethod.GET).flush([aKnownConsoleMock()]);
+    });
+
+    it('lists, adds and renames consoles', () => {
+      spectator.service.getConsoles().subscribe();
+      spectator.expectOne('/api/gamecatalog/consoles', HttpMethod.GET).flush([aConsoleMock()]);
+
+      spectator.service.addConsole('Nintendo Switch', 'Switch dock').subscribe();
+      const add = spectator.expectOne('/api/gamecatalog/consoles', HttpMethod.POST);
+      expect(add.request.body).toEqual({ platform: 'Nintendo Switch', name: 'Switch dock' });
+      add.flush(aConsoleMock());
+
+      spectator.service.addConsole('Nintendo Switch', null).subscribe();
+      const addDefault = spectator.expectOne('/api/gamecatalog/consoles', HttpMethod.POST);
+      expect(addDefault.request.body).toEqual({ platform: 'Nintendo Switch' });
+      addDefault.flush(aConsoleMock());
+
+      spectator.service.renameConsole('c1', 'Bedroom').subscribe();
+      const rename = spectator.expectOne('/api/gamecatalog/consoles/c1', HttpMethod.PATCH);
+      expect(rename.request.body).toEqual({ name: 'Bedroom' });
+      rename.flush(aConsoleMock());
+    });
+
+    it('reads the impact of a removal and removes the console', () => {
+      spectator.service.getConsoleImpact('c1').subscribe();
+      spectator.expectOne('/api/gamecatalog/consoles/c1/impact', HttpMethod.GET)
+        .flush({ games: 1, alsoElsewhere: 0, wouldBeRemoved: 1 });
+
+      spectator.service.removeConsole('c1').subscribe();
+      spectator.expectOne('/api/gamecatalog/consoles/c1', HttpMethod.DELETE).flush(null);
+    });
+
+    it('lists, searches, adds, relinks and removes games on a console', () => {
+      spectator.service.getConsoleGames('c1').subscribe();
+      spectator.expectOne('/api/gamecatalog/consoles/c1/games', HttpMethod.GET).flush([]);
+
+      spectator.service.searchConsoleGames('c1', 'mario').subscribe();
+      spectator.expectOne('/api/gamecatalog/consoles/c1/search?q=mario', HttpMethod.GET).flush([]);
+
+      spectator.service.addConsoleGame('c1', { igdbGameId: 13427 }).subscribe();
+      const add = spectator.expectOne('/api/gamecatalog/consoles/c1/games', HttpMethod.POST);
+      expect(add.request.body).toEqual({ igdbGameId: 13427 });
+      add.flush({ gameId: 'g1', title: 'Mario Kart 8 Deluxe', linkedExisting: false });
+
+      spectator.service.relinkConsoleGame('c1', 'g1', 13427).subscribe();
+      const relink = spectator.expectOne('/api/gamecatalog/consoles/c1/games/g1', HttpMethod.PATCH);
+      expect(relink.request.body).toEqual({ igdbGameId: 13427 });
+      relink.flush({ gameId: 'g1', title: 'x', linkedExisting: false });
+
+      spectator.service.removeConsoleGame('c1', 'g1').subscribe();
+      spectator.expectOne('/api/gamecatalog/consoles/c1/games/g1', HttpMethod.DELETE).flush(null);
+    });
+
+    it('previews and confirms a pasted list', () => {
+      spectator.service.previewConsoleBulk('c1', ['Celeste']).subscribe((lines) => {
+        expect(lines).toEqual([{ line: 'Celeste', status: 'NO_MATCH', match: null }]);
+      });
+      const preview = spectator.expectOne('/api/gamecatalog/consoles/c1/games/bulk/preview', HttpMethod.POST);
+      expect(preview.request.body).toEqual({ lines: ['Celeste'] });
+      preview.flush({ lines: [{ line: 'Celeste', status: 'NO_MATCH', match: null }] });
+
+      spectator.service.confirmConsoleBulk('c1', [{ line: 'Celeste', igdbGameId: null, title: 'Celeste' }]).subscribe();
+      const confirm = spectator.expectOne('/api/gamecatalog/consoles/c1/games/bulk/confirm', HttpMethod.POST);
+      expect(confirm.request.body).toEqual({ items: [{ line: 'Celeste', igdbGameId: null, title: 'Celeste' }] });
+      confirm.flush({ added: [], skipped: [], failed: [] });
+    });
   });
 
   it('resolves the external cover URL when present', () => {
@@ -260,13 +334,47 @@ describe('GameCatalogApiService', () => {
       .flush(regenerated);
   });
 
-  it('posts a bulk refresh and returns the processed and remaining counts', () => {
-    const counts = aRefreshAllMock();
+  it('puts the ROM status of one copy of a game', () => {
+    spectator.service.setRomStatus('game-1', 'copy-1', 'BROKEN').subscribe();
 
-    spectator.service.refreshPending().subscribe((result) => {
-      expect(result).toEqual(counts);
+    const request = spectator.expectOne('/api/gamecatalog/games/game-1/installations/copy-1/rom-status', HttpMethod.PUT);
+    expect(request.request.body).toEqual({ status: 'BROKEN' });
+    request.flush({});
+  });
+
+  it('asks what turning a source off would hide', () => {
+    spectator.service.getHideImpact('source-1').subscribe((impact) => {
+      expect(impact).toEqual({ hiddenGames: 87, stillVisibleElsewhere: 5 });
     });
 
-    spectator.expectOne('/api/gamecatalog/games/refresh', HttpMethod.POST).flush(counts);
+    spectator
+      .expectOne('/api/gamecatalog/sources/source-1/hide-impact', HttpMethod.GET)
+      .flush({ hiddenGames: 87, stillVisibleElsewhere: 5 });
+  });
+
+  it('starts a refresh run of a kind, with the cost confirmation', () => {
+    const run = aRefreshRunMock({ kind: 'AI' });
+
+    spectator.service.startRefreshRun('AI', true).subscribe((result) => expect(result).toEqual(run));
+
+    const request = spectator.expectOne('/api/gamecatalog/refresh-runs', HttpMethod.POST);
+    expect(request.request.body).toEqual({ kind: 'AI', confirmCost: true });
+    request.flush(run);
+  });
+
+  it('asks for the latest run of a kind', () => {
+    const run = aRefreshRunMock();
+
+    spectator.service.getCurrentRefreshRun('DATA').subscribe((result) => expect(result).toEqual(run));
+
+    spectator.expectOne('/api/gamecatalog/refresh-runs/current?kind=DATA', HttpMethod.GET).flush(run);
+  });
+
+  it('posts a stop request for a run', () => {
+    const run = aRefreshRunMock({ stopRequested: true });
+
+    spectator.service.stopRefreshRun(run.id).subscribe((result) => expect(result).toEqual(run));
+
+    spectator.expectOne(`/api/gamecatalog/refresh-runs/${run.id}/stop`, HttpMethod.POST).flush(run);
   });
 });

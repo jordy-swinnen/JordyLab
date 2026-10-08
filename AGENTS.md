@@ -18,7 +18,7 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 | Module | Schema | Purpose |
 |--------|--------|---------|
 | `fna` | `finance` | Financial news aggregation, RSS ingestion, AI investment briefings |
-| `gamecatalog` | `gamecatalog` | ROM/Steam game catalog — ingestion, grid/detail, AI enrichment, grounded chat, source management (**built**) |
+| `gamecatalog` | `gamecatalog` | ROM/Steam/console game catalog — ingestion, grid/detail, filters, marks, auto-filled covers/facts/descriptions, LibBot (grounded AI chat), consoles, source management (**built**) |
 | `garmin` | `garmin` | Health/fitness data from Garmin Connect (written by Python sidecar) |
 | `mobile` | `mobile` | Android APK release hosting (signed download links), notification dispatch (Ntfy) for the native app (see `specs/007-mobile-app/`) |
 | `recipe` | `recipe` | Self-hosted recipe management (planned) |
@@ -77,12 +77,12 @@ the `Commit References` workflow on every pull-request commit. Never bypass it w
 
 ## AI Routing
 
-All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeature` (`fna.briefing`, `gamecatalog.enrichment`, `gamecatalog.chat.query`, `gamecatalog.chat.answer`) has its own model: the one picked on Settings → AI Models (`settings.ai_feature_model_setting`), else the default in `jordylab.ai.features`. Calls go to the **OpenRouter** gateway first and are retried once on **Anthropic** (`jordylab.ai.fallback`) on any failure; without `OPENROUTER_API_KEY` they go straight to Anthropic. Every call publishes `AiCallCompleted` and counts `jordylab.ai.calls`. Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
+All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeature` (`fna.briefing`, `gamecatalog.enrichment`, `gamecatalog.chat.query` and `.chat.answer` = LibBot understanding and writing; `gamecatalog.embedding` is a fixed internal feature) has its own model: the one picked on Settings → AI Models (`settings.ai_feature_model_setting`), else the default in `jordylab.ai.features`. Calls go to the **OpenRouter** gateway first and are retried once on **Anthropic** (`jordylab.ai.fallback`) on any failure; without `OPENROUTER_API_KEY` they go straight to Anthropic. Every call publishes `AiCallCompleted` and counts `jordylab.ai.calls`. Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
 
 | Feature | Default model (OpenRouter id) | Rationale | Status |
 |---------|-------------------------------|-----------|--------|
 | `fna.briefing` | `anthropic/claude-sonnet-5` | Financial analysis needs quality | **Wired** |
-| `gamecatalog.enrichment`, `.chat.query`, `.chat.answer` | `anthropic/claude-haiku-4.5` | Structured JSON + grounded chat; Haiku for cost | **Wired** |
+| `gamecatalog.enrichment`, `.chat.query`, `.chat.answer` | `anthropic/claude-haiku-4.5` | Store-style descriptions + LibBot (understand, write); Haiku for cost | **Wired** |
 | fallback (any feature) | Anthropic `claude-sonnet-5` | Used once when the gateway fails | **Wired** |
 | `recipe` | — | Module not built yet; adds its own `AiFeature` | Not built |
 
@@ -137,8 +137,9 @@ present in the repo.
 
 ## Local containers (Podman/Docker)
 
-The `jordylab-be-*` containers (`compose.yaml`: dev Postgres + Keycloak) and their volumes hold the owner's dev database. The dev Postgres data is in an *anonymous* volume, so it is lost for good if the container is removed with `-v` or the volume is used by a `--rm` container. Agents:
+The `jordylab-be-*` containers (`compose.yaml`: dev Postgres + Keycloak) and their volumes hold the owner's dev database. The dev Postgres data is in the **named** volume `jordylab-be_pgdata` (since feature 013; before that it was an anonymous volume, which is how the dev database was lost once). It survives removing the container; only `compose down -v` or `volume rm jordylab-be_pgdata` deletes it. Agents:
 
+- **Back it up before anything risky**: `podman exec jordylab-be-pgvector-1 sh -c 'pg_dump -U "$POSTGRES_USER" -Fc jordylab' > ~/jordylab-dev-$(date +%F).dump`.
 - **Read-only on the dev stack**: `ps`, `inspect`, `logs` only. Never `rm`, `stop`, `compose down`, `volume rm` or `prune` on it, and never recreate it without the owner's yes.
 - **Remove only what you created, by exact name or run label.** Never select containers by image (the dev stack and the e2e stack both use `pgvector/pgvector:pg16`) or by `ps | grep | xargs rm`.
 - **Never mount an existing volume in a `--rm` container** to look inside it: podman deletes implicitly created volumes when such a container exits. Use `podman volume inspect` / `podman volume export`.

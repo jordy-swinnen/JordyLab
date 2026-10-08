@@ -4,7 +4,10 @@ import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.HideImpactResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.LibraryHealthResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanSourceResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourcesResponse;
@@ -35,11 +38,18 @@ class ScanSourceServiceTest {
     @Mock
     private GameInstallationRepository gameInstallationRepository;
 
+    @Mock
+    private LibraryHealthService libraryHealthService;
+
+    @Mock
+    private GameRepository gameRepository;
+
     private ScanSourceService scanSourceService;
 
     @BeforeEach
     void setUp() {
-        scanSourceService = new ScanSourceService(scanSourceRepository, gameInstallationRepository);
+        scanSourceService = new ScanSourceService(scanSourceRepository, gameInstallationRepository,
+                libraryHealthService, gameRepository);
     }
 
     @Test
@@ -48,15 +58,19 @@ class ScanSourceServiceTest {
         source.recordAttempt(SyncOutcome.APPLIED, ATTEMPT_AT);
         when(scanSourceRepository.findAll()).thenReturn(List.of(source));
         when(gameInstallationRepository.countInstalledBySourceId(source.getId())).thenReturn(412L);
+        LibraryHealthResponse health = new LibraryHealthResponse(230, 12, 30, 5);
+        when(libraryHealthService.health()).thenReturn(health);
 
         SourcesResponse response = scanSourceService.listSources();
 
         assertSoftly(softly -> {
+            softly.assertThat(response.health()).isEqualTo(health);
             softly.assertThat(response.sources()).hasSize(1);
             ScanSourceResponse summary = response.sources().getFirst();
             softly.assertThat(summary.id()).isEqualTo(source.getId());
             softly.assertThat(summary.sourceKey()).isEqualTo("snes");
             softly.assertThat(summary.hostname()).isEqualTo("jordybox");
+            softly.assertThat(summary.label()).isEqualTo("jordybox");
             softly.assertThat(summary.sourceType()).isEqualTo(SourceType.EMUDECK);
             softly.assertThat(summary.platform()).isEqualTo("SNES");
             softly.assertThat(summary.enabled()).isTrue();
@@ -94,10 +108,42 @@ class ScanSourceServiceTest {
         assertThat(response).isEmpty();
     }
 
+    @Test
+    void hideImpactSplitsWhatDisappearsFromWhatStaysVisibleElsewhere() {
+        ScanSource source = aSource("snes");
+        when(scanSourceRepository.findById(source.getId())).thenReturn(Optional.of(source));
+        when(gameRepository.countInstalledOnSource(source.getId())).thenReturn(92L);
+        when(gameRepository.countHiddenIfSourceDisabled(source.getId())).thenReturn(87L);
+
+        HideImpactResponse impact = scanSourceService.hideImpact(source.getId()).orElseThrow();
+
+        assertSoftly(softly -> {
+            softly.assertThat(impact.hiddenGames()).isEqualTo(87);
+            softly.assertThat(impact.stillVisibleElsewhere()).isEqualTo(5);
+        });
+    }
+
+    @Test
+    void hideImpactOfASourceThatIsAlreadyOffIsZero() {
+        ScanSource source = aSource("snes");
+        source.setEnabled(false);
+        when(scanSourceRepository.findById(source.getId())).thenReturn(Optional.of(source));
+
+        assertThat(scanSourceService.hideImpact(source.getId())).contains(new HideImpactResponse(0, 0));
+    }
+
+    @Test
+    void hideImpactOfAnUnknownSourceIsEmpty() {
+        UUID unknownId = UUID.fromString("cccccccc-dddd-4eee-8fff-111111111111");
+        when(scanSourceRepository.findById(unknownId)).thenReturn(Optional.empty());
+
+        assertThat(scanSourceService.hideImpact(unknownId)).isEmpty();
+    }
+
     private ScanSource aSource(String sourceKey) {
         return ScanSource.builder()
                 .sourceKey(sourceKey)
-                .hostname("jordybox")
+                .host(dev.jordy.jordylab.gamecatalog.domain.Host.builder().hostname("jordybox").build())
                 .sourceType(SourceType.EMUDECK)
                 .platform("SNES")
                 .enabled(true)

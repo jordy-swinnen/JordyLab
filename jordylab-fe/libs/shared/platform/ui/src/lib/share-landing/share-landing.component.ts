@@ -22,7 +22,7 @@ import { ShareTargetService } from '@jordylab-fe/shared/platform/api';
         <p class="jordylab-share-landing__text">{{ text }}</p>
 
         <button type="button" [disabled]="submitting()" (click)="onAskCatalog(text)">
-          Ask the catalog
+          Ask LibBot
         </button>
 
         @if (isAdmin()) {
@@ -55,7 +55,7 @@ export class ShareLandingComponent {
 
   protected onAskCatalog(text: string): void {
     this.#shareTarget.clear();
-    void this.#router.navigate(['/games/chat'], { queryParams: { prefill: text } });
+    void this.#router.navigate(['/games/libbot'], { queryParams: { prefill: text } });
   }
 
   protected async onSaveToFna(text: string): Promise<void> {

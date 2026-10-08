@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -31,7 +33,9 @@ public class ScanSource extends BaseEntity<ScanSource> {
 
     private String sourceKey;
 
-    private String hostname;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "host_id")
+    private Host host;
 
     @Enumerated(EnumType.STRING)
     private SourceType sourceType;
@@ -58,8 +62,12 @@ public class ScanSource extends BaseEntity<ScanSource> {
 
     private Instant lastCheckedAt;
 
-    public void announce(String hostname, SourceType sourceType) {
-        this.hostname = hostname;
+    /** The name every screen shows for the machine behind this source: the host's display name or its hostname. */
+    public String hostLabel() {
+        return host.label();
+    }
+
+    public void announce(SourceType sourceType) {
         this.sourceType = sourceType;
     }
 
@@ -94,19 +102,19 @@ public class ScanSource extends BaseEntity<ScanSource> {
 
     public static class ScanSourceBuilder {
         public ScanSource build() {
-            Preconditions.checkArgument(StringUtils.hasText(hostname), "hostname is required");
+            Preconditions.checkArgument(host != null, "host is required");
             Preconditions.checkArgument(sourceType != null, "sourceType is required");
             if (id == null) {
                 id = UUID.randomUUID();
             }
             if (!StringUtils.hasText(sourceKey)) {
-                sourceKey = hostname + ":" + sourceType.name();
+                sourceKey = host.getHostname() + ":" + sourceType.name();
             }
             if (!StringUtils.hasText(platform)) {
                 platform = sourceType.platform();
             }
 
-            return new ScanSource(id, sourceKey, hostname, sourceType, platform, enabled, lastAttemptAt, lastSuccessAt,
+            return new ScanSource(id, sourceKey, host, sourceType, platform, enabled, lastAttemptAt, lastSuccessAt,
                     lastOutcome, lastPayloadHash, machineId, lastClientDigest, ingestVersion, lastCheckedAt);
         }
     }

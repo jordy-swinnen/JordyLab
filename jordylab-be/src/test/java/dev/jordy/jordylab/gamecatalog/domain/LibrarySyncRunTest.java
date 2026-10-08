@@ -29,13 +29,6 @@ class LibrarySyncRunTest {
     }
 
     @Test
-    void buildWithDerivedLocalSourceIsRejected() {
-        assertThatThrownBy(() -> LibrarySyncRunTestBuilder.aLibrarySyncRun()
-                .librarySource(LibrarySource.LOCAL).build())
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void buildWithoutOutcome() {
         assertThatThrownBy(() -> LibrarySyncRunTestBuilder.aLibrarySyncRun().outcome(null).build())
                 .isInstanceOf(IllegalArgumentException.class);

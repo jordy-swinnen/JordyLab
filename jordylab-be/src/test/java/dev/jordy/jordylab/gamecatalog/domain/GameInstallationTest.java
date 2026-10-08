@@ -22,6 +22,7 @@ class GameInstallationTest {
             softly.assertThat(installation.getSource()).isEqualTo(ScanSourceTestBuilder.aDefaultScanSource());
             softly.assertThat(installation.getExternalRef())
                     .isEqualTo(GameInstallationTestBuilder.DEFAULT_EXTERNAL_REF);
+            softly.assertThat(installation.getPlatform()).isEqualTo(GameInstallationTestBuilder.DEFAULT_PLATFORM);
             softly.assertThat(installation.getPresence()).isEqualTo(Presence.INSTALLED);
             softly.assertThat(installation.getFirstSeenAt())
                     .isEqualTo(GameInstallationTestBuilder.DEFAULT_FIRST_SEEN);
@@ -76,42 +77,92 @@ class GameInstallationTest {
     }
 
     @Test
-    void createManualInstallationSetsFormatAndManualFlag() {
-        Instant seenAt = GameInstallationTestBuilder.DEFAULT_FIRST_SEEN;
+    void buildWithoutPlatform() {
+        assertThatThrownBy(() -> GameInstallationTestBuilder.aGameInstallation().platform(" ").build())
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
-        GameInstallation installation = GameInstallation.createManual(
-                GameTestBuilder.aDefaultGame(),
-                ScanSourceTestBuilder.aDefaultScanSource(),
-                GameInstallationTestBuilder.DEFAULT_EXTERNAL_REF,
-                InstallationFormat.PHYSICAL,
-                seenAt);
+    @Test
+    void anEmulatedCopyStartsWithAnUnknownRomStatus() {
+        ScanSource emulator = ScanSourceTestBuilder.aScanSource().sourceType(SourceType.EMUDECK).build();
+
+        GameInstallation installation = GameInstallationTestBuilder.aGameInstallation().source(emulator).build();
 
         SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(installation.isManual()).isTrue();
-            softly.assertThat(installation.getFormat()).isEqualTo(InstallationFormat.PHYSICAL);
-            softly.assertThat(installation.isInstalled()).isTrue();
-            softly.assertThat(installation.getFirstSeenAt()).isEqualTo(seenAt);
-            softly.assertThat(installation.getLastSeenAt()).isEqualTo(seenAt);
+            softly.assertThat(installation.isEmulated()).isTrue();
+            softly.assertThat(installation.getRomStatus()).isEqualTo(RomStatus.UNKNOWN);
         });
     }
 
     @Test
-    void buildManualInstallationWithoutFormatFails() {
-        assertThatThrownBy(() -> GameInstallationTestBuilder.aGameInstallation()
-                .manual(true)
-                .build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("format is required");
+    void aSteamCopyHasNoRomStatus() {
+        GameInstallation installation = GameInstallationTestBuilder.aDefaultGameInstallation();
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(installation.isEmulated()).isFalse();
+            softly.assertThat(installation.getRomStatus()).isNull();
+        });
     }
 
     @Test
-    void buildNonManualInstallationAllowsNullFormat() {
-        GameInstallation installation = GameInstallationTestBuilder.aGameInstallation()
-                .manual(false)
-                .format(null)
-                .build();
+    void buildingASteamCopyWithARomStatusFails() {
+        assertThatThrownBy(() -> GameInstallationTestBuilder.aGameInstallation().romStatus(RomStatus.BROKEN).build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("only applies to emulated copies");
+    }
 
-        assertThat(installation.getFormat()).isNull();
+    @Test
+    void changeRomStatusOnAnEmulatedCopy() {
+        ScanSource emulator = ScanSourceTestBuilder.aScanSource().sourceType(SourceType.EMUDECK).build();
+        GameInstallation installation = GameInstallationTestBuilder.aGameInstallation().source(emulator).build();
+
+        installation.changeRomStatus(RomStatus.VALIDATED);
+        assertThat(installation.getRomStatus()).isEqualTo(RomStatus.VALIDATED);
+
+        installation.changeRomStatus(RomStatus.BROKEN);
+        assertThat(installation.getRomStatus()).isEqualTo(RomStatus.BROKEN);
+
+        installation.changeRomStatus(RomStatus.UNKNOWN);
+        assertThat(installation.getRomStatus()).isEqualTo(RomStatus.UNKNOWN);
+    }
+
+    @Test
+    void changeRomStatusOnASteamCopyIsRejected() {
+        GameInstallation installation = GameInstallationTestBuilder.aDefaultGameInstallation();
+
+        assertThatThrownBy(() -> installation.changeRomStatus(RomStatus.BROKEN))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("only applies to emulated copies");
+    }
+
+    @Test
+    void changeRomStatusRequiresAStatus() {
+        ScanSource emulator = ScanSourceTestBuilder.aScanSource().sourceType(SourceType.EMUDECK).build();
+        GameInstallation installation = GameInstallationTestBuilder.aGameInstallation().source(emulator).build();
+
+        assertThatThrownBy(() -> installation.changeRomStatus(null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void theRomStatusSurvivesBeingUninstalledAndSeenAgain() {
+        ScanSource emulator = ScanSourceTestBuilder.aScanSource().sourceType(SourceType.EMUDECK).build();
+        GameInstallation installation = GameInstallationTestBuilder.aGameInstallation().source(emulator).build();
+        installation.changeRomStatus(RomStatus.VALIDATED);
+
+        installation.markUninstalled(GameInstallationTestBuilder.DEFAULT_LAST_SEEN);
+        installation.seenAgain(GameInstallationTestBuilder.DEFAULT_LAST_SEEN.plusSeconds(60));
+
+        assertThat(installation.getRomStatus()).isEqualTo(RomStatus.VALIDATED);
+    }
+
+    @Test
+    void updatePlatformChangesThePlatformOfThisCopyOnly() {
+        GameInstallation installation = GameInstallationTestBuilder.aDefaultGameInstallation();
+
+        installation.updatePlatform("Super Nintendo");
+
+        assertThat(installation.getPlatform()).isEqualTo("Super Nintendo");
+        assertThatThrownBy(() -> installation.updatePlatform(" ")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

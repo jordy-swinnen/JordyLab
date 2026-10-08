@@ -69,7 +69,7 @@ class MultiplayerServiceTest {
 
     @Test
     void romResolvesThroughIgdb() {
-        Game game = Game.builder().platform("SNES").title("Super Mario World").build();
+        Game game = Game.builder().title("Super Mario World").build();
         stubBacklog(game);
         when(igdbClient.isConfigured()).thenReturn(true);
         when(igdbClient.resolveMultiplayerMode("Super Mario World"))
@@ -86,7 +86,7 @@ class MultiplayerServiceTest {
 
     @Test
     void noIgdbMatchIncrementsAttempts() {
-        Game game = Game.builder().platform("SNES").title("Obscure ROM").build();
+        Game game = Game.builder().title("Obscure ROM").build();
         stubBacklog(game);
         when(igdbClient.isConfigured()).thenReturn(true);
         when(igdbClient.resolveMultiplayerMode("Obscure ROM")).thenReturn(Optional.empty());
@@ -101,7 +101,7 @@ class MultiplayerServiceTest {
 
     @Test
     void unconfiguredIgdbIncrementsAttempts() {
-        Game game = Game.builder().platform("SNES").title("Super Mario World").build();
+        Game game = Game.builder().title("Super Mario World").build();
         stubBacklog(game);
         when(igdbClient.isConfigured()).thenReturn(false);
 
@@ -135,7 +135,7 @@ class MultiplayerServiceTest {
 
     @Test
     void backlogPassSkipsRedundantSteamFetchOnceMetadataAlreadyChecked() {
-        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+        Game game = Game.builder().steamAppId("620").title("Portal 2")
                 .metadataStatus(MetadataStatus.OK).build();
         stubBacklog(game);
         when(igdbClient.isConfigured()).thenReturn(true);
@@ -152,7 +152,7 @@ class MultiplayerServiceTest {
 
     @Test
     void manualRefreshAlwaysRechecksSteamEvenWhenMetadataAlreadyChecked() {
-        Game game = Game.builder().platform("Steam").steamAppId("620").title("Portal 2")
+        Game game = Game.builder().steamAppId("620").title("Portal 2")
                 .metadataStatus(MetadataStatus.OK).build();
         when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata(
                 null, null, null, null, null, "game",
@@ -173,7 +173,7 @@ class MultiplayerServiceTest {
     }
 
     private Game aSteamGame(String appId, String title) {
-        return Game.builder().platform("Steam").steamAppId(appId).title(title).build();
+        return Game.builder().steamAppId(appId).title(title).build();
     }
 
     private GameCatalogProperties properties() {

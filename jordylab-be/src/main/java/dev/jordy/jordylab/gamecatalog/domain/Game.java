@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.gamecatalog.domain;
 
 import com.google.common.base.Preconditions;
+import dev.jordy.jordylab.gamecatalog.util.TitleKeys;
 import dev.jordy.jordylab.shared.domain.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -40,14 +42,14 @@ public class Game extends BaseEntity<Game> {
     @Id
     private UUID id;
 
-    private String platform;
-
     private String steamAppId;
 
     @Setter
     private String igdbGameId;
 
     private String title;
+
+    private String titleKey;
 
     @Enumerated(EnumType.STRING)
     private TitleSource titleSource;
@@ -101,19 +103,33 @@ public class Game extends BaseEntity<Game> {
 
     private int artworkFallbackRequests;
 
+    private Instant factsCheckedAt;
+
+    private Instant artworkCheckedAt;
+
+    @Enumerated(EnumType.STRING)
+    private DescriptionSource descriptionSource;
+
+    private String descriptionModel;
+
+    private String descriptionRequestedModel;
+
+    private Instant descriptionWrittenAt;
+
     /**
-     * Updates the title and platform. The title only changes when the reporting source has at
-     * least the authority of the current one (FR-012) — a scan never overwrites a library title.
+     * Updates the title. It changes when the reporting source outranks the current one, or equals it and is a library or
+     * a person (FR-012): a scan never overwrites a library title, and one scan never renames another's. The title key follows the title so identity matching stays right.
      */
-    public void updateCatalogInfo(String title, String platform, TitleSource source) {
-        this.platform = platform;
-        if (source.outranks(this.titleSource)) {
+    public void updateCatalogInfo(String title, TitleSource source) {
+        if (source.replaces(this.titleSource)) {
             this.title = title;
+            this.titleKey = titleKeyOf(title);
             this.titleSource = source;
         }
     }
 
-    public void applyEnrichment(String genre, Boolean onlineMultiplayer, Boolean singlePlayer, String description) {
+    public void applyEnrichment(String genre, Boolean onlineMultiplayer, Boolean singlePlayer, String description,
+            AiAuthorship authorship) {
         this.genre = genre;
         if (this.onlineMultiplayer == null) {
             this.onlineMultiplayer = onlineMultiplayer;
@@ -122,6 +138,10 @@ public class Game extends BaseEntity<Game> {
             this.singlePlayer = singlePlayer;
         }
         this.description = description;
+        this.descriptionSource = DescriptionSource.AI;
+        this.descriptionModel = authorship.answeredModel();
+        this.descriptionRequestedModel = authorship.requestedModel();
+        this.descriptionWrittenAt = authorship.writtenAt();
         this.enrichmentStatus = EnrichmentStatus.ENRICHED;
     }
 
@@ -151,11 +171,34 @@ public class Game extends BaseEntity<Game> {
         }
     }
 
-    /** Deterministic description (e.g. Steam's short description) for not-installed library games. */
+    /** Steam's own store description: fill-only, recorded as coming from Steam and never from a model (FR-059). */
     public void applyDeterministicDescription(String description) {
         if (this.description == null && description != null) {
             this.description = description;
+            this.descriptionSource = DescriptionSource.STEAM;
+            this.descriptionModel = null;
+            this.descriptionRequestedModel = null;
+            this.descriptionWrittenAt = null;
         }
+    }
+
+    public void recordFactsChecked(Instant checkedAt) {
+        this.factsCheckedAt = checkedAt;
+    }
+
+    public void recordArtworkChecked(Instant checkedAt) {
+        this.artworkCheckedAt = checkedAt;
+    }
+
+    /** Adopts a Steam app id for a game that was known without one (the same title already existed elsewhere). */
+    public void assignSteamAppId(String newSteamAppId) {
+        Preconditions.checkArgument(StringUtils.hasText(newSteamAppId) && newSteamAppId.length() <= MAX_STEAM_APP_ID_LENGTH,
+                "steamAppId is required and must not exceed 32 characters");
+        this.steamAppId = newSteamAppId;
+    }
+
+    private static String titleKeyOf(String title) {
+        return TitleKeys.keyFor(title);
     }
 
     /**
@@ -229,7 +272,6 @@ public class Game extends BaseEntity<Game> {
 
     public static class GameBuilder {
         public Game build() {
-            Preconditions.checkArgument(StringUtils.hasText(platform), "platform is required");
             Preconditions.checkArgument(StringUtils.hasText(title), "title is required");
             Preconditions.checkArgument(steamAppId == null || steamAppId.length() <= MAX_STEAM_APP_ID_LENGTH,
                     "steamAppId must not exceed 32 characters");
@@ -249,6 +291,7 @@ public class Game extends BaseEntity<Game> {
             if (id == null) {
                 id = UUID.randomUUID();
             }
+            titleKey = titleKeyOf(title);
             if (enrichmentStatus == null) {
                 enrichmentStatus = EnrichmentStatus.PENDING;
             }
@@ -265,11 +308,12 @@ public class Game extends BaseEntity<Game> {
                 multiplayerSource = MultiplayerSource.UNKNOWN;
             }
 
-            return new Game(id, platform, steamAppId, igdbGameId, title, titleSource, genre, genres, developer,
+            return new Game(id, steamAppId, igdbGameId, title, titleKey, titleSource, genre, genres, developer,
                     publisher, releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer,
                     splitScreen, multiplayerSource, multiplayerAttempts, description, enrichmentStatus,
                     enrichmentAttempts, metadataStatus, metadataAttempts, coverStatus, coverRef, bannerStatus,
-                    bannerRef, artworkFallbackRequests);
+                    bannerRef, artworkFallbackRequests, factsCheckedAt, artworkCheckedAt, descriptionSource,
+                    descriptionModel, descriptionRequestedModel, descriptionWrittenAt);
         }
     }
 }

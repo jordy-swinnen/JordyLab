@@ -1,6 +1,6 @@
-import { Component, effect, inject, ChangeDetectionStrategy } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { GameDetailStore, SwitchGameFormat } from '@jordylab-fe/gamecatalog/api';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { GameDetailStore, MarkStore, MarkType, RomStatus } from '@jordylab-fe/gamecatalog/api';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { GameDetailViewComponent } from './game-detail-view.component';
 
@@ -13,27 +13,48 @@ import { GameDetailViewComponent } from './game-detail-view.component';
 })
 export class GameDetailComponent {
   readonly #route = inject(ActivatedRoute);
-  readonly #router = inject(Router);
   readonly #store = inject(GameDetailStore);
+  readonly #marks = inject(MarkStore);
 
-  readonly game = this.#store.game;
+  /** The loaded game with this session's mark change on top, so a tap shows at once. */
+  readonly game = computed(() => {
+    const loaded = this.#store.game();
+
+    return loaded ? this.#marks.stateOf(loaded) : null;
+  });
+  readonly markPending = computed(() => {
+    const id = this.#store.game()?.id;
+
+    return id !== undefined && this.#marks.pending().has(id);
+  });
+  readonly markError = this.#marks.error;
   readonly loading = this.#store.loading;
   readonly notFound = this.#store.notFound;
   readonly error = this.#store.error;
   readonly refreshingMetadata = this.#store.refreshingMetadata;
   readonly refreshingEnrichment = this.#store.refreshingEnrichment;
-  readonly savingSwitch = this.#store.savingSwitch;
-  readonly relinkCandidates = this.#store.relinkCandidates;
-  /** Refresh, regenerate and Switch management call admin-only endpoints (006 FR-002); guests get read-only. */
+  readonly savingRomStatus = this.#store.savingRomStatus;
+  readonly romStatusError = this.#store.romStatusError;
+  /** Refresh and regenerate call admin-only endpoints (006 FR-002); guests get read-only. */
   readonly canAdminister = inject(AuthService).isAdmin;
 
   constructor() {
     this.#store.load(this.#route.snapshot.paramMap.get('id') ?? '');
-    effect(() => {
-      if (this.#store.removed()) {
-        void this.#router.navigateByUrl('/games/grid');
-      }
-    });
+  }
+
+  onRomStatusChanged(change: { installationId: string; status: RomStatus }): void {
+    this.#store.setRomStatus(change.installationId, change.status);
+  }
+
+  onRomStatusErrorDismissed(): void {
+    this.#store.dismissRomStatusError();
+  }
+
+  onMarkToggled(mark: MarkType): void {
+    const game = this.game();
+    if (game) {
+      this.#marks.toggle(game, mark);
+    }
   }
 
   onRefreshMetadata(): void {
@@ -42,21 +63,5 @@ export class GameDetailComponent {
 
   onRefreshEnrichment(): void {
     this.#store.refreshEnrichment();
-  }
-
-  onChangeSwitchFormat(format: SwitchGameFormat): void {
-    this.#store.changeSwitchFormat(format);
-  }
-
-  onSearchRelink(query: string): void {
-    this.#store.searchRelinkCandidates(query);
-  }
-
-  onRelink(igdbGameId: number): void {
-    this.#store.relinkSwitchGame(igdbGameId);
-  }
-
-  onRemoveSwitch(): void {
-    this.#store.removeSwitchGame();
   }
 }

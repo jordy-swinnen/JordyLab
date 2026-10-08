@@ -7,8 +7,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import dev.jordy.jordylab.shared.event.UserAccessRemoved;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.Instant;
@@ -37,11 +40,15 @@ class KeycloakUserAdministrationServiceTest {
     @Mock
     private KeycloakAdminClient keycloakAdminClient;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private KeycloakUserAdministrationService service;
 
     @BeforeEach
     void setUp() {
-        service = new KeycloakUserAdministrationService(keycloakAdminClient);
+        service = new KeycloakUserAdministrationService(keycloakAdminClient, eventPublisher,
+                TransactionOperations.withoutTransaction());
     }
 
     @Test
@@ -138,6 +145,7 @@ class KeycloakUserAdministrationServiceTest {
         service.reject(GUEST_ID);
 
         verify(keycloakAdminClient).setEnabled(GUEST_ID.toString(), false);
+        verify(eventPublisher).publishEvent(new UserAccessRemoved(GUEST_ID.toString()));
     }
 
     @Test
@@ -148,6 +156,7 @@ class KeycloakUserAdministrationServiceTest {
 
         assertThatThrownBy(() -> service.reject(SOLE_ADMIN_ID)).isInstanceOf(LastAdminProtectedException.class);
         verify(keycloakAdminClient, never()).setEnabled(SOLE_ADMIN_ID.toString(), false);
+        verify(eventPublisher, never()).publishEvent(new UserAccessRemoved(SOLE_ADMIN_ID.toString()));
     }
 
     @Test
@@ -174,6 +183,8 @@ class KeycloakUserAdministrationServiceTest {
         // spec 007 FR-013 / research D12: a plain session logout does not revoke offline_access
         // grants, so revoke() must separately kill the mobile app's biometric-unlock consent.
         verify(keycloakAdminClient).revokeConsent(GUEST_ID.toString(), "jordylab-mobile");
+        // Their marks stop counting once the other modules hear that the access is gone (spec 013 FR-046).
+        verify(eventPublisher).publishEvent(new UserAccessRemoved(GUEST_ID.toString()));
     }
 
     @Test
@@ -197,6 +208,7 @@ class KeycloakUserAdministrationServiceTest {
 
         assertThatThrownBy(() -> service.revoke(PENDING_ID)).isInstanceOf(UserNotApprovedException.class);
         verify(keycloakAdminClient, never()).revokeRealmRole(PENDING_ID.toString(), "guest");
+        verify(eventPublisher, never()).publishEvent(new UserAccessRemoved(PENDING_ID.toString()));
     }
 
     @Test

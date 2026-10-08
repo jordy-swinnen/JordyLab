@@ -45,6 +45,15 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
         });
       }
 
+      test('the library with the Filters panel open has no violations', async ({ page }) => {
+        await page.goto('/games/grid?platform=Dreamcast&platform=PlayStation%202&status=ALL');
+        await expect(page.getByRole('heading', { level: 2, name: 'Library' })).toBeVisible();
+        await page.getByRole('button', { name: /^Filters/ }).click();
+        await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
+
+        expect(await violationsOf(page)).toEqual([]);
+      });
+
       test('a game detail page has no violations', async ({ page }) => {
         await page.goto('/games/grid');
         await page.getByRole('link', { name: /Chrono Trigger/ }).click();

@@ -1,0 +1,33 @@
+<dialog
+  #dialog
+  class="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-2xl border border-input bg-card p-0 text-foreground shadow-[0_30px_80px_-20px_#000] backdrop:bg-black/60"
+  [attr.aria-labelledby]="'confirm-dialog-heading'"
+  data-testid="confirm-dialog"
+  (cancel)="onNativeCancel($event)"
+>
+  <div class="flex flex-col gap-4 p-6">
+    <h2 id="confirm-dialog-heading" class="font-display text-xl font-semibold">{{ heading() }}</h2>
+    <div class="text-[15px] leading-relaxed text-secondary-foreground">
+      <ng-content />
+    </div>
+    <div class="mt-2 flex flex-wrap justify-end gap-3">
+      <button
+        type="button"
+        class="h-11 cursor-pointer rounded-xl border border-input px-5 text-[14px] font-semibold hover:bg-secondary"
+        data-testid="confirm-dialog-cancel"
+        (click)="cancelled.emit()"
+      >
+        {{ cancelLabel() }}
+      </button>
+      <button
+        type="button"
+        class="h-11 cursor-pointer rounded-xl px-5 text-[14px] font-semibold"
+        [class]="warning() ? 'bg-[#F5B84A] text-[#1A1205] hover:brightness-110' : 'bg-primary text-primary-foreground hover:brightness-110'"
+        data-testid="confirm-dialog-confirm"
+        (click)="confirmed.emit()"
+      >
+        {{ confirmLabel() }}
+      </button>
+    </div>
+  </div>
+</dialog>

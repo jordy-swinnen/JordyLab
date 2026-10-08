@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
+import dev.jordy.jordylab.gamecatalog.CatalogChanged;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameLibraryEntry;
@@ -16,6 +17,7 @@ import dev.jordy.jordylab.gamecatalog.rest.client.SteamOwnedGamesClient;
 import dev.jordy.jordylab.gamecatalog.util.ToolExclusion;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -52,13 +54,11 @@ public class SteamLibrarySyncService {
     private final SteamOwnedGamesClient ownedGamesClient;
     private final SteamFamilyClient familyClient;
     private final ReconciliationService reconciliationService;
+    private final GameIdentityService gameIdentityService;
     private final GameRepository gameRepository;
     private final GameLibraryEntryRepository libraryEntryRepository;
     private final LibrarySyncRunRepository librarySyncRunRepository;
-    private final ArtworkService artworkService;
-    private final SteamMetadataService steamMetadataService;
-    private final EnrichmentService enrichmentService;
-    private final MultiplayerService multiplayerService;
+    private final ApplicationEventPublisher eventPublisher;
     private final GameCatalogProperties properties;
 
     /**
@@ -73,7 +73,7 @@ public class SteamLibrarySyncService {
                     "Steam account is not configured (STEAM_WEB_API_KEY / STEAM_ID)");
         }
 
-        return syncOwned(force, properties.library().storeMinIntervalMs());
+        return applyOwned(force);
     }
 
     /** Family library sync from a short-lived access token; the token is used for this call only. */
@@ -94,8 +94,7 @@ public class SteamLibrarySyncService {
                 .map(game -> new LibraryGame(game.appId(), game.name(), joinOwners(game.ownerIds())))
                 .toList();
 
-        return applyLibrary(LibrarySource.FAMILY, games, force, startedAt,
-                properties.library().storeMinIntervalMs());
+        return applyLibrary(LibrarySource.FAMILY, games, force, startedAt);
     }
 
     /**
@@ -118,10 +117,10 @@ public class SteamLibrarySyncService {
             return;
         }
         log.info("Owned Steam library sync due; running after applied scan");
-        syncOwned(false, 0L);
+        applyOwned(false);
     }
 
-    private LibrarySyncRun syncOwned(boolean force, long storeMinIntervalMs) {
+    private LibrarySyncRun applyOwned(boolean force) {
         Instant startedAt = Instant.now();
         Optional<List<SteamOwnedGamesClient.OwnedGame>> fetched = ownedGamesClient.fetchOwnedGames();
         if (fetched.isEmpty()) {
@@ -131,11 +130,11 @@ public class SteamLibrarySyncService {
                 .map(game -> new LibraryGame(game.appId(), game.name(), null))
                 .toList();
 
-        return applyLibrary(LibrarySource.OWNED, games, force, startedAt, storeMinIntervalMs);
+        return applyLibrary(LibrarySource.OWNED, games, force, startedAt);
     }
 
     private LibrarySyncRun applyLibrary(LibrarySource source, List<LibraryGame> reported, boolean force,
-            Instant startedAt, long storeMinIntervalMs) {
+            Instant startedAt) {
         Map<String, LibraryGame> byAppId = deduplicate(reported);
         String contentHash = contentHash(byAppId.values());
 
@@ -165,12 +164,9 @@ public class SteamLibrarySyncService {
         int added = reconcileEntries(source, byAppId, startedAt);
         int removed = removeMissingEntries(source, byAppId, startedAt);
 
-        int artworkResolved = artworkService.processLibraryGames(
-                gameRepository.findAllBySteamAppIdIn(byAppId.keySet()));
-        int metadataCalls = steamMetadataService.fetchPending(properties.metadata().batchSize(), storeMinIntervalMs);
-        int aiCalls = enrichmentService.enrichPending(properties.enrichment().batchSize());
-        multiplayerService.derivePending(properties.metadata().batchSize());
         reconciliationService.purgeUninstalledGames();
+        // The sync returns now; artwork, facts and descriptions of the new games fill in behind it (spec 013 US4).
+        eventPublisher.publishEvent(new CatalogChanged("steam library"));
 
         LibrarySyncRun run = LibrarySyncRun.builder()
                 .librarySource(source)
@@ -181,12 +177,10 @@ public class SteamLibrarySyncService {
                 .entriesSubmitted(byAppId.size())
                 .entriesAdded(added)
                 .entriesRemoved(removed)
-                .metadataCalls(metadataCalls)
-                .aiCalls(aiCalls)
+                .metadataCalls(0)
+                .aiCalls(0)
                 .build();
-        log.info("{} library sync applied: {} submitted, {} added, {} removed, {} artwork, {} metadata call(s), "
-                        + "{} AI call(s)",
-                source, byAppId.size(), added, removed, artworkResolved, metadataCalls, aiCalls);
+        log.info("{} library sync applied: {} submitted, {} added, {} removed", source, byAppId.size(), added, removed);
 
         return librarySyncRunRepository.save(run);
     }
@@ -194,7 +188,7 @@ public class SteamLibrarySyncService {
     private int reconcileEntries(LibrarySource source, Map<String, LibraryGame> byAppId, Instant seenAt) {
         int added = 0;
         for (LibraryGame reported : byAppId.values()) {
-            Game game = reconciliationService.resolveOrCreateSteamGame(reported.appId(), reported.name(),
+            Game game = gameIdentityService.resolveOrCreateSteamGame(reported.appId(), reported.name(),
                     TitleSource.LIBRARY);
             Optional<GameLibraryEntry> existing = libraryEntryRepository
                     .findByGameIdAndLibrarySource(game.getId(), source);

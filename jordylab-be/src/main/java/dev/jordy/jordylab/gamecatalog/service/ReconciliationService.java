@@ -1,32 +1,25 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
-import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.GameInstallation;
+import dev.jordy.jordylab.gamecatalog.domain.PlatformCatalog;
 import dev.jordy.jordylab.gamecatalog.domain.Presence;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
-import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.TitleSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameLibraryEntryRepository;
-import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamePayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -37,16 +30,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReconciliationService {
 
-    private final GameRepository gameRepository;
     private final GameInstallationRepository gameInstallationRepository;
-    private final GameLibraryEntryRepository gameLibraryEntryRepository;
+    private final GameIdentityService gameIdentityService;
+    private final PlaceRemovalService placeRemovalService;
     private final GameCatalogProperties properties;
+    private final Clock clock;
 
     public ReconciliationCounts applySnapshot(ScanSource source, List<GamePayload> validEntries, Instant snapshotTime) {
         Map<String, GamePayload> entriesByRef = deduplicateByExternalRef(validEntries);
         Map<String, GameInstallation> existingByRef = gameInstallationRepository
                 .findAllBySourceId(source.getId()).stream()
-                .filter(installation -> !installation.isManual())
                 .collect(Collectors.toMap(GameInstallation::getExternalRef, Function.identity()));
 
         int added = 0;
@@ -58,9 +51,7 @@ public class ReconciliationService {
                 added++;
                 continue;
             }
-            Game game = existing.getGame();
-            if (!game.getTitle().equals(entry.title()) || !game.getPlatform().equals(entry.platform())) {
-                game.updateCatalogInfo(entry.title(), entry.platform(), titleSourceFor(entry));
+            if (refreshExisting(existing, entry)) {
                 updated++;
             }
             existing.seenAgain(snapshotTime);
@@ -72,37 +63,14 @@ public class ReconciliationService {
     }
 
     /**
-     * Resolves the host-independent game for a Steam app ID, creating it only when absent. The
-     * insert is race-safe through the unique index; a concurrent creator is adopted instead
-     * (FR-001, FR-002, SC-004). The title follows the reporting source's authority (FR-012).
+     * Deletes installations past the grace period and any game left with no place at all: no installation, no console
+     * entry, and no library entry that is active or within grace. Invoked inline by the scan and library flows (FR-014).
      */
     @Transactional
-    public Game resolveOrCreateSteamGame(String steamAppId, String title, TitleSource titleSource) {        Optional<Game> existing = gameRepository.findBySteamAppId(steamAppId);
-        if (existing.isPresent()) {
-            Game game = existing.get();
-            game.updateCatalogInfo(title, SourceType.STEAM.platform(), titleSource);
-
-            return game;
-        }
-
-        gameRepository.insertSteamGameIfAbsent(UUID.randomUUID(), SourceType.STEAM.platform(), steamAppId, title,
-                titleSource.name());
-
-        return gameRepository.findBySteamAppId(steamAppId)
-                .orElseThrow(() -> new IllegalStateException("Could not create or adopt Steam game " + steamAppId));
-    }
-
-    /**
-     * Deletes installations past the grace period and any game left with no installations, no
-     * active library entry, and no library entry within grace. Invoked inline by the scan and
-     * library flows — there is no scheduler (FR-014).
-     */
     public void purgeUninstalledGames() {
-        Instant cutoff = Instant.now().minus(properties.gracePeriodDays(), ChronoUnit.DAYS);
+        Instant cutoff = clock.instant().minus(properties.gracePeriodDays(), ChronoUnit.DAYS);
         List<GameInstallation> expired = gameInstallationRepository
-                .findByPresenceAndUninstalledAtBefore(Presence.UNINSTALLED, cutoff).stream()
-                .filter(installation -> !installation.isManual())
-                .toList();
+                .findByPresenceAndUninstalledAtBefore(Presence.UNINSTALLED, cutoff);
         if (expired.isEmpty()) {
             return;
         }
@@ -111,19 +79,11 @@ public class ReconciliationService {
                 .map(installation -> installation.getGame().getId())
                 .collect(Collectors.toSet());
         gameInstallationRepository.deleteAll(expired);
+        gameInstallationRepository.flush();
 
         int purgedGames = 0;
         for (UUID gameId : affectedGameIds) {
-            if (gameInstallationRepository.countByGameId(gameId) > 0 || heldInLibrary(gameId, cutoff)) {
-                continue;
-            }
-            Optional<Game> orphanedGame = gameRepository.findById(gameId);
-            if (orphanedGame.isPresent()) {
-                // heldInLibrary was false above, so any remaining entries for this game are past
-                // grace; delete them first — the FK from game_library_entry to game has no cascade.
-                gameLibraryEntryRepository.deleteAll(gameLibraryEntryRepository.findAllByGameId(gameId));
-                deleteLocalArtworkFile(orphanedGame.get());
-                gameRepository.delete(orphanedGame.get());
+            if (placeRemovalService.releaseGameIfOrphaned(gameId)) {
                 purgedGames++;
             }
         }
@@ -132,22 +92,33 @@ public class ReconciliationService {
                 expired.size(), purgedGames, properties.gracePeriodDays());
     }
 
-    private boolean heldInLibrary(UUID gameId, Instant cutoff) {
-        return gameLibraryEntryRepository.existsByGameIdAndRemovedAtIsNull(gameId)
-                || gameLibraryEntryRepository.existsByGameIdAndRemovedAtAfter(gameId, cutoff);
-    }
-
     private Map<String, GamePayload> deduplicateByExternalRef(List<GamePayload> validEntries) {
         return validEntries.stream()
                 .collect(Collectors.toMap(GamePayload::externalRef, Function.identity(), (first, duplicate) -> first,
                         LinkedHashMap::new));
     }
 
+    /** True when the title or platform of an already known installation changed. */
+    private boolean refreshExisting(GameInstallation existing, GamePayload entry) {
+        boolean changed = false;
+        Game game = existing.getGame();
+        if (!game.getTitle().equals(entry.title())) {
+            game.updateCatalogInfo(entry.title(), titleSourceFor(entry));
+            changed = true;
+        }
+        String platform = PlatformCatalog.canonical(entry.platform());
+        if (!platform.equals(existing.getPlatform())) {
+            existing.updatePlatform(platform);
+            changed = true;
+        }
+
+        return changed;
+    }
+
     /**
-     * Links the submitted entry to an existing host-independent game when it is recognized
-     * (Steam: app ID alone; ROM: platform + normalized title), otherwise creates a new one.
-     * Adoption only adds this source's installation — the game's enrichment, metadata, and
-     * artwork are never touched (FR-003/FR-005).
+     * Links the submitted entry to an existing host-independent game when it is recognised (Steam: app id; anything else:
+     * normalised title), otherwise creates a new one. Adoption only adds this source's installation: the game's enrichment,
+     * metadata and artwork are never touched (FR-003, FR-005, FR-025).
      */
     private void addInstallationFor(ScanSource source, GamePayload entry, Instant snapshotTime) {
         Game game = resolveOrCreate(entry);
@@ -155,37 +126,29 @@ public class ReconciliationService {
                 .game(game)
                 .source(source)
                 .externalRef(entry.externalRef())
+                .platform(PlatformCatalog.canonical(entry.platform()))
                 .firstSeenAt(snapshotTime)
                 .lastSeenAt(snapshotTime)
                 .build());
     }
 
     private Game resolveOrCreate(GamePayload entry) {
-        if (SourceType.STEAM.platform().equals(entry.platform())) {
-            return resolveOrCreateSteamGame(entry.externalRef(), entry.title(), TitleSource.MANIFEST);
+        if (PlatformCatalog.STEAM.equals(PlatformCatalog.canonical(entry.platform()))) {
+            return gameIdentityService.resolveOrCreateSteamGame(entry.externalRef(), entry.title(), TitleSource.MANIFEST);
         }
 
-        return gameRepository.findByPlatformAndLowercaseTitle(entry.platform(), entry.title(), PageRequest.of(0, 1))
-                .stream()
-                .findFirst()
-                .orElseGet(() -> gameRepository.save(Game.builder()
-                        .platform(entry.platform())
-                        .title(entry.title())
-                        .titleSource(TitleSource.ROM)
-                        .build()));
+        return gameIdentityService.resolveOrCreateByTitle(entry.title(), TitleSource.ROM);
     }
 
     private TitleSource titleSourceFor(GamePayload entry) {
-        return SourceType.STEAM.platform().equals(entry.platform()) ? TitleSource.MANIFEST : TitleSource.ROM;
+        return PlatformCatalog.STEAM.equals(PlatformCatalog.canonical(entry.platform())) ? TitleSource.MANIFEST
+                : TitleSource.ROM;
     }
 
     private int hideMissingInstallations(Map<String, GameInstallation> existingByRef,
             Map<String, GamePayload> entriesByRef, Instant snapshotTime) {
         int removed = 0;
         for (GameInstallation existing : existingByRef.values()) {
-            if (existing.isManual()) {
-                continue;
-            }
             if (existing.isInstalled() && !entriesByRef.containsKey(existing.getExternalRef())) {
                 existing.markUninstalled(snapshotTime);
                 removed++;
@@ -193,16 +156,5 @@ public class ReconciliationService {
         }
 
         return removed;
-    }
-
-    private void deleteLocalArtworkFile(Game game) {
-        if (game.getCoverStatus() != ArtworkStatus.LOCAL_UPLOAD || game.getCoverRef() == null) {
-            return;
-        }
-        try {
-            Files.deleteIfExists(Path.of(properties.artwork().dir()).resolve(game.getCoverRef()).normalize());
-        } catch (IOException exception) {
-            log.warn("Could not delete artwork file for purged game {}: {}", game.getId(), exception.getMessage());
-        }
     }
 }

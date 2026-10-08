@@ -1,0 +1,20 @@
+# The `jordylab` database as a CloudNativePG Database resource, so the `vector` extension (pgvector) is enabled by the
+# operator as a superuser. The backend's Flyway migration runs `CREATE EXTENSION IF NOT EXISTS vector` as the app user
+# `jordylab`, which may not create it: because the extension already exists by then, that statement is a no-op. Apply this
+# BEFORE the backend version that contains the LibBot search index (runbook "pgvector Database resource").
+#
+# The database itself was created by `bootstrap.initdb` in cnpg-cluster.yaml; this resource adopts it, with the same owner.
+# `retain` means deleting this resource never drops the database.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: jordylab
+spec:
+  name: jordylab
+  owner: jordylab
+  cluster:
+    name: cnpg-cluster
+  databaseReclaimPolicy: retain
+  extensions:
+    - name: vector
+      ensure: present

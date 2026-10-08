@@ -22,21 +22,22 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.UUID;
 
 /**
- * Enforces the guest daily chat limit (FR-009, research D5) on {@code POST /api/gamecatalog/chat}.
+ * Pre-checks the guest daily LibBot limit (FR-009, spec 013 research A8) on {@code POST /api/gamecatalog/libbot/ask}:
+ * a guest at the limit gets a {@code 429} before any stream opens. Nothing is counted here: an event stream is
+ * {@code 200} long before its answer exists, so the count moves to {@code GuestChatUsageListener}, which reacts to the
+ * answered-message event and therefore never counts a failed or abandoned question.
  * Declared as a {@code @Bean} in {@link dev.jordy.jordylab.settings.SettingsConfiguration} rather
  * than {@code @Component} (see that class's javadoc for why), but registered with the same
  * default Spring Boot filter ordering — after the security filter chain — so it only ever runs
  * once the request has already been authenticated and authorized, with a fully populated
- * {@link SecurityContextHolder}. Admins are exempt; the check runs before the call, the increment
- * only after a 2xx response, so a failed AI call never burns a guest's budget.
+ * {@link SecurityContextHolder}. Admins are exempt.
  */
 @RequiredArgsConstructor
 public class GuestChatLimitFilter extends OncePerRequestFilter {
 
-    private static final String CHAT_PATH = "/api/gamecatalog/chat";
+    private static final String CHAT_PATH = "/api/gamecatalog/libbot/ask";
     private static final String ADMIN_AUTHORITY = "ROLE_admin";
 
     private final GuestChatUsageRepository guestChatUsageRepository;
@@ -73,10 +74,6 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
-
-        if (response.getStatus() >= HttpStatus.OK.value() && response.getStatus() < HttpStatus.MULTIPLE_CHOICES.value()) {
-            guestChatUsageRepository.incrementUsage(UUID.randomUUID(), subject, today);
-        }
     }
 
     private boolean isAdmin(JwtAuthenticationToken authentication) {
@@ -88,9 +85,10 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
         Instant resetsAt = today.plusDays(1).atStartOfDay(zone).toInstant();
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(new LimitReachedBody("CHAT_LIMIT_REACHED", resetsAt)));
+        response.getWriter().write(objectMapper.writeValueAsString(new LimitReachedBody("CHAT_LIMIT_REACHED",
+                settingsProperties.guestChat().dailyLimit(), resetsAt)));
     }
 
-    private record LimitReachedBody(String reason, Instant resetsAt) {
+    private record LimitReachedBody(String reason, int limit, Instant resetsAt) {
     }
 }

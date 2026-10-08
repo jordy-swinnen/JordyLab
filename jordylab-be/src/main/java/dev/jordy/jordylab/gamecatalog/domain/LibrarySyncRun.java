@@ -58,8 +58,7 @@ public class LibrarySyncRun extends BaseEntity<LibrarySyncRun> {
 
     public static class LibrarySyncRunBuilder {
         public LibrarySyncRun build() {
-            Preconditions.checkArgument(librarySource == LibrarySource.OWNED || librarySource == LibrarySource.FAMILY,
-                    "librarySource must be OWNED or FAMILY");
+            Preconditions.checkArgument(librarySource != null, "librarySource is required");
             Preconditions.checkArgument(startedAt != null, "startedAt is required");
             Preconditions.checkArgument(finishedAt != null, "finishedAt is required");
             Preconditions.checkArgument(outcome != null, "outcome is required");

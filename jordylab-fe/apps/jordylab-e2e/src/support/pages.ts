@@ -12,8 +12,9 @@ export const PAGES: readonly {
     heading: 'Investment briefing',
   },
   { name: 'Game library', path: '/games/grid', heading: 'Library' },
-  { name: 'Game chat', path: '/games/chat', heading: 'Ask the catalog' },
+  { name: 'LibBot', path: '/games/libbot', heading: 'LibBot' },
   { name: 'Game sources', path: '/games/sources', heading: 'Sources' },
+  { name: 'Consoles', path: '/games/consoles', heading: 'Consoles' },
   { name: 'Settings users', path: '/settings/users', heading: 'Users' },
   {
     name: 'Settings AI models',

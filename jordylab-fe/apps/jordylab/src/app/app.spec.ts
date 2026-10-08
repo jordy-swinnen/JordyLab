@@ -78,9 +78,9 @@ describe('App', () => {
 
     expect(links).toEqual([
       'Library',
-      'Chat',
+      'LibBot',
       'Sources',
-      'Switch games',
+      'Consoles',
       'Articles',
       'Portfolio',
       'Briefing',
@@ -99,9 +99,9 @@ describe('App', () => {
 
     expect(hrefs).toEqual([
       '/games/grid',
-      '/games/chat',
+      '/games/libbot',
       '/games/sources',
-      '/games/switch',
+      '/games/consoles',
       '/fna/articles',
       '/fna/portfolio',
       '/fna/briefing',
@@ -110,12 +110,12 @@ describe('App', () => {
     ]);
   });
 
-  it('shows a guest only the Game Catalog library and chat, with Sources, Switch games, FNA and Settings hidden', () => {
+  it('shows a guest only the Game Catalog library and LibBot, with Sources, Consoles, FNA and Settings hidden', () => {
     const links = spectator
       .queryAll('nav a')
       .map((link) => link.textContent?.trim());
 
-    expect(links).toEqual(['Library', 'Chat']);
+    expect(links).toEqual(['Library', 'LibBot']);
   });
 
   it('renders a router outlet for the domain routes', () => {

@@ -139,7 +139,6 @@ class SteamMetadataServiceTest {
 
     private Game aSteamGame() {
         return Game.builder()
-                .platform("Steam")
                 .steamAppId("620")
                 .title("Portal 2")
                 .build();

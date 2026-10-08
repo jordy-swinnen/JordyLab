@@ -66,6 +66,7 @@ public class AiModelSettingsService implements AiModelResolver {
         Optional<OpenRouterModelCatalogClient.Catalog> catalog = currentCatalog();
 
         return Arrays.stream(AiFeature.values())
+                .filter(AiFeature::selectable)
                 .map(feature -> {
                     Optional<AiFeatureModelSetting> saved = settingRepository.findByFeatureKey(feature.key());
                     String current = saved.map(AiFeatureModelSetting::getModelId)
@@ -86,7 +87,8 @@ public class AiModelSettingsService implements AiModelResolver {
      * for a first choice and for a change alike.
      */
     public void saveModel(String featureKey, String modelId, String updatedBy) {
-        AiFeature feature = AiFeature.fromKey(featureKey).orElseThrow(UnknownAiFeatureException::new);
+        AiFeature feature = AiFeature.fromKey(featureKey).filter(AiFeature::selectable)
+                .orElseThrow(UnknownAiFeatureException::new);
         if (!StringUtils.hasText(modelId)) {
             throw new BlankModelException();
         }

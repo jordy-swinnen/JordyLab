@@ -1,0 +1,36 @@
+<div class="flex flex-wrap items-center gap-2" role="group" aria-label="Your mark" data-testid="mark-buttons">
+  @for (mark of marks; track mark.value) {
+    <button
+      type="button"
+      class="inline-flex h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-input px-3 text-[13.5px] font-semibold text-secondary-foreground outline-none transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-60"
+      [class]="mark.pressedClass"
+      [attr.aria-pressed]="myMark() === mark.value"
+      [attr.aria-label]="mark.label"
+      [attr.title]="mark.label"
+      [attr.data-mark]="mark.value"
+      [disabled]="disabled()"
+      (click)="markChange.emit(mark.value)"
+    >
+      @switch (mark.value) {
+        @case ('WANT_TO_PLAY') {
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 3h12v18l-6-4.5L6 21z" />
+          </svg>
+        }
+        @case ('PLAYED_LIKED') {
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M7 10v10H3V10zM7 10l4-7c1.7 0 2.5 1.2 2 3l-.7 3H19a2 2 0 0 1 2 2.4l-1.4 6.6A2 2 0 0 1 17.7 20H7" />
+          </svg>
+        }
+        @case ('PLAYED_DISLIKED') {
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 14V4h4v10zM17 14l-4 7c-1.7 0-2.5-1.2-2-3l.7-3H5a2 2 0 0 1-2-2.4L4.4 6A2 2 0 0 1 6.3 4H17" />
+          </svg>
+        }
+      }
+      @if (!compact()) {
+        <span>{{ mark.label }}</span>
+      }
+    </button>
+  }
+</div>

@@ -55,6 +55,7 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
+    implementation("com.github.ben-manes.caffeine:caffeine")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
     compileOnly("org.projectlombok:lombok")
@@ -101,6 +102,48 @@ tasks.withType<Test> {
     // (spec 011 BUG-035).
     systemProperty("spring.ai.anthropic.api-key", "test-key-not-used")
     systemProperty("spring.ai.anthropic.chat.options.model", "claude-sonnet-5")
+}
+
+// Real-model tests are never part of `test`: they cost money and need keys (spec 013 FR-018, quickstart A3).
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("golden-live", "integration-igdb")
+    }
+}
+
+// `./gradlew goldenLive` asks the real models the golden questions and prints pass rates and token cost. It needs
+// OPENROUTER_API_KEY (and ANTHROPIC_API_KEY for the fallback) in the environment; the values are never printed.
+val goldenLive by tasks.registering(Test::class) {
+    description = "Runs the LibBot golden questions against the real models (costs tokens)."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeTags("golden-live")
+    }
+    System.getenv("ANTHROPIC_API_KEY")?.let { systemProperty("spring.ai.anthropic.api-key", it) }
+    System.getenv("OPENROUTER_API_KEY")?.let { environment("OPENROUTER_API_KEY", it) }
+    testLogging {
+        showStandardStreams = true
+    }
+    outputs.upToDateWhen { false }
+}
+
+// `./gradlew igdbCheck` re-reads IGDB's platform list and fails when a platform in `PlatformCatalog` no longer carries its
+// stored IGDB name. Needs IGDB_CLIENT_ID and IGDB_CLIENT_SECRET in the environment.
+val igdbCheck by tasks.registering(Test::class) {
+    description = "Checks the platform catalog's IGDB ids against live IGDB."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeTags("integration-igdb")
+    }
+    listOf("IGDB_CLIENT_ID", "IGDB_CLIENT_SECRET").forEach { key -> System.getenv(key)?.let { environment(key, it) } }
+    testLogging {
+        showStandardStreams = true
+    }
+    outputs.upToDateWhen { false }
 }
 
 // The Spring Boot bootstrap class is a single `main` method delegating to

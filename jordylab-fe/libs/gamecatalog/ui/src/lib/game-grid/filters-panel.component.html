@@ -1,0 +1,203 @@
+<div
+  role="dialog"
+  aria-label="Filters"
+  data-testid="filters-panel"
+  class="fixed inset-x-0 bottom-0 z-30 flex max-h-[82vh] flex-col overflow-y-auto rounded-t-[22px] border border-b-0 border-input bg-card px-5 pt-3 shadow-[0_30px_80px_-20px_#000] min-[641px]:absolute min-[641px]:inset-x-auto min-[641px]:bottom-auto min-[641px]:right-0 min-[641px]:top-[58px] min-[641px]:max-h-[70vh] min-[641px]:w-[min(680px,100%)] min-[641px]:rounded-[18px] min-[641px]:border-b min-[641px]:px-[22px] min-[641px]:pt-5"
+>
+  <div class="mx-auto mb-3.5 h-1 w-11 rounded-sm bg-input min-[641px]:hidden" aria-hidden="true"></div>
+
+  <div class="grid grid-cols-1 gap-x-8 gap-y-[22px] min-[641px]:grid-cols-2">
+    @if (platforms().length > 0) {
+      <section class="min-[641px]:col-span-2" data-testid="filter-group-platform">
+        <h3 [class]="groupHeadingClass">Platform</h3>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Platform">
+          @for (platform of platforms(); track platform.name) {
+            <button
+              type="button"
+              [class]="optionClass"
+              [attr.aria-pressed]="selectedPlatforms().includes(platform.name)"
+              (click)="platformToggle.emit(platform.name)"
+            >
+              <span
+                class="size-2.5 shrink-0 rounded-full border border-black/20"
+                [style.background]="platform.background"
+                aria-hidden="true"
+              ></span>
+              {{ platform.name }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    @if (places().length > 0) {
+      <section data-testid="filter-group-where">
+        <h3 [class]="groupHeadingClass">Where</h3>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Where">
+          @for (place of places(); track place.id) {
+            <button
+              type="button"
+              [class]="optionClass"
+              [attr.aria-pressed]="selectedPlaces().includes(place.id)"
+              (click)="placeToggle.emit(place.id)"
+            >
+              {{ place.label }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    <section data-testid="filter-group-status">
+      <h3 [class]="groupHeadingClass">Status</h3>
+      <div
+        class="inline-flex flex-wrap gap-0.5 rounded-full border border-input p-[3px]"
+        role="group"
+        aria-label="Status"
+      >
+        @for (status of installStatuses; track status.value) {
+          <button
+            type="button"
+            [class]="optionClass + ' border-0 min-h-[34px]'"
+            [attr.aria-pressed]="installStatus() === status.value"
+            (click)="installStatusChange.emit(status.value)"
+          >
+            {{ status.label }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <section data-testid="filter-group-source">
+      <h3 [class]="groupHeadingClass">Source</h3>
+      <div class="flex flex-wrap gap-2" role="group" aria-label="Source">
+        @for (source of sources; track source.value) {
+          <button
+            type="button"
+            [class]="optionClass"
+            [attr.aria-pressed]="selectedSources().includes(source.value)"
+            (click)="sourceToggle.emit(source.value)"
+          >
+            {{ source.label }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <section data-testid="filter-group-players">
+      <h3 [class]="groupHeadingClass">Local players</h3>
+      <div class="inline-flex items-center overflow-hidden rounded-full border border-input" role="group" aria-label="Minimum local players">
+        <button
+          type="button"
+          class="h-10 w-11 text-lg disabled:opacity-40"
+          aria-label="Fewer players"
+          [disabled]="!canGoFewer()"
+          (click)="fewerPlayers()"
+        >
+          −
+        </button>
+        <output class="min-w-14 text-center font-mono text-[13px] font-medium" aria-live="polite">{{ playersLabel() }}</output>
+        <button
+          type="button"
+          class="h-10 w-11 text-lg disabled:opacity-40"
+          aria-label="More players"
+          [disabled]="!canGoMore()"
+          (click)="morePlayers()"
+        >
+          +
+        </button>
+      </div>
+    </section>
+
+    <section data-testid="filter-group-rom">
+      <h3 [class]="groupHeadingClass">ROM status · emulated only</h3>
+      <div class="flex flex-wrap gap-2" role="group" aria-label="ROM status">
+        @for (status of romStatuses; track status.value) {
+          <button
+            type="button"
+            [class]="optionClass"
+            [attr.aria-pressed]="selectedRomStatuses().includes(status.value)"
+            (click)="romStatusToggle.emit(status.value)"
+          >
+            {{ status.label }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <section class="min-[641px]:col-span-2" data-testid="filter-group-marks">
+      <h3 [class]="groupHeadingClass">Community marks</h3>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Community marks">
+          @for (mark of marks; track mark.value) {
+            <button
+              type="button"
+              [class]="optionClass"
+              [attr.aria-pressed]="selectedMarks().includes(mark.value)"
+              (click)="markToggle.emit(mark.value)"
+            >
+              {{ mark.label }}
+            </button>
+          }
+        </div>
+        <div
+          class="inline-flex gap-0.5 rounded-full border border-input p-[3px]"
+          role="group"
+          aria-label="Whose marks"
+        >
+          @for (scope of markScopes; track scope.value) {
+            <button
+              type="button"
+              [class]="optionClass + ' border-0 min-h-[34px]'"
+              [attr.aria-pressed]="markScope() === scope.value"
+              (click)="markScopeChange.emit(scope.value)"
+            >
+              {{ scope.label }}
+            </button>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section data-testid="filter-group-sort">
+      <h3 [class]="groupHeadingClass">Sort</h3>
+      <div
+        class="inline-flex flex-wrap gap-0.5 rounded-full border border-input p-[3px]"
+        role="group"
+        aria-label="Sort"
+      >
+        @for (option of sorts; track option.value) {
+          <button
+            type="button"
+            [class]="optionClass + ' border-0 min-h-[34px]'"
+            [attr.aria-pressed]="sort() === option.value"
+            (click)="sortChange.emit(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+    </section>
+  </div>
+
+  <div
+    class="sticky bottom-0 -mx-5 mt-5 flex items-center justify-between gap-3 border-t border-border bg-card px-5 py-3.5 min-[641px]:-mx-[22px] min-[641px]:px-[22px]"
+  >
+    <button
+      type="button"
+      class="cursor-pointer px-2 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-primary underline underline-offset-4 disabled:cursor-default disabled:no-underline disabled:opacity-40"
+      [disabled]="!hasFilters()"
+      (click)="clearAll.emit()"
+    >
+      Clear all
+    </button>
+    <button
+      type="button"
+      class="h-11 cursor-pointer rounded-xl bg-primary px-5 font-semibold text-primary-foreground"
+      data-testid="filters-done"
+      (click)="done.emit()"
+    >
+      Show {{ resultCount() }} {{ resultCount() === 1 ? 'game' : 'games' }}
+    </button>
+  </div>
+</div>

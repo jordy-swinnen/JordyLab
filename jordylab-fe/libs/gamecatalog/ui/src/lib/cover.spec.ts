@@ -1,4 +1,4 @@
-import { coverInitials, coverPalette, platformTagClass } from './cover';
+import { coverInitials, coverPalette } from './cover';
 
 describe('cover helpers', () => {
   it('derives up to three initials, skipping small words', () => {
@@ -15,9 +15,4 @@ describe('cover helpers', () => {
     expect(coverPalette('Celeste')).toEqual(coverPalette('Celeste'));
   });
 
-  it('tints Steam with iris and everything else with flare', () => {
-    expect(platformTagClass('Steam')).toContain('text-iris');
-    expect(platformTagClass('steam')).toContain('text-iris');
-    expect(platformTagClass('SNES')).toContain('text-primary');
-  });
 });

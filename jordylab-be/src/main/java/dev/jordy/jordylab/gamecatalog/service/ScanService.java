@@ -2,12 +2,15 @@ package dev.jordy.jordylab.gamecatalog.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jordy.jordylab.gamecatalog.CatalogChanged;
 import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
+import dev.jordy.jordylab.gamecatalog.domain.Host;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.domain.SyncReport;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameInstallationRepository;
+import dev.jordy.jordylab.gamecatalog.domain.repository.HostRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.ScanSourceRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.SyncReportRepository;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ClientGame;
@@ -24,6 +27,7 @@ import dev.jordy.jordylab.gamecatalog.service.scan.LibraryParser;
 import dev.jordy.jordylab.gamecatalog.util.TextSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -53,14 +57,13 @@ public class ScanService {
     static final int CURRENT_INGEST_VERSION = 1;
 
     private final ScanSourceRepository scanSourceRepository;
+    private final HostRepository hostRepository;
     private final SyncReportRepository syncReportRepository;
     private final GameInstallationRepository gameInstallationRepository;
     private final ReconciliationService reconciliationService;
     private final ArtworkService artworkService;
-    private final SteamMetadataService steamMetadataService;
-    private final EnrichmentService enrichmentService;
     private final SteamLibrarySyncService steamLibrarySyncService;
-    private final MultiplayerService multiplayerService;
+    private final ApplicationEventPublisher eventPublisher;
     private final GameCatalogProperties properties;
     private final ObjectMapper objectMapper;
     private final Map<String, LibraryParser> parsers;
@@ -115,7 +118,6 @@ public class ScanService {
 
         ReconciliationCounts counts = reconciliationService.applySnapshot(source, valid, receivedAt);
         artworkService.processArtworkAfterSync(source, valid);
-        populateCatalogData();
         reconciliationService.purgeUninstalledGames();
         if (source.getSourceType() == SourceType.STEAM) {
             steamLibrarySyncService.syncOwnedIfDue();
@@ -124,21 +126,12 @@ public class ScanService {
         recordDigest(source, request.clientDigest());
         persistReport(source, request, SyncOutcome.APPLIED, receivedAt, payloadHash, counts, valid.size(),
                 rejections.size());
+        // The upload returns now; covers, facts, descriptions and the search index fill in behind it (spec 013 US4).
+        eventPublisher.publishEvent(new CatalogChanged("scan"));
 
         return new ScanResponse(SyncOutcome.APPLIED, source.isEnabled(),
                 new SyncCounts(valid.size(), counts.added(), counts.updated(), counts.removed(),
                         rejections.size()), rejections, null);
-    }
-
-    /**
-     * Fetches deterministic metadata and AI enrichment inline for games still awaiting them, capped
-     * per scan so the client's read timeout is never hit. Leftovers drain on the next applied scan
-     * or via the manual refresh endpoints — there is no scheduler.
-     */
-    private void populateCatalogData() {
-        steamMetadataService.fetchPending(properties.metadata().batchSize());
-        enrichmentService.enrichPending(properties.enrichment().batchSize());
-        multiplayerService.derivePending(properties.metadata().batchSize());
     }
 
     /**
@@ -176,24 +169,34 @@ public class ScanService {
             if (byMachine.isPresent()) {
                 return byMachine.get();
             }
-            Optional<ScanSource> byHostname = scanSourceRepository.findByHostnameAndSourceType(hostname, sourceType);
-            if (byHostname.isPresent()) {
-                ScanSource source = byHostname.get();
+            Host host = resolveHost(hostname);
+            Optional<ScanSource> byHost = scanSourceRepository.findByHostIdAndSourceType(host.getId(), sourceType);
+            if (byHost.isPresent()) {
+                ScanSource source = byHost.get();
                 source.adoptMachine(machineId);
 
                 return source;
             }
 
-            return scanSourceRepository.save(newSource(hostname, sourceType, machineId));
+            return scanSourceRepository.save(newSource(host, sourceType, machineId));
         }
+        Host host = resolveHost(hostname);
 
-        return scanSourceRepository.findByHostnameAndSourceType(hostname, sourceType)
-                .orElseGet(() -> scanSourceRepository.save(newSource(hostname, sourceType, null)));
+        return scanSourceRepository.findByHostIdAndSourceType(host.getId(), sourceType)
+                .orElseGet(() -> scanSourceRepository.save(newSource(host, sourceType, null)));
     }
 
-    private ScanSource newSource(String hostname, SourceType sourceType, String machineId) {
+    /** The host for a reported hostname, created on first sight. A scan never touches the display name (FR-031). */
+    private Host resolveHost(String hostname) {
+        scanLock.acquireHostCreation(hostname);
+
+        return hostRepository.findByHostnameIgnoreCase(hostname)
+                .orElseGet(() -> hostRepository.save(Host.builder().hostname(hostname).build()));
+    }
+
+    private ScanSource newSource(Host host, SourceType sourceType, String machineId) {
         return ScanSource.builder()
-                .hostname(hostname)
+                .host(host)
                 .sourceType(sourceType)
                 .machineId(machineId)
                 .enabled(true)

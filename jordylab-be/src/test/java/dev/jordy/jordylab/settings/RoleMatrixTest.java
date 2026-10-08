@@ -11,8 +11,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.UUID;
 
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /**
  * Proves the deny-by-default access matrix against real Keycloak-issued tokens:
@@ -35,7 +37,6 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             // The settings API is now implemented; an authorized admin reaches it (200), never 403.
             softly.assertThat(status(as(get("/api/settings/users"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/games"), admin))).isEqualTo(200);
-            softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), admin))).isEqualTo(200);
             // No release has been published in this test fixture — an authorized admin falls
@@ -45,19 +46,39 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(post("/api/mobile/releases"), admin))).isEqualTo(403);
             // "Save to FNA" (spec 007 FR-017) reuses the existing /api/fna/** admin-only matcher.
             softly.assertThat(status(as(manualArticleRequest(), admin))).isEqualTo(201);
+            // LibBot's allowance and the console endpoints (spec 013): admins reach both.
+            softly.assertThat(status(as(get("/api/gamecatalog/libbot/quota"), admin))).isEqualTo(200);
+            softly.assertThat(status(as(get("/api/gamecatalog/consoles"), admin))).isEqualTo(200);
+            softly.assertThat(status(as(get("/api/gamecatalog/consoles/known?q=nin"), admin))).isEqualTo(200);
+            // Naming a host is an admin action; an unknown host id reaches the controller and answers 404, never 403.
+            softly.assertThat(status(as(renameHostRequest(), admin))).isEqualTo(404);
+            softly.assertThat(status(as(markRequest(), admin))).isEqualTo(404);
+            softly.assertThat(status(as(romStatusRequest(), admin))).isEqualTo(404);
+            // The bulk refresh runs are admin-only; with nothing run yet the latest of a kind is "no content".
+            softly.assertThat(status(as(get("/api/gamecatalog/refresh-runs/current?kind=DATA"), admin))).isEqualTo(204);
         });
     }
 
     @Test
-    void guestReachesGameCatalogReadsAndChatOnly() {
+    void guestReachesGameCatalogReadsAndLibBotOnly() {
         String guest = accessTokenFor("guest-user", "guest-password");
 
         assertSoftly(softly -> {
             softly.assertThat(status(as(get("/api/gamecatalog/games"), guest))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/platforms"), guest))).isEqualTo(200);
-            softly.assertThat(status(as(get("/api/gamecatalog/hosts"), guest))).isEqualTo(200);
+            softly.assertThat(status(as(get("/api/gamecatalog/places"), guest))).isEqualTo(200);
             // Chat is authorized for guests; only a 403 would mean the matrix refused them.
             softly.assertThat(status(as(chatRequest(), guest))).isNotEqualTo(403);
+            softly.assertThat(status(as(get("/api/gamecatalog/libbot/quota"), guest))).isEqualTo(200);
+            softly.assertThat(status(as(delete("/api/gamecatalog/libbot/conversations/c1"), guest))).isEqualTo(204);
+            softly.assertThat(status(as(get("/api/gamecatalog/consoles"), guest))).isEqualTo(403);
+            softly.assertThat(status(as(renameHostRequest(), guest))).isEqualTo(403);
+            // Marking a game is for everyone approved; an unknown game answers 404, never 403.
+            softly.assertThat(status(as(markRequest(), guest))).isEqualTo(404);
+            // A guest may say whether an emulated game launches on a machine; an unknown game answers 404, never 403.
+            softly.assertThat(status(as(romStatusRequest(), guest))).isEqualTo(404);
+            softly.assertThat(status(as(get("/api/gamecatalog/refresh-runs/current?kind=DATA"), guest))).isEqualTo(403);
+            softly.assertThat(status(as(refreshRunRequest(), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/fna/articles"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/settings/users"), guest))).isEqualTo(403);
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), guest))).isEqualTo(403);
@@ -80,6 +101,10 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(get("/api/settings/users"), pending))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/games"), pending))).isEqualTo(403);
             softly.assertThat(status(as(chatRequest(), pending))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/gamecatalog/libbot/quota"), pending))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/gamecatalog/consoles"), pending))).isEqualTo(403);
+            softly.assertThat(status(as(markRequest(), pending))).isEqualTo(403);
+            softly.assertThat(status(as(romStatusRequest(), pending))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), pending))).isEqualTo(403);
             // spec 007 scenario 4: a pending user gets no dialog and a denied download-link request.
             softly.assertThat(status(as(get("/api/mobile/releases/latest"), pending))).isEqualTo(403);
@@ -125,9 +150,31 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
     }
 
     private MockHttpServletRequestBuilder chatRequest() {
-        return post("/api/gamecatalog/chat")
+        return post("/api/gamecatalog/libbot/ask")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"question\":\"anything\"}");
+                .content("{\"conversationId\":\"c1\",\"message\":\"anything\"}");
+    }
+
+    private MockHttpServletRequestBuilder refreshRunRequest() {
+        return post("/api/gamecatalog/refresh-runs").contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"DATA\"}");
+    }
+
+    private MockHttpServletRequestBuilder romStatusRequest() {
+        return put("/api/gamecatalog/games/" + UUID.randomUUID() + "/installations/" + UUID.randomUUID() + "/rom-status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"BROKEN\"}");
+    }
+
+    private MockHttpServletRequestBuilder markRequest() {
+        return put("/api/gamecatalog/games/" + UUID.randomUUID() + "/mark")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mark\":\"WANT_TO_PLAY\"}");
+    }
+
+    private MockHttpServletRequestBuilder renameHostRequest() {
+        return put("/api/gamecatalog/hosts/" + UUID.randomUUID() + "/display-name")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Living room PC\"}");
     }
 
     private MockHttpServletRequestBuilder ingestCheckRequest() {

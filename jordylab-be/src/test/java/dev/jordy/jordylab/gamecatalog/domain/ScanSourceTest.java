@@ -16,7 +16,8 @@ class ScanSourceTest {
         org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(source.getId()).isNotNull();
             softly.assertThat(source.getSourceKey()).isEqualTo("jordybox:STEAM");
-            softly.assertThat(source.getHostname()).isEqualTo(ScanSourceTestBuilder.DEFAULT_HOSTNAME);
+            softly.assertThat(source.getHost().getHostname()).isEqualTo(ScanSourceTestBuilder.DEFAULT_HOSTNAME);
+            softly.assertThat(source.hostLabel()).isEqualTo(ScanSourceTestBuilder.DEFAULT_HOSTNAME);
             softly.assertThat(source.getSourceType()).isEqualTo(ScanSourceTestBuilder.DEFAULT_SOURCE_TYPE);
             softly.assertThat(source.getPlatform()).isEqualTo("Steam");
             softly.assertThat(source.isEnabled()).isTrue();
@@ -25,15 +26,21 @@ class ScanSourceTest {
     }
 
     @Test
-    void buildWithoutHostname() {
-        assertThatThrownBy(() -> ScanSourceTestBuilder.aScanSource().hostname(null).build())
+    void buildWithoutHost() {
+        assertThatThrownBy(() -> ScanSourceTestBuilder.aScanSource().host(null).build())
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void buildWithBlankHostname() {
-        assertThatThrownBy(() -> ScanSourceTestBuilder.aScanSource().hostname(" ").build())
-                .isInstanceOf(IllegalArgumentException.class);
+    void hostLabelFollowsTheHostDisplayName() {
+        ScanSource source = ScanSourceTestBuilder.aScanSource()
+                .host(Host.builder().hostname("cachyos-htpc").displayName("Living room PC").build())
+                .build();
+
+        org.assertj.core.api.SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(source.hostLabel()).isEqualTo("Living room PC");
+            softly.assertThat(source.getSourceKey()).isEqualTo("cachyos-htpc:STEAM");
+        });
     }
 
     @Test
@@ -45,7 +52,7 @@ class ScanSourceTest {
     @Test
     void buildDerivesSourceKeyAndPlatform() {
         ScanSource source = ScanSourceTestBuilder.aScanSource()
-                .hostname("media-pc")
+                .host(Host.builder().hostname("media-pc").build())
                 .sourceType(SourceType.EMUDECK)
                 .build();
 

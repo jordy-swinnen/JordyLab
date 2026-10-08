@@ -2,6 +2,7 @@ package dev.jordy.jordylab.gamecatalog.rest.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jordy.jordylab.gamecatalog.util.TitleKeys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,14 +41,12 @@ public class IgdbClient {
     private static final String IMAGE_CDN_BASE_URL = "https://images.igdb.com/igdb/image/upload";
     private static final int MAX_SEARCH_RESULTS = 10;
     private static final int MAX_MODE_ROWS = 500;
-    private static final long NINTENDO_SWITCH_PLATFORM_ID = 130L;
     /**
-     * IGDB {@code game_type}s a Switch library holds: main game (0), standalone expansion (4), remake (8),
-     * remaster (9), expanded game (10) and port (11). Main games alone missed Switch staples such as
-     * Mario Kart 8 Deluxe (expanded game) and every port (spec 011 BUG-042); DLC, bundles, mods, episodes,
-     * seasons, packs and updates stay out.
+     * IGDB {@code game_type}s a library holds: main game (0), standalone expansion (4), remake (8), remaster (9),
+     * expanded game (10) and port (11). Main games alone missed staples such as Mario Kart 8 Deluxe (expanded game) and
+     * every port (spec 011 BUG-042); DLC, bundles, mods, episodes, seasons, packs and updates stay out.
      */
-    static final String SWITCH_GAME_TYPES = "(0,4,8,9,10,11)";
+    static final String ACCEPTED_GAME_TYPES = "(0,4,8,9,10,11)";
 
     @Value("${IGDB_CLIENT_ID:}")
     String clientId;
@@ -113,28 +112,113 @@ public class IgdbClient {
     }
 
     /**
-     * Searches IGDB for Nintendo Switch titles matching the query. Returns the first
-     * {@value #MAX_SEARCH_RESULTS} matches with metadata and cover/banner URLs; empty if the
-     * client is unconfigured or the call fails.
+     * The IGDB game that is this title, found on the given platform first and by title alone as a fallback (a title that
+     * IGDB lists under another platform is still the same game). Titles are compared by their {@link TitleKeys} so
+     * regional tags and punctuation do not matter; when several entries match, the first search hit wins. Empty when
+     * unconfigured, unreachable, or nothing matches (never a guess).
      */
-    public List<SwitchSearchResult> searchSwitchGames(String query) {
+    public Optional<IgdbGame> findGame(String title, Long platformIgdbId) {
+        if (!isConfigured() || !StringUtils.hasText(title)) {
+            return Optional.empty();
+        }
+        if (platformIgdbId != null) {
+            Optional<IgdbGame> onPlatform = searchExact(title, "platforms = (" + platformIgdbId + ") & game_type = "
+                    + ACCEPTED_GAME_TYPES);
+            if (onPlatform.isPresent()) {
+                return onPlatform;
+            }
+        }
+
+        return searchExact(title, "version_parent = null & game_type = " + ACCEPTED_GAME_TYPES);
+    }
+
+    private Optional<IgdbGame> searchExact(String title, String where) {
+        String query = "search \"" + escapeQuery(title) + "\"; fields name; where " + where + "; limit "
+                + MAX_SEARCH_RESULTS + ";";
+        JsonNode response = post("/games", query);
+        if (response == null || !response.isArray()) {
+            return Optional.empty();
+        }
+        String wanted = TitleKeys.keyFor(title);
+        for (JsonNode game : response) {
+            String name = game.path("name").asText(null);
+            if (StringUtils.hasText(name) && wanted.equals(TitleKeys.keyFor(name))) {
+                return Optional.of(new IgdbGame(game.path("id").asLong(), name));
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * The facts IGDB holds for one game: release year, genres, developer, publisher, summary, cover and a wide banner,
+     * plus its aggregated multiplayer modes. Empty when unconfigured or the id is unknown.
+     */
+    public Optional<IgdbFacts> fetchFacts(long igdbGameId) {
+        if (!isConfigured()) {
+            return Optional.empty();
+        }
+        String query = "fields name,first_release_date,genres.name,summary,"
+                + "involved_companies.developer,involved_companies.publisher,involved_companies.company.name,"
+                + "cover.image_id,artworks.image_id,screenshots.image_id; where id = " + igdbGameId + ";";
+        JsonNode response = post("/games", query);
+        if (response == null || !response.isArray() || response.isEmpty()) {
+            return Optional.empty();
+        }
+        JsonNode game = response.get(0);
+        String coverImageId = game.path("cover").path("image_id").asText(null);
+        String bannerImageId = firstArtworkImageId(game.path("artworks"));
+        if (bannerImageId == null) {
+            bannerImageId = firstArtworkImageId(game.path("screenshots"));
+        }
+        Map<Long, MultiplayerMode> modes = fetchMultiplayerModes(List.of(igdbGameId));
+
+        return Optional.of(new IgdbFacts(igdbGameId, game.path("name").asText(null),
+                parseReleaseYear(game.path("first_release_date")), parseNames(game.path("genres")),
+                companyNamed(game.path("involved_companies"), "developer"),
+                companyNamed(game.path("involved_companies"), "publisher"), game.path("summary").asText(null),
+                buildImageUrl(coverImageId, ImageSize.COVER_BIG),
+                buildImageUrl(bannerImageId, ImageSize.SCREENSHOT_BIG), modes.get(igdbGameId)));
+    }
+
+    private String companyNamed(JsonNode companies, String role) {
+        if (companies == null || !companies.isArray()) {
+            return null;
+        }
+        for (JsonNode involved : companies) {
+            if (involved.path(role).asBoolean(false)) {
+                String name = involved.path("company").path("name").asText(null);
+                if (StringUtils.hasText(name)) {
+                    return name;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Searches IGDB for titles on one platform matching the query. Returns the first {@value #MAX_SEARCH_RESULTS} matches
+     * with metadata and cover/banner URLs; empty if the client is unconfigured or the call fails.
+     */
+    public List<IgdbSearchResult> searchGames(String query, long platformIgdbId) {
         if (!isConfigured() || !StringUtils.hasText(query)) {
             return List.of();
         }
         String apicalypse = "search \"" + escapeQuery(query) + "\"; "
                 + "fields name,first_release_date,genres.name,involved_companies.company.name,"
                 + "cover.image_id,artworks.image_id; "
-                + "where platforms = (" + NINTENDO_SWITCH_PLATFORM_ID + ") & version_parent = null & game_type = "
-                + SWITCH_GAME_TYPES + "; "
+                + "where platforms = (" + platformIgdbId + ") & version_parent = null & game_type = "
+                + ACCEPTED_GAME_TYPES + "; "
                 + "limit " + MAX_SEARCH_RESULTS + ";";
         JsonNode response = post("/games", apicalypse);
         if (response == null || !response.isArray()) {
             return List.of();
         }
 
-        List<SwitchSearchResult> results = new ArrayList<>();
+        List<IgdbSearchResult> results = new ArrayList<>();
         for (JsonNode game : response) {
-            SwitchSearchResult result = parseSwitchGame(game);
+            IgdbSearchResult result = parseGame(game);
             if (result != null) {
                 results.add(result);
             }
@@ -144,10 +228,9 @@ public class IgdbClient {
     }
 
     /**
-     * Fetches full Switch details for an IGDB game id, including aggregated multiplayer modes
-     * and cover/banner URLs.
+     * Fetches full details for an IGDB game id, including aggregated multiplayer modes and cover/banner URLs.
      */
-    public Optional<SwitchGameDetails> fetchSwitchGameDetails(long igdbGameId) {
+    public Optional<IgdbGameDetails> fetchGameDetails(long igdbGameId) {
         if (!isConfigured()) {
             return Optional.empty();
         }
@@ -158,14 +241,14 @@ public class IgdbClient {
             return Optional.empty();
         }
 
-        SwitchSearchResult base = parseSwitchGame(response.get(0));
+        IgdbSearchResult base = parseGame(response.get(0));
         if (base == null) {
             return Optional.empty();
         }
         Map<Long, MultiplayerMode> modes = fetchMultiplayerModes(List.of(igdbGameId));
         MultiplayerMode multiplayerMode = modes.get(igdbGameId);
 
-        return Optional.of(new SwitchGameDetails(base.igdbGameId(), base.title(), base.releaseYear(),
+        return Optional.of(new IgdbGameDetails(base.igdbGameId(), base.title(), base.releaseYear(),
                 base.genres(), base.developer(), base.coverUrl(), base.bannerUrl(), multiplayerMode));
     }
 
@@ -180,7 +263,7 @@ public class IgdbClient {
         return IMAGE_CDN_BASE_URL + "/t_" + size.suffix + "/" + imageId + ".jpg";
     }
 
-    private SwitchSearchResult parseSwitchGame(JsonNode game) {
+    private IgdbSearchResult parseGame(JsonNode game) {
         long igdbGameId = game.path("id").asLong(-1);
         String title = game.path("name").asText(null);
         if (igdbGameId < 0 || !StringUtils.hasText(title)) {
@@ -193,7 +276,7 @@ public class IgdbClient {
         String coverImageId = game.path("cover").path("image_id").asText(null);
         String bannerImageId = firstArtworkImageId(game.path("artworks"));
 
-        return new SwitchSearchResult(igdbGameId, title, releaseYear, genres, developer,
+        return new IgdbSearchResult(igdbGameId, title, releaseYear, genres, developer,
                 buildImageUrl(coverImageId, ImageSize.COVER_BIG),
                 buildImageUrl(bannerImageId, ImageSize.SCREENSHOT_BIG));
     }
@@ -427,13 +510,40 @@ public class IgdbClient {
         return max > 0 ? max : null;
     }
 
-    /** Search result for a Nintendo Switch game on IGDB. */
-    public record SwitchSearchResult(long igdbGameId, String title, Integer releaseYear, List<String> genres,
+    /** The IGDB names of the given platform ids (empty when unconfigured). Used to prove the platform catalog still matches IGDB. */
+    public Map<Long, String> fetchPlatformNames(List<Long> platformIds) {
+        if (!isConfigured() || platformIds == null || platformIds.isEmpty()) {
+            return Map.of();
+        }
+        String ids = platformIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+        JsonNode response = post("/platforms", "fields name; where id = (" + ids + "); limit " + platformIds.size() + ";");
+        if (response == null || !response.isArray()) {
+            return Map.of();
+        }
+        Map<Long, String> names = new HashMap<>();
+        for (JsonNode platform : response) {
+            names.put(platform.path("id").asLong(), platform.path("name").asText(null));
+        }
+
+        return names;
+    }
+
+    /** An IGDB game that matches a title. */
+    public record IgdbGame(long id, String name) {
+    }
+
+    /** What IGDB knows about one game; any field may be null. */
+    public record IgdbFacts(long igdbGameId, String title, Integer releaseYear, List<String> genres, String developer,
+            String publisher, String summary, String coverUrl, String bannerUrl, MultiplayerMode multiplayerMode) {
+    }
+
+    /** Search result for a game on IGDB. */
+    public record IgdbSearchResult(long igdbGameId, String title, Integer releaseYear, List<String> genres,
             String developer, String coverUrl, String bannerUrl) {
     }
 
-    /** Full details for a Switch game, including aggregated multiplayer facts. */
-    public record SwitchGameDetails(long igdbGameId, String title, Integer releaseYear, List<String> genres,
+    /** Full details for a game, including aggregated multiplayer facts. */
+    public record IgdbGameDetails(long igdbGameId, String title, Integer releaseYear, List<String> genres,
             String developer, String coverUrl, String bannerUrl, MultiplayerMode multiplayerMode) {
     }
 

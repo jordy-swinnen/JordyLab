@@ -47,16 +47,3 @@ export function coverInitials(title: string): string {
     .map((word) => word.charAt(0).toUpperCase())
     .join('');
 }
-
-const TAG_BASE =
-  'rounded-[7px] border-transparent px-2 py-[5px] font-mono text-[10.5px] font-medium uppercase tracking-[0.08em]';
-
-/** Steam gets the iris tint, every other platform (consoles, emulators) the flare tint. */
-export function platformTagClass(platform: string): string {
-  const tint =
-    platform.toLowerCase() === 'steam'
-      ? 'bg-iris/15 text-iris'
-      : 'bg-primary/15 text-primary';
-
-  return `${TAG_BASE} ${tint}`;
-}

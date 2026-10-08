@@ -1,0 +1,9 @@
+@if (visible().length > 0) {
+  <div class="flex flex-col items-end gap-1.5" role="group" [attr.aria-label]="description()" data-testid="vote-rail">
+    @for (entry of visible(); track entry.mark) {
+      <span class="rounded-full bg-[#0D0B13]/85 backdrop-blur-sm">
+        <lib-mark-chip [mark]="entry.mark" [count]="entry.count" [mine]="myMark() === entry.mark" [compact]="true" />
+      </span>
+    }
+  </div>
+}

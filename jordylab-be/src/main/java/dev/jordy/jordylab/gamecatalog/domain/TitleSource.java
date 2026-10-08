@@ -17,6 +17,20 @@ public enum TitleSource {
         this.authority = authority;
     }
 
+    /**
+     * Whether a title from this source replaces the current one. A higher authority always does. At equal authority only
+     * a library or a person may rename (a Steam name that changed); two scans of equal rank (a ROM file name and a
+     * manifest name, from different hosts) keep whichever title the game already has, so the name does not flip with the
+     * order the hosts scan in (spec 013 FR-024).
+     */
+    public boolean replaces(TitleSource current) {
+        if (current == null || authority > current.authority) {
+            return true;
+        }
+
+        return authority == current.authority && (this == LIBRARY || this == MANUAL);
+    }
+
     public boolean outranks(TitleSource other) {
         if (other == null) {
             return true;

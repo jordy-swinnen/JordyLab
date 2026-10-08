@@ -242,21 +242,70 @@
   }
 </div>
 
+@if (health(); as libraryHealth) {
+  <section class="mb-5 mt-12" aria-labelledby="library-health-title" data-testid="library-health">
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+      <h2 id="library-health-title" class="section-title">Library health</h2>
+      <span class="mono-label">{{ libraryHealth.totalGames }} games in the library</span>
+    </div>
+    <p class="mb-4 text-[15px] leading-relaxed text-secondary-foreground">
+      Covers, facts, descriptions and the search index fill in by themselves. What is still missing is listed here.
+    </p>
+    <ul class="grid gap-3 sm:grid-cols-3">
+      @for (row of healthRows; track row.kind) {
+        <li class="panel flex flex-col gap-2 px-5 py-4">
+          <span class="mono-label">{{ row.label }}</span>
+          <span class="font-display text-3xl font-bold" [attr.data-testid]="'health-count-' + row.kind">
+            {{ row.count(libraryHealth) }}
+            <span class="text-base font-normal text-muted-foreground">
+              · {{ percentOf(row.count(libraryHealth), libraryHealth) }}
+            </span>
+          </span>
+          @if (row.count(libraryHealth) > 0) {
+            <button
+              type="button"
+              class="w-fit text-sm font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-50"
+              [disabled]="loadingExceptions() !== null"
+              [attr.data-testid]="'show-exceptions-' + row.kind"
+              (click)="showExceptions.emit(row.kind)"
+            >
+              {{ loadingExceptions() === row.kind ? 'Loading…' : 'Show exceptions' }}
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    @if (healthExceptions(); as exceptions) {
+      <div class="panel mt-4 px-5 py-4" data-testid="health-exceptions">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <span class="mono-label">
+            {{ exceptions.total }} games · showing {{ exceptions.games.length }}
+          </span>
+          <button type="button" class="text-sm font-semibold text-primary" (click)="hideExceptions.emit()">
+            Hide
+          </button>
+        </div>
+        <ul class="flex flex-wrap gap-2">
+          @for (game of exceptions.games; track game.id) {
+            <li>
+              <a
+                [routerLink]="['/games', game.id]"
+                class="inline-flex rounded-full border border-input px-3 py-1 text-[13px] text-secondary-foreground hover:border-primary hover:text-foreground"
+                >{{ game.title }}</a
+              >
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </section>
+}
+
+<ng-content select="lib-refresh-panel" />
+
 <div class="mb-5 mt-12 flex flex-wrap items-center justify-between gap-4">
   <h2 class="section-title">Scan sources</h2>
   <div class="flex items-center gap-4">
-    @if (refreshProgress(); as progress) {
-      <span class="mono-label">{{ progress }}</span>
-    }
-    <button
-      hlmBtn
-      variant="outline"
-      [disabled]="refreshingPending()"
-      (click)="refreshPending.emit()"
-      data-testid="refresh-pending-data"
-    >
-      {{ refreshingPending() ? 'Refreshing…' : 'Refresh pending data' }}
-    </button>
     <span class="mono-label">{{ sources().length }} sources</span>
   </div>
 </div>
@@ -293,26 +342,40 @@
       >
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2.5">
-            <span class="font-mono text-base tracking-tight text-foreground">{{
-              source.sourceKey
+            <span class="font-display text-lg font-semibold text-foreground" data-testid="source-label">{{
+              source.label
             }}</span>
-            <span
-              hlmBadge
-              variant="secondary"
-              static
-              [class]="tagClass(source.platform)"
-              >{{ source.platform }}</span
-            >
+            <lib-platform-chip [chip]="source.platformChip" />
             <span hlmBadge variant="secondary" static [class]="neutralTag">
               {{ sourceTypeLabel(source.sourceType) }}
             </span>
           </div>
           <p
-            class="mt-2.5 truncate font-mono text-[13px] text-muted-foreground"
+            class="mt-2.5 flex flex-wrap items-center gap-x-3 truncate font-mono text-[13px] text-muted-foreground"
             [title]="source.hostname"
           >
-            hostname: {{ source.hostname }}
+            <span>hostname: {{ source.hostname }}</span>
+            @if (editingSourceId() !== source.id) {
+              <button
+                type="button"
+                class="cursor-pointer font-sans text-[13px] font-semibold text-primary underline underline-offset-4"
+                [attr.aria-label]="'Rename ' + source.label"
+                (click)="editHostName.emit(source.id)"
+              >
+                {{ source.displayName ? 'Rename' : 'Give a name' }}
+              </button>
+            }
           </p>
+          @if (editingSourceId() === source.id) {
+            <lib-host-name-editor
+              [hostname]="source.hostname"
+              [displayName]="source.displayName"
+              [saving]="renamingHostId() === source.hostId"
+              [problem]="hostNameProblem()"
+              (save)="renameHost.emit({ hostId: source.hostId, displayName: $event })"
+              (dismiss)="cancelHostName.emit()"
+            />
+          }
           <p class="mt-1.5 text-sm text-secondary-foreground">
             {{ source.installedGameCount }} installed
             @if (source.lastAttemptAt) {
@@ -360,3 +423,30 @@
     }
   </div>
 }
+
+<lib-confirm-dialog
+  heading="Turn this source off?"
+  confirmLabel="Turn off"
+  [warning]="true"
+  [open]="disableQuote() !== null"
+  (confirmed)="confirmDisable.emit()"
+  (cancelled)="cancelDisable.emit()"
+>
+  @if (disableQuote(); as quote) {
+    @if (quote.impact.hiddenGames > 0) {
+      <p>
+        <strong>{{ quote.impact.hiddenGames }}</strong>
+        {{ quote.impact.hiddenGames === 1 ? 'game' : 'games' }} of {{ quote.source.label }} will no longer show, because
+        this is the only place {{ quote.impact.hiddenGames === 1 ? 'it is' : 'they are' }} on.
+      </p>
+    } @else if (quote.impact.hiddenGames === 0) {
+      <p>No game will disappear: every game of {{ quote.source.label }} is also somewhere else.</p>
+    } @else {
+      <p>Games that live only on {{ quote.source.label }} will no longer show.</p>
+    }
+    @if (quote.impact.stillVisibleElsewhere > 0) {
+      <p class="mt-2">{{ quote.impact.stillVisibleElsewhere }} other games stay visible through another place.</p>
+    }
+    <p class="mt-2"><strong>Nothing is deleted.</strong> Turn the source back on and its games return at once.</p>
+  }
+</lib-confirm-dialog>

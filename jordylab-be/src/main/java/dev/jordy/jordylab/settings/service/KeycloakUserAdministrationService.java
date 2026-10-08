@@ -2,8 +2,11 @@ package dev.jordy.jordylab.settings.service;
 
 import dev.jordy.jordylab.settings.rest.client.KeycloakAdminClient;
 import dev.jordy.jordylab.settings.util.TemporaryPasswordGenerator;
+import dev.jordy.jordylab.shared.event.UserAccessRemoved;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.Comparator;
@@ -30,6 +33,8 @@ public class KeycloakUserAdministrationService {
     private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
 
     private final KeycloakAdminClient keycloakAdminClient;
+    private final ApplicationEventPublisher eventPublisher;
+    private final TransactionOperations transactions;
 
     public List<AppUser> listUsers(UserStatus statusFilter) {
         return keycloakAdminClient.listUsers().stream()
@@ -57,6 +62,7 @@ public class KeycloakUserAdministrationService {
         KeycloakAdminClient.KeycloakUser user = requireUser(userId);
         guardLastAdmin(user);
         keycloakAdminClient.setEnabled(user.id(), false);
+        publishAccessRemoved(user.id());
     }
 
     public void revoke(UUID userId) {
@@ -68,6 +74,7 @@ public class KeycloakUserAdministrationService {
         keycloakAdminClient.revokeRealmRole(user.id(), GUEST_ROLE);
         keycloakAdminClient.endSessions(user.id());
         revokeMobileOfflineConsent(user.id());
+        publishAccessRemoved(user.id());
     }
 
     /** Returned once, to the admin, for out-of-band sharing — never logged or stored. */
@@ -77,6 +84,11 @@ public class KeycloakUserAdministrationService {
         keycloakAdminClient.resetPassword(user.id(), temporaryPassword);
 
         return temporaryPassword;
+    }
+
+    /** Inside a transaction, because module listeners only run once the publishing transaction commits. */
+    private void publishAccessRemoved(String userSubject) {
+        transactions.executeWithoutResult(status -> eventPublisher.publishEvent(new UserAccessRemoved(userSubject)));
     }
 
     private void guardLastAdmin(KeycloakAdminClient.KeycloakUser target) {

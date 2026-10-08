@@ -34,9 +34,10 @@ spring:
       # Spring AI's AnthropicApi and StockPriceService's Yahoo Finance client.
       read-timeout: 120s
   ai:
-    # Only chat is used: keep the OpenAI starter's other clients (embedding, image, audio, moderation) out of the context.
+    # Chat and embeddings are used (LibBot's semantic index embeds through the same OpenRouter gateway, spec 013 research A3);
+    # keep the OpenAI starter's other clients (image, audio, moderation) out of the context.
     model:
-      embedding: none
+      embedding: openai
       image: none
       audio:
         speech: none
@@ -46,6 +47,12 @@ spring:
     # spring.ai.model.chat unset — each starter only matches its own value there, so setting it switches the other off.
     openai:
       base-url: ${jordylab.ai.gateway.base-url}
+      embedding:
+        options:
+          # Not selectable on Settings → AI Models: switching it invalidates every stored vector (GameEmbedding stores the model).
+          # 1536 matches the vector(1536) column and the project's pgvector rule.
+          model: ${jordylab.ai.embedding.model}
+          dimensions: 1536
       # The OpenAI auto-configuration refuses to start without a key; "unset" keeps it up, and ResilientAiService
       # skips the gateway while jordylab.ai.gateway.api-key is blank.
       api-key: ${OPENROUTER_API_KEY:unset}
@@ -86,16 +93,21 @@ jordylab:
     fallback:
       provider: anthropic
       model: claude-sonnet-5
+    embedding:
+      model: openai/text-embedding-3-small
     # Feature keys contain dots: the brackets keep them whole instead of nesting (AiPropertiesTest).
     features:
       "[fna.briefing]":
         model: anthropic/claude-sonnet-5
       "[gamecatalog.enrichment]":
         model: anthropic/claude-haiku-4.5
+      # Temperature 0: the question reader must give the same facts for the same question (spec 013 research A1).
       "[gamecatalog.chat.query]":
         model: anthropic/claude-haiku-4.5
+        temperature: 0
       "[gamecatalog.chat.answer]":
         model: anthropic/claude-haiku-4.5
+        temperature: 0.3
   gamecatalog:
     artwork:
       dir: ${GAMECATALOG_ARTWORK_DIR:/var/jordylab/artwork}
@@ -108,6 +120,21 @@ jordylab:
       max-attempts: 3
     chat:
       max-result-games: 50
+    # Background auto-fill of covers, facts, descriptions and the search index (spec 013 US4).
+    autofill:
+      batch-size: 10
+      ai-max-attempts: 3
+      free-lookup-retry-hours: 24
+      sweep-cron: "0 30 4 * * *"
+      zone: Europe/Brussels
+    # LibBot (spec 013 US1 to US3).
+    libbot:
+      memory-exchanges: 10
+      memory-idle-hours: 2
+      max-references: 10
+      max-candidates: 15
+      max-unknown-titles: 5
+      max-message-length: 1000
     metadata:
       store-base-url: https://store.steampowered.com
       batch-size: 25

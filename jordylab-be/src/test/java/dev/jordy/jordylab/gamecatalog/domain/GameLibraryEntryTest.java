@@ -42,13 +42,6 @@ class GameLibraryEntryTest {
     }
 
     @Test
-    void buildWithDerivedLocalSourceIsRejected() {
-        assertThatThrownBy(() -> GameLibraryEntryTestBuilder.aGameLibraryEntry()
-                .librarySource(LibrarySource.LOCAL).build())
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void buildWithoutTimestamps() {
         assertThatThrownBy(() -> GameLibraryEntryTestBuilder.aGameLibraryEntry().firstSeenAt(null).build())
                 .isInstanceOf(IllegalArgumentException.class);

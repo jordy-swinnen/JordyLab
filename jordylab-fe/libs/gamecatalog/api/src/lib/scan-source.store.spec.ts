@@ -2,18 +2,21 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
-import { LibraryStatus, RefreshAll, ScanSource } from './gamecatalog.models';
+import { HealthExceptions, LibraryStatus, SourcesOverview } from './gamecatalog.models';
 import { ScanSourceStore } from './scan-source.store';
-import { aRefreshAllMock } from './mocks/refresh-all.model.mock';
-import { aRefreshCountMock } from './mocks/refresh-count.model.mock';
+import { aHostMock } from './mocks/host.model.mock';
 import { aScanSourceMock } from './mocks/scan-source.model.mock';
+import { aSourcesOverviewMock } from './mocks/sources-overview.model.mock';
+import { aLibraryHealthMock } from './mocks/library-health.model.mock';
 
 describe('ScanSourceStore', () => {
   let spectator: SpectatorService<ScanSourceStore>;
   const getSources = vi.fn<GameCatalogApiService['getSources']>();
+  const getHealthExceptions = vi.fn<GameCatalogApiService['getHealthExceptions']>();
   const setSourceEnabled = vi.fn<GameCatalogApiService['setSourceEnabled']>();
+  const getHideImpact = vi.fn<GameCatalogApiService['getHideImpact']>();
+  const setHostDisplayName = vi.fn<GameCatalogApiService['setHostDisplayName']>();
   const getScanClient = vi.fn<GameCatalogApiService['getScanClient']>();
-  const refreshPending = vi.fn<GameCatalogApiService['refreshPending']>();
   const getLibraryStatus = vi.fn<GameCatalogApiService['getLibraryStatus']>();
   const syncOwnedLibrary = vi.fn<GameCatalogApiService['syncOwnedLibrary']>();
   const syncFamilyLibrary = vi.fn<GameCatalogApiService['syncFamilyLibrary']>();
@@ -25,9 +28,11 @@ describe('ScanSourceStore', () => {
         provide: GameCatalogApiService,
         useValue: {
           getSources,
+          getHealthExceptions,
           setSourceEnabled,
+          getHideImpact,
+          setHostDisplayName,
           getScanClient,
-          refreshPending,
           getLibraryStatus,
           syncOwnedLibrary,
           syncFamilyLibrary,
@@ -38,15 +43,14 @@ describe('ScanSourceStore', () => {
 
   beforeEach(() => {
     getSources.mockReset();
-    getSources.mockReturnValue(of([aScanSourceMock()]));
+    getSources.mockReturnValue(of(aSourcesOverviewMock()));
+    setHostDisplayName.mockReset();
+    getHideImpact.mockReset();
+    getHideImpact.mockReturnValue(of({ hiddenGames: 87, stillVisibleElsewhere: 5 }));
     setSourceEnabled.mockReset();
     setSourceEnabled.mockImplementation((id, enabled) => of({ id, enabled }));
     getScanClient.mockReset();
     getScanClient.mockReturnValue(of(new Blob(['#!/bin/sh'])));
-    refreshPending.mockReset();
-    refreshPending.mockReturnValue(
-      of(aRefreshAllMock({ metadata: aRefreshCountMock({ processed: 0 }), enrichment: aRefreshCountMock({ processed: 0 }) }))
-    );
     getLibraryStatus.mockReset();
     getLibraryStatus.mockReturnValue(of(anEmptyLibraryStatus()));
     syncOwnedLibrary.mockReset();
@@ -62,14 +66,20 @@ describe('ScanSourceStore', () => {
       expect(spectator.service.error()).toBeNull();
     });
 
+    it('exposes the library health that comes with the sources', () => {
+      spectator = createService();
+
+      expect(spectator.service.health()).toEqual(aLibraryHealthMock());
+    });
+
     it('is loading until the sources arrive', () => {
-      const sources = new Subject<ScanSource[]>();
+      const sources = new Subject<SourcesOverview>();
       getSources.mockReturnValue(sources.asObservable());
       spectator = createService();
 
       expect(spectator.service.loading()).toBe(true);
 
-      sources.next([]);
+      sources.next(aSourcesOverviewMock({ sources: [] }));
 
       expect(spectator.service.loading()).toBe(false);
     });
@@ -115,7 +125,7 @@ describe('ScanSourceStore', () => {
     });
 
     it('only updates the toggled source', () => {
-      getSources.mockReturnValue(of([aScanSourceMock(), aScanSourceMock({ id: 'other', sourceKey: 'other:STEAM' })]));
+      getSources.mockReturnValue(of(aSourcesOverviewMock({ sources: [aScanSourceMock(), aScanSourceMock({ id: 'other', sourceKey: 'other:STEAM' })] })));
       spectator.service.load();
 
       spectator.service.toggle(aScanSourceMock());
@@ -153,6 +163,152 @@ describe('ScanSourceStore', () => {
       expect(spectator.service.error()).toBe("Failed to update 'jordybox:STEAM'.");
       expect(spectator.service.togglingId()).toBeNull();
       expect(spectator.service.sources()[0].enabled).toBe(true);
+    });
+  });
+
+  describe('turning a source off', () => {
+    beforeEach(() => {
+      spectator = createService();
+    });
+
+    it('asks what would be hidden before disabling and changes nothing yet', () => {
+      const source = aScanSourceMock();
+
+      spectator.service.requestToggle(source);
+
+      expect(getHideImpact).toHaveBeenCalledWith(source.id);
+      expect(spectator.service.disableQuote()).toEqual({ source, impact: { hiddenGames: 87, stillVisibleElsewhere: 5 } });
+      expect(setSourceEnabled).not.toHaveBeenCalled();
+    });
+
+    it('disables the source once the admin confirms', () => {
+      const source = aScanSourceMock();
+      spectator.service.requestToggle(source);
+
+      spectator.service.confirmDisable();
+
+      expect(setSourceEnabled).toHaveBeenCalledWith(source.id, false);
+      expect(spectator.service.disableQuote()).toBeNull();
+    });
+
+    it('leaves the source on when the admin cancels', () => {
+      spectator.service.requestToggle(aScanSourceMock());
+
+      spectator.service.cancelDisable();
+
+      expect(spectator.service.disableQuote()).toBeNull();
+      expect(setSourceEnabled).not.toHaveBeenCalled();
+    });
+
+    it('turns a disabled source back on at once, with no question', () => {
+      const off = aScanSourceMock({ enabled: false });
+
+      spectator.service.requestToggle(off);
+
+      expect(getHideImpact).not.toHaveBeenCalled();
+      expect(setSourceEnabled).toHaveBeenCalledWith(off.id, true);
+    });
+
+    it('still asks, without a number, when the impact cannot be fetched', () => {
+      getHideImpact.mockReturnValue(throwError(() => new Error('offline')));
+
+      spectator.service.requestToggle(aScanSourceMock());
+
+      expect(spectator.service.disableQuote()?.impact.hiddenGames).toBe(-1);
+    });
+  });
+
+  describe('naming a host', () => {
+    const livingRoom = aHostMock({ displayName: 'Living room PC', label: 'Living room PC' });
+    const steam = aScanSourceMock();
+    const emulation = aScanSourceMock({ id: 'e1', sourceKey: 'jordybox:EMUDECK', sourceType: 'EMUDECK' });
+    const otherHost = aScanSourceMock({ id: 'o1', hostId: 'other-host', hostname: 'macbook', label: 'macbook' });
+
+    beforeEach(() => {
+      getSources.mockReturnValue(of(aSourcesOverviewMock({ sources: [steam, emulation, otherHost] })));
+      setHostDisplayName.mockReturnValue(of(livingRoom));
+      spectator = createService();
+    });
+
+    it('opens one editor at a time and closes it again', () => {
+      spectator.service.startEditingHostName(steam.id);
+      expect(spectator.service.editingSourceId()).toBe(steam.id);
+
+      spectator.service.startEditingHostName(emulation.id);
+      expect(spectator.service.editingSourceId()).toBe(emulation.id);
+
+      spectator.service.stopEditingHostName();
+      expect(spectator.service.editingSourceId()).toBeNull();
+    });
+
+    it('applies the new name to every source of the host and nowhere else', () => {
+      spectator.service.startEditingHostName(steam.id);
+
+      spectator.service.renameHost(steam.hostId, ' Living room PC ');
+
+      expect(setHostDisplayName).toHaveBeenCalledWith(steam.hostId, 'Living room PC');
+      expect(spectator.service.sources().map((source) => [source.id, source.label])).toEqual([
+        [steam.id, 'Living room PC'],
+        ['e1', 'Living room PC'],
+        ['o1', 'macbook'],
+      ]);
+      expect(spectator.service.sources()[0].displayName).toBe('Living room PC');
+      expect(spectator.service.editingSourceId()).toBeNull();
+      expect(spectator.service.renamingHostId()).toBeNull();
+    });
+
+    it('sends null for a blank name so the hostname comes back', () => {
+      setHostDisplayName.mockReturnValue(of(aHostMock()));
+
+      spectator.service.renameHost(steam.hostId, '   ');
+
+      expect(setHostDisplayName).toHaveBeenCalledWith(steam.hostId, null);
+      expect(spectator.service.sources()[0].label).toBe('jordybox');
+    });
+
+    it('says the name is taken and keeps the editor open', () => {
+      spectator.service.startEditingHostName(steam.id);
+      setHostDisplayName.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 409, error: { reason: 'NAME_TAKEN' } })),
+      );
+
+      spectator.service.renameHost(steam.hostId, 'Nintendo Switch');
+
+      expect(spectator.service.hostNameProblem()).toBe('That name is already used by another host or console.');
+      expect(spectator.service.editingSourceId()).toBe(steam.id);
+      expect(spectator.service.sources()[0].label).toBe('jordybox');
+      expect(spectator.service.renamingHostId()).toBeNull();
+    });
+
+    it('says the name is too long', () => {
+      setHostDisplayName.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 400, error: { reason: 'NAME_TOO_LONG' } })),
+      );
+
+      spectator.service.renameHost(steam.hostId, 'x'.repeat(41));
+
+      expect(spectator.service.hostNameProblem()).toBe('A name can be at most 40 characters.');
+    });
+
+    it('falls back to a general message for any other failure and forgets it when the editor closes', () => {
+      setHostDisplayName.mockReturnValue(throwError(() => new Error('offline')));
+
+      spectator.service.renameHost(steam.hostId, 'Anything');
+      expect(spectator.service.hostNameProblem()).toBe('Could not save the name. Try again.');
+
+      spectator.service.stopEditingHostName();
+      expect(spectator.service.hostNameProblem()).toBeNull();
+    });
+
+    it('ignores a second save while one is in flight', () => {
+      const pending = new Subject<ReturnType<typeof aHostMock>>();
+      setHostDisplayName.mockReturnValue(pending.asObservable());
+
+      spectator.service.renameHost(steam.hostId, 'One');
+      spectator.service.renameHost(steam.hostId, 'Two');
+
+      expect(setHostDisplayName).toHaveBeenCalledTimes(1);
+      expect(spectator.service.renamingHostId()).toBe(steam.hostId);
     });
   });
 
@@ -208,76 +364,6 @@ describe('ScanSourceStore', () => {
     });
   });
 
-  describe('refreshPending', () => {
-    it('drains in batches until nothing remains', () => {
-      spectator = createService();
-      refreshPending
-        .mockReturnValueOnce(
-          of(
-            aRefreshAllMock({
-              metadata: aRefreshCountMock({ processed: 5, remaining: 5 }),
-              enrichment: aRefreshCountMock({ processed: 2, remaining: 5 }),
-            })
-          )
-        )
-        .mockReturnValueOnce(
-          of(
-            aRefreshAllMock({
-              metadata: aRefreshCountMock({ processed: 5 }),
-              enrichment: aRefreshCountMock({ processed: 5 }),
-            })
-          )
-        );
-
-      spectator.service.refreshPending();
-
-      expect(refreshPending).toHaveBeenCalledTimes(2);
-      expect(spectator.service.refreshingPending()).toBe(false);
-      expect(spectator.service.refreshProgress()).toBeNull();
-      expect(spectator.service.error()).toBeNull();
-    });
-
-    it('stops with an error when a batch makes no progress', () => {
-      spectator = createService();
-      refreshPending.mockReturnValue(
-        of(
-          aRefreshAllMock({
-            metadata: aRefreshCountMock({ processed: 0, remaining: 3 }),
-            enrichment: aRefreshCountMock({ processed: 0, remaining: 2 }),
-          })
-        )
-      );
-
-      spectator.service.refreshPending();
-
-      expect(refreshPending).toHaveBeenCalledTimes(2);
-      expect(spectator.service.refreshingPending()).toBe(false);
-      expect(spectator.service.error()).toContain('stalled');
-    });
-
-    it('reports a failure and stops refreshing', () => {
-      spectator = createService();
-      refreshPending.mockReturnValue(throwError(() => new Error('network error')));
-
-      spectator.service.refreshPending();
-
-      expect(spectator.service.error()).toBe('Failed to refresh catalog data.');
-      expect(spectator.service.refreshingPending()).toBe(false);
-      expect(spectator.service.refreshProgress()).toBeNull();
-    });
-
-    it('ignores a refresh while one is already running', () => {
-      spectator = createService();
-      const inFlight = new Subject<RefreshAll>();
-      refreshPending.mockReturnValue(inFlight.asObservable());
-
-      spectator.service.refreshPending();
-      spectator.service.refreshPending();
-
-      expect(refreshPending).toHaveBeenCalledTimes(1);
-    });
-  });
-
   describe('library sync failures', () => {
     beforeEach(() => {
       spectator = createService();
@@ -320,8 +406,36 @@ describe('ScanSourceStore', () => {
       expect(spectator.service.error()).toBe('Failed to sync the family library.');
     });
   });
-});
 
+  describe('health exceptions', () => {
+    beforeEach(() => {
+      spectator = createService();
+    });
+
+    it('loads the games behind one count and can hide them again', () => {
+      const exceptions: HealthExceptions = { kind: 'COVER', total: 12, games: [{ id: 'g-1', title: 'Obscure Game' }] };
+      getHealthExceptions.mockReturnValue(of(exceptions));
+
+      spectator.service.showHealthExceptions('COVER');
+
+      expect(getHealthExceptions).toHaveBeenCalledWith('COVER');
+      expect(spectator.service.healthExceptions()).toEqual(exceptions);
+      expect(spectator.service.loadingExceptions()).toBeNull();
+
+      spectator.service.hideHealthExceptions();
+      expect(spectator.service.healthExceptions()).toBeNull();
+    });
+
+    it('shows nothing when the list cannot be loaded', () => {
+      getHealthExceptions.mockReturnValue(throwError(() => new Error('down')));
+
+      spectator.service.showHealthExceptions('INDEX');
+
+      expect(spectator.service.healthExceptions()).toBeNull();
+      expect(spectator.service.loadingExceptions()).toBeNull();
+    });
+  });
+});
 
 function anEmptyLibraryStatus(): LibraryStatus {
   const empty = {
