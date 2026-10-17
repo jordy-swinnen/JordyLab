@@ -209,7 +209,9 @@ Oxlint measurement shows a larger gap or Jordy prefers Oxlint's CI fail-fast val
 - Verified against the current Claude Code hook docs (T035): all hooks matching one event run **in parallel**; plain stdout and stderr at exit 0 go to the debug log only, so
   only JSON `hookSpecificOutput.additionalContext` (with `hookEventName: "PostToolUse"`) reaches the model; `timeout` is per hook in seconds (PostToolUse default 600).
   Consequence: the repo's existing advisory hooks (`post-test-convention-check.sh`, `post-java-modularity-check.sh`) print plain stdout and their warnings are not
-  shown to the agent; a follow-up is suggested.
+  shown to the agent. Follow-up done (2026-10-05): both now emit the same `additionalContext` JSON (silent when clean, always exit 0) and are covered by
+  `.claude/hooks/tests/advisory-cases.sh`; the fixtures also exposed that the convention hook exited 1 on a test file with no `assertThat(` (`grep -o` under
+  `pipefail`), fixed there.
 - Decision (FR-020, T025): single-file ESLint measured about 0.6-0.8 s warm, inside the 1 s target, so the shared command uses **ESLint** now; the Oxlint branch is
   added with the Oxlint install and adds the CI fast pass. Through the real hook the finding arrives in about 0.9-1.3 s.
 - Real-run finding: the Nx ESLint plugin prints a warning to **stdout** before the JSON when no project graph is cached (it also skips the module-boundary rule then),
