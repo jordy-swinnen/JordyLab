@@ -1177,3 +1177,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): `Language` now takes the constant names as wire values (schema = deserialiser) with a `@JsonCreator` factory that also accepts the lowercase codes in any case and folds anything unrecognised into `OTHER`; the field description and the prompt now say EN/NL/OTHER.
 - Regression test added: `QuestionInterpretationTest` (schema form `EN`, golden form `nl`, unrecognised `fr` → OTHER) through `BeanOutputConverter`, the production parse path.
 - Verified on prod: pending
+
+### BUG-077: Local-multiplayer data is never derived in the background and player counts stay empty
+- Status: OPEN (spec 013)
+- Severity: S2 (LibBot cannot judge "fits N players" for most of the library; the owner: "this is not acceptable")
+- Area/spec: gamecatalog multiplayer / 005, 013
+- Env found: prod, 2026-10-28, via LibBot ("Voor 163 andere spellen is het aantal spelers nog niet bekend…")
+- Coverage rows: 005 local-multiplayer metadata, 013 SC-006
+- Steps to reproduce:
+  1. On https://jordylab.be ask LibBot a question with a party size, e.g. "what can we play with 3 people?".
+- Expected (cite spec/story): the answer judges every local-multiplayer game against the party size (005: `max_local_players` is deterministic and filled in the background).
+- Actual (logs/screenshot, secrets redacted): LibBot answers for the games it can judge and adds "for 163 other games the player count isn't known yet". Database state: 117 games `multiplayer_source = 'UNKNOWN'` (77 with 0 attempts, 24 parked at the 3-attempt ceiling) and 470 of 509 games with `max_local_players` null — including all 332 Steam-source games, whose booleans resolved but whose player counts Steam categories can never provide.
+- Root cause: two gaps. (1) `MultiplayerService.derivePending` — the bounded backlog pass the docs promise is wired into the auto-fill — has **no caller anywhere** since the auto-fill rewrite: the backlog never runs, so untried games sit at 0 attempts and only per-game manual refreshes ever derive anything. (2) The derive stops once Steam gives booleans (`maxLocalPlayers` untouched, "Steam categories carry no player counts") and never asks IGDB for the counts, so every Steam local-multiplayer game keeps a null player count forever.
+- Fix (PR / commit / tag): the auto-fill run and the free bulk "Refresh game data" run both drive the backlog (the bulk run resets the attempt counter so parked games get another look); the derive fills only what is still unknown from IGDB (flags, counts) without overwriting Steam's booleans, and the backlog also covers games whose flags are known but whose player counts are missing.
+- Regression test added: pending
+- Verified on prod: pending
