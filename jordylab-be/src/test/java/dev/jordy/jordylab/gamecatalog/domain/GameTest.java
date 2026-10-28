@@ -154,6 +154,38 @@ class GameTest {
     }
 
     @Test
+    void applyFillOnlyMultiplayerFillsOnlyWhatIsUnknown() {
+        Game game = Game.builder().steamAppId("620").title("Portal 2")
+                .localMultiplayer(true).splitScreen(false).maxLocalPlayers(4)
+                .multiplayerSource(MultiplayerSource.STEAM).build();
+
+        game.applyFillOnlyMultiplayer(false, true, 8, MultiplayerSource.IGDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+            softly.assertThat(game.getSplitScreen()).isFalse();
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.STEAM);
+        });
+    }
+
+    @Test
+    void applyFillOnlyMultiplayerFillsMissingFactsAndClearsAttempts() {
+        Game game = GameTestBuilder.aDefaultGame();
+        game.recordMultiplayerFailure();
+
+        game.applyFillOnlyMultiplayer(true, true, 6, MultiplayerSource.IGDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+            softly.assertThat(game.getSplitScreen()).isTrue();
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(6);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+        });
+    }
+
+    @Test
     void recordMultiplayerFailureIncrementsAndResetClears() {
         Game game = GameTestBuilder.aDefaultGame();
 

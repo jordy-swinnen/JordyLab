@@ -6,6 +6,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.GameEmbeddingRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.service.GameEmbeddingService;
 import dev.jordy.jordylab.gamecatalog.service.GamePlatformService;
+import dev.jordy.jordylab.gamecatalog.service.MultiplayerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,12 +61,16 @@ class CatalogAutoFillServiceTest {
     @Mock
     private GameEmbeddingService embeddingService;
 
+    @Mock
+    private MultiplayerService multiplayerService;
+
     private CatalogAutoFillService service;
 
     @BeforeEach
     void setUp() {
         service = new CatalogAutoFillService(gameRepository, embeddingRepository, platformService, factsStep,
-                artworkStep, descriptionStep, embeddingService, new AutoFillProperties(2, 3, 24, null, null),
+                artworkStep, descriptionStep, embeddingService, multiplayerService,
+                new AutoFillProperties(2, 3, 24, null, null),
                 TransactionOperations.withoutTransaction(), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -138,6 +143,18 @@ class CatalogAutoFillServiceTest {
             softly.assertThat(report.failed()).isEqualTo(1);
         });
         verify(embeddingService).embed(List.of(fine.getId()));
+    }
+
+    @Test
+    void everyRunAlsoDrivesTheMultiplayerBacklog() {
+        when(gameRepository.findAutoFillBacklog(RETRY_BEFORE, Set.of(PLACEHOLDER_ID), FIRST_BATCH))
+                .thenReturn(List.of());
+        when(embeddingService.embeddingModel()).thenReturn("m");
+        when(embeddingRepository.findGameIdsMissingOrEmbeddedWithAnotherModel("m")).thenReturn(List.of());
+
+        service.run();
+
+        verify(multiplayerService).derivePending(20);
     }
 
     @Test

@@ -56,14 +56,19 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
     boolean isAvailableNow(@Param("id") UUID id);
 
     /**
-     * Games still needing structured multiplayer data. Available games first; games parked at the attempt ceiling drop
-     * out until a manual refresh resets them.
+     * Games still needing structured multiplayer data: unknown facts, or known flags with a missing player count (Steam
+     * categories carry none). Available games first; games parked at the attempt ceiling drop out until a manual refresh
+     * resets them.
      */
-    @Query("SELECT g FROM Game g WHERE g.multiplayerSource = 'UNKNOWN' AND g.multiplayerAttempts < :maxAttempts "
+    @Query("SELECT g FROM Game g WHERE g.multiplayerAttempts < :maxAttempts "
+            + "AND (g.multiplayerSource = 'UNKNOWN' OR (g.maxLocalPlayers IS NULL "
+            + "AND (g.localMultiplayer IS NULL OR g.localMultiplayer = true))) "
             + "ORDER BY CASE WHEN " + AVAILABLE_NOW + " THEN 0 ELSE 1 END, g.createdDate")
     List<Game> findMultiplayerBacklog(@Param("maxAttempts") int maxAttempts, Pageable pageable);
 
-    @Query("SELECT COUNT(g) FROM Game g WHERE g.multiplayerSource = 'UNKNOWN' AND g.multiplayerAttempts < :maxAttempts")
+    @Query("SELECT COUNT(g) FROM Game g WHERE g.multiplayerAttempts < :maxAttempts "
+            + "AND (g.multiplayerSource = 'UNKNOWN' OR (g.maxLocalPlayers IS NULL "
+            + "AND (g.localMultiplayer IS NULL OR g.localMultiplayer = true)))")
     long countMultiplayerBacklog(@Param("maxAttempts") int maxAttempts);
     List<Game> findByMetadataStatusOrderByCreatedDateAsc(MetadataStatus status, Pageable pageable);
 

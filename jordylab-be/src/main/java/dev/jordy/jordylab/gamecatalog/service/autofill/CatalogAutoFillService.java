@@ -6,6 +6,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.GameEmbeddingRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.service.GameEmbeddingService;
 import dev.jordy.jordylab.gamecatalog.service.GamePlatformService;
+import dev.jordy.jordylab.gamecatalog.service.MultiplayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +44,7 @@ public class CatalogAutoFillService {
     private final ArtworkStep artworkStep;
     private final DescriptionStep descriptionStep;
     private final GameEmbeddingService embeddingService;
+    private final MultiplayerService multiplayerService;
     private final AutoFillProperties properties;
     private final TransactionOperations transactions;
     private final Clock clock;
@@ -96,11 +98,21 @@ public class CatalogAutoFillService {
             }
         }
         sweepSearchIndex();
+        deriveMultiplayer();
         if (!handled.isEmpty()) {
             log.info("Auto-fill handled {} game(s), {} failed", handled.size(), failed);
         }
 
         return new Report(false, handled.size(), failed);
+    }
+
+    /** Drives the structured local-multiplayer backlog in one bounded pass per run (BUG-077). */
+    private void deriveMultiplayer() {
+        try {
+            multiplayerService.derivePending(properties.batchSize() * 10);
+        } catch (RuntimeException exception) {
+            log.warn("Multiplayer backlog pass failed: {}", exception.getMessage());
+        }
     }
 
     /** Runs the steps for one game; returns true when Steam asked us to slow down. */

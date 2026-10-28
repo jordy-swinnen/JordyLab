@@ -49,12 +49,15 @@ class MultiplayerServiceTest {
     }
 
     @Test
-    void steamCategoriesResolveToSteamSource() {
+    void steamCategoriesKeepTheirFlagsAndIgdbFillsThePlayerCount() {
         Game game = aSteamGame("620", "Portal 2");
         stubBacklog(game);
         when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata(
                 null, null, null, null, null, "game",
                 new SteamAppDetailsClient.MultiplayerFacts(true, true, true, true, true))));
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Portal 2"))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, false, true, 4)));
 
         int processed = multiplayerService.derivePending(BATCH);
 
@@ -62,9 +65,66 @@ class MultiplayerServiceTest {
         assertSoftly(softly -> {
             softly.assertThat(game.getLocalMultiplayer()).isTrue();
             softly.assertThat(game.getSplitScreen()).isTrue();
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
             softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.STEAM);
             softly.assertThat(game.getMultiplayerAttempts()).isZero();
         });
+    }
+
+    @Test
+    void aSteamGameWithoutIgdbDataCountsAnAttemptForTheMissingPlayerCount() {
+        Game game = aSteamGame("620", "Portal 2");
+        stubBacklog(game);
+        when(steamAppDetailsClient.fetch("620")).thenReturn(Optional.of(new SteamAppDetailsClient.SteamMetadata(
+                null, null, null, null, null, "game",
+                new SteamAppDetailsClient.MultiplayerFacts(true, true, true, true, true))));
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Portal 2")).thenReturn(Optional.empty());
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.STEAM);
+            softly.assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void aModeWithoutPlayerCountsStillCountsAsAnAttempt() {
+        Game game = Game.builder().title("Super Mario World").build();
+        stubBacklog(game);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Super Mario World"))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, true, false, null)));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+            softly.assertThat(game.getMaxLocalPlayers()).isNull();
+            softly.assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void aBulkReriveResetsTheAttemptCounterAndDoesNotRecheckSteam() {
+        Game game = Game.builder().steamAppId("620").title("Portal 2")
+                .metadataStatus(MetadataStatus.OK).build();
+        game.recordMultiplayerFailure();
+        game.recordMultiplayerFailure();
+        when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Portal 2"))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, true, false, 2)));
+
+        multiplayerService.rederive(game.getId());
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(2);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+        });
+        verify(steamAppDetailsClient, never()).fetch("620");
     }
 
     @Test
