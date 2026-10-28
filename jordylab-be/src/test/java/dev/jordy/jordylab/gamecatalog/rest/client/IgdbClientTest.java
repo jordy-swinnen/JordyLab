@@ -64,6 +64,37 @@ class IgdbClientTest {
     }
 
     @Test
+    void articleOrderDoesNotMatterForAMatch() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 55, "name": "The Legend of Zelda: Majora's Mask"} ]
+                """)));
+
+        List<Long> ids = igdbClient.findGameIdsByTitle("Legend of Zelda, The - Majora's Mask");
+
+        assertThat(ids).containsExactly(55L);
+    }
+
+    @Test
+    void anEditionMatchesTheBaseTitleItWasNamedAfter() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 7, "name": "Need for Speed: Carbon"} ]
+                """)));
+
+        List<Long> ids = igdbClient.findGameIdsByTitle("Need for Speed - Carbon - Collector's Edition");
+
+        assertThat(ids).containsExactly(7L);
+    }
+
+    @Test
+    void aBaseTitleShorterThanSixCharactersIsNotAcceptedForAnEdition() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 9, "name": "Mario"} ]
+                """)));
+
+        assertThat(igdbClient.findGameIdsByTitle("Mario Party 7")).isEmpty();
+    }
+
+    @Test
     void resolvesToTheSameNamedEntryThatActuallyHasModes() {
         // IGDB holds several "GoldenEye 007" entries; only the N64 original carries modes.
         stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
@@ -81,6 +112,70 @@ class IgdbClientTest {
             softly.assertThat(mode.get().splitScreen()).isTrue();
             softly.assertThat(mode.get().maxLocalPlayers()).isEqualTo(4);
         });
+    }
+
+    @Test
+    void gameModesFlagsFillGamesWithoutMultiplayerModes() {
+        stubFor(post(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("search \"Mario Party 7\""))
+                .willReturn(json("""
+                        [ {"id": 2334, "name": "Mario Party 7"} ]
+                        """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("[]")));
+        stubFor(post(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("game_modes.name"))
+                .willReturn(json("""
+                        [ {"id": 2334, "game_modes": [{"name": "Single player"}, {"name": "Multiplayer"},
+                                                       {"name": "Co-operative"}, {"name": "Split screen"}]} ]
+                        """)));
+
+        Optional<IgdbClient.MultiplayerMode> mode = igdbClient.resolveMultiplayerMode("Mario Party 7");
+
+        assertSoftly(softly -> {
+            softly.assertThat(mode).isPresent();
+            softly.assertThat(mode.get().localMultiplayer()).isTrue();
+            softly.assertThat(mode.get().splitScreen()).isTrue();
+            softly.assertThat(mode.get().onlineMultiplayer()).isFalse();
+            softly.assertThat(mode.get().maxLocalPlayers()).isNull();
+        });
+    }
+
+    @Test
+    void gameModesReadMultiplayerAloneAsOnline() {
+        stubFor(post(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("search \"Burnout Revenge\""))
+                .willReturn(json("""
+                        [ {"id": 2626, "name": "Burnout Revenge"} ]
+                        """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("[]")));
+        stubFor(post(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("game_modes.name"))
+                .willReturn(json("""
+                        [ {"id": 2626, "game_modes": [{"name": "Single player"}, {"name": "Multiplayer"}]} ]
+                        """)));
+
+        Optional<IgdbClient.MultiplayerMode> mode = igdbClient.resolveMultiplayerMode("Burnout Revenge");
+
+        assertSoftly(softly -> {
+            softly.assertThat(mode).isPresent();
+            softly.assertThat(mode.get().localMultiplayer()).isFalse();
+            softly.assertThat(mode.get().onlineMultiplayer()).isTrue();
+        });
+    }
+
+    @Test
+    void multiplayerModesWinOverTheGameModesFallback() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 123, "name": "Super Mario World"} ]
+                """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("""
+                [ {"game": 123, "splitscreen": true, "offlinecoop": true, "offlinecoopmax": 2} ]
+                """)));
+
+        Optional<IgdbClient.MultiplayerMode> mode = igdbClient.resolveMultiplayerMode("Super Mario World");
+
+        assertThat(mode).isPresent();
+        verify(0, postRequestedFor(urlPathEqualTo("/v4/games")).withRequestBody(containing("game_modes")));
     }
 
     @Test

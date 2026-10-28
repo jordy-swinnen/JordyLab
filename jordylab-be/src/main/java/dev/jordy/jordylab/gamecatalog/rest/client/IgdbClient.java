@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +42,8 @@ public class IgdbClient {
     private static final String IMAGE_CDN_BASE_URL = "https://images.igdb.com/igdb/image/upload";
     private static final int MAX_SEARCH_RESULTS = 10;
     private static final int MAX_MODE_ROWS = 500;
+    private static final int MIN_BASE_TITLE_LENGTH = 6;
+    private static final Set<String> ARTICLES = Set.of("the", "a", "an");
     /**
      * IGDB {@code game_type}s a library holds: main game (0), standalone expansion (4), remake (8), remaster (9),
      * expanded game (10) and port (11). Main games alone missed staples such as Mario Kart 8 Deluxe (expanded game) and
@@ -89,7 +92,11 @@ public class IgdbClient {
         return StringUtils.hasText(clientId) && StringUtils.hasText(clientSecret);
     }
 
-    /** IGDB game ids whose name matches the (already cleaned) title exactly, in search order. */
+    /**
+     * IGDB game ids whose name matches the (already cleaned) title, in search order. Articles do not matter ("Legend of
+     * Zelda, The" is "The Legend of Zelda"), and when nothing matches exactly, the base title an edition was named after
+     * counts too ("Need for Speed - Carbon - Collector's Edition" → "Need for Speed: Carbon").
+     */
     public List<Long> findGameIdsByTitle(String title) {
         if (!isConfigured() || !StringUtils.hasText(title)) {
             return List.of();
@@ -101,14 +108,25 @@ public class IgdbClient {
             return List.of();
         }
         String normalized = normalizeTitle(title);
-        List<Long> ids = new ArrayList<>();
+        List<Long> exact = new ArrayList<>();
+        List<Long> baseTitles = new ArrayList<>();
         for (JsonNode game : response) {
-            if (normalized.equals(normalizeTitle(game.path("name").asText(null)))) {
-                ids.add(game.path("id").asLong());
+            String name = normalizeTitle(game.path("name").asText(null));
+            if (normalized.equals(name)) {
+                exact.add(game.path("id").asLong());
+            } else if (isBaseTitleOf(name, normalized)) {
+                baseTitles.add(game.path("id").asLong());
             }
         }
+        exact.addAll(baseTitles);
 
-        return ids;
+        return exact;
+    }
+
+    /** True when the scanned title is an edition of the IGDB title ("portal2" is not an edition of "portal"). */
+    private boolean isBaseTitleOf(String base, String scanned) {
+        return base.length() >= MIN_BASE_TITLE_LENGTH && scanned.length() <= base.length() * 2
+                && scanned.startsWith(base);
     }
 
     /**
@@ -324,7 +342,9 @@ public class IgdbClient {
     /**
      * Resolves structured multiplayer data for a title. IGDB often holds several same-named
      * entries (regions, re-releases) where only some carry {@code multiplayer_modes} data, so all
-     * exact-name matches are queried in one batch and the first with data wins.
+     * exact-name matches are queried in one batch and the first with data wins. When no entry has
+     * {@code multiplayer_modes} rows (older consoles), the {@code game_modes} names say at least which kinds of play
+     * exist — never how many players fit.
      */
     public Optional<MultiplayerMode> resolveMultiplayerMode(String title) {
         List<Long> igdbGameIds = findGameIdsByTitle(title);
@@ -339,7 +359,48 @@ public class IgdbClient {
             }
         }
 
+        return resolveFlagsFromGameModes(igdbGameIds);
+    }
+
+    /**
+     * The fallback for games whose {@code multiplayer_modes} rows IGDB does not have: {@code game_modes} names ("Single
+     * player", "Multiplayer", "Co-operative", "Split screen"). "Split screen" and "Co-operative" mean shared play,
+     * "Multiplayer" on its own is read as online, and no player counts are invented. The first entry with mode names
+     * wins.
+     */
+    private Optional<MultiplayerMode> resolveFlagsFromGameModes(List<Long> igdbGameIds) {
+        String ids = igdbGameIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+        JsonNode response = post("/games", "fields game_modes.name; where id = (" + ids + "); limit "
+                + MAX_SEARCH_RESULTS + ";");
+        if (response == null || !response.isArray()) {
+            return Optional.empty();
+        }
+        Map<Long, List<String>> namesByGame = new HashMap<>();
+        for (JsonNode game : response) {
+            List<String> names = new ArrayList<>();
+            for (JsonNode mode : game.path("game_modes")) {
+                names.add(mode.path("name").asText(null));
+            }
+            namesByGame.put(game.path("id").asLong(), names);
+        }
+        for (Long igdbGameId : igdbGameIds) {
+            List<String> names = namesByGame.get(igdbGameId);
+            if (names != null && !names.isEmpty()) {
+                return Optional.of(fromGameModeNames(names));
+            }
+        }
+
         return Optional.empty();
+    }
+
+    /** Maps IGDB {@code game_modes} names to the structured flags; player counts stay unknown (BUG-077). */
+    static MultiplayerMode fromGameModeNames(List<String> names) {
+        boolean splitScreen = names.contains("Split screen");
+        boolean cooperative = names.contains("Co-operative");
+        boolean localMultiplayer = splitScreen || cooperative;
+        boolean onlineMultiplayer = names.contains("Multiplayer") && !localMultiplayer;
+
+        return new MultiplayerMode(localMultiplayer, splitScreen, onlineMultiplayer, null);
     }
 
     /**
@@ -500,8 +561,14 @@ public class IgdbClient {
         if (title == null) {
             return "";
         }
+        StringBuilder key = new StringBuilder();
+        for (String token : title.toLowerCase(java.util.Locale.ROOT).split("[^a-z0-9]+")) {
+            if (!token.isEmpty() && !ARTICLES.contains(token)) {
+                key.append(token);
+            }
+        }
 
-        return title.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "");
+        return key.toString();
     }
 
     private Integer maxOf(int first, int second) {
