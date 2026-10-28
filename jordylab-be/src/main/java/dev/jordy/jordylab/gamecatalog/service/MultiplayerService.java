@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Derives structured local-multiplayer data from deterministic sources — Steam store categories
@@ -73,6 +74,23 @@ public class MultiplayerService {
     }
 
     /**
+     * Re-derives one game as part of a bulk run: the attempt counter is reset (the admin asked for a full look) but Steam
+     * is not fetched again, because the facts pass of the same run just did.
+     */
+    public void rederive(UUID gameId) {
+        Optional<Game> snapshot = gameRepository.findById(gameId);
+        if (snapshot.isEmpty()) {
+            return;
+        }
+        Game game = snapshot.get();
+        game.resetMultiplayerForRetry();
+        if (!deriveOne(game, new HashMap<>(), false)) {
+            game.recordMultiplayerFailure();
+        }
+        gameRepository.save(game);
+    }
+
+    /**
      * {@code forceSteamCheck} distinguishes an explicit manual refresh (always re-checks Steam,
      * since the caller asked for a fresh look) from the automatic backlog pass, where a Steam
      * game only reaches here after {@code SteamMetadataService} already checked its categories
@@ -91,17 +109,29 @@ public class MultiplayerService {
                     // Steam categories carry no player counts, so maxLocalPlayers stays untouched.
                     game.applyDeterministicMultiplayer(facts.localMultiplayer(), facts.splitScreen(), null,
                             MultiplayerSource.STEAM);
-
-                    return true;
                 }
             }
-            // No Steam category data (or the fetch failed) → fall back to IGDB by title.
+            // No Steam category data (or the fetch failed) → fill what is missing from IGDB.
+        }
+        if (!needsMultiplayerData(game)) {
+            return true;
         }
 
-        return deriveFromIgdb(game, igdbModeByTitle);
+        return fillFromIgdb(game, igdbModeByTitle);
     }
 
-    private boolean deriveFromIgdb(Game game, Map<String, Optional<IgdbClient.MultiplayerMode>> igdbModeByTitle) {
+    /** True while a game that can have local multiplayer is still missing flags or its player count. */
+    private boolean needsMultiplayerData(Game game) {
+        return game.getMaxLocalPlayers() == null
+                && (game.getLocalMultiplayer() == null || game.getLocalMultiplayer());
+    }
+
+    /**
+     * Fills whatever is still unknown from IGDB (flags and player counts) without overwriting facts a deterministic
+     * source already set. Resolves only when the game is complete afterwards: a mode without player counts still counts
+     * as an attempt, so games no source has a count for park instead of being looked up forever.
+     */
+    private boolean fillFromIgdb(Game game, Map<String, Optional<IgdbClient.MultiplayerMode>> igdbModeByTitle) {
         if (!igdbClient.isConfigured()) {
             return false;
         }
@@ -111,9 +141,9 @@ public class MultiplayerService {
             return false;
         }
         game.applyDeterministicMultiplayerFlags(null, mode.get().onlineMultiplayer());
-        game.applyDeterministicMultiplayer(mode.get().localMultiplayer(), mode.get().splitScreen(),
+        game.applyFillOnlyMultiplayer(mode.get().localMultiplayer(), mode.get().splitScreen(),
                 mode.get().maxLocalPlayers(), MultiplayerSource.IGDB);
 
-        return true;
+        return !needsMultiplayerData(game);
     }
 }

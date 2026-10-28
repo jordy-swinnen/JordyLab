@@ -10,6 +10,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.RefreshRunRepository;
 import dev.jordy.jordylab.gamecatalog.service.EnrichmentService;
 import dev.jordy.jordylab.gamecatalog.service.GameEmbeddingService;
 import dev.jordy.jordylab.gamecatalog.service.GamePlatformService;
+import dev.jordy.jordylab.gamecatalog.service.MultiplayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -46,6 +47,7 @@ public class RefreshRunService {
     private final ArtworkStep artworkStep;
     private final EnrichmentService enrichmentService;
     private final GameEmbeddingService embeddingService;
+    private final MultiplayerService multiplayerService;
     private final TransactionOperations transactions;
     private final RefreshRunLauncher launcher;
     private final Clock clock;
@@ -208,6 +210,7 @@ public class RefreshRunService {
             artworkStep.apply(fresh, artwork, now, true);
             gameRepository.save(fresh);
         }));
+        multiplayerService.rederive(gameId);
         embeddingService.embed(List.of(gameId));
 
         return Outcome.succeeded();

@@ -217,6 +217,27 @@ public class Game extends BaseEntity<Game> {
         this.multiplayerAttempts = 0;
     }
 
+    /**
+     * Fills only the multiplayer facts that are still unknown (IGDB for a game Steam already spoke about): a known value
+     * is never overwritten, and a game that already had provenance keeps it. Clears the attempt counter on any progress.
+     */
+    public void applyFillOnlyMultiplayer(Boolean localMultiplayer, Boolean splitScreen, Integer maxLocalPlayers,
+            MultiplayerSource source) {
+        if (this.localMultiplayer == null) {
+            this.localMultiplayer = localMultiplayer;
+        }
+        if (this.splitScreen == null) {
+            this.splitScreen = splitScreen;
+        }
+        if (this.maxLocalPlayers == null) {
+            this.maxLocalPlayers = maxLocalPlayers;
+        }
+        if (this.multiplayerSource == null || this.multiplayerSource == MultiplayerSource.UNKNOWN) {
+            this.multiplayerSource = source;
+        }
+        this.multiplayerAttempts = 0;
+    }
+
     /** Counts a failed/unresolved multiplayer lookup; the backlog query parks games at max attempts. */
     public void recordMultiplayerFailure() {
         this.multiplayerAttempts++;

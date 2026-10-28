@@ -10,6 +10,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.RefreshRunRepository;
 import dev.jordy.jordylab.gamecatalog.service.EnrichmentService;
 import dev.jordy.jordylab.gamecatalog.service.GameEmbeddingService;
 import dev.jordy.jordylab.gamecatalog.service.GamePlatformService;
+import dev.jordy.jordylab.gamecatalog.service.MultiplayerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +63,9 @@ class RefreshRunServiceTest {
     @Mock
     private GameEmbeddingService embeddingService;
 
+    @Mock
+    private MultiplayerService multiplayerService;
+
     private final Map<UUID, RefreshRun> stored = new HashMap<>();
     private final List<Runnable> launched = new ArrayList<>();
     private final List<Game> games = new ArrayList<>();
@@ -103,7 +107,7 @@ class RefreshRunServiceTest {
         artworkStep = mock(ArtworkStep.class, call -> "fetch".equals(call.getMethod().getName())
                 ? ArtworkStep.Fetched.none() : RETURNS_DEFAULTS.answer(call));
         service = new RefreshRunService(runs, gameRepository, platformService, factsStep, artworkStep, enrichmentService,
-                embeddingService, TransactionOperations.withoutTransaction(), launched::add,
+                embeddingService, multiplayerService, TransactionOperations.withoutTransaction(), launched::add,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -156,6 +160,19 @@ class RefreshRunServiceTest {
         verify(embeddingService, times(3)).embed(embedded.capture());
         assertThat(embedded.getAllValues()).containsExactlyInAnyOrder(
                 games.stream().map(game -> List.of(game.getId())).toArray(List[]::new));
+    }
+
+    @Test
+    void aBulkDataRunAlsoRederivesMultiplayerData() {
+        visibleGames(2);
+        dataRunSeesEveryGame();
+
+        runNow(RefreshRunKind.DATA, false);
+
+        ArgumentCaptor<UUID> rederived = ArgumentCaptor.forClass(UUID.class);
+        verify(multiplayerService, times(2)).rederive(rederived.capture());
+        assertThat(rederived.getAllValues())
+                .containsExactlyInAnyOrder(games.stream().map(Game::getId).toArray(UUID[]::new));
     }
 
     @Test
