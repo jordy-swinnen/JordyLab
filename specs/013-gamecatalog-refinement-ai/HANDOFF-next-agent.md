@@ -1,41 +1,100 @@
-# Handoff: finish spec 013 (written 2026-10-08 for a fresh agent, e.g. OpenCode)
+# Handoff: take over JordyLab (2026-11-01, for a fresh agent — Claude Code)
 
-Read this first, then `tasks.md` (ticked `[X]` = done) and `validation-results.md` (what was run and what it showed).
+Written at the end of an OpenCode session that started from the previous `HANDOFF-next-agent.md` (now in git
+history). Read this first, then `docs/testing/bug-log.md` (BUG-075 to BUG-077) and
+`specs/013-gamecatalog-refinement-ai/validation-results.md` for the detailed records.
 
-## State
+## STOP: production is down (do this before anything else)
 
-- Everything in `tasks.md` up to **Phase 18 (Polish)** is implemented, tested and ticked. Frontend lint/Oxlint/tests: 17 projects green. `e2e/run.sh web`: 88 journeys passed. Backend: green except the known local container-start failures (see below).
-- Work is on branch `claude/game-catalog-refinement-461e9c`, **PR #134** (https://github.com/jordy-swinnen/JordyLab/pull/134). Check its state first: `gh pr view 134 --json state,mergedAt,statusCheckRollup`. If it is merged, continue from "Release". If not, get CI green (the previous session fixed the review comments and the CI failures: a removed endpoint still in `RoleMatrixTest`, a phone-width assertion, a Mockito rule) and merge it.
-- Dev stack was rebuilt on 2026-10-08: `jordylab-be-pgvector-1` (named volume `jordylab-be_pgdata`, empty) and `jordylab-be-keycloak-1` (port 8180). Never `compose down -v` or remove that volume. Compose is run from the worktree with `podman compose -p jordylab-be --env-file /Users/jordy/Projects/JordyLab/jordylab-be/.env up -d`.
+The OVH VPS is **offline** — bigger than any code task:
 
-## Still open
+- `tailscale status`: `jordylab-vps ... offline, last seen 2d ago` (~2026-10-30)
+- `https://jordylab.be` does not answer (`curl` exit 000)
+- `ssh ubuntu@57.129.163.110` times out (port 22 unreachable)
+- The `v0.0.1-rc24` deploy failed at 2026-11-01 13:54 with `dial tcp 100.93.81.41:6443: i/o timeout` — the CI runner
+  could not reach the k3s API because the server is gone, not because of the manifests.
 
-| Tasks | What | Who |
-|---|---|---|
-| T027, T072, T086, T100, T146-T149 | Real scans (Mac Steam, Linux box), `./gradlew goldenLive`, migration rehearsal, 20 fingerprint sign-ins, description comparison | **Owner**: `HANDOFF-30` and `HANDOFF-31` in `docs/testing/e2e-test-plan.md` |
-| T150 | Decision gate: every story passed locally | Owner after the HANDOFFs; record in `validation-results.md` |
-| T151-T153 | PR merged, pre-deploy backup + `vector` Database, tag rc and approve deploy | Agent (see Release) |
-| T154-T157 | Real scan against jordylab.be, quickstart B2, fingerprint, close-out | Agent + owner |
+Diagnosis (in order):
 
-The owner explicitly asked for a release so he can test on https://jordylab.be before finishing the local HANDOFFs. Release is therefore allowed; keep saying in the final report that T150 was not signed off.
+1. OVH control panel → the VPS: is it still running? Reboot it from there if it is not (SSH is impossible while it is
+   down). Watch for a rescue-mode prompt or a suspended service (unpaid invoice, abuse).
+2. When SSH is back: `sudo systemctl status k3s`, `uptime`, `df -h`, `journalctl -k | tail`, `sudo ufw status verbose`
+   — the runbook `docs/runbook.md` §2, §3, §19 and the `jordylab-ops` skill cover hardening and k3s recovery.
+3. Verify Tailscale (`tailscale status`, the node must show `active`), then `kubectl get nodes` from the Mac.
+4. Redeploy the release once the cluster is healthy:
+   `gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f version=v0.0.1-rc24`, approve, watch rollout.
+5. The database is safe even if the VPS is not: CloudNativePG ships base + WAL backups to OVH Object Storage
+   (`jordylab-cnpg-backups`, runbook §15 restore drill, §16 full VPS rebuild). Do **not** rebuild before checking
+   whether the local `local-path` volume survived — a simple reboot keeps everything.
 
-## Release (runbook `docs/runbook.md` §20, §22)
+## What shipped this session (all on `main`, deployed to prod)
 
-1. PR #134 merged into `main` (CI required: backend, frontend, lint, `e2e-web`, refs). Merge only when all review comments are resolved.
-2. Before the deploy (cluster mutations need the owner's yes unless already given; the owner approved the `Database` resource on 2026-10-07 and asked for the release): on-demand CNPG backup (§22 step 1), confirm `Completed`. `deploy/k8s/cluster/cnpg-database.yaml` (pgvector) must exist before the new backend starts; the normal deploy applies it, verify with §22 step 2.
-3. Tag the next release candidate (look at existing tags, e.g. `git tag --sort=-v:refname | head`; last was `v0.0.1-rc19`), approve the production deploy per §20, watch the rollout and the backend log for Flyway (three new migrations: `V20261008001`, `V20261008002` Java backfill, `V20261008003`).
-4. Verify on prod: login, library grid and filters, a game page, Sources (admin), LibBot (needs AI keys in the cluster secret, `OPENROUTER_API_KEY`), Consoles. Roll back per §11 if the migration fails.
-5. Log findings in `docs/testing/bug-log.md` first, then fix (root `AGENTS.md`, Commits). Every commit needs a `Refs:` trailer, e.g. `Refs: 013 T152`; enable the hook with `git config core.hooksPath .githooks`; never `--no-verify`.
+| Tag | PR | What | State |
+|-----|----|------|-------|
+| `v0.0.1-rc20` | #134 (pre-session) | spec 013 release: pgvector `Database`, 3 Flyway migrations | deployed, verified |
+| `v0.0.1-rc21` | #135 | BUG-075: `temperature` no longer sent to the Anthropic fallback (it 400s: "temperature is deprecated for this model") | deployed, verified |
+| `v0.0.1-rc22` | #136 | BUG-076: `Language` wire values — the generated schema says `EN/NL/OTHER`, the parser accepted only `en/nl/other`; every LibBot question died on every model | deployed, verified |
+| `v0.0.1-rc23` | #138 | BUG-077 part 1: `MultiplayerService.derivePending` had **no caller** (backlog never ran) and Steam games never got player counts; auto-fill + bulk "Refresh game data" now drive it, IGDB fills counts fill-only | deployed (verification pending) |
+| `v0.0.1-rc24` | #139 | BUG-077 part 2: IGDB title matching (article order, edition suffixes) + `game_modes` flag fallback where `multiplayer_modes` rows don't exist | **tagged, deploy FAILED (VPS offline)** — redeploy per above |
 
-## Things to know
+LibBot on prod was verified working (rc22/rc23 era, admin browser session): English and Dutch answers with cited
+games, party-size questions with derived constraints and the honest unknown-count note. BUG-075 and BUG-076 are
+VERIFIED-PROD in the bug log.
 
-- **Known local test failures** (they pass in CI): `RoleMatrixTest`, `GuestChatLimitIntegrationTest` and sometimes `JordylabApplicationTests` fail on this Mac with `localhost:2375 failed to respond` (Testcontainers/Podman). Run backend tests with `DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}') TESTCONTAINERS_RYUK_DISABLED=true ./gradlew test --tests '<pattern>'`.
-- **Never seed the database by hand**; real data comes from the real scanner (root `AGENTS.md`, Validation Data). Never print secrets; `jordylab-be/.env` holds real keys (the live golden run and IGDB cost money: ask before running `goldenLive`).
-- Rules the reviewer enforces: no `var`, no Mockito `any*()` matchers, blank line before `return`, explicit types, TestBuilder pattern, `assertSoftly`.
-- Frontend: Bun/Nx (`bunx nx run-many -t lint oxlint test`), signal stores, Vitest + Spectator, no `fakeAsync`.
-- Deviations from the contracts are written at the end of each file in `contracts/`.
-- Module rule: `gamecatalog` must not depend on `settings` (events only; `UserAccessRemoved` lives in `shared.event`).
+## Open threads (priority order)
 
-## Prompt to give the next agent
+1. **Bring the VPS back and deploy rc24** (above). Then verify: login, library, a game page, Sources, one LibBot
+   question.
+2. **BUG-077 verification**: after rc24, the derive backlog runs in every auto-fill sweep (bounded 100/run) and on the
+   free bulk **Refresh game data** button on the Sources page (that one resets attempt counters, so parked games get
+   another look). A full drain wants one bulk press — it needs the owner's admin session in the browser pane
+   (`agent-browser open https://jordylab.be --headed`, owner types the password; the agent never does).
+   Success = `multiplayer_source='UNKNOWN'` near zero, `max_local_players` filled wherever a source has counts, and
+   LibBot party answers covering the library.
+3. **The player-count source wall** — owner decision needed. Proven by live IGDB API probes: `multiplayer_modes` (the
+   only count source) has **no rows** for many N64/GameCube/PS2 titles (`Mario Party 7`, `Super Mario 64` …), Steam
+   categories carry no counts by design. `game_modes` (rc24) fills the flags but never counts. Options recorded at the
+   end of `validation-results.md`: accept the honest "unknown" note | curated count field in the admin UI |
+   ScreenScraper integration (`joueurs` for ROMs; new external source, needs an account) | deterministic extraction
+   from description text. The spec's "deterministic only, never LLM-inferred" rule (and the 006 migration that nulled
+   the earlier AI-guessed values) stands unless the owner explicitly changes it.
+4. **Golden live tier at 74 %** (23/31, first ever live run, `./gradlew goldenLive`, owner allowed credits). The 8
+   misses are live-model vs recorded-expectation wording, not faults. T072 tuning = re-record goldens, prompt tuning
+   or a model change on Settings → AI Models — owner's call. `GoldenLiveTest` also has a description-quality tier that
+   failed alongside.
+5. **Owner-declined leftover tasks** (he said he is happy with the work and not doing them): T150 sign-off, the local
+   HANDOFFs (real scans, fingerprint sign-ins), T154–T157 close-out. Do not chase them; say so in any final report.
 
-> Read `specs/013-gamecatalog-refinement-ai/HANDOFF-next-agent.md`, then `CLAUDE.md`/`AGENTS.md`. Check PR #134 (`gh pr view 134`). If it is not merged, make CI green and merge it once review comments are resolved. Then do the release steps in the handoff (backup, pgvector `Database`, tag the next rc, approve the prod deploy, verify on jordylab.be) and tell me the result. Do not run `goldenLive` or any paid AI call, never print secrets, and never remove the `jordylab-be_pgdata` volume. Report what you did and what is left for me.
+## Rules and gotchas (from root `AGENTS.md`, `jordylab-ops`, and this session)
+
+- **Never print secrets** (`jordylab-be/.env`, cluster Secrets, tokens). Never remove `jordylab-be_pgdata`. Never
+  hand-seed the dev or prod database. Read-only on the dev stack.
+- **Every commit needs a `Refs:` trailer** (`Refs: BUG-077`, `Refs: 013/T155`, …); hooks are enabled
+  (`git config core.hooksPath .githooks`); never `--no-verify`. Commits land via PR (branch → CI → merge), never
+  directly on `main`.
+- **Cluster mutations need the owner's yes** (deploy approvals were delegated for this work; re-confirm for anything
+  new). Production changes go through Git + the release pipeline (tag `vX.Y.Z[-rcN]` → Release → approved deploy).
+- **Backend tests on this Mac**: `DOCKER_HOST=unix://$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')`
+  `TESTCONTAINERS_RYUK_DISABLED=true ./gradlew test --tests '<pattern>'`. Known local-only flakes (pass in CI):
+  `RoleMatrixTest`, `GuestChatLimitIntegrationTest`, sometimes `JordylabApplicationTests` (`localhost:2375` /
+  `DockerClientProviderStrategy`). `goldenLive` and `igdbCheck` cost/may cost money — owner allowed credits for
+  testing the LibBot/multiplayer feature; re-confirm before large runs.
+- **Frontend**: `bunx nx run-many -t lint oxlint test` (Bun/Nx). **E2E**: `jordylab-fe/e2e/run.sh web`. Reviewer rules:
+  no `var`, no Mockito `any*()`, blank line before `return`, `assertSoftly`, TestBuilder pattern.
+- **`opencode.json` at the repo root has an uncommitted local modification** from before this session — leave it be.
+- **Commit message style** (from git history): conventional subject, body with why + how verified, then
+  `Refs: …` and `Co-Authored-By:` trailers.
+
+## Key commands (cluster once it is back)
+
+```bash
+export KUBECONFIG=~/.kube/jordylab.yaml
+kubectl -n jordylab get pods,cluster,database          # backend/frontend/keycloak on :v0.0.1-rc24 when done
+kubectl -n jordylab logs deploy/backend --tail=100 | grep -i -E "flyway|auto-fill|multiplayer"
+kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At \
+  -c "select multiplayer_source, count(*) from gamecatalog.game group by 1 order by 2 desc"
+gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f version=v0.0.1-rc24   # then approve in Actions
+```
+
+Full ops detail lives in the `jordylab-ops` skill and `docs/runbook.md` (§11 rollback, §20 release, §22 backup +
+pgvector).
