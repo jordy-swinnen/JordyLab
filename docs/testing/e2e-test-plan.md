@@ -1062,7 +1062,7 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 #### HANDOFF-34: TheGamesDB API key — done 2026-11-01
 - The owner registered, requested the key through TheGamesDB's own access request, and put `THEGAMESDB_API_KEY` in `jordylab-be/.env` (not in the repo). It was checked by behaviour: the platforms call answered 200 with a monthly allowance of 1000 calls.
 
-#### HANDOFF-35: Read the MobyGames API terms in your browser (second player-count source)
+#### HANDOFF-35: Read the MobyGames API terms in your browser (second player-count source) — cancelled 2026-11-01 (the owner will not pay for access)
 - Machine: your Mac, in a browser · Why you: MobyGames answers automated reads with 403, and the rule is that a refusing service is dropped, never worked around. Only you can read the page as a visitor.
 - Open https://www.mobygames.com/info/api/ and its pricing and terms pages. Tell me in chat: (1) whether a free tier exists for personal, self-hosted, non-commercial use, and the monthly price if not; (2) the request limit; (3) whether the terms allow looking up games by name from a personal app; (4) whether the API documentation lists game attributes such as "Number of Offline Players" or "Multiplayer Options".
 - Do not register or accept anything yet. I only need the answers to decide whether it is worth an account.
