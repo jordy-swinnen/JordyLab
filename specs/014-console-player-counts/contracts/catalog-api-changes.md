@@ -64,6 +64,7 @@ source ("Local players: 4 · TheGamesDB") and keeps the "Multiplayer data" row f
 - `unknownByReason`: `STEAM_NO_SOURCE` = a Steam app ID and no count; the four stored reasons from `player_count_gap`;
   `NOT_LOOKED_UP_YET` = a console game without count and without a stored reason (not asked yet, or the source was paused or
   unconfigured). The reasons add up to `unknown`.
+- "Had no count for" (FR-013) is, for TheGamesDB, the sum of `ENTRIES_DISAGREE`, `NO_MATCH`, `COUNT_BELOW_TWO` and `CONSOLE_NOT_LISTED`; IGDB's misses are not recorded per game, so only `unknown` applies to it.
 - `theGamesDb.pauseReason`: `KEY_REFUSED_OR_ALLOWANCE_USED`, `ALLOWANCE_LOW`, `UNREACHABLE` or `null`.
 - Games whose local flag is unknown are not in this block at all (they are not local-multiplayer games yet).
 

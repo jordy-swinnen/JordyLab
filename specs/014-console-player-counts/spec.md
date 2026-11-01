@@ -99,7 +99,7 @@ On a game's detail page and in LibBot's citations, a count names the source it c
 
 ### User Story 4 - The Sources page shows how well each source does (Priority: P2)
 
-On the Sources page the owner sees, per source, how many games it filled, how many it had no count for, and how many remain unknown, and can open the list of games behind each number, including the games where entries disagreed.
+On the Sources page the owner sees, per source, how many games it filled; for the new source, how many it was asked about and had no count for, by reason; and how many games remain unknown overall. The owner can open the list of games behind each number, including the games where entries disagreed.
 
 **Why this priority**: It makes gaps visible instead of silent and shows whether a further source is ever needed. It also feeds the follow-up for hand-set counts.
 
@@ -109,7 +109,7 @@ On the Sources page the owner sees, per source, how many games it filled, how ma
 
 1. **Given** a finished bulk refresh, **When** the owner opens the Sources page, **Then** it shows, per source, filled, no-count and still-unknown numbers.
 2. **Given** a game whose entries disagreed, **When** the owner opens the list behind "no count", **Then** the game is listed with the reason.
-3. **Given** a console the source does not list, **When** the owner reads the page, **Then** games on it are reported as skipped, not retried.
+3. **Given** a console the source does not list, **When** the owner reads the page, **Then** games on it are reported as "console not listed" and are never sent to the source.
 
 ---
 
@@ -157,8 +157,8 @@ The source needs an access key. Without it, nothing changes compared with today 
 - **FR-009**: The new source MUST be optional. With no key configured the derivation MUST skip it, log that once, and behave exactly as before; the backend MUST start normally.
 - **FR-010**: The key MUST be stored and handled like the existing source credentials: named in the example environment file, kept as a sealed secret for production and in the untracked environment file locally. The key, and any request address or error text that contains it, MUST NOT be logged, returned or shown.
 - **FR-011**: Lookups MUST stay within the source's monthly allowance: only games without a count are looked up, once per game and console, paced between calls. When the source reports the allowance used up (or refuses the key), the system MUST pause that source and MUST NOT count each game as a failed attempt. The same holds when the source is unreachable: a transient outage MUST NOT use up a game's bounded attempts. The application MUST identify itself honestly in its requests.
-- **FR-012**: A console the source does not list MUST be skipped and reported rather than retried.
-- **FR-013**: The Sources page MUST show, per source, how many games it filled, how many it had no count for and how many remain unknown, and MUST list the games behind each number, including the games whose entries disagreed.
+- **FR-012**: A console the source does not list MUST never be sent to the source (no request, no allowance spent) and MUST be reported with the reason "console not listed". Like any other unresolved game, it counts the normal bounded attempts and is then parked.
+- **FR-013**: The Sources page MUST show, per source, how many games it filled; for the new source, how many games it was asked about and had no count for, split by reason; and how many games remain unknown overall (the existing source's misses are not recorded per source, so only this overall figure applies to it). It MUST list the games behind each number, including the games whose entries disagreed.
 - **FR-014**: The setup MUST be documented in the runbook and the example environment file: which secret exists, where it is kept, how to rotate it, and how to check by behaviour (a successful request, not by reading the key) that the source works.
 - **FR-015**: The product docs, the data-source notes and the backlog explanation in the admin UI MUST be updated in the same change.
 
@@ -167,7 +167,7 @@ The source needs an access key. Without it, nothing changes compared with today 
 - **Player count**: the maximum number of local players of a game; a whole number of 2 or more; absent when unknown. Carries the source it came from.
 - **Count source**: the origin of a count (the existing source, the new source, or none). Kept apart from the origin of the game's flags.
 - **Source entry**: one record in the new source for a title on a console, with the source's own player-count field.
-- **Review entry**: a game left without a count together with the reason (entries disagree, no exact match, console not listed, count under 2, allowance used up).
+- **Review entry**: a game left without a count together with the reason the new source gave (entries disagree, no exact match, console not listed, count under 2). While the source is unconfigured or paused (allowance used up, key refused, unreachable) games get no reason; the Sources page shows the source's state instead and counts them as not looked up yet.
 
 ## Success Criteria *(mandatory)*
 
