@@ -23,6 +23,8 @@ The 44 games are two different kinds, and this draft only addresses the first:
 - A game no source has a count for is parked after a bounded number of attempts and is retried only by the bulk "Refresh game data" run, as now. It must not loop on every sweep.
 - Each new source is optional: with no credentials configured the derivation skips it, logs once, and behaves as it does today. The backend must start without them.
 - Credentials and keys are stored as secrets in the same way as the existing IGDB credentials and are never logged or echoed.
+- Getting access is part of this feature, not a precondition. The work includes registering for each chosen source (accounts, developer or application access, API keys), reading its terms and rate limits, and recording the outcome. Registration steps that need the owner (creating an account under their identity, accepting terms, entering a password or payment detail) are written down as explicit hand-offs for the owner, and the work does not proceed past a source until its access is in place. Any source whose terms do not allow this use is dropped.
+- The setup is documented in the runbook and the example environment file: which secrets exist, where they are kept (sealed secrets for the cluster, the local environment file for development), how to rotate them, and how to check that a source works by behaviour without printing the key.
 - External calls respect each service's published rate limits and terms, identify the application honestly, and use only the access the service grants for this kind of use. A source that refuses access is dropped from the plan, not worked around.
 - The matching of a catalog title to a source's record uses the same normalised title key as the IGDB lookup. A match below a clear confidence threshold is treated as no match rather than guessed.
 - The Sources page shows, per source, how many games it filled, how many it had no count for, and how many remain unknown.
@@ -56,7 +58,7 @@ Having an AI estimate or extract counts, scraping pages for which no access has 
 2. Should counts for ROM games prefer the ROM's own region or release when a source lists several versions with different counts?
 3. A game that supports more players with an accessory (for example a multitap) than with the console alone: which number counts as the maximum?
 4. Steam PC games make up roughly half of the games without a count and have no new source here. Do they stay on the Steam-category flags with an unknown count (possibly filled later by a curated field), or is a PC source worth researching in a separate piece of work?
-5. Who creates the source accounts and keys, and where do they live (the existing sealed secrets for the cluster plus the local environment file)? The owner has to create them, an agent cannot.
+5. Which of the owner's identities (email, handle) should the source accounts be registered under, and is a free tier enough for a library this size or do the services require a paid or donor tier for reliable access?
 
 ## Facts to verify in the repo
 
