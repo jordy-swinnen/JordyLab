@@ -4,9 +4,27 @@ Written at the end of an OpenCode session that started from the previous `HANDOF
 history). Read this first, then `docs/testing/bug-log.md` (BUG-075 to BUG-077) and
 `specs/013-gamecatalog-refinement-ai/validation-results.md` for the detailed records.
 
-## STOP: production is down (do this before anything else)
+## UPDATE 2026-11-01 14:50 UTC: VPS recovered, rc24 deployed, DNS still broken
 
-The OVH VPS is **offline** — bigger than any code task:
+- The owner rebooted the VPS from the OVH panel; k3s, Tailscale and CloudNativePG came back by themselves, the
+  database survived (no restore). `deploy-prod.yml` for `v0.0.1-rc24` then ran green; backend, frontend and keycloak
+  are on rc24.
+- **`jordylab.be` does not resolve for anyone** (SERVFAIL on 1.1.1.1/8.8.8.8/9.9.9.9). The OVH zone's DNSSEC
+  signatures expired on 2026-10-29. The owner toggled DNSSEC on in the OVH console, OVH re-signed the zone with new
+  keys (KSK tag 12932, signatures valid to 2026-12-01), but the **DS record at the registry still holds the old key
+  (tag 16339)** until OVH pushes the update (the console said up to 24 h). Check:
+  `dig jordylab.be DS @a.nsset.be +short` — when it shows `12932`, `dig jordylab.be A @1.1.1.1 +short` should print
+  `57.129.163.110`. The owner can also replace/delete the DS record in the OVH console (security setting, so the
+  agent does not touch it).
+- Still to do once DNS works: verify login, library, a game page, Sources and one LibBot question; then the owner
+  presses "Refresh game data" on Sources (open thread 2). `multiplayer_source` right after the deploy: STEAM 332,
+  UNKNOWN 112, IGDB 65.
+
+The rest of this section is the original outage record, kept for the diagnosis steps:
+
+## (Resolved) production was down
+
+The OVH VPS was **offline** — bigger than any code task:
 
 - `tailscale status`: `jordylab-vps ... offline, last seen 2d ago` (~2026-10-30)
 - `https://jordylab.be` does not answer (`curl` exit 000)
@@ -35,7 +53,7 @@ Diagnosis (in order):
 | `v0.0.1-rc21` | #135 | BUG-075: `temperature` no longer sent to the Anthropic fallback (it 400s: "temperature is deprecated for this model") | deployed, verified |
 | `v0.0.1-rc22` | #136 | BUG-076: `Language` wire values — the generated schema says `EN/NL/OTHER`, the parser accepted only `en/nl/other`; every LibBot question died on every model | deployed, verified |
 | `v0.0.1-rc23` | #138 | BUG-077 part 1: `MultiplayerService.derivePending` had **no caller** (backlog never ran) and Steam games never got player counts; auto-fill + bulk "Refresh game data" now drive it, IGDB fills counts fill-only | deployed (verification pending) |
-| `v0.0.1-rc24` | #139 | BUG-077 part 2: IGDB title matching (article order, edition suffixes) + `game_modes` flag fallback where `multiplayer_modes` rows don't exist | **tagged, deploy FAILED (VPS offline)** — redeploy per above |
+| `v0.0.1-rc24` | #139 | BUG-077 part 2: IGDB title matching (article order, edition suffixes) + `game_modes` flag fallback where `multiplayer_modes` rows don't exist | deployed 2026-11-01 (after the VPS came back); verification blocked on DNS |
 
 LibBot on prod was verified working (rc22/rc23 era, admin browser session): English and Dutch answers with cited
 games, party-size questions with derived constraints and the honest unknown-count note. BUG-075 and BUG-076 are
@@ -43,8 +61,8 @@ VERIFIED-PROD in the bug log.
 
 ## Open threads (priority order)
 
-1. **Bring the VPS back and deploy rc24** (above). Then verify: login, library, a game page, Sources, one LibBot
-   question.
+1. **Get `jordylab.be` resolving again** (DS record, see the update above), then verify: login, library, a game page,
+   Sources, one LibBot question. The VPS and the rc24 deploy are done.
 2. **BUG-077 verification**: after rc24, the derive backlog runs in every auto-fill sweep (bounded 100/run) and on the
    free bulk **Refresh game data** button on the Sources page (that one resets attempt counters, so parked games get
    another look). A full drain wants one bulk press — it needs the owner's admin session in the browser pane
