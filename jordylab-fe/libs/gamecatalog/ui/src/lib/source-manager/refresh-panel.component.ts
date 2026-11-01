@@ -39,7 +39,7 @@ export class RefreshPanelComponent {
     {
       kind: 'DATA',
       title: 'Game data',
-      explanation: 'Looks facts and covers up again for every game. Free. Nothing you corrected by hand is changed.',
+      explanation: 'Looks facts and covers up again for every game, and player counts again for console games that have none (doubtful ones stay unknown and are listed under Library health). Free. Nothing you corrected by hand is changed.',
       actionLabel: 'Refresh game data',
       run: this.dataRun(),
     },
