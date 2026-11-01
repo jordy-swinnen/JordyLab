@@ -1054,7 +1054,7 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Machine: your Mac · Target env: prod secrets in git · Why you: you edit SOPS secrets in IntelliJ and the agent never sees key values.
 - 1. `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`, then add `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `LANGFUSE_BASE_URL` under `stringData` (same values as in `jordylab-be/.env`). Save and close.
 - 2. Commit (`Refs: NO-CODE`) and let the normal deploy run. `LANGFUSE_ENVIRONMENT=production` is already in the `backend-config` ConfigMap (`deploy/k8s/overlays/prod/kustomization.yaml`).
-- 3. After the deploy, trigger one AI call (for example LibBot or "Regenerate description") and check Langfuse for a `run-<feature>` trace in environment `production`. Tell me if it is missing. To also see prompts and answers there, add `LANGFUSE_CAPTURE_CONTENT=true` to the ConfigMap (your call: they hold library and portfolio data).
+- 3. After the deploy, trigger one AI call (for example LibBot or "Regenerate description") and check Langfuse for a `run-<feature>` trace in environment `production`. Tell me if it is missing. Prompts and answers are captured in prod (`LANGFUSE_CAPTURE_CONTENT=true`, your decision of 2026-11-01).
 
 ## 8. AI call tally
 

@@ -33,7 +33,7 @@ configMapGenerator:
       - MOBILE_APPLICATION_ID=be.jordylab.app
       - MOBILE_RELEASE_SIGNING_CERT_SHA256=1B0213851EAAA2D4069080AB548524EE08B038F545F91891A51C929D47DD77E8
       - NTFY_BASE_URL=https://jordylab.be/ntfy
-      # AI traces go to Langfuse Cloud (EU); keys and base URL are in jordylab-secrets. Prompts/answers stay off the traces.
+      # AI traces go to Langfuse Cloud (EU); keys and base URL are in jordylab-secrets.
       - LANGFUSE_ENVIRONMENT=production
       # Jordy's call (2026-11-01): prod traces carry prompts and answers.
       - LANGFUSE_CAPTURE_CONTENT=true
