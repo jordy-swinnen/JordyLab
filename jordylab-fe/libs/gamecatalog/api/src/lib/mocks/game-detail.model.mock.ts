@@ -35,6 +35,7 @@ export function aGameDetailMock(overrides: Partial<GameDetail> = {}): GameDetail
     releaseYear: 1990,
     metadataSource: 'AI',
     maxLocalPlayers: 2,
+    maxLocalPlayersSource: 'IGDB',
     onlineMultiplayer: false,
     singlePlayer: true,
     description: {
@@ -44,7 +45,7 @@ export function aGameDetailMock(overrides: Partial<GameDetail> = {}): GameDetail
       requestedModel: null,
       writtenAt: '2026-10-07T10:12:00Z',
     },
-    factSources: { facts: 'AI', multiplayer: 'IGDB' },
+    factSources: { facts: 'AI', multiplayer: 'IGDB', playerCount: 'IGDB' },
     firstSeenAt: '2026-08-02T10:15:00Z',
     installStatus: 'INSTALLED',
     localMultiplayer: false,

@@ -94,6 +94,14 @@ export type MetadataSource = 'STEAM' | 'AI';
 
 export type MultiplayerSource = 'STEAM' | 'IGDB' | 'UNKNOWN';
 
+/** Where a game's maximum number of local players came from (kept apart from the source of the multiplayer flags). */
+export type PlayerCountSource = 'IGDB' | 'THEGAMESDB';
+
+export const PLAYER_COUNT_SOURCE_LABELS: Record<PlayerCountSource, string> = {
+  IGDB: 'IGDB',
+  THEGAMESDB: 'TheGamesDB',
+};
+
 export type InstallStatus = 'INSTALLED' | 'NOT_INSTALLED' | 'ALL';
 
 export type LibrarySource = 'OWNED' | 'FAMILY';
@@ -212,6 +220,7 @@ export interface GameDescription {
 export interface FactSources {
   facts: 'STEAM' | 'AI' | null;
   multiplayer: 'STEAM' | 'IGDB' | null;
+  playerCount: PlayerCountSource | null;
 }
 
 export interface GameDetail {
@@ -234,6 +243,7 @@ export interface GameDetail {
   releaseYear: number | null;
   metadataSource: MetadataSource | null;
   maxLocalPlayers: number | null;
+  maxLocalPlayersSource: PlayerCountSource | null;
   onlineMultiplayer: boolean | null;
   singlePlayer: boolean | null;
   description: GameDescription | null;

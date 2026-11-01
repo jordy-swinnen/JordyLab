@@ -15,6 +15,7 @@ export {
   SORT_LABELS,
 } from './lib/game-library.store';
 export type { ActiveFilter } from './lib/game-library.store';
+export { PLAYER_COUNT_SOURCE_LABELS } from './lib/gamecatalog.models';
 export { ScanSourceStore } from './lib/scan-source.store';
 export { ConsoleStore } from './lib/console.store';
 export { RefreshRunStore } from './lib/refresh-run.store';
@@ -81,6 +82,7 @@ export type {
   ConsoleBulkLine,
   ConsoleBulkItem,
   ConsoleBulkSummary,
+  PlayerCountSource,
 } from './lib/gamecatalog.models';
 export { aAttachedGameMock } from './lib/mocks/attached-game.model.mock';
 export { aLibBotAnswerMock } from './lib/mocks/libbot-answer.model.mock';
