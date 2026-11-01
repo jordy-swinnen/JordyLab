@@ -35,6 +35,8 @@ configMapGenerator:
       - NTFY_BASE_URL=https://jordylab.be/ntfy
       # AI traces go to Langfuse Cloud (EU); keys and base URL are in jordylab-secrets. Prompts/answers stay off the traces.
       - LANGFUSE_ENVIRONMENT=production
+      # Jordy's call (2026-11-01): prod traces carry prompts and answers.
+      - LANGFUSE_CAPTURE_CONTENT=true
       # No API docs in prod: SpringDoc's defaults serve /v3/api-docs and /swagger-ui.html (spec 011 BUG-046).
       - SPRINGDOC_API_DOCS_ENABLED=false
       - SPRINGDOC_SWAGGER_UI_ENABLED=false
