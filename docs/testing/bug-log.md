@@ -1179,7 +1179,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending
 
 ### BUG-077: Local-multiplayer data is never derived in the background and player counts stay empty
-- Status: OPEN (spec 013)
+- Status: DEPLOYED, partly fixed (spec 013): the backlog now runs; the player-count source gap remains and moves to the multiplayer-player-counts draft
 - Severity: S2 (LibBot cannot judge "fits N players" for most of the library; the owner: "this is not acceptable")
 - Area/spec: gamecatalog multiplayer / 005, 013
 - Env found: prod, 2026-10-28, via LibBot ("Voor 163 andere spellen is het aantal spelers nog niet bekend…")
@@ -1192,4 +1192,4 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): the auto-fill run and the free bulk "Refresh game data" run both drive the backlog (the bulk run resets the attempt counter so parked games get another look); the derive fills only what is still unknown from IGDB (flags, counts) without overwriting Steam's booleans, and the backlog also covers games whose flags are known but whose player counts are missing. Probes of the IGDB API while fixing this showed `multiplayer_modes` (the only count source) has **no rows at all** for many N64/GameCube/PS2 titles (e.g. Mario Party 7 id 2334) while `game_modes` covers them: title matching now ignores article order and edition suffixes, and a `game_modes` fallback fills the local/split flags where `multiplayer_modes` is absent (counts stay unknown — see validation-results for the source wall).
 - Regression test added: pending
 - Deployed: `v0.0.1-rc24` on prod 2026-11-01 14:20 UTC (after the VPS outage, see the handoff). At startup the backlog pass ran ("Deriving multiplayer data for 24 game(s)"); `multiplayer_source` at that moment: STEAM 332, UNKNOWN 112, IGDB 65.
-- Verified on prod: pending (needs one press of "Refresh game data" in the owner's admin session and a LibBot party-size question; blocked until `jordylab.be` resolves again)
+- Verified on prod (2026-11-01, `v0.0.1-rc24`, owner's admin session, bulk "Refresh game data"): `multiplayer_source` went from STEAM 332 / UNKNOWN 112 / IGDB 65 to STEAM 333 / UNKNOWN 45 / IGDB 131, so the backlog pass and the title matching work. `max_local_players` is still null for 447 of 509 games; 44 of the 105 local-multiplayer games have no count. A LibBot question for 4 players still ends with "For 85 more games the player count isn't known yet". Not fully fixed: IGDB and Steam have no counts for these games. Next: the multiplayer-player-counts draft (more sources, console ROMs first; Steam games are an open question). Close this bug once that ships and a party-size question names far fewer unknown games.
