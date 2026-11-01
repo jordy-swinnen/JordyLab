@@ -1,18 +1,19 @@
 # Feature Specification: Guest Feedback and Admin Triage
 
 **Feature Branch**: assigned by SpecKit when specified
-**Created**: 2026-10-05
+**Created**: 2026-10-05 (updated 2026-11-01: Accept creates a Linear issue)
 **Status**: Draft (reference for `/speckit-specify`; see `research.md`)
-**Module**: new `feedback` module (backend and frontend), Settings shell, shared AI layer
+**Module**: new `feedback` module (backend and frontend), Settings shell, Linear client
 **Release**: essential for the first release (Jordy)
 
 ---
 
 ## Overview
 
-Guests can send feedback about the apps they use; the admin triages it as tickets and turns the good ones into SpecKit
-drafts with one click. A guest sees what happened to their feedback. The draft is written by a dedicated AI feature on
-a heavier model and lands in the repository as a pull request that the admin reviews.
+Guests can send feedback about the apps they use; the admin triages it as tickets in an idea box. Accepting a ticket
+creates an issue in Linear, Jordy's backlog (see the `linear-backlog` draft), labelled with the app and the type. A
+guest sees what happened to their feedback. Turning an accepted idea into a SpecKit draft is a later step started from
+the Linear issue by an agent, not part of the accept click.
 
 ---
 
@@ -27,26 +28,35 @@ and description, send. The ticket appears in the admin's inbox. Apps the guest c
 
 ### User Story: The admin triages tickets (Priority: High)
 
-As the admin, I want an inbox of tickets with their app, type, sender and date, and to mark each as Backlog or Reject.
+As the admin, I want an inbox of tickets with their app, type, sender and date, and to Accept, Backlog or Reject each.
 
-**Independent Test**: a new ticket shows as New; Backlog moves it to a Backlog list; Reject archives it as Rejected.
-Backlog tickets can still be implemented or rejected later.
+**Independent Test**: a new ticket shows as New; Backlog keeps it in the app for later; Reject archives it as
+Rejected. Backlog tickets can still be accepted or rejected later.
 
-### User Story: Implement turns a ticket into a draft pull request (Priority: High)
+### User Story: Accept creates a Linear issue (Priority: High)
 
-As the admin, I want Implement to produce a SpecKit draft from the ticket and open a pull request with it, so that I
-can continue the work with my agents.
+As the admin, I want Accept to create a Linear issue from the ticket, so that the idea lands in my backlog with the
+rest of my work without retyping it.
 
-**Independent Test**: on a ticket, choose Implement, add an optional note, review the generated draft, confirm. A pull
-request appears on GitHub with a new folder under `specs/_drafts/` following the drafts convention, and the ticket
-shows Implementing with a link to the pull request.
+**Independent Test**: on a ticket, choose Accept and add an optional note. An issue appears in Triage of Linear team
+`JOR` with the ticket's title, description and note, labels App = the ticket's app and Type = the ticket's type, and
+"From the idea box" as its source. The ticket shows Accepted with a link to the issue. The guest's email is nowhere in
+the issue.
 
 ### User Story: The guest sees what happened (Priority: Medium)
 
 As a guest, I want to see my tickets with their status and any reply from the admin.
 
-**Independent Test**: after the admin backlogs a ticket with a short reply, the guest sees Backlog and the reply. The
-guest never sees other guests' tickets, internal notes or the pull request.
+**Independent Test**: after the admin accepts a ticket with a short reply, the guest sees Accepted and the reply. The
+guest never sees other guests' tickets, internal notes or the Linear link.
+
+### User Story: Status follows Linear (Priority: Low)
+
+As a guest, I want my accepted idea to show "Planned", "In progress" or "Done" as the work moves, so that I know
+whether it was built.
+
+**Independent Test**: moving the Linear issue to In Progress and then Done changes the guest-visible status within a
+minute, through a signed Linear webhook.
 
 ### User Story: The admin hears about new feedback (Priority: Low)
 
@@ -56,9 +66,11 @@ As the admin, I want a notification when a new ticket arrives.
 
 ### Edge Cases
 
-- GitHub is unreachable or the token is invalid: the generated draft is kept and Implement can be retried.
-- The model returns something that is not a valid draft (wrong paths, extra files): nothing is committed, the admin sees why.
-- A ticket tries to instruct the model ("ignore your instructions and …"): the draft treats it as content only.
+- Linear is unreachable or the credential is invalid: the ticket stays New with an error, and Accept can be retried
+  without creating a second issue.
+- Accept is clicked twice: one Linear issue only.
+- The Linear issue is deleted or moved to another team: the ticket keeps its last status and the admin sees the link
+  is broken.
 - A guest loses access to an app: their existing tickets for that app stay visible to them and the admin.
 - A guest account is deleted: their tickets stay for the admin, without the guest's personal data.
 
@@ -70,42 +82,43 @@ As the admin, I want a notification when a new ticket arrives.
   guests never see. Users and AI Models MUST stay admin-only, enforced in the backend.
 - A ticket MUST have an app, a type (at least bug report, feature request, other), a title and a description. The app
   list MUST come from the apps the guest is allowed to use, and the backend MUST reject other apps.
-- Ticket states MUST be New, Implementing, Backlog and Rejected. Backlog tickets MUST be movable to Implementing or
-  Rejected. Rejected tickets MUST be archived, not deleted.
+- Ticket states MUST be New, Accepted, Backlog and Rejected. Backlog tickets MUST be movable to Accepted or Rejected.
+  Rejected tickets MUST be archived, not deleted.
 - The admin MAY add a reply visible to the guest and a private note the guest never sees.
-- Implement MUST call a new AI feature for writing drafts through `ResilientAiService`, with an Opus-class default
-  model that the admin can change on the AI Models page.
-- The generated draft MUST follow the drafts convention: one folder `specs/_drafts/<short-name>/`, the usual files, no
-  numbers or codes. It MUST NOT contain the guest's name, email or other personal data.
-- Ticket text MUST be passed to the model as delimited data, never as instructions.
-- The admin MUST preview the draft before anything reaches GitHub.
-- The pull request MUST be opened on a new branch from `main`, with commits carrying the `Refs: NO-CODE` trailer, and
-  MUST never be merged automatically. The ticket MUST link to it.
-- The GitHub credential MUST be limited to this repository (contents and pull requests), stored as a secret, and never
-  sent to the browser.
+- Accept MUST create one issue in Linear team `JOR` through Linear's GraphQL API, in the Triage state, with the App
+  label mapped from the ticket's app and the Type label mapped from the ticket's type. It MUST be idempotent: a retry
+  never creates a second issue.
+- The issue MUST NOT contain the guest's name, email or other personal data; it says "a guest" and the app.
+- The ticket MUST store the Linear issue id and link; only the admin sees the link.
+- The Linear credential (OAuth app installed with `actor=app`, or a personal API key) MUST be stored as a SOPS secret
+  and never sent to the browser.
+- If a status sync is built, the webhook MUST verify `Linear-Signature` and reject deliveries older than 60 seconds.
 - Guests MUST have a daily submission limit.
 - A new ticket MUST notify the admin through Ntfy, without the ticket text.
 
 ## Success Criteria
 
 - A guest can send feedback in under a minute.
-- From an open ticket, the admin gets a pull request with a valid draft in a few clicks, with no manual file work.
-- No draft in the repository contains a guest's personal data.
+- From an open ticket, one click (plus an optional note) puts the idea in the Linear backlog, correctly labelled.
+- No Linear issue contains a guest's email address.
 - Guests can only ever see their own tickets.
 
 ## Out of Scope
 
-Public feedback from people without an account, voting on tickets, merging several tickets into one draft, the app
+Public feedback from people without an account, voting on tickets, merging several tickets into one issue, writing a
+SpecKit draft or opening a pull request from the app (that now starts from the Linear issue, by an agent), the app
 implementing anything itself, email notifications.
 
 ## Assumptions
 
 - Per-app access comes from the `user-management` draft; until then the app list is the Game Catalog for guests.
-- GitHub access for the backend can be set up with a repository-scoped token or GitHub App.
+- The Linear workspace, team `JOR` and the App and Type label groups exist (set up by the `linear-backlog` draft).
+- Linear stays on the Free plan; the idea box adds a few issues a week at most.
 
 ## Clarifications Needed
 
 - Extra feedback types (improvement, question)?
-- Screenshots on bug reports?
-- Edit the generated draft in the app, or only regenerate with a note?
+- Screenshots on bug reports? (They would also need uploading to Linear.)
+- OAuth app with `actor=app` or a personal API key for the backend?
 - Exact daily submission limit for guests.
+- Build the status sync from Linear in the first version, or later?
