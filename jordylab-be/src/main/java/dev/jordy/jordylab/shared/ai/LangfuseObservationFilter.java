@@ -14,7 +14,6 @@ import org.springframework.ai.embedding.observation.EmbeddingModelObservationCon
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Shapes Spring AI's model spans for Langfuse. Names them after the action and provider ({@code generate-openai}), not
@@ -54,10 +53,10 @@ final class LangfuseObservationFilter implements ObservationFilter {
                             .toList())));
         }
         if (chat.getResponse() != null && chat.getResponse().getResults() != null) {
-            List<Map<String, String>> answers = chat.getResponse().getResults().stream()
+            List<Turn> answers = chat.getResponse().getResults().stream()
                     .map(Generation::getOutput)
                     .filter(output -> output != null && StringUtils.hasText(output.getText()))
-                    .map(output -> Map.of("role", "assistant", "content", output.getText()))
+                    .map(output -> new Turn("assistant", output.getText()))
                     .toList();
             if (!answers.isEmpty()) {
                 context.addHighCardinalityKeyValue(KeyValue.of(OUTPUT, json(answers)));
@@ -71,9 +70,12 @@ final class LangfuseObservationFilter implements ObservationFilter {
         return json(messages.stream().map(LangfuseObservationFilter::turn).toList());
     }
 
-    private static Map<String, String> turn(Message message) {
-        return Map.of("role", message.getMessageType().getValue(),
-                "content", message.getText() == null ? "" : message.getText());
+    private static Turn turn(Message message) {
+        return new Turn(message.getMessageType().getValue(), message.getText() == null ? "" : message.getText());
+    }
+
+    /** A record, not {@code Map.of}: its fields keep one order, so the JSON is the same on every run. */
+    private record Turn(String role, String content) {
     }
 
     private static String json(Object value) {
