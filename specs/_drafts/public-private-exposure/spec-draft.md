@@ -2,7 +2,7 @@
 
 **Status**: Draft, proposed (not yet agreed; Jordy has only confirmed the per-app split)
 **Target path**: `specs/_drafts/public-private-exposure/spec.md`
-**Relates to**: spec 008 T074 (public port-scan security review), `compose-deployment`, `auth-without-keycloak`
+**Relates to**: the public port-scan security review task of the OVH k3s deployment spec, `compose-deployment`, `auth-without-keycloak`
 
 > Written without repo access. Which modules non-admin users actually use is not in the notes I have, so the audience table is a placeholder to fill in.
 
@@ -14,23 +14,23 @@ Everything reachable on `https://jordylab.be` is protected only by login and rol
 
 **Phase 1: public allow-list (cheap, no new hostnames)**
 
-- **FR-001**: The public route forwards only an explicit allow-list of path prefixes (frontend assets, auth endpoints, and the endpoints non-admin users and the scanner need). Everything else returns 404 from the proxy, never reaching the backend.
-- **FR-002**: An audience table lists every module and endpoint group as public, authenticated-public or private, and the allow-list is derived from it.
-- **FR-003**: Keycloak's admin console is not reachable on the public hostname. Check this today regardless of the rest of this draft, since `/auth` is public.
-- **FR-004**: The ntfy server's public paths are reviewed (what is exposed and with what access control).
+- The public route forwards only an explicit allow-list of path prefixes (frontend assets, auth endpoints, and the endpoints non-admin users and the scanner need). Everything else returns 404 from the proxy, never reaching the backend.
+- An audience table lists every module and endpoint group as public, authenticated-public or private, and the allow-list is derived from it.
+- Keycloak's admin console is not reachable on the public hostname. Check this today regardless of the rest of this draft, since `/auth` is public.
+- The ntfy server's public paths are reviewed (what is exposed and with what access control).
 
 **Phase 2: private hostname over the tailnet**
 
-- **FR-005**: Private modules (candidates: `fna`, `garmin`, `trading`, `settings` admin features) are served on a second hostname that resolves and listens only on the tailnet.
-- **FR-006**: The application still authenticates users on the private hostname (defense in depth), and role checks stay as they are.
-- **FR-007**: Clients used outside the home (phone, the Mac) have Tailscale installed. The usability cost of this is accepted explicitly in the audience table.
-- **FR-008**: The scanner's ingest endpoint is classified: public with token auth (today's design, push-based) or tailnet-only (requires Tailscale on JordyBox and the Mac).
+- Private modules (candidates: `fna`, `garmin`, `trading`, `settings` admin features) are served on a second hostname that resolves and listens only on the tailnet.
+- The application still authenticates users on the private hostname (defense in depth), and role checks stay as they are.
+- Clients used outside the home (phone, the Mac) have Tailscale installed. The usability cost of this is accepted explicitly in the audience table.
+- The scanner's ingest endpoint is classified: public with token auth (today's design, push-based) or tailnet-only (requires Tailscale on JordyBox and the Mac).
 
 ## Success criteria
 
-- **SC-001**: An external port and path scan of `jordylab.be` finds only allow-listed paths, and a request to a private path returns 404 from the proxy.
-- **SC-002**: With the phone off the tailnet, private features are unreachable and public features are unaffected.
-- **SC-003**: The new check is part of CI or the post-deploy smoke test, so the allow-list cannot drift silently.
+- An external port and path scan of `jordylab.be` finds only allow-listed paths, and a request to a private path returns 404 from the proxy.
+- With the phone off the tailnet, private features are unreachable and public features are unaffected.
+- The new check is part of CI or the post-deploy smoke test, so the allow-list cannot drift silently.
 
 ## Out of scope
 

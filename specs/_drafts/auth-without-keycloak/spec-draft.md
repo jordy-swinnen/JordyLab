@@ -2,7 +2,7 @@
 
 **Status**: Draft, direction leaning (Jordy: "maybe we should"; extracted apps will have their own separate accounts)
 **Target path**: `specs/_drafts/auth-without-keycloak/spec.md`
-**Amends**: spec 006 (Settings: users, AI models), spec 003 (scanner device-code login), spec 008 (Keycloak in prod)
+**Amends**: the settings spec (users, AI models), the game catalog scanner spec (device-code login), the OVH k3s deployment spec (Keycloak in prod)
 **Depends on**: `pwa-replaces-capacitor` first (the Capacitor WebView origin complicates cookie sessions). Interacts with `continuous-deploy` (sessions must survive deploys).
 
 > Written without repo access. The Keycloak inventory comes from `jordylab-infrastructure-guide.md`. Never hand-roll password storage: this draft uses no passwords at all.
@@ -17,24 +17,24 @@ Realm `jordylab` with clients `jordylab-host`, `gamecatalog-script` (device auth
 
 ## Requirements
 
-- **FR-001**: Users sign in with passkeys. No passwords exist anywhere in the system.
-- **FR-002**: Enrollment and recovery use single-use, short-lived invite or sign-in links created by an admin. Delivery is the admin copying the link (or sending it via ntfy), unless Open question 1 chooses email.
-- **FR-003**: Self-registration with admin approval and the roles `admin` and `guest` keep working as in spec 006.
-- **FR-004**: The scanner authenticates with a per-machine token created in the UI ("Add machine"), shown once, stored hashed, scoped to ingestion, revocable, with last-used time. The token has at least 256 bits of randomness. The existing cache path `~/.config/jordylab/scan/token.json` (mode 0600) stays.
-- **FR-005**: Browser sessions are server-side and stored in the database (or equivalent), so deploys do not log anyone out. Cookies are HttpOnly with SameSite set and CSRF protection works with the Angular XSRF mechanism.
-- **FR-006**: Two filter chains: session-based for the web app, bearer-token for the scanner ingest endpoints. Existing `@PreAuthorize` rules keep working on the same authority names.
-- **FR-007**: The identity code lives in its own module with its own schema and a narrow public API (a `CurrentUser` abstraction), so extracting an app later means taking that module along and starting its own user store.
-- **FR-008**: Break-glass: a documented operator-only procedure creates an admin sign-in link from the cluster or database, so losing the only passkey is recoverable. Users are encouraged to register two passkeys.
-- **FR-009**: Cutover preserves user identities. If other modules store the Keycloak `sub` as owner id, the new user table keeps it as a legacy external id so no foreign keys change.
-- **FR-010**: Removal checklist after cutover and a verified backup: Keycloak deployment and `/auth` route, realm files, the `keycloak` schema, compose service, `KC_*` variables, issuer-uri config, frontend OIDC code.
-- **FR-011**: E2E setup stops depending on Keycloak. `e2e-web` currently starts throwaway Postgres + Keycloak. Replace it with a test-only sign-in available only under a dedicated profile, plus a test that proves it is absent in the prod configuration.
+- Users sign in with passkeys. No passwords exist anywhere in the system.
+- Enrollment and recovery use single-use, short-lived invite or sign-in links created by an admin. Delivery is the admin copying the link (or sending it via ntfy), unless the open question on invite delivery chooses email.
+- Self-registration with admin approval and the roles `admin` and `guest` keep working as in the settings spec.
+- The scanner authenticates with a per-machine token created in the UI ("Add machine"), shown once, stored hashed, scoped to ingestion, revocable, with last-used time. The token has at least 256 bits of randomness. The existing cache path `~/.config/jordylab/scan/token.json` (mode 0600) stays.
+- Browser sessions are server-side and stored in the database (or equivalent), so deploys do not log anyone out. Cookies are HttpOnly with SameSite set and CSRF protection works with the Angular XSRF mechanism.
+- Two filter chains: session-based for the web app, bearer-token for the scanner ingest endpoints. Existing `@PreAuthorize` rules keep working on the same authority names.
+- The identity code lives in its own module with its own schema and a narrow public API (a `CurrentUser` abstraction), so extracting an app later means taking that module along and starting its own user store.
+- Break-glass: a documented operator-only procedure creates an admin sign-in link from the cluster or database, so losing the only passkey is recoverable. Users are encouraged to register two passkeys.
+- Cutover preserves user identities. If other modules store the Keycloak `sub` as owner id, the new user table keeps it as a legacy external id so no foreign keys change.
+- Removal checklist after cutover and a verified backup: Keycloak deployment and `/auth` route, realm files, the `keycloak` schema, compose service, `KC_*` variables, issuer-uri config, frontend OIDC code.
+- E2E setup stops depending on Keycloak. `e2e-web` currently starts throwaway Postgres + Keycloak. Replace it with a test-only sign-in available only under a dedicated profile, plus a test that proves it is absent in the prod configuration.
 
 ## Success criteria
 
-- **SC-001**: An admin invites a friend, the friend registers a passkey on Android and on a desktop browser, and the admin approves them, all without Keycloak running.
-- **SC-002**: A deploy during an active session does not sign the user out.
-- **SC-003**: The scanner on JordyBox and on the Mac ingests with a new token, and revoking the token stops it at the next call.
-- **SC-004**: After removal, production runs one fewer container and the repository has no Keycloak references outside docs history.
+- An admin invites a friend, the friend registers a passkey on Android and on a desktop browser, and the admin approves them, all without Keycloak running.
+- A deploy during an active session does not sign the user out.
+- The scanner on JordyBox and on the Mac ingests with a new token, and revoking the token stops it at the next call.
+- After removal, production runs one fewer container and the repository has no Keycloak references outside docs history.
 
 ## Out of scope
 

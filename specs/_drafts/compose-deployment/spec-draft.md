@@ -2,7 +2,7 @@
 
 **Status**: Draft, direction agreed in principle, low urgency (k3s was chosen mainly to try it; Docker would suffice)
 **Target path**: `specs/_drafts/compose-deployment/spec.md`
-**Supersedes parts of**: spec 008 (OVH k3s deployment), `deploy/k8s/`, `docs/runbooks/vps-k3s-deployment/`, `docs/runbook.md`
+**Supersedes parts of**: the OVH k3s deployment spec, `deploy/k8s/`, `docs/runbooks/vps-k3s-deployment/`, `docs/runbook.md`
 **Interacts with**: `continuous-deploy`, `public-private-exposure`, `auth-without-keycloak`
 
 > Written without repo access. Topology details come from `jordylab-infrastructure-guide.md` (2026-10-07).
@@ -19,7 +19,7 @@ Not now. The current setup works and has taught what it was meant to. Do it when
 
 Docker Engine and the Compose plugin on the same kind of VPS (Ubuntu LTS, `ufw` on 22/80/443):
 
-- Reverse proxy with automatic TLS (Caddy, or Traefik with ACME; see Open question 1).
+- Reverse proxy with automatic TLS (Caddy, or Traefik with ACME; see the open question on the reverse proxy).
 - `frontend` (nginx), `backend`, `ntfy`, PostgreSQL 16 with pgvector, and Keycloak until `auth-without-keycloak` removes it.
 - Postgres backups with WAL archiving plus daily and weekly base backups to OVH Object Storage (Gravelines), using pgBackRest or WAL-G. Parity with today's point-in-time restore is a hard requirement.
 - Secrets stay SOPS + age in git, decrypted only by the deploy workflow.
@@ -27,13 +27,13 @@ Docker Engine and the Compose plugin on the same kind of VPS (Ubuntu LTS, `ufw` 
 
 ## Requirements
 
-- **FR-001**: Everything that runs in production is described by one Compose project plus an env/secrets file, with images pinned by sha.
-- **FR-002**: TLS issuance and renewal are automatic, verified by a forced-renewal test.
-- **FR-003**: Point-in-time restore works against object storage backups, and the quarterly drill (next due 2027-01-01, manual runbook MRB-09/10/13) is re-run on the new stack before the old one is decommissioned.
-- **FR-004**: Services restart after a VPS reboot, with healthchecks and `restart: unless-stopped`, and the reboot drill passes.
-- **FR-005**: Container log rotation limits are set (Docker's default json-file driver grows without bound), and memory limits fit the 8 GB VPS.
-- **FR-006**: The deploy workflow from `continuous-deploy` is retargeted to Compose, including readiness waiting and automatic rollback.
-- **FR-007**: `docs/runbook.md`, the `jordylab-ops` skill and the `jordylab-devops` agent are rewritten for Compose. `docs/learn/` Kubernetes notes stay as history.
+- Everything that runs in production is described by one Compose project plus an env/secrets file, with images pinned by sha.
+- TLS issuance and renewal are automatic, verified by a forced-renewal test.
+- Point-in-time restore works against object storage backups, and the quarterly drill (next due 2027-01-01, manual runbook MRB-09/10/13) is re-run on the new stack before the old one is decommissioned.
+- Services restart after a VPS reboot, with healthchecks and `restart: unless-stopped`, and the reboot drill passes.
+- Container log rotation limits are set (Docker's default json-file driver grows without bound), and memory limits fit the 8 GB VPS.
+- The deploy workflow from `continuous-deploy` is retargeted to Compose, including readiness waiting and automatic rollback.
+- `docs/runbook.md`, the `jordylab-ops` skill and the `jordylab-devops` agent are rewritten for Compose. `docs/learn/` Kubernetes notes stay as history.
 
 ## Migration plan (proposed)
 
@@ -43,10 +43,10 @@ Docker Engine and the Compose plugin on the same kind of VPS (Ubuntu LTS, `ufw` 
 
 ## Success criteria
 
-- **SC-001**: A full rebuild from an empty VPS to serving traffic, following only the runbook, succeeds and the time is recorded.
-- **SC-002**: A point-in-time restore to a chosen timestamp succeeds on the new stack.
-- **SC-003**: A deploy and a rollback both complete through the workflow with no manual server access.
-- **SC-004**: Memory use on the host is lower than on k3s (measure before and after, no assumption).
+- A full rebuild from an empty VPS to serving traffic, following only the runbook, succeeds and the time is recorded.
+- A point-in-time restore to a chosen timestamp succeeds on the new stack.
+- A deploy and a rollback both complete through the workflow with no manual server access.
+- Memory use on the host is lower than on k3s (measure before and after, no assumption).
 
 ## Out of scope
 
