@@ -112,7 +112,7 @@ tasks.withType<Test> {
 // Real-model tests are never part of `test`: they cost money and need keys (spec 013 FR-018, quickstart A3).
 tasks.test {
     useJUnitPlatform {
-        excludeTags("golden-live", "integration-igdb")
+        excludeTags("golden-live", "integration-igdb", "integration-thegamesdb")
     }
 }
 
@@ -145,6 +145,23 @@ val igdbCheck by tasks.registering(Test::class) {
         includeTags("integration-igdb")
     }
     listOf("IGDB_CLIENT_ID", "IGDB_CLIENT_SECRET").forEach { key -> System.getenv(key)?.let { environment(key, it) } }
+    testLogging {
+        showStandardStreams = true
+    }
+    outputs.upToDateWhen { false }
+}
+
+// `./gradlew theGamesDbCheck` re-reads TheGamesDB's platform list and fails when a console in the lookup map no longer
+// carries its stored TheGamesDB name. Needs THEGAMESDB_API_KEY in the environment (one call; the value is never printed).
+val theGamesDbCheck by tasks.registering(Test::class) {
+    description = "Checks the console map of the player-count source against live TheGamesDB."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeTags("integration-thegamesdb")
+    }
+    System.getenv("THEGAMESDB_API_KEY")?.let { environment("THEGAMESDB_API_KEY", it) }
     testLogging {
         showStandardStreams = true
     }

@@ -79,6 +79,14 @@ public class Game extends BaseEntity<Game> {
 
     private int multiplayerAttempts;
 
+    /** Where {@code maxLocalPlayers} came from; null exactly when the count is null. */
+    @Enumerated(EnumType.STRING)
+    private PlayerCountSource maxLocalPlayersSource;
+
+    /** Why the second source left a console game without a count; null when a count exists or it was not asked. */
+    @Enumerated(EnumType.STRING)
+    private PlayerCountGap playerCountGap;
+
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -212,6 +220,8 @@ public class Game extends BaseEntity<Game> {
         this.splitScreen = splitScreen;
         if (maxLocalPlayers != null) {
             this.maxLocalPlayers = maxLocalPlayers;
+            this.maxLocalPlayersSource = PlayerCountSource.IGDB;
+            this.playerCountGap = null;
         }
         this.multiplayerSource = source;
         this.multiplayerAttempts = 0;
@@ -223,19 +233,49 @@ public class Game extends BaseEntity<Game> {
      */
     public void applyFillOnlyMultiplayer(Boolean localMultiplayer, Boolean splitScreen, Integer maxLocalPlayers,
             MultiplayerSource source) {
-        if (this.localMultiplayer == null) {
+        boolean progressed = false;
+        if (this.localMultiplayer == null && localMultiplayer != null) {
             this.localMultiplayer = localMultiplayer;
+            progressed = true;
         }
-        if (this.splitScreen == null) {
+        if (this.splitScreen == null && splitScreen != null) {
             this.splitScreen = splitScreen;
+            progressed = true;
         }
-        if (this.maxLocalPlayers == null) {
+        if (this.maxLocalPlayers == null && maxLocalPlayers != null) {
             this.maxLocalPlayers = maxLocalPlayers;
+            this.maxLocalPlayersSource = PlayerCountSource.IGDB;
+            this.playerCountGap = null;
+            progressed = true;
         }
         if (this.multiplayerSource == null || this.multiplayerSource == MultiplayerSource.UNKNOWN) {
             this.multiplayerSource = source;
         }
+        if (progressed) {
+            this.multiplayerAttempts = 0;
+        }
+    }
+
+    /**
+     * Fills the player count from the second source. Fill-only: a count that exists, from any source, is never replaced.
+     * Clears the gap reason and the attempt counter like the other fill methods.
+     */
+    public void applyPlayerCount(int playerCount, PlayerCountSource source) {
+        if (this.maxLocalPlayers != null) {
+            return;
+        }
+        this.maxLocalPlayers = playerCount;
+        this.maxLocalPlayersSource = source;
+        this.playerCountGap = null;
         this.multiplayerAttempts = 0;
+    }
+
+    /** Records why the second source gave no count. Ignored once a count exists. */
+    public void recordPlayerCountGap(PlayerCountGap gap) {
+        if (this.maxLocalPlayers != null) {
+            return;
+        }
+        this.playerCountGap = gap;
     }
 
     /** Counts a failed/unresolved multiplayer lookup; the backlog query parks games at max attempts. */
@@ -331,7 +371,8 @@ public class Game extends BaseEntity<Game> {
 
             return new Game(id, steamAppId, igdbGameId, title, titleKey, titleSource, genre, genres, developer,
                     publisher, releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer,
-                    splitScreen, multiplayerSource, multiplayerAttempts, description, enrichmentStatus,
+                    splitScreen, multiplayerSource, multiplayerAttempts, maxLocalPlayersSource, playerCountGap, description,
+                    enrichmentStatus,
                     enrichmentAttempts, metadataStatus, metadataAttempts, coverStatus, coverRef, bannerStatus,
                     bannerRef, artworkFallbackRequests, factsCheckedAt, artworkCheckedAt, descriptionSource,
                     descriptionModel, descriptionRequestedModel, descriptionWrittenAt);

@@ -1067,6 +1067,12 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Open https://www.mobygames.com/info/api/ and its pricing and terms pages. Tell me in chat: (1) whether a free tier exists for personal, self-hosted, non-commercial use, and the monthly price if not; (2) the request limit; (3) whether the terms allow looking up games by name from a personal app; (4) whether the API documentation lists game attributes such as "Number of Offline Players" or "Multiplayer Options".
 - Do not register or accept anything yet. I only need the answers to decide whether it is worth an account.
 
+#### HANDOFF-36: Local end-to-end of the console player counts (spec 014) — run by the agent
+- Owner decision 2026-11-01: the agent runs this itself against the running dev stack and the real library, with the keys in `jordylab-be/.env` (never printed), after backing up the dev database. Steps: `specs/014-console-player-counts/quickstart.md` §2, then `./gradlew goldenLive`. Results are recorded in `specs/014-console-player-counts/validation-results.md`.
+
+#### HANDOFF-37: Add `THEGAMESDB_API_KEY` to the prod secrets — done 2026-11-01
+- The owner added the key to `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_EDITOR="idea --wait" sops …`. Presence on the cluster is checked after the next deploy (`quickstart.md` §3, step 2), by behaviour and never by value.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.
