@@ -42,7 +42,8 @@ What the repo does not do yet is listed in `docs/research/spring-ai-gap-analysis
 - Langfuse tracing (OpenTelemetry, `AiTracing` + `LangfuseTracingConfiguration`): every `ResilientAiService` call is one
   span `run-<feature>` with Spring AI's `generate-<provider>` spans under it; only `gen_ai.*`/`langfuse.*` spans are
   exported (`AiSpanExporter`). Name spans after the action, never the model. Prompts/answers reach Langfuse only with
-  `LANGFUSE_CAPTURE_CONTENT=true` (off by default: they hold the library, portfolio and user questions). Without
+  `LANGFUSE_CAPTURE_CONTENT=true` (off by default in the code because they hold the library, portfolio and user questions; prod turns it on in
+  `backend-config`, the owner's decision of 2026-11-01). Without
   `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` nothing is exported. Model calls run on another thread: use
   `AiTracing.inCurrentTrace` for any new call that crosses threads.
 - A new feature ships with a unit test around a mocked `ChatModel` (see `ResilientAiServiceTest`) and at least one
