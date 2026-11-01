@@ -241,7 +241,8 @@ public class ResilientAiService {
             return AiEmbeddingResult.failure(GATEWAY, model, ProviderFailureReason.UNREACHABLE);
         }
         try {
-            EmbeddingResponse response = callWithTimeout(aiTracing.inCurrentTrace(() -> embeddingModel.embedForResponse(texts)));
+            EmbeddingResponse response = callWithTimeout(
+                    aiTracing.inCurrentTrace(() -> embeddingModel.embedForResponse(texts)));
             List<float[]> vectors = response.getResults().stream()
                     .sorted(Comparator.comparing(Embedding::getIndex))
                     .map(Embedding::getOutput)
