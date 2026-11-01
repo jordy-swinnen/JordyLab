@@ -41,5 +41,5 @@ The dev stack is up (Postgres and Keycloak), but its database holds only Keycloa
 
 ## Still to do
 
-- The key in git: PR 153 adds it to the sealed secrets; a release after it merges (`v0.0.1-rc28`) makes the deploy apply it, so the live patch is no longer needed.
+- Done: the key is in the sealed secrets (PR 153) and `v0.0.1-rc28` deployed it. After that deploy the key is set on the pod from the secret (the manual patch is overwritten), the new pod's log has no "not configured" and no errors, the Sources page reads "TheGamesDB is ready", and the counts are unchanged (IGDB 62, TheGamesDB 13, 0 inconsistencies).
 - T018 (local run) was skipped: the dev database has no scanned library; the production check above replaces it.
