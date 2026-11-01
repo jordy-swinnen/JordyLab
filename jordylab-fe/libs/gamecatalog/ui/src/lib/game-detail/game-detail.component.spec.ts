@@ -111,10 +111,24 @@ describe('GameDetailComponent', () => {
   });
 
   it('shows where the facts came from as the last line of the spec sheet, not in the About heading', () => {
-    show(aGameDetailMock({ factSources: { facts: 'STEAM', multiplayer: 'IGDB' } }));
+    show(aGameDetailMock({ factSources: { facts: 'STEAM', multiplayer: 'IGDB', playerCount: null } }));
 
     expect(spectator.query('[data-testid="fact-sources"]')).toHaveText('Source · facts from Steam · multiplayer from IGDB');
     expect(spectator.query('[data-testid="about-heading"]')).not.toHaveText('facts from');
+  });
+
+  it('shows the source of the player count next to the number, apart from the multiplayer data source', () => {
+    show(aGameDetailMock({ maxLocalPlayers: 4, maxLocalPlayersSource: 'THEGAMESDB', multiplayerSource: 'IGDB' }));
+
+    expect(spectator.query('[data-testid="player-count-source"]')).toHaveText('TheGamesDB');
+    expect(spectator.query('dl')).toHaveText('up to 4 players');
+    expect(spectator.query('dl')).toHaveText('Multiplayer data');
+  });
+
+  it('shows no player count source while the count is unknown', () => {
+    show(aGameDetailMock({ maxLocalPlayers: null, maxLocalPlayersSource: null }));
+
+    expect(spectator.query('[data-testid="player-count-source"]')).toBeNull();
   });
 
   it('credits Steam when the description is Steam\'s own', () => {

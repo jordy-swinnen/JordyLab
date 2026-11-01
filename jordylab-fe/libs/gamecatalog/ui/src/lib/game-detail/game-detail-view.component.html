@@ -227,6 +227,11 @@
                       {{ game.localMultiplayer ? 'Yes' : 'No' }}
                       @if (game.maxLocalPlayers !== null) {
                         · up to {{ game.maxLocalPlayers }} players
+                        @if (game.maxLocalPlayersSource; as countSource) {
+                          <span class="mono-label" data-testid="player-count-source"
+                            >· {{ playerCountSourceLabels[countSource] }}</span
+                          >
+                        }
                       }
                     </dd>
                   </div>

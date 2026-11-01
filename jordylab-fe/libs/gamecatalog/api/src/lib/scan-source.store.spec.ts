@@ -426,6 +426,20 @@ describe('ScanSourceStore', () => {
       expect(spectator.service.healthExceptions()).toBeNull();
     });
 
+    it('asks for the games behind one player-count reason', () => {
+      const exceptions: HealthExceptions = {
+        kind: 'PLAYER_COUNT',
+        total: 1,
+        games: [{ id: 'g-7', title: 'Mario Party 7', reason: 'ENTRIES_DISAGREE' }],
+      };
+      getHealthExceptions.mockReturnValue(of(exceptions));
+
+      spectator.service.showHealthExceptions('PLAYER_COUNT', 'ENTRIES_DISAGREE');
+
+      expect(getHealthExceptions).toHaveBeenCalledWith('PLAYER_COUNT', 'ENTRIES_DISAGREE');
+      expect(spectator.service.healthExceptions()).toEqual(exceptions);
+    });
+
     it('shows nothing when the list cannot be loaded', () => {
       getHealthExceptions.mockReturnValue(throwError(() => new Error('down')));
 

@@ -5,6 +5,7 @@ import { GameCatalogApiService } from './gamecatalog-api.service';
 import {
   HealthExceptions,
   HealthKind,
+  PlayerCountReason,
   HideImpact,
   LibraryHealth,
   LibraryStatus,
@@ -78,10 +79,9 @@ export class ScanSourceStore {
       });
   }
 
-  showHealthExceptions(kind: HealthKind): void {
+  showHealthExceptions(kind: HealthKind, reason: PlayerCountReason | null = null): void {
     this.#loadingExceptions.set(kind);
-    this.#api
-      .getHealthExceptions(kind)
+    (reason ? this.#api.getHealthExceptions(kind, reason) : this.#api.getHealthExceptions(kind))
       .pipe(catchError(() => of(null)))
       .subscribe((exceptions) => {
         this.#loadingExceptions.set(null);

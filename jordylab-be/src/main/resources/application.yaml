@@ -157,6 +157,12 @@ jordylab:
       store-base-url: https://store.steampowered.com
       batch-size: 25
       max-attempts: 3
+    # Player counts for console games (spec 014). The key is THEGAMESDB_API_KEY; without it the source is skipped.
+    thegamesdb:
+      base-url: https://api.thegamesdb.net/v1
+      timeout-ms: 5000
+      min-interval-ms: 1000
+      allowance-reserve: 20
     scan:
       max-games-per-source: 50000
       max-payload-bytes: 8388608

@@ -12,6 +12,10 @@ import {
   LibraryHealth,
   LibraryStatus,
   LibrarySyncRun,
+  PLAYER_COUNT_PAUSE_LABELS,
+  PLAYER_COUNT_REASON_LABELS,
+  PLAYER_COUNT_REASONS,
+  PlayerCountReason,
   ScanSource,
   SourceType,
 } from '@jordylab-fe/gamecatalog/api';
@@ -63,6 +67,7 @@ export class SourceManagerViewComponent {
   cancelHostName = output<void>();
   renameHost = output<{ hostId: string; displayName: string }>();
   showExceptions = output<HealthKind>();
+  showPlayerCountGames = output<PlayerCountReason>();
   hideExceptions = output<void>();
   downloadClient = output<ScanClientType>();
   syncOwnedLibrary = output<void>();
@@ -79,6 +84,10 @@ export class SourceManagerViewComponent {
     { kind: 'DESCRIPTION', label: 'Without a description', count: (health) => health.gamesWithoutDescription },
     { kind: 'INDEX', label: 'Not yet searchable by LibBot', count: (health) => health.gamesPendingIndex },
   ];
+
+  protected readonly playerCountReasons = PLAYER_COUNT_REASONS;
+  protected readonly playerCountReasonLabels = PLAYER_COUNT_REASON_LABELS;
+  protected readonly playerCountPauseLabels = PLAYER_COUNT_PAUSE_LABELS;
 
   protected percentOf(count: number, health: LibraryHealth): string {
     return health.totalGames === 0 ? '0 %' : `${Math.round((count / health.totalGames) * 100)} %`;

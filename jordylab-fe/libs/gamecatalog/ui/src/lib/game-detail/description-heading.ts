@@ -1,4 +1,4 @@
-import { FactSources, GameDescription } from '@jordylab-fe/gamecatalog/api';
+import { FactSources, GameDescription, PLAYER_COUNT_SOURCE_LABELS } from '@jordylab-fe/gamecatalog/api';
 
 /** What the "About" label says and the full ids behind it (shown on hover), built only from what the server reported. */
 export interface DescriptionHeading {
@@ -43,6 +43,9 @@ export function factSourcesLine(sources: FactSources): string | null {
   }
   if (sources.multiplayer) {
     parts.push(`multiplayer from ${sources.multiplayer === 'STEAM' ? 'Steam' : 'IGDB'}`);
+  }
+  if (sources.playerCount) {
+    parts.push(`player count from ${PLAYER_COUNT_SOURCE_LABELS[sources.playerCount]}`);
   }
 
   return parts.length > 0 ? `Source · ${parts.join(' · ')}` : null;

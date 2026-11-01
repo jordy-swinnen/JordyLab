@@ -275,6 +275,57 @@
         </li>
       }
     </ul>
+    @if (libraryHealth.playerCounts; as playerCounts) {
+      <div class="panel mt-4 px-5 py-4" data-testid="player-counts">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h3 class="mono-label">Player counts</h3>
+          <span class="mono-label">{{ playerCounts.localMultiplayerGames }} local-multiplayer games</span>
+        </div>
+        <p class="mb-3 text-[15px] leading-relaxed text-secondary-foreground">
+          <span data-testid="player-counts-igdb">{{ playerCounts.filled.IGDB }} from IGDB</span>
+          ·
+          <span data-testid="player-counts-thegamesdb">{{ playerCounts.filled.THEGAMESDB }} from TheGamesDB</span>
+          ·
+          <span data-testid="player-counts-unknown">{{ playerCounts.unknown }} unknown</span>
+        </p>
+        <p class="mb-3 text-sm text-muted-foreground" data-testid="player-counts-source-state">
+          @if (!playerCounts.theGamesDb.configured) {
+            TheGamesDB is not configured (no key), so only IGDB fills player counts.
+          } @else if (playerCounts.theGamesDb.pausedUntil; as pausedUntil) {
+            TheGamesDB is paused until {{ pausedUntil | date: 'MMM d, h:mm a' }} because
+            {{ playerCounts.theGamesDb.pauseReason ? playerCountPauseLabels[playerCounts.theGamesDb.pauseReason] : 'of an error' }}.
+          } @else {
+            TheGamesDB is ready
+            @if (playerCounts.theGamesDb.remainingAllowance !== null) {
+              · {{ playerCounts.theGamesDb.remainingAllowance }} lookups left this month
+            }
+          }
+        </p>
+        <ul class="flex flex-col gap-2">
+          @for (reason of playerCountReasons; track reason) {
+            @if (playerCounts.unknownByReason[reason] > 0) {
+              <li class="flex flex-wrap items-baseline justify-between gap-3 border-t border-border pt-2">
+                <span class="text-[15px] text-secondary-foreground">{{ playerCountReasonLabels[reason] }}</span>
+                <span class="flex items-baseline gap-3">
+                  <span class="font-display text-xl font-bold" [attr.data-testid]="'player-count-reason-' + reason">
+                    {{ playerCounts.unknownByReason[reason] }}
+                  </span>
+                  <button
+                    type="button"
+                    class="w-fit text-sm font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-50"
+                    [disabled]="loadingExceptions() !== null"
+                    [attr.data-testid]="'show-player-count-' + reason"
+                    (click)="showPlayerCountGames.emit(reason)"
+                  >
+                    {{ loadingExceptions() === 'PLAYER_COUNT' ? 'Loading…' : 'Show games' }}
+                  </button>
+                </span>
+              </li>
+            }
+          }
+        </ul>
+      </div>
+    }
     @if (healthExceptions(); as exceptions) {
       <div class="panel mt-4 px-5 py-4" data-testid="health-exceptions">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -293,6 +344,9 @@
                 class="inline-flex rounded-full border border-input px-3 py-1 text-[13px] text-secondary-foreground hover:border-primary hover:text-foreground"
                 >{{ game.title }}</a
               >
+              @if (game.reason) {
+                <span class="mono-label ml-1">{{ playerCountReasonLabels[game.reason] }}</span>
+              }
             </li>
           }
         </ul>
