@@ -36,6 +36,14 @@ Of the 44 games, **15 are console games** (GameCube, Nintendo 64, PlayStation, P
 
 ---
 
+## Clarifications
+
+### Session 2026-11-01
+
+- Q: Should the new source also be asked for console games whose local-multiplayer flag is not yet known, or only for games already flagged local multiplayer? → A: Only games already flagged local multiplayer. The source's number does not say local or online, so a count is never stored for a game that is not known to be local multiplayer.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - LibBot judges more console games for a party (Priority: P1)
@@ -56,7 +64,7 @@ The owner (or a guest) asks LibBot what to play with a given number of people. C
 
 ### User Story 2 - Counts are filled automatically, correctly and only when sure (Priority: P1)
 
-Console games without a count are looked up in the background and on the bulk refresh, after the existing source has had its turn. A count is stored only when the source gives the same number for every entry that matches the game's title on its console. Anything doubtful is left unknown rather than guessed.
+Console games flagged local multiplayer that have no count are looked up in the background and on the bulk refresh, after the existing source has had its turn. A count is stored only when the source gives the same number for every entry that matches the game's title on its console. Anything doubtful is left unknown rather than guessed.
 
 **Why this priority**: A wrong number is worse than "unknown": it makes LibBot recommend or exclude games wrongly. The rule keeps the data trustworthy.
 
@@ -70,6 +78,7 @@ Console games without a count are looked up in the background and on the bulk re
 4. **Given** the title only matches loosely (not the same normalised title on the same console), **When** the lookup runs, **Then** it is treated as no match and nothing is stored.
 5. **Given** a game that already has a count, **When** any run happens, **Then** its count is left unchanged.
 6. **Given** a game with no count that no source can fill, **When** several sweeps run, **Then** it is parked after the existing bounded number of attempts and is retried only by the bulk refresh.
+7. **Given** a console game whose local-multiplayer flag is unknown, **When** a sweep or the bulk refresh runs, **Then** the new source is not asked about it and no count is stored; once the existing source sets the flag to local multiplayer, the game becomes eligible on the next run.
 
 ---
 
@@ -128,6 +137,7 @@ The source needs an access key. Without it, nothing changes compared with today 
 - A title has entries whose names differ only by edition or region tags: they count as the same title for the agreement rule; a bundle or variant with a different name does not.
 - A game is installed on more than one console: it is looked up for each, and stored only if all agree.
 - A game with no console (a Steam game): never looked up in this feature.
+- A console game whose local-multiplayer flag is unknown (30 of the library's console games on 2026-11-01): never looked up in this feature, so it can never receive a count from a number that might be an online limit.
 - The source is unreachable or slow: the game is not charged a failed attempt for a transient outage, and the run continues with the next source.
 - A count outside the sensible range for a local-multiplayer game (under 2): treated as no count.
 - A bulk refresh run again in the same month: every game still without a count is looked up again, including those whose entries disagreed or did not match (the source's data may have been corrected since). Games that already have a count are not looked up, so a repeat run costs only as many lookups as there are unfilled games.
@@ -136,7 +146,7 @@ The source needs an access key. Without it, nothing changes compared with today 
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST ask its sources for a game's player count in a fixed order and stop at the first one that has a count: the existing source first, then the new source for console games (games with no Steam identity). A source that has flags but no count MUST NOT end the search. Steam games MUST keep using the existing source only.
+- **FR-001**: The system MUST ask its sources for a game's player count in a fixed order and stop at the first one that has a count: the existing source first, then the new source for console games (games with no Steam identity) that are already flagged local multiplayer. A game whose local-multiplayer flag is unknown MUST NOT be looked up in the new source. A source that has flags but no count MUST NOT end the search. Steam games MUST keep using the existing source only.
 - **FR-002**: A count MUST only ever come from a source's own data field. It MUST NOT be inferred by an AI, taken from free text, or guessed. The earlier rule that removed AI-guessed values stays in force.
 - **FR-003**: The system MUST store a count from the new source only when every entry for the same title on the game's console gives the same number. When entries disagree, nothing is stored and the game is listed for review.
 - **FR-004**: A count under 2 for a game flagged local multiplayer MUST be treated as no count.
@@ -180,4 +190,5 @@ The source needs an access key. Without it, nothing changes compared with today 
 - The source's published player-count field is the best open number available for these consoles; where it is wrong for a single title, correcting it by hand is the separate follow-up, not part of this feature.
 - The five consoles in the library (GameCube, Nintendo 64, PlayStation, PlayStation 2, PlayStation 3) are the ones the source lists; any other console the library gains falls under FR-012 until mapped.
 - The source's public pages show no terms of use; the key page shows only the allowance. If terms that bar this use appear, the source is dropped.
-- Out of scope: Steam PC games, AI-estimated counts, scraping pages without agreed access, changing how local, split-screen and online flags are derived, online or co-op player limits, and the hand-set count (separate draft).
+- The per-game "refresh multiplayer" action in the admin UI runs the same derivation as the bulk run, so it also uses the new source for an eligible game.
+- Out of scope: Steam PC games, console games whose local-multiplayer flag is unknown, AI-estimated counts, scraping pages without agreed access, changing how local, split-screen and online flags are derived, online or co-op player limits, and the hand-set count (separate draft).
