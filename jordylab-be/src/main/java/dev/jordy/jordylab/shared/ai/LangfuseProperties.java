@@ -5,8 +5,9 @@ import org.springframework.util.StringUtils;
 
 /**
  * {@code langfuse.*}: where AI traces are sent (Langfuse takes OpenTelemetry at {@code /api/public/otel}). Without both
- * keys nothing is exported (the exporter bean's condition in {@code LangfuseTracingConfiguration}). {@code captureContent} puts prompts and answers on the traces; it stays off unless asked
- * for, because those texts hold the library, the portfolio and the user's questions.
+ * keys nothing is exported (the exporter bean's condition in {@code LangfuseTracingConfiguration}).
+ * {@code captureContent} puts prompts and answers on the traces; it stays off unless asked for, because those texts
+ * hold the library, the portfolio and the user's questions.
  */
 @ConfigurationProperties(prefix = "langfuse")
 public record LangfuseProperties(String publicKey, String secretKey, String baseUrl, boolean captureContent) {

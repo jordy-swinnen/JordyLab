@@ -20,8 +20,8 @@ import java.util.Map;
  * Shapes Spring AI's model spans for Langfuse. Names them after the action and provider ({@code generate-openai}), not
  * the model, so evaluators and dashboards keep matching when a model is swapped; the model stays an attribute. With
  * {@code langfuse.capture-content} on, also puts the prompt and answer on the span as
- * {@code langfuse.observation.input|output}, in the role/content shape Langfuse renders as a conversation (the Spring AI
- * {@code log-prompt}/{@code log-completion} switches, which write to the application log, stay off).
+ * {@code langfuse.observation.input|output}, in the role/content shape Langfuse renders as a conversation (the Spring
+ * AI {@code log-prompt}/{@code log-completion} switches, which write to the application log, stay off).
  */
 @Slf4j
 @RequiredArgsConstructor
