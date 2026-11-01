@@ -15,7 +15,12 @@ export {
   SORT_LABELS,
 } from './lib/game-library.store';
 export type { ActiveFilter } from './lib/game-library.store';
-export { PLAYER_COUNT_SOURCE_LABELS } from './lib/gamecatalog.models';
+export {
+  PLAYER_COUNT_PAUSE_LABELS,
+  PLAYER_COUNT_REASON_LABELS,
+  PLAYER_COUNT_REASONS,
+  PLAYER_COUNT_SOURCE_LABELS,
+} from './lib/gamecatalog.models';
 export { ScanSourceStore } from './lib/scan-source.store';
 export { ConsoleStore } from './lib/console.store';
 export { RefreshRunStore } from './lib/refresh-run.store';
@@ -83,6 +88,10 @@ export type {
   ConsoleBulkItem,
   ConsoleBulkSummary,
   PlayerCountSource,
+  PlayerCountReason,
+  PlayerCountPauseReason,
+  PlayerCountSourceState,
+  PlayerCountsHealth,
 } from './lib/gamecatalog.models';
 export { aAttachedGameMock } from './lib/mocks/attached-game.model.mock';
 export { aLibBotAnswerMock } from './lib/mocks/libbot-answer.model.mock';
@@ -95,7 +104,7 @@ export { aRefreshRunMock } from './lib/mocks/refresh-run.model.mock';
 export { aGameDetailMock } from './lib/mocks/game-detail.model.mock';
 export { aGameSummaryMock } from './lib/mocks/game-summary.model.mock';
 export { aGamesPageMock } from './lib/mocks/games-page.model.mock';
-export { aLibraryHealthMock } from './lib/mocks/library-health.model.mock';
+export { aLibraryHealthMock, aPlayerCountsHealthMock } from './lib/mocks/library-health.model.mock';
 export { aSourcesOverviewMock } from './lib/mocks/sources-overview.model.mock';
 export { aHostMock } from './lib/mocks/host.model.mock';
 export { aScanSourceMock } from './lib/mocks/scan-source.model.mock';

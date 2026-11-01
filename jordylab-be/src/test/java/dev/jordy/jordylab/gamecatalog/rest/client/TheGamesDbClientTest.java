@@ -2,6 +2,8 @@ package dev.jordy.jordylab.gamecatalog.rest.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import dev.jordy.jordylab.gamecatalog.domain.PlatformCatalog;
+import dev.jordy.jordylab.gamecatalog.domain.PlatformEntry;
 import dev.jordy.jordylab.gamecatalog.domain.PlayerCountGap;
 import dev.jordy.jordylab.gamecatalog.rest.client.TheGamesDbClient.Outcome;
 import dev.jordy.jordylab.gamecatalog.rest.client.TheGamesDbClient.PauseReason;
@@ -18,7 +20,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -347,6 +351,14 @@ class TheGamesDbClientTest {
         assertThat(TheGamesDbClient.platforms()).hasSize(32).containsKeys("GameCube", "Nintendo 64", "PlayStation",
                 "PlayStation 2", "PlayStation 3");
         assertThat(TheGamesDbClient.platforms().get("PlayStation 2").id()).isEqualTo(11);
+    }
+
+    @Test
+    void everyConsoleOfTheCatalogExceptSteamIsMappedAndNothingElse() {
+        Set<String> catalogConsoles = PlatformCatalog.all().stream().map(PlatformEntry::name)
+                .filter(name -> !PlatformCatalog.STEAM.equals(name)).collect(Collectors.toSet());
+
+        assertThat(TheGamesDbClient.platforms().keySet()).containsExactlyInAnyOrderElementsOf(catalogConsoles);
     }
 
     private TheGamesDbClient clientWithKey(String key) {

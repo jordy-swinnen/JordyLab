@@ -350,14 +350,68 @@ export interface LibraryHealth {
   gamesWithoutCover: number;
   gamesWithoutDescription: number;
   gamesPendingIndex: number;
+  /** Where the local player counts come from and why the missing ones are missing. */
+  playerCounts: PlayerCountsHealth | null;
 }
 
-export type HealthKind = 'COVER' | 'DESCRIPTION' | 'INDEX';
+/** Why a visible local-multiplayer game has no player count. */
+export type PlayerCountReason =
+  | 'STEAM_NO_SOURCE'
+  | 'ENTRIES_DISAGREE'
+  | 'NO_MATCH'
+  | 'COUNT_BELOW_TWO'
+  | 'CONSOLE_NOT_LISTED'
+  | 'NOT_LOOKED_UP_YET';
+
+export const PLAYER_COUNT_REASONS: PlayerCountReason[] = [
+  'STEAM_NO_SOURCE',
+  'ENTRIES_DISAGREE',
+  'NO_MATCH',
+  'COUNT_BELOW_TWO',
+  'CONSOLE_NOT_LISTED',
+  'NOT_LOOKED_UP_YET',
+];
+
+export const PLAYER_COUNT_REASON_LABELS: Record<PlayerCountReason, string> = {
+  STEAM_NO_SOURCE: 'Steam games (no source has a count)',
+  ENTRIES_DISAGREE: 'Entries disagree',
+  NO_MATCH: 'No exact match',
+  COUNT_BELOW_TWO: 'Count under 2',
+  CONSOLE_NOT_LISTED: 'Console not listed',
+  NOT_LOOKED_UP_YET: 'Not looked up yet',
+};
+
+export type PlayerCountPauseReason = 'KEY_REFUSED_OR_ALLOWANCE_USED' | 'ALLOWANCE_LOW' | 'UNREACHABLE';
+
+export const PLAYER_COUNT_PAUSE_LABELS: Record<PlayerCountPauseReason, string> = {
+  KEY_REFUSED_OR_ALLOWANCE_USED: 'the key was refused or the monthly allowance is used up',
+  ALLOWANCE_LOW: 'the monthly allowance is almost used up',
+  UNREACHABLE: 'the service could not be reached',
+};
+
+/** The second player-count source: configured, paused until when and why, and the last monthly allowance seen. */
+export interface PlayerCountSourceState {
+  configured: boolean;
+  pausedUntil: string | null;
+  pauseReason: PlayerCountPauseReason | null;
+  remainingAllowance: number | null;
+}
+
+/** The visible games flagged local multiplayer: how many each source filled and why the others have no count. */
+export interface PlayerCountsHealth {
+  localMultiplayerGames: number;
+  filled: Record<PlayerCountSource, number>;
+  unknown: number;
+  unknownByReason: Record<PlayerCountReason, number>;
+  theGamesDb: PlayerCountSourceState;
+}
+
+export type HealthKind = 'COVER' | 'DESCRIPTION' | 'INDEX' | 'PLAYER_COUNT';
 
 export interface HealthExceptions {
   kind: HealthKind;
   total: number;
-  games: { id: string; title: string }[];
+  games: { id: string; title: string; reason?: PlayerCountReason | null }[];
 }
 
 /** GET /api/gamecatalog/sources: the scan sources and the library health in one call. */

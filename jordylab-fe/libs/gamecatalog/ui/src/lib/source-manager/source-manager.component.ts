@@ -1,5 +1,5 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { HealthKind, RefreshRun, RefreshRunStore, ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
+import { HealthKind, PlayerCountReason, RefreshRun, RefreshRunStore, ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
 import { RefreshPanelComponent } from './refresh-panel.component';
 import { ScanClientType, SourceManagerViewComponent } from './source-manager-view.component';
 
@@ -61,6 +61,10 @@ export class SourceManagerComponent {
 
   onShowExceptions(kind: HealthKind): void {
     this.#store.showHealthExceptions(kind);
+  }
+
+  onShowPlayerCountGames(reason: PlayerCountReason): void {
+    this.#store.showHealthExceptions('PLAYER_COUNT', reason);
   }
 
   onHideExceptions(): void {

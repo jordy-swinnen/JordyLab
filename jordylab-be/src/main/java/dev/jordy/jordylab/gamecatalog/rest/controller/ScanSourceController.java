@@ -5,6 +5,7 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.SetSourceEnabledRequ
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourcesResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.HealthExceptionsResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlayerCountReason;
 import dev.jordy.jordylab.gamecatalog.service.LibraryHealthService;
 import dev.jordy.jordylab.gamecatalog.service.ScanSourceService;
 import jakarta.validation.Valid;
@@ -34,8 +35,9 @@ public class ScanSourceController {
     }
 
     @GetMapping("/health/exceptions")
-    public HealthExceptionsResponse getHealthExceptions(@RequestParam LibraryHealthService.Kind kind) {
-        return libraryHealthService.exceptions(kind);
+    public HealthExceptionsResponse getHealthExceptions(@RequestParam LibraryHealthService.Kind kind,
+            @RequestParam(required = false) PlayerCountReason reason) {
+        return libraryHealthService.exceptions(kind, reason);
     }
 
     @GetMapping("/{id}/hide-impact")
