@@ -130,7 +130,7 @@ The source needs an access key. Without it, nothing changes compared with today 
 - A game with no console (a Steam game): never looked up in this feature.
 - The source is unreachable or slow: the game is not charged a failed attempt for a transient outage, and the run continues with the next source.
 - A count outside the sensible range for a local-multiplayer game (under 2): treated as no count.
-- A bulk refresh run twice in a month: only games still without a count are looked up, so the allowance is not spent twice on the same games.
+- A bulk refresh run again in the same month: every game still without a count is looked up again, including those whose entries disagreed or did not match (the source's data may have been corrected since). Games that already have a count are not looked up, so a repeat run costs only as many lookups as there are unfilled games.
 
 ## Requirements *(mandatory)*
 
@@ -163,12 +163,12 @@ The source needs an access key. Without it, nothing changes compared with today 
 
 ### Measurable Outcomes
 
-- **SC-001**: After a bulk "Refresh game data" run, fewer than 10 % of the local-multiplayer console games in the production library have no player count, and every remaining one is listed by title with its reason. In the measurement, 13 of the 15 console games without a count would be filled.
+- **SC-001**: After a bulk "Refresh game data" run, fewer than 10 % of all local-multiplayer console games in the production library have no player count, and every remaining one is listed by title with its reason. The percentage is over the whole set (56 such games on 2026-11-01, of which 15 had no count), not over the 15-game sample: in the measurement, 13 of those 15 would be filled, leaving 2 of 56 (about 4 %).
 - **SC-002**: Every stored count shows its source, and a spot check of at least ten console games against the source's own site agrees with the stored number.
 - **SC-003**: A count the measurement judged wrong is never stored: Mario Party 7 stays unknown unless the source's entries agree.
 - **SC-004**: A party-size LibBot question names fewer unknown games than before the run, and the note still appears for the games that remain.
 - **SC-005**: With no key configured, behaviour and results match today's exactly and the backend starts without error.
-- **SC-006**: A full bulk refresh uses well under the monthly allowance: at most 100 lookups for the current library.
+- **SC-006**: Each full bulk refresh uses at most 100 lookups for the current library (about 15 to 30 in the measurement, because only unfilled games are looked up), so at least ten refreshes in a month stay within the 1,000-lookup allowance.
 - **SC-007**: No player count in the database exists that did not come from a source's own field, and the key appears in no log, response or page.
 - **SC-008**: Steam PC games are unchanged by this feature (measured separately; not expected to improve).
 

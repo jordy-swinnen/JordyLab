@@ -33,5 +33,6 @@
 
 - Validation 1 of 3: all items pass. The spec names the source (TheGamesDB) and product concepts (LibBot, the Sources page, the bulk "Refresh game data" run) because the owner chose that source in the draft and these are the product's own terms; no frameworks, endpoints, tables or code structure appear.
 - No clarification markers: every open point was closed in the draft (store only agreeing counts, console games only, accessories out of scope, free tier is enough, terms recorded).
-- The success rate in SC-001 (under 10 % of local-multiplayer console games) is measured on the production library after the bulk refresh. The probe filled 13 of the 15 console games without a count; the remaining two are the disagreeing titles, which the owner can later set by hand through the separate follow-up.
+- The success rate in SC-001 (under 10 % of local-multiplayer console games) is over the whole production set: 56 such games on 2026-11-01, 15 without a count. The probe filled 13 of those 15; the remaining two are the disagreeing titles, so 2 of 56 (about 4 %) would stay unknown, which meets the threshold. The owner can later set those two by hand through the separate follow-up.
+- Repeat bulk refreshes look the unfilled games up again (including disagreeing ones), which SC-006 budgets: at most 100 lookups per run against a 1,000-lookup monthly allowance.
 - Ready for `/speckit-clarify` (optional) or `/speckit-plan`.
