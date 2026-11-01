@@ -27,8 +27,19 @@ Recorded 2026-11-01 on branch `docs/014-tasks`. Real values only; no key, reques
 
 The dev stack is up (Postgres and Keycloak), but its database holds only Keycloak's tables: no `gamecatalog` schema, so the backend has never run against it and there is no scanned library. The run needs the real scan client (device-code login by the owner) to fill the catalog; nothing is seeded by hand. The dev database was backed up first (`~/jordylab-dev-2026-11-01.dump`, valid custom-format dump). Until the owner scans, the end-to-end evidence is the automated suite above plus the production check (quickstart §3) after the release.
 
+## Production validation (2026-11-01, release v0.0.1-rc27)
+
+- **Release:** `v0.0.1-rc27` on `9a490dd` (the merge of PR 152). Every job passed: verify, retag, release, deploy, apk, publish. Backend, frontend and Keycloak pods healthy; the migration `20261102001` applied at start-up; all 62 existing counts were backfilled to IGDB.
+- **The key was not on the cluster.** The owner's secret edit (HANDOFF-37) had not reached git, so rc27 started with "TheGamesDB not configured" and the source was idle: this is also the SC-005 proof (the backend started normally, no lookups, the 62 counts untouched, the Sources page said "not configured"). With the owner's yes the key was then added to the live `jordylab-secrets` from the owner's local `.env` (never printed) and the backend restarted. The edit reached git later in PR 153; until a release deploys it, the live patch is the only source of the key.
+- **SC-001:** after the restart pass and the bulk "Refresh game data" run (DATA run **succeeded, 507 of 507 games, 0 failed**), 2 of 56 local-multiplayer console games have no count (3.6 %): Mario Party 7 and PlayStation All-Stars Battle Royale, both listed on the Sources page as "entries disagree". 13 console games were filled.
+- **SC-002:** all 13 stored counts were re-queried from TheGamesDB and equal the source's own field (13 of 13); the detail page shows "up to 4 players · TheGamesDB" next to "Multiplayer data: IGDB" and the source line "player count from TheGamesDB" (Mario Party 6). Real-world check by the owner still advisable: Ratchet & Clank: Up Your Arsenal is stored as 4, which looks high for its offline play.
+- **SC-003:** Mario Party 7 (source entries 7, 7 and 4) stays unknown.
+- **SC-004:** LibBot, "What can we play with 4 people?": names Mario Party 6 as a 4-player pick and says "For 71 more games the player count isn't known yet" (85 before the feature, at rc24); the note still appears.
+- **SC-006:** about 16 lookups at the restart pass (the 15 console games and one more) and about 3 in the bulk run; the monthly allowance stood at 931 of 1,000 afterwards, including the author's own checks.
+- **SC-007:** 0 rows where a count and its source disagree; 0 lines containing the key or `apikey` in the live backend log (82 lines read after the restart); counts by source: IGDB 62, TheGamesDB 13.
+- **SC-008:** Steam games unchanged: 29 stay unknown, "Steam games (no source has a count)".
+
 ## Still to do
 
-- T018 once the owner has a scanned library on the dev stack (or skip in favour of the production check).
-- T047 after the release: quickstart §3 on production, then record SC-001 to SC-007 here.
-- T048: update the BUG-077 entry with the measured result.
+- The key in git: PR 153 adds it to the sealed secrets; a release after it merges (`v0.0.1-rc28`) makes the deploy apply it, so the live patch is no longer needed.
+- T018 (local run) was skipped: the dev database has no scanned library; the production check above replaces it.
