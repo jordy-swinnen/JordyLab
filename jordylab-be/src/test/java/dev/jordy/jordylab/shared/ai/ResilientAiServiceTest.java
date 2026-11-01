@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.shared.ai;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.constraints.Min;
@@ -98,7 +99,8 @@ class ResilientAiServiceTest {
     private void serviceWith(AiProperties properties) {
         healthCache = new ProviderHealthCache(properties, CLOCK);
         service = new ResilientAiService(properties, healthCache, modelResolver, gatewayChatModel, fallbackChatModel,
-                embeddingModel, VALIDATOR, eventPublisher, meterRegistry, CLOCK);
+                embeddingModel, VALIDATOR, eventPublisher, meterRegistry, CLOCK,
+                new AiTracing(ObservationRegistry.NOOP, new LangfuseProperties(null, null, null, false)));
     }
 
     @AfterEach

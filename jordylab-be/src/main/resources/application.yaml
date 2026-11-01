@@ -81,6 +81,24 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  tracing:
+    sampling:
+      probability: 1.0
+    export:
+      otlp:
+        # The exporter is ours (LangfuseTracingConfiguration, AI spans only); the default one would post to localhost.
+        enabled: false
+  opentelemetry:
+    resource-attributes:
+      "[deployment.environment.name]": ${LANGFUSE_ENVIRONMENT:local}
+
+# AI traces go to Langfuse (OpenTelemetry). No keys, no export. Prompts and answers are only added to the traces with
+# LANGFUSE_CAPTURE_CONTENT=true (see shared/ai/AGENTS.md).
+langfuse:
+  public-key: ${LANGFUSE_PUBLIC_KEY:}
+  secret-key: ${LANGFUSE_SECRET_KEY:}
+  base-url: ${LANGFUSE_BASE_URL:https://cloud.langfuse.com}
+  capture-content: ${LANGFUSE_CAPTURE_CONTENT:false}
 
 jordylab:
   ai:

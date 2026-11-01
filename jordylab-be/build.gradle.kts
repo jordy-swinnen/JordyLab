@@ -44,6 +44,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    // Langfuse tracing (AI calls only): Micrometer observations -> OpenTelemetry -> OTLP. Not spring-boot-starter-
+    // opentelemetry, which also pulls the OTLP metrics registry and would export metrics to localhost:4318.
+    implementation("org.springframework.boot:spring-boot-micrometer-tracing-opentelemetry")
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("org.springframework.boot:spring-boot-starter-webclient")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("com.rometools:rome:2.1.0")

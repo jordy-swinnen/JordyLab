@@ -32,7 +32,7 @@ class ReplayAiService extends ResilientAiService {
     private final Map<AiFeature, List<Message>> lastMessages = new EnumMap<>(AiFeature.class);
 
     ReplayAiService(JsonNode interpretation, JsonNode answer) {
-        super(null, null, null, null, null, null, null, null, null, null);
+        super(null, null, null, null, null, null, null, null, null, null, null);
         this.interpretation = interpretation;
         this.answer = answer;
     }
