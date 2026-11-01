@@ -1050,6 +1050,12 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Build and install the debug APK (`jordylab-fe/apps/jordylab-mobile`, see its README), turn fingerprint unlock on, then do the 20 sign-ins of `docs/runbook.md` §21 ("Fingerprint sign-in: no error flash"). A red message at any moment is a failure: tell me which attempt.
 - Open the library, a game page and Sources at the phone's normal width: nothing should scroll sideways; the game page should show the cover overlapping the corner of the banner like on a computer.
 
+#### HANDOFF-32: Add the Langfuse keys to the prod secrets
+- Machine: your Mac · Target env: prod secrets in git · Why you: you edit SOPS secrets in IntelliJ and the agent never sees key values.
+- 1. `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`, then add `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `LANGFUSE_BASE_URL` under `stringData` (same values as in `jordylab-be/.env`). Save and close.
+- 2. Commit (`Refs: NO-CODE`) and let the normal deploy run. `LANGFUSE_ENVIRONMENT=production` is already in the `backend-config` ConfigMap (`deploy/k8s/overlays/prod/kustomization.yaml`).
+- 3. After the deploy, trigger one AI call (for example LibBot or "Regenerate description") and check Langfuse for a `run-<feature>` trace in environment `production`. Tell me if it is missing. To also see prompts and answers there, add `LANGFUSE_CAPTURE_CONTENT=true` to the ConfigMap (your call: they hold library and portfolio data).
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.

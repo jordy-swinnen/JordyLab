@@ -3,6 +3,7 @@ package dev.jordy.jordylab.shared.ai;
 import com.anthropic.errors.AnthropicServiceException;
 import com.openai.errors.OpenAIServiceException;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.Observation;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +77,7 @@ public class ResilientAiService {
     private final ApplicationEventPublisher eventPublisher;
     private final MeterRegistry meterRegistry;
     private final Clock clock;
+    private final AiTracing aiTracing;
     // One virtual thread per call: cheap, so an SDK call that ignores the timeout's interrupt can't pile up platform
     // threads; future.cancel(true) still interrupts it.
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -131,6 +133,19 @@ public class ResilientAiService {
     }
 
     private <T> Execution<T> execute(AiFeature feature, List<Message> messages, StructuredVerifier<T> verifier) {
+        Observation observation = aiTracing.start(feature, messages);
+        try (Observation.Scope ignored = observation.openScope()) {
+            Execution<T> execution = executeOnProviders(feature, messages, verifier);
+            aiTracing.finish(observation, execution.call());
+
+            return execution;
+        } finally {
+            observation.stop();
+        }
+    }
+
+    private <T> Execution<T> executeOnProviders(AiFeature feature, List<Message> messages,
+            StructuredVerifier<T> verifier) {
         Execution<T> execution = tryGateway(feature, messages, verifier);
         if (!execution.call().success()) {
             String fallbackModel = properties.fallback().model();
@@ -196,7 +211,7 @@ public class ResilientAiService {
             ChatOptions options, List<Message> messages) {
         Prompt prompt = new Prompt(messages, options);
         try {
-            ChatResponse response = callWithTimeout(() -> chatModel.call(prompt));
+            ChatResponse response = callWithTimeout(aiTracing.inCurrentTrace(() -> chatModel.call(prompt)));
             String content = extractText(response);
             if (!StringUtils.hasText(content)) {
                 log.error("AI call returned no text: feature={}, provider={}, model={}", feature.key(), provider,
@@ -226,7 +241,8 @@ public class ResilientAiService {
             return AiEmbeddingResult.failure(GATEWAY, model, ProviderFailureReason.UNREACHABLE);
         }
         try {
-            EmbeddingResponse response = callWithTimeout(() -> embeddingModel.embedForResponse(texts));
+            EmbeddingResponse response = callWithTimeout(
+                    aiTracing.inCurrentTrace(() -> embeddingModel.embedForResponse(texts)));
             List<float[]> vectors = response.getResults().stream()
                     .sorted(Comparator.comparing(Embedding::getIndex))
                     .map(Embedding::getOutput)
