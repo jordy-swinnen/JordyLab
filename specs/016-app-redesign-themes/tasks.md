@@ -209,7 +209,7 @@
 - [X] T090 Update `jordylab-fe/AGENTS.md` with a short theme section (tokens live in `jordylab-fe/themes.js`, no raw colours, the boot script), and add a note at the top of `specs/013-gamecatalog-refinement-ai/ui-design.md` that its colour and filter direction is superseded by spec 016.
 - [X] T091 Write `specs/016-app-redesign-themes/checklists/visual-review.md`: compare each screen with the design system on desktop and phone, the Library in all six themes; record each difference and its agreement (SC-008). Also compare the number of steps to find a game and set a mark before and after the redesign, on desktop and on a phone (SC-007).
 - [X] T092 Write `jordylab-fe/apps/jordylab-e2e/src/edge-cases.spec.ts` for the spec's edge cases: with the font files blocked (route abort) the Library and Settings still show readable text and no sideways scroll; with `forcedColors: 'active'` emulated, buttons, links and the theme picker stay visible and identifiable; at 320 pixels wide the Library and Settings do not scroll sideways.
-- [ ] T093 Run the unit tests and lint of every touched project, `jordylab-fe/tools/check-lint-ownership.sh`, and `jordylab-fe/tools/check-theme-tokens.mjs`; check that both new libraries meet the 80 percent line-coverage gate; fix every finding. Then record the closing commits on Linear JOR-47 (cover-plate contrast, closed by this work) and JOR-55.
+- [X] T093 Run the unit tests and lint of every touched project, `jordylab-fe/tools/check-lint-ownership.sh`, and `jordylab-fe/tools/check-theme-tokens.mjs`; check that both new libraries meet the 80 percent line-coverage gate; fix every finding. Then record the closing commits on Linear JOR-47 (cover-plate contrast, closed by this work) and JOR-55.
 
 ---
 
