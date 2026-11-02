@@ -147,7 +147,7 @@ gamecatalog/
         ├── ConversationStore.java                 changed: forget(userSubject)
         └── LibBotConversationCleanupListener.java new: UserDeleted → forget
 
-resources/db/migration/V20261102001__settings_guest_chat_limit.sql    new
+resources/db/migration/V20261102003__settings_guest_chat_limit.sql    new
 ```
 
 Backend tests, `jordylab-be/src/test/java/dev/jordy/jordylab/`:
@@ -220,7 +220,7 @@ The order of the streams is a dependency order. Stream A must reach production b
 
 **B. Settings backend**
 
-- B1. Migration `V20261102001__settings_guest_chat_limit.sql` and the `GuestChatLimit` entity with its builder and test.
+- B1. Migration `V20261102003__settings_guest_chat_limit.sql` and the `GuestChatLimit` entity with its builder and test.
 - B2. `GuestChatLimitService` and the resolver; route `GuestChatQuotaService` and `GuestChatLimitFilter` through it.
   Saved zero must not be coerced to 20.
 - B3. `ManagedApp` and `AppAccessService`: grant, remove, default set, validation (grantable, approved, own account).

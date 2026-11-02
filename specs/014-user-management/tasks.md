@@ -45,7 +45,7 @@ feature are deployed.
 
 **Purpose**: the table, the entity, the app registry, the events, the shared exceptions and the frontend models.
 
-- [x] T007 Create `jordylab-be/src/main/resources/db/migration/V20261102001__settings_guest_chat_limit.sql`: `CREATE SCHEMA IF NOT EXISTS settings`, `SET search_path TO settings`, table `guest_chat_limit` per `data-model.md` §1, `CHECK (daily_limit >= 0)`, `UNIQUE (user_subject)`, and a partial unique index allowing at most one row where `user_subject IS NULL`
+- [x] T007 Create `jordylab-be/src/main/resources/db/migration/V20261102003__settings_guest_chat_limit.sql`: `CREATE SCHEMA IF NOT EXISTS settings`, `SET search_path TO settings`, table `guest_chat_limit` per `data-model.md` §1, `CHECK (daily_limit >= 0)`, `UNIQUE (user_subject)`, and a partial unique index allowing at most one row where `user_subject IS NULL`
 - [x] T008 Create entity `jordylab-be/src/main/java/dev/jordy/jordylab/settings/domain/GuestChatLimit.java` in the canonical entity structure: UUID id, nullable `userSubject` (null means the saved default), `dailyLimit` int, `updatedBySubject`; preconditions only in `build()`: limit at least 0, subject for updated-by present
 - [x] T009 [P] Create test builder `jordylab-be/src/test/java/dev/jordy/jordylab/settings/domain/GuestChatLimitTestBuilder.java` (`@UtilityClass`, fixed `DEFAULT_*` constants, `aDefaultGuestChatLimit()` and `aGuestChatLimit()`)
 - [x] T010 Create `jordylab-be/src/test/java/dev/jordy/jordylab/settings/domain/GuestChatLimitTest.java`: builds with every field, default row with null subject, negative limit rejected, blank updated-by rejected, `EqualsVerifier` with the three standard suppressions (depends on T008, T009)
@@ -258,7 +258,7 @@ them is deployed (plan, work streams A and F).
 - [x] T115 Set `accessTokenLifespan` to 60 on the live realm (`kcadm.sh update realms/jordylab -s accessTokenLifespan=60`), only after the owner's sign-off. Command recorded in `deploy/keycloak/README.md`
 - [x] T116 Record T113 to T115 in the changes table of `deploy/keycloak/README.md`, dated, with the commands used. Mirror in the realm files already changed in Phase 1
 - [x] T117 Check the live realm against quickstart section 4 (`specs/014-user-management/quickstart.md`) before any backend deploy
-- [ ] T118 Deploy the backend (`jordylab-be/src/main/resources/db/migration/V20261102001__settings_guest_chat_limit.sql`, `jordylab-be/src/main/java/dev/jordy/jordylab/shared/config/SecurityConfig.java`, settings and gamecatalog changes). Only after T117
+- [ ] T118 Deploy the backend (`jordylab-be/src/main/resources/db/migration/V20261102003__settings_guest_chat_limit.sql`, `jordylab-be/src/main/java/dev/jordy/jordylab/shared/config/SecurityConfig.java`, settings and gamecatalog changes). Only after T117
 - [ ] T119 Deploy the frontend (`jordylab-fe/apps/jordylab/src/app/app.routes.ts`, no-apps route, guards, navigation, Users panel). Only after T118
 - [ ] T120 Run the post-deploy checks from quickstart section 4, step 6 (`specs/014-user-management/quickstart.md`): a current guest still sees the catalog; a pending user sees "awaiting approval"; a guest is refused FNA; the panel loads; one grant round trip works
 

@@ -11,7 +11,8 @@ export const gamecatalogRoutes: Route[] = [
   {
     path: '',
     component: GamecatalogShellComponent,
-    canActivate: [roleGuard('admin', 'guest')],
+    // Spec 014: the Game Catalog needs the per-app grant, not just approval.
+    canActivate: [roleGuard('admin', 'app-gamecatalog')],
     children: [
       {
         path: 'grid',
