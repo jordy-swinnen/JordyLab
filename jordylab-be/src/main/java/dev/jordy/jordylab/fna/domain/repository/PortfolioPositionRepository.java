@@ -12,7 +12,7 @@ public interface PortfolioPositionRepository extends JpaRepository<PortfolioPosi
     /** Every tracked ticker, held or wishlisted; the price refresh walks all of them. */
     List<PortfolioPosition> findAllByOrderByTickerAsc();
 
-    /** Held positions only (spec 015: a null share count marks a wishlist item). */
+    /** Held positions only (spec 016: a null share count marks a wishlist item). */
     List<PortfolioPosition> findAllByShareCountIsNotNullOrderByTickerAsc();
 
     /** Wishlist items only. */

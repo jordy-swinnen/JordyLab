@@ -49,7 +49,7 @@ public class FnaController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Wishlist stocks (spec 015): tickers the investor is considering but does not own. */
+    /** Wishlist stocks (spec 016): tickers the investor is considering but does not own. */
     @GetMapping("/wishlist")
     public ResponseEntity<List<WishlistItemDto>> getWishlist() {
         return ResponseEntity.ok(fnaService.getWishlistItems());

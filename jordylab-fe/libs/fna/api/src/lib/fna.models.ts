@@ -18,7 +18,7 @@ export interface PortfolioPositionRow extends PortfolioPosition {
   value: number | null;
 }
 
-/** A stock the investor is considering but does not hold: no share count, only a price (spec 015). */
+/** A stock the investor is considering but does not hold: no share count, only a price (spec 016). */
 export interface WishlistItem {
   id: string;
   ticker: string;

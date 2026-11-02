@@ -23,7 +23,7 @@ public class FnaExceptionHandler {
         return ResponseEntity.badRequest().body(new ErrorBody("ARTICLE_ALREADY_QUEUED"));
     }
 
-    /** A ticker is held or wishlisted, never both (spec 015 FR-003). */
+    /** A ticker is held or wishlisted, never both (spec 016 FR-003). */
     @ExceptionHandler(TickerAlreadyHeldException.class)
     public ResponseEntity<ErrorBody> handleTickerAlreadyHeld(TickerAlreadyHeldException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorBody("TICKER_ALREADY_HELD"));

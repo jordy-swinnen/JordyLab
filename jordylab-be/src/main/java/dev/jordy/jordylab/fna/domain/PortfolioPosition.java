@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A tracked ticker. A position with a share count is held; a position without one is on the wishlist (spec 015) — the
+ * A tracked ticker. A position with a share count is held; a position without one is on the wishlist (spec 016) — the
  * same row carries both, so promoting a wishlist item keeps the resolved price symbol and the cached price.
  */
 @Entity
