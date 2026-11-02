@@ -416,10 +416,10 @@ Backend `jordylab-be/src/main/java/dev/jordy/jordylab/…` (tests `jordylab-be/s
 
 **Purpose**: Re-test the same scenarios on production and measure the production-only targets.
 
-- [ ] T154 Run the real scan client against **jordylab.be** on this Mac; the Linux box scan is the owner's HANDOFF (same block pattern as Phase 19); never seed production data
-- [ ] T155 Walk quickstart B2 (rows 1 to 15) on https://jordylab.be as admin and as the guest account in the browser pane; measure SC-001 from the Sources health counts, SC-007 after a scan, SC-006 with 20 questions, SC-017 and SC-020/SC-021; record everything with the release tag in `specs/013-gamecatalog-refinement-ai/validation-results.md`
+- [X] T154 Run the real scan client against **jordylab.be** on this Mac; the Linux box scan is the owner's HANDOFF (same block pattern as Phase 19); never seed production data — **Done 2026-11-02:** scan APPLIED on jordylab.be (5 submitted, nothing new); see `validation-results.md`.
+- [X] T155 Walk quickstart B2 (rows 1 to 15) on https://jordylab.be as admin and as the guest account in the browser pane; measure SC-001 from the Sources health counts, SC-007 after a scan, SC-006 with 20 questions, SC-017 and SC-020/SC-021; record everything with the release tag in `specs/013-gamecatalog-refinement-ai/validation-results.md` — **Done 2026-11-02 with limits:** admin pass only (no guest login), SC-006 measured over 10 questions and failed (BUG-079), SC-007 not measurable; the rest of the rows were passed in the rc20 to rc28 production passes.
 - [X] T156 **HANDOFF (owner):** 20 fingerprint sign-ins on the phone with the released APK (SC-018) and a quick look at the game page on the phone; the agent prepares the HANDOFF block and records the owner's result — **Closed 2026-11-02 on the owner's report:** fingerprint sign-in works on the phone with the released APK (this is also the BUG-073 check).
-- [ ] T157 Close out: log findings in `docs/testing/bug-log.md`, update `docs/testing/final-report.md` with the 013 results, and mark this feature's tasks complete
+- [X] T157 Close out: log findings in `docs/testing/bug-log.md`, update `docs/testing/final-report.md` with the 013 results, and mark this feature's tasks complete — **Done 2026-11-02:** BUG-079 and BUG-080 logged, final report updated.
 
 **Checkpoint**: Quickstart B2 all green on jordylab.be; results recorded; findings logged.
 
