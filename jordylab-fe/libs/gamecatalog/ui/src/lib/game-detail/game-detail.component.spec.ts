@@ -253,6 +253,17 @@ describe('GameDetailComponent', () => {
     expect(spectator.query('.text-destructive')).toHaveText('Failed to load the game.');
   });
 
+  it('loads the game again when the person taps Try again after a failure', () => {
+    loading.set(false);
+    error.set('Failed to load the game.');
+    spectator.detectChanges();
+    load.mockClear();
+
+    spectator.click(spectator.query('lib-error-state button') as HTMLButtonElement);
+
+    expect(load).toHaveBeenCalledWith('1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
+  });
+
   it('shows skeletons while loading', () => {
     expect(spectator.queryAll('hlm-skeleton').length).toBeGreaterThan(0);
   });

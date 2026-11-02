@@ -90,7 +90,7 @@
                   } @else {
                     <span
                       class="h-[22px] w-[22px] shrink-0 rounded-full"
-                      [style.background]="palette(reference.title).background"
+                      [class]="plateClass(reference.title)"
                       aria-hidden="true"
                     ></span>
                   }
@@ -175,7 +175,7 @@
         } @else {
           <span
             class="h-[22px] w-[22px] shrink-0 rounded-full"
-            [style.background]="palette(attached.title).background"
+            [class]="plateClass(attached.title)"
             aria-hidden="true"
           ></span>
         }

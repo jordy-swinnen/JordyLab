@@ -179,7 +179,7 @@
             @if (result.coverUrl) {
               <img [src]="result.coverUrl" alt="" class="h-16 w-12 shrink-0 rounded-lg object-cover" />
             } @else {
-              <span class="h-16 w-12 shrink-0 rounded-lg" [style.background]="palette(result.title).background" aria-hidden="true"></span>
+              <span class="h-16 w-12 shrink-0 rounded-lg" [class]="plateClass(result.title)" aria-hidden="true"></span>
             }
             <div class="min-w-0 flex-1">
               <div class="truncate font-semibold">{{ result.title }}</div>
@@ -262,8 +262,7 @@
                 } @else {
                   <span
                     class="flex h-16 w-12 shrink-0 items-center justify-center rounded-lg font-display text-sm font-bold"
-                    [style.background]="palette(game.title).background"
-                    [style.color]="palette(game.title).color"
+                    [class]="plateClass(game.title)"
                     aria-hidden="true"
                     >{{ initials(game.title) }}</span
                   >

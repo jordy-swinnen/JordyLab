@@ -9,7 +9,7 @@ import { SOURCE_LABELS } from '../source-labels';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'inline-flex items-center whitespace-nowrap font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-secondary-foreground',
+      'inline-flex items-center whitespace-nowrap text-[12.5px] text-muted-foreground',
   },
   template: '{{ label() }}',
 })

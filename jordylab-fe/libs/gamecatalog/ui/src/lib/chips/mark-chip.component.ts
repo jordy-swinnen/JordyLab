@@ -5,15 +5,15 @@ const BASE =
   'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none';
 
 const TINTS: Record<MarkType, string> = {
-  WANT_TO_PLAY: 'bg-[#A99BFF]/15 text-[#A99BFF]',
-  PLAYED_LIKED: 'bg-[#FF8FB1]/15 text-[#FF8FB1]',
-  PLAYED_DISLIKED: 'bg-[#98A2B3]/15 text-[#98A2B3]',
+  WANT_TO_PLAY: 'bg-mark-want/15 text-mark-want',
+  PLAYED_LIKED: 'bg-mark-liked/15 text-mark-liked',
+  PLAYED_DISLIKED: 'bg-mark-disliked/15 text-mark-disliked',
 };
 
 const OUTLINES: Record<MarkType, string> = {
-  WANT_TO_PLAY: 'ring-[1.5px] ring-inset ring-[#A99BFF]',
-  PLAYED_LIKED: 'ring-[1.5px] ring-inset ring-[#FF8FB1]',
-  PLAYED_DISLIKED: 'ring-[1.5px] ring-inset ring-[#98A2B3]',
+  WANT_TO_PLAY: 'ring-[1.5px] ring-inset ring-mark-want',
+  PLAYED_LIKED: 'ring-[1.5px] ring-inset ring-mark-liked',
+  PLAYED_DISLIKED: 'ring-[1.5px] ring-inset ring-mark-disliked',
 };
 
 /**
@@ -53,7 +53,7 @@ const OUTLINES: Record<MarkType, string> = {
       <span aria-hidden="true">{{ label() }}</span>
     }
     @if (count() !== null) {
-      <span class="font-mono" aria-hidden="true">{{ count() }}</span>
+      <span class="tabular-nums" aria-hidden="true">{{ count() }}</span>
     }
   `,
 })

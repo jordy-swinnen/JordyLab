@@ -115,6 +115,9 @@ function ownNameColors() {
 const sansStack = ["'Archivo'", 'system-ui', 'sans-serif'];
 
 const extend = {
+  boxShadow: {
+    modal: '0 30px 80px -20px #000000',
+  },
   fontFamily: {
     display: sansStack,
     sans: sansStack,

@@ -9,7 +9,7 @@ import {
   LibBotReference,
   LibBotStage,
 } from '@jordylab-fe/gamecatalog/api';
-import { coverPalette } from '../cover';
+import { coverPlateClass } from '../cover';
 import { SparkleIconComponent } from '../chips/sparkle-icon.component';
 
 interface StageStep {
@@ -48,7 +48,7 @@ export class LibBotViewComponent {
   removeAttachment = output<void>();
 
   protected readonly questionInput = viewChild<ElementRef<HTMLInputElement>>('questionInput');
-  protected readonly palette = coverPalette;
+  protected readonly plateClass = coverPlateClass;
   protected readonly coverUrl = coverUrl;
 
   protected readonly steps = computed<StageStep[]>(() => {

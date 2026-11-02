@@ -8,7 +8,7 @@ import {
   KnownConsole,
 } from '@jordylab-fe/gamecatalog/api';
 import { PlatformChipComponent } from '../chips/platform-chip.component';
-import { coverInitials, coverPalette } from '../cover';
+import { coverInitials, coverPlateClass } from '../cover';
 
 export interface ConsoleRemoval {
   console: GameConsole;
@@ -52,7 +52,7 @@ export class ConsolesViewComponent {
 
   protected readonly renamingId = signal<string | null>(null);
   protected readonly relinkingGameId = signal<string | null>(null);
-  protected readonly palette = coverPalette;
+  protected readonly plateClass = coverPlateClass;
   protected readonly initials = coverInitials;
 
   protected selected(): GameConsole | null {

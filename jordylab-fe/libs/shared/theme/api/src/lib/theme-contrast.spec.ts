@@ -25,6 +25,14 @@ function contrastRatio(foregroundHex: string, backgroundHex: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function blendHex(foregroundHex: string, backgroundHex: string, opacity: number): string {
+  const foreground = channelsOfHex(foregroundHex);
+  const background = channelsOfHex(backgroundHex);
+  const channels = foreground.map((channel, index) => Math.round(channel * opacity + background[index] * (1 - opacity)));
+
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+}
+
 function channelsOfTriplet(triplet: string): Channels {
   const [hueText, saturationText, lightnessText] = triplet.split(' ');
   const hue = parseFloat(hueText);
@@ -78,6 +86,15 @@ describe('themes', () => {
           const ratio = contrastRatio(theme.tokens[foreground], theme.tokens[background]);
 
           expect(ratio, `${foreground} ${theme.tokens[foreground]} on ${background} ${theme.tokens[background]}`).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+
+      for (const mark of ['mark-want', 'mark-liked', 'mark-disliked']) {
+        it(`shows ${mark} on its 15% tint over surface at 4.5:1 or better`, () => {
+          const tint = blendHex(theme.tokens[mark], theme.tokens['surface'], 0.15);
+          const ratio = contrastRatio(theme.tokens[mark], tint);
+
+          expect(ratio, `${mark} ${theme.tokens[mark]} on tint ${tint}`).toBeGreaterThanOrEqual(4.5);
         });
       }
 

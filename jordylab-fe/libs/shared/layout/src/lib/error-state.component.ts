@@ -13,7 +13,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
       class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-destructive px-[18px] py-4 text-[14.5px] text-destructive"
     >
       <span>{{ message() }}</span>
-      <button hlmBtn variant="outline" type="button" class="h-10 rounded-[10px] px-4 text-sm font-semibold" (click)="retry.emit()">
+      <button hlmBtn variant="outline" type="button" class="h-11 rounded-[10px] px-4 text-sm font-semibold" (click)="retry.emit()">
         Try again
       </button>
     </div>

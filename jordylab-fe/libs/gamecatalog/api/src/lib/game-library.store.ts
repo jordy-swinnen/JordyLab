@@ -444,6 +444,11 @@ export class GameLibraryStore {
     });
   }
 
+  /** Asks the server again with the filters as they are, for the "Try again" after a failed load. */
+  reload(): void {
+    this.#queryTrigger.next();
+  }
+
   goToPage(page: number): void {
     this.#filters.update((filters) => ({ ...filters, page }));
     this.#queryTrigger.next();

@@ -115,6 +115,10 @@ export class GameGridComponent {
     this.#marks.dismissError();
   }
 
+  onReload(): void {
+    this.#store.reload();
+  }
+
   onPageChanged(page: number): void {
     this.#store.goToPage(page);
   }
