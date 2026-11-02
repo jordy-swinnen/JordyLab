@@ -1118,7 +1118,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending (after the release)
 
 ### BUG-073: A fingerprint sign-in flashes a red "session could not be refreshed" message
-- Status: FIXED-LOCAL (spec 013); owner's 20 phone sign-ins pending (HANDOFF)
+- Status: VERIFIED-PROD (2026-11-02, owner report on the released APK)
 - Severity: S3
 - Area/spec: frontend shared auth / 013 US14
 - Env found: owner testing the Android app, 2026-10
@@ -1130,7 +1130,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: while the unlock was running a request asked `AuthService.getToken()`; there was no session yet, the refresh failed, and the service reported a dead session and navigated to `/login`. `BiometricUnlockService.unlock()` also kept the previous attempt's failure on screen.
 - Fix (PR / commit / tag): `getToken()` returns `null` quietly until a session has existed; `unlock()` clears stale failures first (`clearNativeFailure()`).
 - Regression test added: `auth.service.spec.ts` and `biometric-unlock.service.spec.ts` (failed first, then green).
-- Verified on prod: pending (owner, 20 sign-ins)
+- Verified on prod: 2026-11-02, owner: fingerprint sign-in works on the phone with the released APK (the 20-sign-in check was reported as passing; the count itself was not recorded).
 
 ### BUG-074: Two scenario test classes shared one stopped database container
 - Status: FIXED-LOCAL (spec 013)
@@ -1195,3 +1195,19 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod (2026-11-01, `v0.0.1-rc24`, owner's admin session, bulk "Refresh game data"): `multiplayer_source` went from STEAM 332 / UNKNOWN 112 / IGDB 65 to STEAM 333 / UNKNOWN 45 / IGDB 131, so the backlog pass and the title matching work. `max_local_players` is still null for 447 of 509 games; 44 of the 105 local-multiplayer games have no count. A LibBot question for 4 players still ends with "For 85 more games the player count isn't known yet". Not fully fixed: IGDB and Steam have no counts for these games. Next: the multiplayer-player-counts draft (more sources, console ROMs first; Steam games are an open question). Close this bug once that ships and a party-size question names far fewer unknown games.
 - Shipped 2026-11-01 (`v0.0.1-rc27`, spec 014): the console games are filled from TheGamesDB: 13 of the 15 now have a count, Mario Party 7 and PlayStation All-Stars stay unknown (entries disagree), so 2 of 56 local-multiplayer console games have no count. The 4-player LibBot question now says "71 more games" (was 85). The 29 Steam games still have no count: the hand-set count (curated-player-counts draft) is the follow-up. Status: partly fixed; close it when the Steam games have counts.
 - Source probe (2026-11-01): of the 44 games without a count, 15 are console games and 29 are Steam games. TheGamesDB matched all 15 console games with a count (13 where its entries agree, 2 where they disagree, so those stay unknown) and is unreliable for Steam games (nine matched games say 1 player). ScreenScraper (terms do not cover a personal app), LaunchBox, the libretro max-users lists, Wikidata and Co-Optimus were dropped; MobyGames refuses automated reads. The multiplayer-player-counts draft now holds the measured table; the Steam games and source errors move to the curated-player-counts draft. Still open.
+
+### BUG-078: Two extra TCP ports (31460, 32531) are public on the VPS besides 22, 80 and 443
+- Status: OPEN
+- Severity: S3 (a hardening gap, no secret or application reachable through the ports; both answer with a plain 404)
+- Area/spec: prod network / 008 (FR-019, SC-008, T074)
+- Env found: prod, 2026-11-02, owner-approved TCP connect scan from the agent's Mac
+- Coverage rows: 008-FR-019, 008-SC-008
+- Steps to reproduce:
+  1. `nc -z -w 3 57.129.163.110 31460` and `... 32531` from outside the VPS (or a rate-limited connect scan of 1 to 1024 and 30000 to 32767; a fast scan is dropped by the VPS and gives wrong results).
+  2. `curl -I http://57.129.163.110:31460/` and `curl -skI https://57.129.163.110:32531/`.
+- Expected (cite spec/story): 008 FR-019 / SC-008 — only 22 (restricted), 80 and 443 are public; `docs/runbook.md` §2 sets `ufw` to deny everything else.
+- Actual (logs/screenshot, secrets redacted): 22, 80, 443, **31460** (HTTP 404, `text/plain`, `X-Content-Type-Options: nosniff`) and **32531** (HTTP/2 404) accept connections. Sending `Host: jordylab.be` (or that SNI) gets the same 404, so no application, Keycloak or actuator content is reachable through them. 6443 is not reachable. UDP (flannel 8472, Tailscale 41641) was not scanned.
+- Root cause: probable, not yet confirmed on the host — the Traefik `LoadBalancer` service is allocated NodePorts (31460/32531 look like its `web`/`websecure` NodePorts) and kube-proxy publishes NodePorts on the node address; `ufw` filters the host's INPUT chain, not forwarded NodePort traffic.
+- Fix (PR / commit / tag): to decide with the owner (cluster change): `allocateLoadBalancerNodePorts: false` on the Traefik service via its HelmChartConfig (k3s ServiceLB does not need them), or a rule that drops the 30000–32767 range from the public interface; then rerun the scan.
+- Regression test added: none yet; the port scan of `specs/008-ovh-k8s-deployment/quickstart.md` ("Security check") is the check, rerun after the fix.
+- Verified on prod: pending

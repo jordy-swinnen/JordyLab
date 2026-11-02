@@ -51,6 +51,10 @@ with a ticket.
   - `Fixes JOR-23`, `Closes`, `Resolves`, `Completes`, `Implements`: the ticket moves to *Done* when the PR merges. Use
     only on the PR that finishes the ticket.
   - `Refs JOR-23`, `Part of JOR-23`, `Towards JOR-23`: links without completing. Use for partial work.
+  - **A key alone completes the ticket.** A key in the PR title or in the branch name links the PR, and merging moves
+    the ticket to *Done* (PR #159 did this to JOR-23 by mistake). A PR that does not finish its ticket must say
+    `Part of JOR-n` (or `Refs JOR-n`) in the description; Linear then leaves the ticket open (PR #160 did this for
+    JOR-15 and JOR-22). Put the key of the ticket the PR finishes in the title.
   - Linear also links a PR whose **branch name** contains the key (`jordyswinnen/jor-23-…`, from Linear's "copy branch
     name"), and moves the ticket to *In Progress* when the PR opens.
 - **One pull request per spec** (spec, plan, tasks and implementation on one branch), several tickets allowed.

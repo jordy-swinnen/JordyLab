@@ -10,7 +10,7 @@
 
 ## Tickets
 
-<!-- Fixes JOR-<n>  (finishes the ticket)   |   Refs JOR-<n>  (partial work) -->
+<!-- Fixes JOR-<n>  (finishes the ticket)   |   Part of JOR-<n>  (partial work: a key alone in the title or branch completes the ticket on merge) -->
 
 ## Refs
 
