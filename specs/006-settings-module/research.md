@@ -253,11 +253,22 @@ Driven the way the app's user menu does it: an authorization request to the loca
 - **`UPDATE_PASSWORD`**: the "Update password" form (new password, confirmation, "Sign out from other devices") opened
   directly; submitting redirected back with `kc_action=UPDATE_PASSWORD&kc_action_status=success`. No re-authentication
   prompt appeared because the session had just been created; the re-authentication step belongs to older sessions.
-- **`UPDATE_EMAIL`**: the redirect came back with `kc_action_status=error` and no form, so the Update Email required
-  action is **not enabled in the local dev realm** (it is enabled in production, HANDOFF-06; BUG-011 verified there that
-  the menu reaches Keycloak and asks to re-authenticate).
-- **Not yet checked**: submitting an email change, and the email-as-username sync caveat (keycloak #13988/#16679), on a
-  realm where the action is enabled. T033 stays open for that.
+- **`UPDATE_EMAIL`**: first the redirect came back with `kc_action_status=error` and no form: the Update Email required
+  action was **not enabled in the local dev realm** (it is enabled in production, HANDOFF-06). With the owner's go-ahead
+  it was enabled on the running local realm through the admin API (`UPDATE_EMAIL` `enabled=true`). Then, for a session
+  that already existed, Keycloak asked to **re-authenticate** first ("Please re-authenticate to continue", the owner's
+  own session, not completed); for a freshly registered user the "Update email" form (new address, "Sign out from other
+  devices") opened directly, and submitting a new address redirected back with
+  `kc_action=UPDATE_EMAIL&kc_action_status=success`.
+- **Username-sync caveat** (keycloak #13988/#16679): with `registrationEmailAsUsername` on, the account's **username
+  followed the new email** after the change (checked through the admin API: username equals the new address). On
+  Keycloak 26.7.4 no workaround is needed. Email verification is off in the dev realm (`verifyEmail` unset), so the
+  address changed at once; in production check once whether the realm verifies new addresses.
+- **Left behind**: the realm export (`keycloak-realm-export.json`) does not enable the action, so a freshly imported local
+  realm shows the error status again until the action is enabled (Authentication → Required actions → Update Email, or the
+  `kcadm.sh update authentication/required-actions/UPDATE_EMAIL -r jordylab -s enabled=true` line of
+  `deploy/keycloak/README.md`).
+- The throwaway test users were deleted afterwards.
 
 ## 5. Implementation findings (from T001–T009)
 
