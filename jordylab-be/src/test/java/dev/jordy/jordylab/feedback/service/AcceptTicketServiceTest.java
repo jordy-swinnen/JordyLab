@@ -16,6 +16,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -134,6 +135,6 @@ class AcceptTicketServiceTest {
             softly.assertThat(result.getAcceptError()).isNull();
         });
         verify(linearClient).findIssue(FeedbackTicketTestBuilder.DEFAULT_TITLE);
-        verify(linearClient, never()).createIssue(ticket, isNull());
+        verify(linearClient, never()).createIssue(eq(ticket), isNull());
     }
 }
