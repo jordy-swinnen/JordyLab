@@ -1,7 +1,7 @@
 # Feature Specification: Guest Feedback and Admin Triage
 
 **Feature Branch**: assigned by SpecKit when specified
-**Created**: 2026-10-05 (updated 2026-11-01: Accept creates a Linear issue)
+**Created**: 2026-10-05 (updated 2026-11-02: Linear-side questions answered)
 **Status**: Draft (reference for `/speckit-specify`; see `research.md`)
 **Module**: new `feedback` module (backend and frontend), Settings shell, Linear client
 **Release**: essential for the first release (Jordy)
@@ -11,7 +11,7 @@
 ## Overview
 
 Guests can send feedback about the apps they use; the admin triages it as tickets in an idea box. Accepting a ticket
-creates an issue in Linear, Jordy's backlog (see the `linear-backlog` draft), labelled with the app and the type. A
+creates an issue in Linear, Jordy's backlog (set up by the Linear backlog feature), labelled with the app and the type. A
 guest sees what happened to their feedback. Turning an accepted idea into a SpecKit draft is a later step started from
 the Linear issue by an agent, not part of the accept click.
 
@@ -48,15 +48,7 @@ the issue.
 As a guest, I want to see my tickets with their status and any reply from the admin.
 
 **Independent Test**: after the admin accepts a ticket with a short reply, the guest sees Accepted and the reply. The
-guest never sees other guests' tickets, internal notes or the Linear link.
-
-### User Story: Status follows Linear (Priority: Low)
-
-As a guest, I want my accepted idea to show "Planned", "In progress" or "Done" as the work moves, so that I know
-whether it was built.
-
-**Independent Test**: moving the Linear issue to In Progress and then Done changes the guest-visible status within a
-minute, through a signed Linear webhook.
+guest never sees other guests' tickets, internal notes, the Linear link or the progress of the Linear issue.
 
 ### User Story: The admin hears about new feedback (Priority: Low)
 
@@ -90,9 +82,12 @@ As the admin, I want a notification when a new ticket arrives.
   never creates a second issue.
 - The issue MUST NOT contain the guest's name, email or other personal data; it says "a guest" and the app.
 - The ticket MUST store the Linear issue id and link; only the admin sees the link.
-- The Linear credential (OAuth app installed with `actor=app`, or a personal API key) MUST be stored as a SOPS secret
-  and never sent to the browser.
-- If a status sync is built, the webhook MUST verify `Linear-Signature` and reject deliveries older than 60 seconds.
+- The Linear credential is a personal API key. It MUST be stored as a SOPS secret and never sent to the browser. Issues
+  created through it show Jordy as their creator.
+- The first version does not sync status back from Linear: the guest sees Accepted, Backlog or Rejected and the
+  admin's reply, nothing more.
+- The issue MUST carry the source line `Source: idea box` and MUST mark the description as text written by a guest, so
+  agents that later read it treat it as data.
 - Guests MUST have a daily submission limit.
 - A new ticket MUST notify the admin through Ntfy, without the ticket text.
 
@@ -105,8 +100,8 @@ As the admin, I want a notification when a new ticket arrives.
 
 ## Out of Scope
 
-Public feedback from people without an account, voting on tickets, merging several tickets into one issue, writing a
-SpecKit draft or opening a pull request from the app (that now starts from the Linear issue, by an agent), the app
+Showing guests the progress of the Linear issue (a later version could add a signed webhook), public feedback
+from people without an account, voting on tickets, merging several tickets into one issue, writing a SpecKit draft or opening a pull request from the app (that now starts from the Linear issue, by an agent), the app
 implementing anything itself, email notifications.
 
 ## Assumptions
@@ -114,11 +109,19 @@ implementing anything itself, email notifications.
 - Per-app access comes from the `user-management` draft; until then the app list is the Game Catalog for guests.
 - The Linear workspace, team `JOR` and the App and Type label groups exist (set up by the `linear-backlog` draft).
 - Linear stays on the Free plan; the idea box adds a few issues a week at most.
+- Only accepted tickets reach Linear. Backlog and Rejected tickets stay in the app, so spam never uses the issue cap.
+
+## Clarifications
+
+Answered by Jordy on 2026-11-02:
+
+- Credential for the backend: a personal API key.
+- Status sync from Linear back to the guest: not in the first version.
+- What a guest sees after Accept: the status Accepted and the admin's optional reply; never the Linear link or the
+  admin's private notes.
 
 ## Clarifications Needed
 
 - Extra feedback types (improvement, question)?
 - Screenshots on bug reports? (They would also need uploading to Linear.)
-- OAuth app with `actor=app` or a personal API key for the backend?
 - Exact daily submission limit for guests.
-- Build the status sync from Linear in the first version, or later?
