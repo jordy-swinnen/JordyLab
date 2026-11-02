@@ -75,12 +75,17 @@ creates the project and its issues, spec 015 US7).
 
 Which Linear operations each tool can do is recorded under "Tool coverage" once it has been checked (H-01).
 
+### OpenCode: desktop app and command line
+
+The desktop app and the `opencode` command keep their own MCP sign-ins. `opencode mcp list` in a terminal says nothing
+about what the app is signed in to; check inside the app, and sign in where you will use it.
+
 ### Claude Code
 
 **If `github` shows "Authorization header is badly formatted":** the session was started from a checkout that is older than
 `main`, so it reads the old `.mcp.json` (a direct URL with a `GITHUB_PAT` header) instead of the launcher. `claude mcp list`
 names the file it read ("Location: …/.mcp.json") and warns "Missing environment variables: GITHUB_PAT". Fix: update that
-checkout to `main` (found 2026-11-02: the main checkout sat on a branch 108 commits behind). The launcher itself was
+checkout to `main` (found 2026-11-02: the main checkout sat on a branch 108 commits behind; after updating it, `github` connected). The launcher itself was
 probed with a minimal desktop-like environment (`env -i`, no Homebrew on `PATH`) and connected.
 
 The project file `.mcp.json` declares `github` and `linear`. In a fresh session approve the project servers when asked,
@@ -223,8 +228,9 @@ Seen on 2026-11-01 through the Linear connector of the Claude account (the proje
 - 2026-11-02, OpenCode (headless `opencode run`): without a Linear sign-in the capture skill loaded, said Linear was
   unavailable, named `opencode mcp auth linear` and repeated the full ticket text (the outage message passes). The
   commit rules held in a throwaway worktree: no key invented, asked once; with a key given it committed in the right
-  shape. The live capture is still open: `opencode mcp list` shows `linear` as needing authentication and
-  `~/.local/share/opencode/mcp-auth.json` holds no token for it (the sign-in was started but not finished).
+  shape. That run used the command-line `opencode`, which has no Linear sign-in; the owner uses the OpenCode desktop app,
+  which keeps its own sign-ins and where Linear and GitHub are connected (owner's report, 2026-11-02). The live capture
+  in the app is still to be run.
 
 ## Rebuild checklist
 
