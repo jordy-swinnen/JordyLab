@@ -1,6 +1,6 @@
 # Guest Feedback and Admin Triage: Data Model (Phase 1)
 
-One aggregate, one table, four enums. Column names below are the contract; the Flyway migration (`V20261102003__feedback_create_tables.sql`, schema `feedback`) implements them.
+One aggregate, one table, four enums. Column names below are the contract; the Flyway migration (`V20261103001__feedback_create_tables.sql`, schema `feedback`) implements them.
 
 ## FeedbackTicket (aggregate root)
 
