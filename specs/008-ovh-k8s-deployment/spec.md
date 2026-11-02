@@ -387,6 +387,7 @@ touching the live system; it doesn't gate ongoing operation once it has succeede
   a CI check keeps it that way.
 - **SC-008**: A public port scan of the VPS shows only 80, 443 and (restricted) SSH — 6443 is never publicly
   reachable, since CI reaches it over WireGuard/Tailscale instead. `/auth/admin` is not reachable.
+  - **Accepted deviation (owner, 2026-11-02):** the 2026-11-02 scan also found ports 31460 and 32531 open (Traefik NodePorts answering 404; logged as BUG-078). The fix is deferred and decided with the move to Docker Compose (Linear JOR-31); until then SC-008 is **not met** in the strict sense. 6443 and `/auth/admin` are unaffected.
 
 ## Assumptions
 

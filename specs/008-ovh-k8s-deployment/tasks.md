@@ -366,7 +366,7 @@ includes the VPS's own Tailscale membership (T065), not just the CI side (T034/T
   record the results — **DEFERRED**: no live cluster exists yet
   - **Progress 2026-11-02:** the public part (US1) and the security check ran today; the rest of the quickstart (secrets, approvals and rollback, backups, local setup) is covered by the production campaign of spec 011. Left open until the owner confirms that is enough.
 - [X] T074 Final security review: confirm a public port scan matches FR-019/SC-008 exactly (only 22/80/443 public,
-  6443 never public) — **DEFERRED**: no live VPS exists yet
+  6443 never public) — **Closed as a waiver 2026-11-02** (acceptance not met, see below and the accepted deviation in `spec.md`)
   - **Result 2026-11-02:** the port scan does not match FR-019 / SC-008 exactly: besides 22, 80 and 443 the ports **31460** and **32531** accept connections (Traefik NodePorts answering 404), logged as BUG-078. 6443 is not reachable. UDP was not scanned. **Closed the same day by the owner's decision:** the finding is tracked as BUG-078 and decided under the k3s-to-Docker-Compose ticket (JOR-31); the scan is rerun there.
 
 ---

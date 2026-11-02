@@ -170,7 +170,6 @@ Things only the owner can do. Each stays open until the owner says it is done.
 | H-01 | T007 | Claude Code: approve the project MCP servers, run `/mcp` (no argument), pick `linear` → Authenticate. OpenCode: `opencode mcp auth linear`, then `opencode mcp list`. | 2026-11-01 (owner: both connected) |
 | H-02 | T008 | Triage on: Settings → Teams → JordyLab → Triage. States: Settings → Teams → JordyLab → **Issue statuses** (listed on the team overview page; not under "Workflows & automations"); `+` in the *Backlog* group row adds a state. | 2026-11-01: Triage on by owner; *Drafted* and *Specified* added by the agent in the browser |
 | H-03 | T013 | In the existing Claude project used for tickets: Set project instructions → paste the block above. Then ask for one test ticket and a two-ticket list; repeat from the phone app inside the same project. | 2026-11-02 (owner: pasted; JOR-8 created; re-paste after the Triage fix) |
-
 | H-04 | T027 | Create the four saved views from "Saved views" above (Linear → team → Views → New view). | |
 | H-05 | T033 | Connect the GitHub integration, keep the default pull-request automation, add the commit webhook. | 2026-11-02 (owner; integration and automation checked on PRs #159, #160, #162) |
 
