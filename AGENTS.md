@@ -43,6 +43,14 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 - Switching between Claude Code and OpenCode mid-work: use the `agent-handover` skill (`/agent-handover` in both tools). The outgoing agent wraps up, writes `HANDOFF-next-agent.md` next to the spec and prints a prompt for the other tool; the incoming agent takes over from that file.
 - Drafts live in `specs/_drafts/<short-name>/` and carry **no numbers or codes** — not in folder names, titles, requirement or priority labels (use High/Medium/Low), and no references to other features by number. Drafts are written in any order; SpecKit assigns the spec number when a draft is specified. Name other features by what they are.
 
+## Backlog (Linear)
+
+Ideas and new bugs are logged in Linear (team `JOR`), not in files: use the `linear-capture` skill ("log an idea", "make
+a ticket for …", "turn this plan into tickets"; it previews, checks duplicates and creates in Triage with one App and
+one Type label). `docs/testing/bug-log.md` stays as history and the campaign's log-first rule; `BUG-###` references stay
+valid. Specs, plans and tasks stay in git. Setup, labels, states and the connector steps for the Claude apps are in
+`docs/linear.md` (spec `specs/014-linear-backlog/`).
+
 ## Commits
 
 Every commit says which SpecKit artefact it serves, as a `Refs:` git trailer in the message's last paragraph
