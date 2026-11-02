@@ -1,15 +1,12 @@
-<div class="flex flex-col gap-3.5">
-  <div class="eyebrow">Settings · Users</div>
-  <h2 class="page-title">Users</h2>
-</div>
+<lib-page-header title="Users" subtitle="Approve sign-ups and manage who can use the app." />
 
 @if (temporaryPassword(); as reveal) {
   <div
-    class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/40 bg-primary/10 p-4"
+    class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-accent-text p-4"
   >
     <div>
-      <p class="mono-label">Temporary password — shown once</p>
-      <p class="mt-1 font-mono text-base text-foreground" data-testid="temporary-password">
+      <p class="label text-accent-text">Temporary password — shown once</p>
+      <p class="mt-1 text-base font-semibold tabular-nums text-foreground" data-testid="temporary-password">
         {{ reveal.password }}
       </p>
       <p class="mt-1 text-xs text-muted-foreground">
@@ -28,42 +25,38 @@
 }
 
 @if (error()) {
-  <div
-    class="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
-  >
-    {{ error() }}
+  <div class="mt-6">
+    <lib-error-state [message]="error() ?? ''" (retry)="reload.emit()" />
   </div>
 }
 
 @if (loading()) {
-  <div class="mt-10 space-y-3" aria-label="Loading users">
-    @for (row of [1, 2, 3]; track row) {
-      <hlm-skeleton class="h-20 w-full rounded-2xl" />
-    }
+  <div class="mt-10">
+    <lib-skeleton-rows [count]="3" [height]="80" />
   </div>
 } @else {
-  <div class="mt-10 flex flex-col gap-10">
+  <div class="mt-8 flex flex-col gap-10">
     <section>
       <div class="mb-4 flex items-center gap-3">
         <h3 class="section-title">Pending</h3>
         <span hlmBadge variant="secondary">{{ pendingUsers().length }}</span>
       </div>
       @if (pendingUsers().length === 0) {
-        <p class="text-sm text-muted-foreground">No pending sign-ups.</p>
+        <p class="text-sm text-muted-foreground">No one is waiting for approval.</p>
       } @else {
         <div class="space-y-3">
           @for (user of pendingUsers(); track user.id) {
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 font-mono text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">
                   signed up {{ user.createdAt | date: 'MMM d, h:mm a' }}
                 </p>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="default"
                   [disabled]="actioningId() === user.id"
                   (click)="approve.emit(user.id)"
@@ -72,7 +65,7 @@
                   Approve
                 </button>
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="outline"
                   [disabled]="actioningId() === user.id"
                   (click)="reject.emit(user.id)"
@@ -100,11 +93,11 @@
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 font-mono text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="outline"
                   [disabled]="actioningId() === user.id"
                   (click)="resetPassword.emit(user.id)"
@@ -113,7 +106,7 @@
                   Reset password
                 </button>
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="outline"
                   [disabled]="actioningId() === user.id"
                   (click)="revoke.emit(user.id)"
@@ -141,10 +134,10 @@
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 font-mono text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
               </div>
               <button
-                hlmBtn
+                hlmBtn class="h-11"
                 variant="outline"
                 [disabled]="actioningId() === user.id"
                 (click)="approve.emit(user.id)"

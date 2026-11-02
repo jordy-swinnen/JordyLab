@@ -1,29 +1,19 @@
-<div class="flex flex-wrap items-end justify-between gap-6">
-  <div class="flex flex-col gap-3.5">
-    <div class="eyebrow">
-      FNA ·
-      <span class="uppercase">
-        {{ positions().length }}
-        {{ positions().length === 1 ? 'position' : 'positions' }}
-      </span>
-    </div>
-    <h2 class="page-title">Portfolio</h2>
-  </div>
+<lib-page-header title="Portfolio" [subtitle]="positions().length + (positions().length === 1 ? ' position' : ' positions')">
   @if (hasAnyPrices()) {
     <div class="text-right">
-      <div class="mono-label">Total worth</div>
+      <div class="label">Total worth</div>
       <p
-        class="mt-2 font-mono text-[clamp(1.9rem,3.2vw,2.75rem)] font-medium tracking-[-0.04em] tabular-nums text-primary"
+        class="mt-1 text-[clamp(1.75rem,3.2vw,2.5rem)] font-bold tracking-[-0.03em] tabular-nums text-accent-text"
         data-testid="total-worth"
       >
         €{{ totalWorth() | number: '1.2-2' }}
       </p>
     </div>
   }
-</div>
+</lib-page-header>
 
 @if (allocation().length > 0) {
-  <div class="mt-11" aria-label="Allocation">
+  <div class="mt-8" aria-label="Allocation">
     <div class="flex h-3.5 gap-[3px] overflow-hidden rounded-full">
       @for (segment of allocation(); track segment.ticker) {
         <div
@@ -34,7 +24,7 @@
       }
     </div>
     <ul
-      class="mt-3.5 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs text-secondary-foreground"
+      class="mt-3.5 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-secondary-foreground"
     >
       @for (segment of allocation(); track segment.ticker) {
         <li class="inline-flex items-center gap-2">
@@ -52,18 +42,29 @@
   </div>
 }
 
-<div class="panel mt-9 overflow-hidden">
+<div class="panel mt-8 overflow-hidden">
+  @if (positions().length === 0) {
+    <div class="p-4">
+      <lib-empty-state
+        title="No holdings yet."
+        hint="Add a ticker and the number of shares to see its value and how your portfolio is split."
+        actionLabel="Add holding"
+        actionKind="primary"
+        (actionClicked)="tickerField.focus()"
+      />
+    </div>
+  } @else {
   <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Positions table">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-border bg-secondary">
-          <th class="mono-label px-7 py-4 text-left font-medium">Ticker</th>
-          <th class="mono-label px-4 py-4 text-right font-medium">Shares</th>
-          <th class="mono-label px-4 py-4 text-right font-medium">
+          <th class="label px-7 py-4 text-left font-medium">Ticker</th>
+          <th class="label px-4 py-4 text-right font-medium">Shares</th>
+          <th class="label px-4 py-4 text-right font-medium">
             Last price
           </th>
-          <th class="mono-label px-4 py-4 text-right font-medium">Value</th>
-          <th class="mono-label px-4 py-4 text-right font-medium">Updated</th>
+          <th class="label px-4 py-4 text-right font-medium">Value</th>
+          <th class="label px-4 py-4 text-right font-medium">Updated</th>
           <th class="px-7 py-4"></th>
         </tr>
       </thead>
@@ -79,20 +80,20 @@
                   [class]="swatch(i)"
                 ></span>
                 <span
-                  class="font-mono text-[17px] font-medium text-foreground"
+                  class="text-[17px] font-medium text-foreground"
                   >{{ position.ticker }}</span
                 >
               </span>
             </td>
             <td
-              class="px-4 py-5 text-right font-mono text-[15px] tabular-nums text-secondary-foreground"
+              class="px-4 py-5 text-right text-[15px] tabular-nums text-secondary-foreground"
             >
               {{ position.shareCount | number: '1.0-10' }}
             </td>
             <td class="px-4 py-5 text-right">
               @if (position.lastPrice !== null) {
                 <span
-                  class="font-mono text-[15px] tabular-nums text-secondary-foreground"
+                  class="text-[15px] tabular-nums text-secondary-foreground"
                   data-testid="row-price"
                 >
                   €{{ position.lastPrice | number: '1.2-2' }}
@@ -104,7 +105,7 @@
             <td class="px-4 py-5 text-right">
               @if (position.value !== null) {
                 <span
-                  class="font-mono text-lg font-medium tabular-nums text-foreground"
+                  class="text-lg font-medium tabular-nums text-foreground"
                   data-testid="row-value"
                 >
                   €{{ position.value | number: '1.2-2' }}
@@ -125,7 +126,7 @@
                 hlmBtn
                 variant="ghost"
                 size="sm"
-                class="text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                class="h-11 text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                 (click)="deletePosition.emit(position.id)"
               >
                 Remove
@@ -136,13 +137,15 @@
       </tbody>
     </table>
   </div>
+  }
 
   <!-- Add position form -->
-  <div class="flex flex-wrap items-center gap-3 bg-secondary px-7 py-[18px]">
+  <div class="flex flex-wrap items-center gap-3 bg-rail px-7 py-[18px]">
     <input
+      #tickerField
       type="text"
       aria-label="Ticker"
-      class="h-[46px] w-40 rounded-xl border border-input bg-background px-4 font-mono text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      class="h-11 w-40 rounded-xl border border-input bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       placeholder="TICKER"
       [value]="newTicker()"
       (input)="newTicker.set($any($event.target).value)"
@@ -151,17 +154,17 @@
       type="number"
       step="any"
       aria-label="Shares"
-      class="h-[46px] w-32 rounded-xl border border-input bg-background px-4 font-mono text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      class="h-11 w-32 rounded-xl border border-input bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       placeholder="Shares"
       [value]="newShares()"
       (input)="newShares.set(+$any($event.target).value || null)"
     />
-    <button hlmBtn class="h-[46px] px-5" (click)="onAddPosition()">
+    <button hlmBtn class="h-11 px-5" (click)="onAddPosition()">
       Add position
     </button>
     <p class="basis-full text-xs text-muted-foreground">
-      Just the name is enough (<span class="font-mono">KBC</span>, <span class="font-mono">MEUD</span>,
-      <span class="font-mono">BTC</span>): JordyLab finds the euro listing for you.
+      Just the name is enough (<span class="font-semibold">KBC</span>, <span class="font-semibold">MEUD</span>,
+      <span class="font-semibold">BTC</span>): JordyLab finds the euro listing for you.
     </p>
   </div>
 </div>

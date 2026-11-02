@@ -8,7 +8,7 @@ import { Component, input, output, signal, ChangeDetectionStrategy } from '@angu
   template: `
     @if (!dismissed()) {
       <div
-        class="jordylab-update-banner fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card p-4 shadow-2xl"
+        class="jordylab-update-banner fixed inset-x-0 bottom-0 z-50 rounded-t-[18px] border-t border-input bg-card p-4 shadow-modal"
         role="status"
       >
         <p class="text-[15px] font-semibold text-foreground">Update available: v{{ versionName() }}</p>
@@ -23,7 +23,7 @@ import { Component, input, output, signal, ChangeDetectionStrategy } from '@angu
           </button>
           <button
             type="button"
-            class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-input text-[15px] text-foreground"
+            class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-input text-[15px] font-semibold text-foreground"
             (click)="dismissed.set(true)"
           >
             Later

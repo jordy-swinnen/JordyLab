@@ -1,6 +1,6 @@
 <a
   routerLink="/games/grid"
-  class="mono-label inline-flex items-center gap-2 transition-colors hover:text-foreground"
+  class="label inline-flex min-h-11 items-center gap-2 transition-colors hover:text-foreground"
 >
   <svg
     width="16"
@@ -22,7 +22,7 @@
   @if (loading()) {
     <div class="flex flex-col gap-10">
       <div class="relative">
-        <hlm-skeleton class="aspect-[16/9] w-full rounded-[20px] sm:aspect-[16/5]" />
+        <hlm-skeleton class="aspect-[16/9] w-full rounded-2xl sm:aspect-[16/5]" />
         <hlm-skeleton
           class="absolute -bottom-10 left-4 aspect-[2/3] w-24 rounded-2xl border-4 border-background sm:left-6 sm:w-32 md:left-8 md:w-40"
         />
@@ -34,34 +34,25 @@
       </div>
     </div>
   } @else if (notFound()) {
-    <div
-      class="rounded-2xl border border-dashed border-input py-20 text-center text-muted-foreground"
-    >
-      <p class="text-sm">This game is not in your catalog.</p>
-    </div>
+    <lib-empty-state title="This game is not in your catalog." hint="It may have been removed from every library." />
   } @else if (error()) {
-    <div
-      class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
-    >
-      {{ error() }}
-    </div>
+    <lib-error-state [message]="error() ?? ''" (retry)="reload.emit()" />
   } @else if (game(); as game) {
     <div class="relative">
       @if (bannerUrl(game); as bannerSrc) {
         <img
           [src]="bannerSrc"
           [alt]="game.title + ' banner'"
-          class="aspect-[16/9] w-full rounded-[20px] border border-input object-cover sm:aspect-[16/5]"
+          class="aspect-[16/9] w-full rounded-2xl border border-input object-cover sm:aspect-[16/5]"
         />
       } @else {
         <div
-          class="plate aspect-[16/9] w-full rounded-[20px] sm:aspect-[16/5]"
-          [style.background]="palette(game.title).background"
-          [style.color]="palette(game.title).color"
+          class="plate aspect-[16/9] w-full rounded-2xl sm:aspect-[16/5]"
+          [class]="plateClass(game.title)"
           [attr.aria-label]="'No banner for ' + game.title"
           role="img"
         >
-          <div class="font-mono text-[10.5px] uppercase tracking-[0.12em]">
+          <div class="label !text-inherit">
             {{ game.platforms[0]?.name }}
           </div>
           <div class="plate-initials !text-[4rem]">{{ initials(game.title) }}</div>
@@ -80,8 +71,7 @@
         } @else {
           <div
             class="plate h-full w-full"
-            [style.background]="palette(game.title).background"
-            [style.color]="palette(game.title).color"
+            [class]="plateClass(game.title)"
             [attr.aria-label]="'No artwork for ' + game.title"
             role="img"
           >
@@ -98,32 +88,31 @@
             <lib-platform-chip [chip]="platform" />
           }
           @if (game.enrichmentStatus === 'ENRICHED') {
-            <span class="pill">Enriched</span>
+            <span class="chip rounded-full bg-primary/15 px-[11px] py-1.5 text-accent-text">Enriched</span>
           }
         </div>
         <h2
-          class="mt-5 font-display text-[clamp(2.25rem,7vw,7rem)] font-bold leading-[0.95] tracking-[-0.045em] [overflow-wrap:anywhere]"
-          style="font-variation-settings: 'wdth' 84"
+          class="page-title mt-5 [overflow-wrap:anywhere]"
         >
           {{ game.title }}
         </h2>
         @if (hostLabels(game).length > 0) {
-          <div class="mono-label mt-4">Installed on · {{ hostLabels(game).join(', ') }}</div>
+          <div class="label mt-4">Installed on · {{ hostLabels(game).join(', ') }}</div>
         }
-        <div class="mono-label mt-2 flex flex-wrap items-center gap-2">
+        <div class="label mt-2 flex flex-wrap items-center gap-2">
           <lib-status-chip [status]="game.installStatus === 'INSTALLED' ? 'INSTALLED' : 'NOT_INSTALLED'" />
           @for (source of game.sources; track source) {
             <lib-source-label [source]="source" />
           }
         </div>
         @if (familyOwners(game); as owners) {
-          <div class="mono-label mt-2">Family · {{ owners }}</div>
+          <div class="label mt-2">Family · {{ owners }}</div>
         }
 
         @if (emulatedCopies(game); as copies) {
           @if (copies.length > 0) {
             <section class="mt-6 flex flex-col gap-3" aria-labelledby="rom-heading" data-testid="rom-section">
-              <h3 id="rom-heading" class="mono-label">Does it run? (per machine)</h3>
+              <h3 id="rom-heading" class="label">Does it run? (per machine)</h3>
               @for (copy of copies; track copy.installationId) {
                 <div class="flex flex-wrap items-center gap-3" data-testid="rom-copy">
                   <span class="min-w-32 text-[15px] font-medium">{{ copy.label }}</span>
@@ -155,7 +144,7 @@
         }
 
         <section class="mt-6 flex flex-col gap-3" aria-labelledby="marks-heading" data-testid="marks-section">
-          <h3 id="marks-heading" class="mono-label">Your mark</h3>
+          <h3 id="marks-heading" class="label">Your mark</h3>
           <lib-mark-buttons
             [myMark]="game.myMark"
             [disabled]="markPending()"
@@ -176,13 +165,13 @@
             <div
               class="panel w-full flex-shrink-0 px-6 pb-2.5 pt-1 xl:w-[380px]"
             >
-              <h3 class="eyebrow pb-1 pt-[18px]">Spec sheet</h3>
+              <h3 class="label pb-1 pt-[18px]">Spec sheet</h3>
               <dl class="text-sm">
                 @if (game.genres || game.genre) {
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Genres</dt>
+                    <dt class="label">Genres</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.genres ?? game.genre }}
                     </dd>
@@ -192,7 +181,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Developer</dt>
+                    <dt class="label">Developer</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.developer }}
                     </dd>
@@ -202,7 +191,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Publisher</dt>
+                    <dt class="label">Publisher</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.publisher }}
                     </dd>
@@ -212,7 +201,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Released</dt>
+                    <dt class="label">Released</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.releaseYear }}
                     </dd>
@@ -222,7 +211,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Local co-op</dt>
+                    <dt class="label">Local co-op</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.localMultiplayer ? 'Yes' : 'No' }}
                       @if (game.maxLocalPlayers !== null) {
@@ -240,7 +229,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Split-screen</dt>
+                    <dt class="label">Split-screen</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.splitScreen ? 'Yes' : 'No' }}
                     </dd>
@@ -250,7 +239,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Online only</dt>
+                    <dt class="label">Online only</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.onlineOnly ? 'Yes' : 'No' }}
                     </dd>
@@ -260,7 +249,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Multiplayer data</dt>
+                    <dt class="label">Multiplayer data</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.multiplayerSource === 'STEAM' ? 'Steam' : 'IGDB' }}
                     </dd>
@@ -270,7 +259,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Online multiplayer</dt>
+                    <dt class="label">Online multiplayer</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.onlineMultiplayer ? 'Yes' : 'No' }}
                     </dd>
@@ -280,7 +269,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Single-player</dt>
+                    <dt class="label">Single-player</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.singlePlayer ? 'Yes' : 'No' }}
                     </dd>
@@ -288,7 +277,7 @@
                 }
                 @if (hostLabels(game).length > 0) {
                   <div class="flex items-baseline justify-between gap-4 border-b border-border py-4">
-                    <dt class="mono-label">Hosts</dt>
+                    <dt class="label">Hosts</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ hostLabels(game).join(', ') }}
                     </dd>
@@ -296,7 +285,7 @@
                 }
               </dl>
               @if (factSourcesLine(game.factSources); as sourceLine) {
-                <p class="mono-label py-4" data-testid="fact-sources">{{ sourceLine }}</p>
+                <p class="label py-4" data-testid="fact-sources">{{ sourceLine }}</p>
               }
             </div>
 
@@ -304,7 +293,7 @@
               @if (game.description; as description) {
                 @if (descriptionHeading(description); as heading) {
                   <div
-                    class="mono-label flex flex-wrap gap-x-2 [overflow-wrap:anywhere]"
+                    class="label flex flex-wrap gap-x-2 [overflow-wrap:anywhere]"
                     [attr.title]="heading.tooltip"
                     data-testid="about-heading"
                   >

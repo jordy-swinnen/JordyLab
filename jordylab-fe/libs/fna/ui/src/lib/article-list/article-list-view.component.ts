@@ -1,3 +1,4 @@
+import { EmptyStateComponent, PageHeaderComponent, SkeletonRowsComponent } from '@jordylab-fe/shared/layout';
 import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ArticleSummary } from '@jordylab-fe/fna/api';
@@ -11,7 +12,7 @@ interface ArticleDay {
 @Component({
   selector: 'lib-article-list-view',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, EmptyStateComponent, PageHeaderComponent, SkeletonRowsComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './article-list-view.component.html',
 })
@@ -36,13 +37,13 @@ export class ArticleListViewComponent {
     return days;
   });
 
-  /** Feed accent: ECB in flare, Politico in iris, everything else neutral. */
+  /** Feed accent: ECB in the theme's accent colour, Politico in the second series colour, everything else neutral. */
   protected feedColor(feedName: string): string {
     if (feedName === 'ECB Press Releases') {
-      return 'text-primary';
+      return 'text-accent-text';
     }
     if (feedName === 'Politico Europe') {
-      return 'text-iris';
+      return 'text-series-2';
     }
 
     return 'text-foreground';

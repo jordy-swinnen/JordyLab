@@ -1,7 +1,5 @@
 @if (error()) {
-  <div class="py-12 text-center text-destructive">
-    <p class="text-sm">{{ error() }}</p>
-  </div>
+  <lib-error-state [message]="error() ?? ''" (retry)="reload()" />
 } @else {
   <lib-article-list-view [articles]="articles()" [loading]="loading()" />
 }

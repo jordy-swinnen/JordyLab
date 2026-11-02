@@ -1,34 +1,72 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Hanken+Grotesk:wght@400;500;600&display=swap');
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url('../fonts/archivo-latin-wdth-normal.woff2') format('woff2-variations');
+}
 
-/* Night Lab tokens (same values as jordylab-fe/apps/jordylab/src/styles.css) */
+/*
+ * Two palettes, chosen by the device's light or dark setting (this page is on another origin, so it cannot read the theme chosen in
+ * the app). Dark is the Content Led theme, light is Paper. The values are the same hex colours as jordylab-fe/themes.js under the
+ * same token names; jordylab-fe/tools/check-theme-tokens.mjs fails when they drift apart.
+ */
+:root {
+  color-scheme: dark;
+  --jl-ground: #131314;
+  --jl-rail: #0f0f10;
+  --jl-surface: #1b1b1d;
+  --jl-line: #2c2c2f;
+  --jl-line-strong: #424246;
+  --jl-text: #f1f0ec;
+  --jl-text-2: #b0afab;
+  --jl-text-3: #92918d;
+  --jl-accent: #ece8dd;
+  --jl-accent-ink: #141414;
+  --jl-accent-text: #f1f0ec;
+  --jl-danger: #ff9fb8;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --jl-ground: #f2eee5;
+    --jl-rail: #e9e4d8;
+    --jl-surface: #faf7f1;
+    --jl-line: #d8d1c0;
+    --jl-line-strong: #b9b19e;
+    --jl-text: #1b1a1f;
+    --jl-text-2: #4a4952;
+    --jl-text-3: #646269;
+    --jl-accent: #2a43d6;
+    --jl-accent-ink: #ffffff;
+    --jl-accent-text: #2a43d6;
+    --jl-danger: #9f1f46;
+  }
+}
+
 :root,
 :root.pf-v5-theme-dark {
-  color-scheme: dark;
-  --jl-bg: #0e0c14;
-  --jl-card: #16131f;
-  --jl-secondary: #1e1a2a;
-  --jl-line: #2a2536;
-  --jl-line-strong: #3a3449;
-  --jl-text: #f2ede4;
-  --jl-mute: #a9a2b6;
-  --jl-dim: #8a8398;
-  --jl-flare: #ff6a3d;
-  --jl-ink: #1c0a04;
   --keycloak-card-top-color: transparent;
-  --pf-v5-global--FontFamily--text: 'Hanken Grotesk', system-ui, sans-serif;
-  --pf-v5-global--FontFamily--heading: 'Bricolage Grotesque', system-ui, sans-serif;
-  --pf-v5-global--link--Color: var(--jl-flare);
-  --pf-v5-global--link--Color--hover: #ff8a66;
-  --pf-v5-global--primary-color--100: var(--jl-flare);
-  --pf-v5-global--primary-color--200: #ff8a66;
+  --pf-v5-global--FontFamily--text: 'Archivo', system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: 'Archivo', system-ui, sans-serif;
+  --pf-v5-global--link--Color: var(--jl-accent-text);
+  --pf-v5-global--link--Color--hover: var(--jl-text);
+  --pf-v5-global--primary-color--100: var(--jl-accent);
+  --pf-v5-global--primary-color--200: var(--jl-accent);
+  --pf-v5-global--BackgroundColor--100: var(--jl-surface);
+  --pf-v5-global--Color--100: var(--jl-text);
+  --pf-v5-global--Color--200: var(--jl-text-2);
+  --pf-v5-global--danger-color--100: var(--jl-danger);
 }
 
 /* Page */
 .login-pf body,
 .pf-v5-c-login {
-  background: var(--jl-bg);
+  background: var(--jl-ground);
   color: var(--jl-text);
-  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: 'Archivo', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 .login-pf body {
@@ -63,12 +101,11 @@
 }
 #kc-header-wrapper::before,
 #kc-header-wrapper::after {
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: 'Archivo', system-ui, sans-serif;
   font-size: 34px;
   line-height: 1;
   text-transform: none;
   letter-spacing: -0.03em;
-  font-variation-settings: 'wdth' 88;
 }
 #kc-header-wrapper::before {
   content: 'Jordy';
@@ -78,14 +115,14 @@
 #kc-header-wrapper::after {
   content: 'Lab';
   font-weight: 800;
-  color: var(--jl-flare);
+  color: var(--jl-accent-text);
 }
 
 /* Card */
 .pf-v5-c-login__main {
-  background: var(--jl-card);
+  background: var(--jl-surface);
   border: 1px solid var(--jl-line);
-  border-radius: 20px;
+  border-radius: 14px;
   box-shadow: none;
   overflow: hidden;
 }
@@ -94,26 +131,25 @@
 }
 .pf-v5-c-login__main-header .pf-v5-c-title,
 #kc-page-title {
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: 'Archivo', system-ui, sans-serif;
   font-weight: 700;
   letter-spacing: -0.03em;
-  font-variation-settings: 'wdth' 88;
   color: var(--jl-text);
 }
 
 /* Form */
 .pf-v5-c-form__label-text,
 .pf-v5-c-form__label {
-  font-family: 'Hanken Grotesk', sans-serif;
+  font-family: 'Archivo', system-ui, sans-serif;
   font-weight: 500;
-  color: var(--jl-mute);
+  color: var(--jl-text-2);
 }
 .pf-v5-c-form-control {
-  --pf-v5-c-form-control--BackgroundColor: var(--jl-bg);
+  --pf-v5-c-form-control--BackgroundColor: var(--jl-ground);
   --pf-v5-c-form-control--BorderColor: var(--jl-line-strong);
   --pf-v5-c-form-control--Color: var(--jl-text);
   border-radius: 12px;
-  background-color: var(--jl-bg);
+  background-color: var(--jl-ground);
   color: var(--jl-text);
   min-height: 48px;
 }
@@ -123,43 +159,43 @@
 }
 .pf-v5-c-form-control:focus-within::after,
 .pf-v5-c-form-control:focus-within {
-  --pf-v5-c-form-control--BorderColor: var(--jl-flare);
-  --pf-v5-c-form-control--focus--BorderBottomColor: var(--jl-flare);
-  border-color: var(--jl-flare);
+  --pf-v5-c-form-control--BorderColor: var(--jl-accent);
+  --pf-v5-c-form-control--focus--BorderBottomColor: var(--jl-accent);
+  border-color: var(--jl-accent);
 }
 .pf-v5-c-form-control input {
   color: var(--jl-text);
 }
 .pf-v5-c-form-control input::placeholder {
-  color: var(--jl-dim);
+  color: var(--jl-text-3);
 }
 /* Chrome autofill keeps the dark field */
 .pf-v5-c-form-control input:-webkit-autofill {
   -webkit-text-fill-color: var(--jl-text);
-  -webkit-box-shadow: 0 0 0 100px var(--jl-bg) inset;
+  -webkit-box-shadow: 0 0 0 100px var(--jl-ground) inset;
 }
 
 /* Buttons */
 .pf-v5-c-button.pf-m-primary {
-  --pf-v5-c-button--m-primary--BackgroundColor: var(--jl-flare);
-  --pf-v5-c-button--m-primary--Color: var(--jl-ink);
-  --pf-v5-c-button--m-primary--hover--BackgroundColor: #ff8a66;
-  --pf-v5-c-button--m-primary--hover--Color: var(--jl-ink);
-  --pf-v5-c-button--m-primary--focus--BackgroundColor: #ff8a66;
-  --pf-v5-c-button--m-primary--focus--Color: var(--jl-ink);
-  --pf-v5-c-button--m-primary--active--BackgroundColor: #ff8a66;
-  --pf-v5-c-button--m-primary--active--Color: var(--jl-ink);
-  background-color: var(--jl-flare);
-  color: var(--jl-ink);
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--jl-accent);
+  --pf-v5-c-button--m-primary--Color: var(--jl-accent-ink);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--jl-accent);
+  --pf-v5-c-button--m-primary--hover--Color: var(--jl-accent-ink);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--jl-accent);
+  --pf-v5-c-button--m-primary--focus--Color: var(--jl-accent-ink);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--jl-accent);
+  --pf-v5-c-button--m-primary--active--Color: var(--jl-accent-ink);
+  background-color: var(--jl-accent);
+  color: var(--jl-accent-ink);
   border-radius: 12px;
   font-weight: 600;
   min-height: 48px;
 }
 .pf-v5-c-button.pf-m-control {
-  --pf-v5-c-button--m-control--BackgroundColor: var(--jl-bg);
-  --pf-v5-c-button--m-control--Color: var(--jl-mute);
-  background-color: var(--jl-bg);
-  color: var(--jl-mute);
+  --pf-v5-c-button--m-control--BackgroundColor: var(--jl-ground);
+  --pf-v5-c-button--m-control--Color: var(--jl-text-2);
+  background-color: var(--jl-ground);
+  color: var(--jl-text-2);
 }
 .pf-v5-c-button.pf-m-secondary {
   --pf-v5-c-button--m-secondary--Color: var(--jl-text);
@@ -169,14 +205,14 @@
 
 /* Links, footer, messages */
 a {
-  color: var(--jl-flare);
+  color: var(--jl-accent-text);
 }
 .pf-v5-c-login__main-footer-band {
-  background: var(--jl-secondary);
+  background: var(--jl-rail);
   border-top: 1px solid var(--jl-line);
 }
 .pf-v5-c-alert {
-  --pf-v5-c-alert--BackgroundColor: var(--jl-secondary);
+  --pf-v5-c-alert--BackgroundColor: var(--jl-rail);
   border-radius: 12px;
 }
 
@@ -206,8 +242,8 @@ a {
   box-shadow: none;
 }
 .pf-v5-c-form-control:focus-within {
-  border: 1px solid var(--jl-flare);
-  box-shadow: 0 0 0 3px rgba(255, 106, 61, 0.2);
+  border: 1px solid var(--jl-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--jl-accent) 25%, transparent);
 }
 
 .pf-v5-c-form-control {
@@ -230,7 +266,7 @@ a {
 
 #kc-registration,
 #kc-form-options {
-    color: var(--jl-mute);
+    color: var(--jl-text-2);
     font-size: 0.875rem;
 }
 

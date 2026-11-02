@@ -4,7 +4,7 @@ import { InstallPromptStore } from '@jordylab-fe/shared/platform/api';
 export type InstallDownloadStatus = 'idle' | 'preparing' | 'started' | 'failed';
 
 const BUTTON =
-  'inline-flex h-12 flex-1 items-center justify-center rounded-xl text-[15px] font-semibold transition-colors';
+  'inline-flex h-12 min-w-0 flex-1 items-center justify-center rounded-xl text-[15px] font-semibold transition-colors';
 
 /**
  * Mounts the Android install dialog or the iOS Add-to-Home-Screen sheet — never both, never on
@@ -21,7 +21,7 @@ const BUTTON =
     @switch (store.promptKind()) {
       @case ('android') {
         <div
-          class="jordylab-install-dialog fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-border bg-card p-5 shadow-2xl"
+          class="jordylab-install-dialog fixed inset-x-0 bottom-0 z-50 rounded-t-[18px] border-t border-input bg-card p-5 shadow-modal"
           role="dialog"
           aria-label="Get the JordyLab app"
         >
@@ -70,7 +70,7 @@ const BUTTON =
       }
       @case ('ios') {
         <div
-          class="jordylab-install-sheet fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-border bg-card p-5 shadow-2xl"
+          class="jordylab-install-sheet fixed inset-x-0 bottom-0 z-50 rounded-t-[18px] border-t border-input bg-card p-5 shadow-modal"
           role="dialog"
           aria-label="Add JordyLab to Home Screen"
         >

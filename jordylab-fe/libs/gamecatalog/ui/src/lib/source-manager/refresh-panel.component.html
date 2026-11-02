@@ -18,7 +18,7 @@
     @for (card of cards(); track card.kind) {
       <div class="panel flex flex-col gap-4 px-6 py-5" [attr.data-testid]="'refresh-card-' + card.kind">
         <div>
-          <h3 class="font-display text-lg font-semibold">{{ card.title }}</h3>
+          <h3 class="text-lg font-semibold">{{ card.title }}</h3>
           <p class="mt-1 text-sm text-secondary-foreground">{{ card.explanation }}</p>
         </div>
 
@@ -35,7 +35,7 @@
               >
                 <div class="h-full rounded-full bg-primary transition-[width]" [style.width.%]="percent(run)"></div>
               </div>
-              <p class="mono-label mt-2" aria-live="polite" data-testid="refresh-progress">
+              <p class="label mt-2" aria-live="polite" data-testid="refresh-progress">
                 {{ run.processed }} of {{ run.total }} games
                 @if (run.failed > 0) {
                   · {{ run.failed }} failed

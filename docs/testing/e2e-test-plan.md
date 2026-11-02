@@ -1073,6 +1073,16 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 #### HANDOFF-37: Add `THEGAMESDB_API_KEY` to the prod secrets — done 2026-11-01
 - The owner added the key to `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_EDITOR="idea --wait" sops …`. Presence on the cluster is checked after the next deploy (`quickstart.md` §3, step 2), by behaviour and never by value.
 
+#### HANDOFF-38: Look at the redesign on your Android phone and on the sign-in page (spec 016)
+- Machine: your Android phone with the debug APK, and your Mac · Why you: the status bar and the sign-in page's follow-the-device switch can only be judged on a real device and on the Keycloak you run.
+- Follow `specs/016-app-redesign-themes/quickstart.md` section 6: on the phone, choose Paper in Settings → App and check the status bar icons stay readable (if not, say so and I add the status-bar plugin). Then restart the local Keycloak (recreating the dev stack needs your yes; `jordylab-be/compose.yaml` mounts the theme) and open the sign-in page with the computer set to light, then to dark.
+- Tell me what you saw; I record it in `specs/016-app-redesign-themes/research.md` (D9, D10).
+
+#### HANDOFF-39: Compare the redesign with the design system (spec 016) — done 2026-11-02 (the owner approved the design; step counts not recorded)
+- Machine: your Mac, in a browser · Why you: judging whether the new look matches the design canvas is a call only you can make.
+- With the app running, open the Library, a game, LibBot, Sources, Consoles and Settings → App on desktop and in a phone-sized window, the Library in all six themes. Compare with the redesign canvas and the design system, and count the steps to find a game and set a mark (before and after, SC-007).
+- Tell me the differences you want changed; I record them in `specs/016-app-redesign-themes/checklists/visual-review.md`.
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.

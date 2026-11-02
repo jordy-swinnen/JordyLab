@@ -103,6 +103,10 @@ export class SourceManagerComponent {
     this.#store.syncFamilyLibrary(accessToken);
   }
 
+  onReload(): void {
+    this.#store.load();
+  }
+
   onDownloadClient(libraryType: ScanClientType): void {
     this.#store.downloadClient(libraryType, (blob) =>
       triggerBrowserDownload(blob, `jordylab-scan-${libraryType}.py`)

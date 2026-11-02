@@ -4,9 +4,11 @@
     <meta charset="utf-8" />
     <title>JordyLab</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="theme-boot.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <meta name="theme-color" content="#0E0C14" />
+    <meta name="theme-color" content="#131314" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f2eee5" media="(prefers-color-scheme: light)" />
     <!-- iOS home-screen support (spec US7, FR-008) — Safari ignores manifest.webmanifest for
          these three concerns and needs its own tags regardless of manifest-spec compliance. -->
     <link rel="manifest" href="manifest.webmanifest" />
@@ -14,12 +16,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="JordyLab" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Hanken+Grotesk:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" href="fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <app-root></app-root>

@@ -14,6 +14,8 @@ describe('application providers', () => {
   });
 
   beforeEach(() => {
+    // jsdom has no matchMedia; the theme store, started by an app initializer, asks the device whether it is light or dark.
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener: vi.fn() })) as unknown as typeof window.matchMedia;
     TestBed.configureTestingModule({ providers: appConfig.providers });
   });
 

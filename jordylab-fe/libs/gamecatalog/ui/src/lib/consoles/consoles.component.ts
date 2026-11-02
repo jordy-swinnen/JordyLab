@@ -31,6 +31,10 @@ export class ConsolesComponent {
     this.#store.suggest('');
   }
 
+  onReload(): void {
+    this.#store.load();
+  }
+
   onSuggest(query: string): void {
     this.#store.suggest(query);
   }

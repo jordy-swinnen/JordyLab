@@ -82,7 +82,7 @@ export class FiltersPanelComponent {
   protected readonly optionClass =
     'inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-input px-3.5 text-[13.5px] font-semibold text-secondary-foreground outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-pressed:border-transparent aria-pressed:bg-foreground aria-pressed:text-background';
   protected readonly groupHeadingClass =
-    'mb-2.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground';
+    'mb-2.5 text-[12.5px] font-medium text-muted-foreground';
 
   constructor() {
     afterNextRender(() => this.#host.nativeElement.querySelector<HTMLElement>('button')?.focus());

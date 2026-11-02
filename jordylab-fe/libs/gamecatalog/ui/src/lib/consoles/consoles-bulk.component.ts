@@ -1,3 +1,4 @@
+import { PageHeaderComponent } from '@jordylab-fe/shared/layout';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -10,13 +11,10 @@ import { ConsoleBulkItem, ConsoleBulkLine, ConsoleStore } from '@jordylab-fe/gam
 @Component({
   selector: 'lib-consoles-bulk',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
-    <div class="flex flex-col gap-3.5">
-      <div class="eyebrow">Game Catalog · consoles</div>
-      <h2 class="page-title">Paste a list</h2>
-    </div>
+    <lib-page-header title="Paste a list" />
     @if (console(); as current) {
       <p class="mt-5 text-[15px] text-secondary-foreground">
         One title per line, added to <strong>{{ current.name }}</strong
@@ -25,27 +23,27 @@ import { ConsoleBulkItem, ConsoleBulkLine, ConsoleStore } from '@jordylab-fe/gam
     }
 
     @if (error(); as message) {
-      <p class="mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm" role="alert">{{ message }}</p>
+      <p class="mt-6 rounded-xl border border-destructive p-4 text-sm text-destructive" role="alert">{{ message }}</p>
     }
 
     @if (summary(); as result) {
       <section class="panel mt-8 px-6 py-5" data-testid="bulk-summary">
-        <p class="font-display text-xl font-bold">{{ result.added.length }} added</p>
+        <p class="text-xl font-bold">{{ result.added.length }} added</p>
         @if (result.skipped.length > 0) {
           <p class="mt-2 text-sm text-secondary-foreground">Already there: {{ result.skipped.join(', ') }}</p>
         }
         @for (failure of result.failed; track failure.line) {
           <p class="mt-2 text-sm text-destructive">{{ failure.line }}: {{ failure.reason }}</p>
         }
-        <a routerLink="/games/consoles" class="mt-4 inline-block font-semibold text-primary">Back to consoles</a>
+        <a routerLink="/games/consoles" class="mt-4 inline-block font-semibold text-accent-text">Back to consoles</a>
       </section>
     } @else if (lines().length === 0) {
       <label class="mt-8 flex flex-col gap-2">
-        <span class="mono-label">Titles</span>
+        <span class="label">Titles</span>
         <textarea
           #text
           rows="10"
-          class="rounded-xl border border-input bg-background p-3"
+          class="rounded-xl border border-input bg-card p-3 text-base"
           placeholder="Mario Kart 8 Deluxe&#10;Super Mario Odyssey&#10;Celeste"
           data-testid="bulk-text"
         ></textarea>

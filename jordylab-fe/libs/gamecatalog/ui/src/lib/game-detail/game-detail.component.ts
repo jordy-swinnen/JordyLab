@@ -42,6 +42,10 @@ export class GameDetailComponent {
     this.#store.load(this.#route.snapshot.paramMap.get('id') ?? '');
   }
 
+  onReload(): void {
+    this.#store.load(this.#route.snapshot.paramMap.get('id') ?? '');
+  }
+
   onRomStatusChanged(change: { installationId: string; status: RomStatus }): void {
     this.#store.setRomStatus(change.installationId, change.status);
   }

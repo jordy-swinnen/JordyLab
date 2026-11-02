@@ -3,12 +3,12 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
 import { AiFeatureModel, CatalogModel, ModelCatalog, VendorGroup } from '@jordylab-fe/settings/api';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
-import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
+import { ErrorStateComponent, PageHeaderComponent, SkeletonRowsComponent } from '@jordylab-fe/shared/layout';
 
 @Component({
   selector: 'lib-ai-models-page-view',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, HlmBadgeDirective, HlmButtonDirective, HlmSkeletonComponent],
+  imports: [DatePipe, DecimalPipe, HlmBadgeDirective, HlmButtonDirective, ErrorStateComponent, PageHeaderComponent, SkeletonRowsComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './ai-models-page-view.component.html',
 })
@@ -28,6 +28,7 @@ export class AiModelsPageViewComponent {
   closePicker = output<void>();
   searchChange = output<string>();
   choose = output<string>();
+  reload = output<void>();
 
   price(model: CatalogModel): string {
     const { input: inputPrice, output: outputPrice } = model.pricingPerMillionTokens;

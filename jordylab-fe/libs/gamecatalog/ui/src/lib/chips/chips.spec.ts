@@ -12,7 +12,7 @@ describe('StatusChipComponent', () => {
 
     expect(spectator.element).toHaveText('Installed');
     expect(spectator.element.className).toContain('border-solid');
-    expect(spectator.element.className).toContain('#2DD4BF');
+    expect(spectator.element.className).toContain('border-installed');
     expect(spectator.query('svg path')).toBeTruthy();
   });
 
@@ -21,7 +21,7 @@ describe('StatusChipComponent', () => {
 
     expect(spectator.element).toHaveText('Not installed');
     expect(spectator.element.className).toContain('border-dashed');
-    expect(spectator.element.className).toContain('#F5B84A');
+    expect(spectator.element.className).toContain('border-muted-foreground');
     expect(spectator.query('svg')?.getAttribute('stroke-dasharray')).toBeTruthy();
   });
 
@@ -52,10 +52,10 @@ describe('RomChipComponent', () => {
   const createComponent = createComponentFactory(RomChipComponent);
 
   it.each([
-    ['VALIDATED', 'Validated', 'bg-[#9BE564]'],
-    ['BROKEN', 'Broken ROM', 'bg-[#FF6B6B]'],
-    ['UNKNOWN', 'Unknown', 'border-[#9A93AB]'],
-    ['MIXED', 'Mixed', 'border-[#F5B84A]'],
+    ['VALIDATED', 'Validated', 'bg-rom-validated'],
+    ['BROKEN', 'Broken ROM', 'border-destructive'],
+    ['UNKNOWN', 'Unknown', 'border-muted-foreground'],
+    ['MIXED', 'Mixed', 'border-secondary-foreground'],
   ] as const)('shows %s as "%s" with its own look and an icon', (state, label, look) => {
     const spectator = createComponent({ props: { state } });
 

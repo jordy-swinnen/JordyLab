@@ -6,7 +6,7 @@ test.describe('FNA briefing view (read-only)', () => {
     await page.goto('/fna/briefing');
 
     await expect(page.getByRole('heading', { level: 2, name: 'Investment briefing' })).toBeVisible();
-    await expect(page.getByText('No briefing generated yet')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Generate Briefing' })).toBeVisible();
+    await expect(page.getByText('No briefing yet.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Generate briefing' })).toBeVisible();
   });
 });

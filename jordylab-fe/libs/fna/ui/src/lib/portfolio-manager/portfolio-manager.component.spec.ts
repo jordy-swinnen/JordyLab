@@ -86,7 +86,8 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('h2')).toHaveText('Portfolio');
-    expect(spectator.query('span.uppercase')).toHaveText('0 positions');
+    expect(spectator.element).toHaveText('0 positions');
+    expect(spectator.element).toHaveText('No holdings yet.');
   });
 
   it('surfaces an error state when the store reports an error', () => {
@@ -138,5 +139,15 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('input[aria-label="Shares"]')?.getAttribute('step')).toBe('any');
+  });
+
+  it('loads the portfolio again when the error state is retried', () => {
+    storeMock.load.mockClear();
+    error.set('Failed to load portfolio.');
+    spectator.detectChanges();
+
+    spectator.click('lib-error-state button');
+
+    expect(storeMock.load).toHaveBeenCalledOnce();
   });
 });
