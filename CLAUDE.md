@@ -12,6 +12,10 @@ Skills (invoke with `/skill-name`):
 - `/ai-endpoint` — wire up a ResilientAiService integration for a module
 - `/angular-signal-store` — generate an NgRx-free signal-based state service for an Angular domain
 - `/angular-test` — Angular/Vitest testing conventions (mocking, spec structure, mock fixtures)
+- `/linear-capture` — log an idea, bug or ticket (or turn a plan into tickets) in Linear, in Triage, with duplicate check and preview
+- `/linear-triage` — go through the Linear Triage inbox: propose labels, project and duplicates, apply what Jordy confirms
+- `/linear-sync-drafts` — mirror specs, drafts and open bugs into Linear and keep them in step
+- `/speckit-taskstoissues` — customised: turns a spec's tasks into a Linear project, milestones and one issue per user story
 - `/dual-agent-config` — set up and audit shared config so Claude Code and OpenCode read the same rules/skills/MCP servers
 - `/agent-handover` — hand work over between Claude Code and OpenCode (wrap up, update tasks/bug log, write
   `HANDOFF-next-agent.md`, print the prompt for the other tool, stop); also used by the agent taking over

@@ -5,6 +5,8 @@ on:
     paths:
       - '.claude/hooks/**'
       - '.githooks/**'
+      - 'scripts/mcp/**'
+      - '.claude/skills/linear-sync-drafts/**'
 
 jobs:
   guard-cases:
@@ -29,3 +31,12 @@ jobs:
 
       - name: Run commit-msg fixtures
         run: bash .githooks/tests/commit-msg-cases.sh
+
+      - name: Run GitHub MCP launcher fixtures
+        run: bash scripts/mcp/tests/github-mcp-cases.sh
+
+      - name: Run Linear sync inventory fixtures
+        run: bash .claude/skills/linear-sync-drafts/scripts/tests/inventory-cases.sh
+
+      - name: Run Linear sync open-bugs fixtures
+        run: bash .claude/skills/linear-sync-drafts/scripts/tests/open-bugs-cases.sh
