@@ -37,7 +37,7 @@
   "agent": {
     "planner": {
       "mode": "primary",
-      "description": "SpecKit: constitution, specify, clarify, plan, tasks. Highest-capability model; errors here propagate into every later step.",
+      "description": "SpecKit: constitution, specify, clarify, plan, tasks. Use for work where an error propagates into every later step.",
       "model": "opencode-go/claude-haiku-5-5",
       "variant": "xhigh"
     },

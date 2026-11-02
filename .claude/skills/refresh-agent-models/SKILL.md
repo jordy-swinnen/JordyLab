@@ -30,7 +30,7 @@ Never touch descriptions, permissions, prompts, or other agents (`speckit`, `bui
 | Role | SpecKit steps | Why this tier |
 |---|---|---|
 | Planner | constitution, specify, clarify, plan, tasks | Runs the majority of SpecKit actions and multi-turn spec/plan synthesis; needs high intelligence **and** a large request/task allowance so sessions never hit the 5-hour cap. |
-| Reviewer | analyze, converge | Independent check; must be a different model creator than the Planner (different blind spots) and use a separate Go allowance bucket. |
+| Reviewer | analyze, converge | Independent check; on OpenCode Go, must be a different model creator than the Planner (different blind spots; Claude Code is Anthropic-only) and use a separate Go allowance bucket. |
 | Worker | implement, checklist, taskstoissues | Highest request volume and tool-call loops; needs the largest request and task bucket, fast response times, and reliable tool use. |
 
 ## Parameters (judgment calls; the user tunes these)
@@ -228,4 +228,5 @@ Refs: NO-CODE
 - Date: 2026-11-02 (JOR-9 fix: added OpenCode Go effort variants, `T(m, v) = Limit_m / C_Go(m, v)` task allowance, and higher quota floors `Q_BASE_MIN = 15,000` / `TASKS_MIN = 50`)
 - AA Intelligence Index version: v5.0
 - Coding data: unavailable (Coding Agent Index charts not readable via fetch)
+- Verification: `opencode models opencode-go --verbose` confirmed `claude-haiku-5-5` (`xhigh`), `mimo-v2.6-pro` (default), and `deepseek-v4.1-flash` (`max`); `opencode debug agent {planner,reviewer,worker}` resolved all three cleanly
 - Result: assignments as in "Current assignments" (`planner` → `claude-haiku-5-5` `xhigh`, `reviewer` → `mimo-v2.6-pro`, `worker` → `deepseek-v4.1-flash` `max`)
