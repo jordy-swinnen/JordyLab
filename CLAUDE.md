@@ -1,4 +1,5 @@
 @AGENTS.md
+@.github/instructions/commits-and-pull-requests.instructions.md
 
 ## Claude Automations
 

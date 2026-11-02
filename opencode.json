@@ -16,6 +16,7 @@
       }
     }
   },
+  "instructions": [".github/instructions/commits-and-pull-requests.instructions.md"],
   "mcp": {
     "nx-mcp": {
       "type": "local",

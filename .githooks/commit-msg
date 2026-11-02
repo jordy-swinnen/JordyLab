@@ -1,7 +1,12 @@
 #!/bin/sh
-# commit-msg — every commit names the SpecKit artefact it serves, or says it has none.
+# commit-msg — every commit starts with its Linear ticket and names the SpecKit artefact it serves.
 #
-# Rule (AGENTS.md → "Commits"): the message's trailer block carries a `Refs:` line.
+# Rule 1 (since 2026-11-02): the subject starts with the ticket key and a colon, `JOR-<n>: <summary>`, e.g.
+#   JOR-55: adding a button
+#   No ticket yet? Create one first (linear-capture skill), then commit.
+#   Commits made before the cutoff are not checked: CI passes the commit's timestamp as the second argument.
+#
+# Rule 2 (AGENTS.md → "Commits"): the message's trailer block carries a `Refs:` line.
 #   Refs: 011 BUG-033          spec number and/or campaign IDs
 #   Refs: 009/T039             a task of a spec
 #   Refs: NO-CODE              config/tooling/docs work with no SpecKit artefact (must stand alone)
@@ -17,12 +22,23 @@
 # Also run by CI on every pull-request commit (.github/workflows/commit-refs.yml).
 
 message_file="$1"
+commit_time="${2:-}"          # epoch seconds, given by CI; empty locally (always checked)
+ticket_rule_cutoff=1793579400   # 2026-11-02T00:30:00Z
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 subject="$(grep -v '^#' "$message_file" | sed -n '/./{p;q;}')"
 case "$subject" in
   "Merge "*|"fixup! "*|"squash! "*|"amend! "*|"Revert \""*) exit 0 ;;
 esac
+
+if [ -z "$commit_time" ] || [ "$commit_time" -ge "$ticket_rule_cutoff" ]; then
+  if ! printf '%s' "$subject" | grep -Eq '^JOR-[1-9][0-9]{0,5}: .*[^ ]'; then
+    echo "commit-msg: the subject must start with the Linear ticket and a colon, e.g. 'JOR-55: adding a button'." >&2
+    echo "  No ticket yet? Create one first (linear-capture skill: 'make a ticket for ...'), then commit." >&2
+    echo "  See .github/instructions/commits-and-pull-requests.instructions.md." >&2
+    exit 1
+  fi
+fi
 
 fail() {
   echo "commit-msg: $1" >&2

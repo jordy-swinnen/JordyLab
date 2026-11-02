@@ -382,9 +382,11 @@ file path; without an active issue, no comment is posted and no error appears.
 
 **Commit and pull-request instructions**
 
-- **FR-021**: Written instructions MUST define the commit message format: conventional subject, a body that explains
-  why and how it was verified, and a last-paragraph `Refs:` trailer with the accepted tokens (spec, task, bug,
-  campaign ID, Linear key, `NO-CODE`) next to the attribution line.
+- **FR-021**: Written instructions MUST define the commit message format: the subject starts with the Linear ticket key
+  and a colon (`JOR-55: adding a button`, the owner's choice on 2026-11-02, replacing the earlier plan to put the key in
+  the `Refs:` trailer), a body that explains why and how the change was verified, and a `Refs:` trailer naming the
+  SpecKit artefact. A hook and the pull-request check MUST reject a subject without the key for commits made after the
+  cutoff (2026-11-02T00:30Z); merge, fixup, squash and revert commits are exempt.
 - **FR-022**: Written instructions MUST define the pull-request description: summary, reason, how it was tested, specs
   and Linear issues served with the correct linking word (completing vs. non-completing), and the attribution line for
   agent-written pull requests.

@@ -53,29 +53,14 @@ valid. Specs, plans and tasks stay in git. Setup, labels, states and the connect
 
 ## Commits
 
-Every commit says which SpecKit artefact it serves, as a `Refs:` git trailer in the message's last paragraph
-(next to `Co-Authored-By:`). Subjects stay conventional commits (`fix(settings): …`).
-
-```
-fix(keycloak): backend needs view-realm to approve users
-
-Why the change was needed and how it was verified.
-
-Refs: 011 BUG-033
-Co-Authored-By: …
-```
-
-| Token | Meaning | Checked |
-|-------|---------|---------|
-| `NNN` | spec number, e.g. `011` | `specs/NNN-*` exists |
-| `NNN/T###` | a task of that spec, e.g. `009/T039` | spec exists |
-| `BUG-###` | campaign bug | already logged in `docs/testing/bug-log.md` (log first, then fix) |
-| `HANDOFF-##`, `DEPLOY-##`, `Q-##` | campaign handoff / deployment / question (`docs/testing/e2e-test-plan.md`) | format |
-| `NO-CODE` | config, tooling or docs work with no SpecKit artefact — must stand alone | — |
-
-Combine tokens freely (`Refs: 011 BUG-020 BUG-026`). Merge, `fixup!`/`squash!` and `git revert` commits are exempt.
-Enforced by `.githooks/commit-msg` locally (enable once per clone: `git config core.hooksPath .githooks`) and by
-the `Commit References` workflow on every pull-request commit. Never bypass it with `--no-verify`.
+Every commit subject starts with its Linear ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
+`Refs:` trailer naming the SpecKit artefact (`Refs: 015/T004`, `Refs: 011 BUG-020`, or `Refs: NO-CODE`). No ticket yet?
+Create one first with the `linear-capture` skill. Pull requests use `.github/pull_request_template.md` and a linking
+word (`Fixes JOR-23` finishes the ticket, `Refs JOR-23` does not). The full rules, the `Refs:` token table and examples
+are in `.github/instructions/commits-and-pull-requests.instructions.md`, loaded by Claude Code (`CLAUDE.md`) and OpenCode
+(`opencode.json`). Enforced by `.githooks/commit-msg` locally (enable once per clone:
+`git config core.hooksPath .githooks`) and by the `Commit References` workflow on every pull-request commit. Never
+bypass it with `--no-verify`. Merge, `fixup!`/`squash!` and `git revert` commits are exempt.
 
 ## Validation Data
 

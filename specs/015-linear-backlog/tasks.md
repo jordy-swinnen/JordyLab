@@ -103,13 +103,13 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 
 ## Phase 6: User Story 4 - Progress moves by itself (Priority: P1)
 
-**Goal**: `JOR-###` keys are accepted in `Refs:` and Linear moves issues with pull requests.
+**Goal**: `JOR-###` keys are accepted in `Refs:` and Linear moves issues with pull requests. *Change of 2026-11-02: the ticket key goes at the start of the commit subject (`JOR-55: adding a button`) and is enforced by the hook and CI (spec FR-021); T030 to T032 were done as that subject rule instead of a `Refs:` token.*
 
 **Independent Test**: `quickstart.md` §5.1–5.3.
 
-- [ ] T030 [P] [US4] Add the `JOR` cases from `contracts/refs-trailer.md` to `.githooks/tests/commit-msg-cases.sh` (pass: `JOR-12`, `015 JOR-12`, `JOR-12, JOR-340 BUG-001`; block: `NO-CODE JOR-12`, `JOR-`, `JOR-1x`, `jor-12`, `TICKET-12`). Run and see the pass cases fail.
-- [ ] T031 [US4] Add the `JOR-[0-9]*` token to `.githooks/commit-msg` (case arm with a strict `JOR-` plus digits check, format only), list `JOR-###` in the header comment and in the `fail` help text. Keep `NO-CODE` standing alone. Make T030 pass.
-- [ ] T032 [P] [US4] Update the token description in the comment at the top of `.github/workflows/commit-refs.yml` (the workflow runs the same script, so behaviour already follows).
+- [X] T030 [P] [US4] Add the `JOR` cases from `contracts/refs-trailer.md` to `.githooks/tests/commit-msg-cases.sh` (pass: `JOR-12`, `015 JOR-12`, `JOR-12, JOR-340 BUG-001`; block: `NO-CODE JOR-12`, `JOR-`, `JOR-1x`, `jor-12`, `TICKET-12`). Run and see the pass cases fail.
+- [X] T031 [US4] Add the `JOR-[0-9]*` token to `.githooks/commit-msg` (case arm with a strict `JOR-` plus digits check, format only), list `JOR-###` in the header comment and in the `fail` help text. Keep `NO-CODE` standing alone. Make T030 pass.
+- [X] T032 [P] [US4] Update the token description in the comment at the top of `.github/workflows/commit-refs.yml` (the workflow runs the same script, so behaviour already follows).
 - [ ] T033 [US4] **OWNER HANDOFF** (steps in `docs/linear.md` first): connect Linear's GitHub integration to the `jordy-swinnen` repository, keep the default pull-request automations (In Progress on open, Done on merge, set under Workflows & automations for team `JOR`), and leave commit linking off (research D4). Record the date. First check, and record in `docs/linear.md`, that the integration can be installed for a personal-account repository (`jordy-swinnen/…`, not an organization); if it can only be installed for an organization, stop and ask, because pull-request linking is the point of this story.
 - [ ] T034 [US4] Document in `docs/linear.md`: branch names contain the issue key, which linking word completes an issue (`Fixes`) and which does not (`Refs`, `Part of`), that words in comments do not link, that `Skip JOR-n` prevents a link, and that commit linking is off on purpose.
 - [ ] T035 [US4] Validate US4 with a test issue and a throwaway pull request (`quickstart.md` §5.1–5.3): the PR links the issue and moves it to In Progress; commits with `Refs: NO-CODE`, `Refs: 015 JOR-<n>` pass locally and in the Commit References check, `Refs: JOR-x` is blocked with the accepted-token list; merging `Fixes JOR-<n>` moves the issue to Done and `Refs JOR-<n>` leaves it open. Delete the test artefacts.
@@ -122,11 +122,11 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 
 **Independent Test**: `quickstart.md` §5.4.
 
-- [ ] T036 [US5] Write `.github/instructions/commits-and-pull-requests.instructions.md` as the single source (research D3, D4): commit subject (conventional), body (why and how verified), `Refs:` trailer in the last paragraph next to the attribution line, the full token table including `JOR-###` (moved from `AGENTS.md`), exemptions (merge, fixup, squash, amend, revert), pull-request description headings (summary, why, how tested, specs and Linear issues served with `Fixes`/`Refs`/`Part of`, attribution line for agent-written pull requests), partial-completion rule, `NO-CODE` for work with no issue. Frontmatter `applyTo: "**"`.
-- [ ] T037 [P] [US5] Write `.github/pull_request_template.md` with the headings from T036 and a pointer to the instruction file (no rules repeated).
-- [ ] T038 [P] [US5] Write `.github/copilot-instructions.md` as a short pointer to the instruction file (one paragraph, no rules repeated).
-- [ ] T039 [US5] Wire the readers: add `@.github/instructions/commits-and-pull-requests.instructions.md` to `CLAUDE.md`, and an `instructions` list entry with the same path in `opencode.json` (edit after T005/T006 so the file is changed once at a time).
-- [ ] T040 [US5] Shorten the "Commits" section of `AGENTS.md` to a three-line summary and a link to the instruction file (the token table now lives only there), and change the `See AGENTS.md → Commits` wording in `.githooks/commit-msg` to name the instruction file.
+- [X] T036 [US5] Write `.github/instructions/commits-and-pull-requests.instructions.md` as the single source (research D3, D4): commit subject (conventional), body (why and how verified), `Refs:` trailer in the last paragraph next to the attribution line, the full token table including `JOR-###` (moved from `AGENTS.md`), exemptions (merge, fixup, squash, amend, revert), pull-request description headings (summary, why, how tested, specs and Linear issues served with `Fixes`/`Refs`/`Part of`, attribution line for agent-written pull requests), partial-completion rule, `NO-CODE` for work with no issue. Frontmatter `applyTo: "**"`.
+- [X] T037 [P] [US5] Write `.github/pull_request_template.md` with the headings from T036 and a pointer to the instruction file (no rules repeated).
+- [X] T038 [P] [US5] Write `.github/copilot-instructions.md` as a short pointer to the instruction file (one paragraph, no rules repeated).
+- [X] T039 [US5] Wire the readers: add `@.github/instructions/commits-and-pull-requests.instructions.md` to `CLAUDE.md`, and an `instructions` list entry with the same path in `opencode.json` (edit after T005/T006 so the file is changed once at a time).
+- [X] T040 [US5] Shorten the "Commits" section of `AGENTS.md` to a three-line summary and a link to the instruction file (the token table now lives only there), and change the `See AGENTS.md → Commits` wording in `.githooks/commit-msg` to name the instruction file.
 - [ ] T041 [US5] Validate US5 (`quickstart.md` §5.4): ask Claude Code and OpenCode, without reminders, to commit and open a pull request on a trivial docs change; both follow the instruction file (subject, why, verified, `Refs:`, linking word, attribution). Check that a PR opened on GitHub shows the template skeleton. Fix the instruction wording where an agent missed a rule, then re-run.
 
 ---
