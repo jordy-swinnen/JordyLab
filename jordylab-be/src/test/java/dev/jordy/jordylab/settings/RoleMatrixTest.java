@@ -108,8 +108,9 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(markRequest(), withoutApps))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/fna/articles"), withoutApps))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/settings/users"), withoutApps))).isEqualTo(403);
-            // Mobile downloads are not an app grant, so the approved person keeps them.
-            softly.assertThat(status(as(get("/api/mobile/releases/latest"), withoutApps))).isEqualTo(404);
+            // The APK release endpoints were removed with the native app (spec 017 US4): no app grant
+            // can reach them any more, the deny-all refuses an authenticated caller with 403.
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), withoutApps))).isEqualTo(403);
         });
     }
 

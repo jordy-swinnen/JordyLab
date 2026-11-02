@@ -58,7 +58,7 @@
       }
     },
     {
-      "clientId": "jordylab-mobile",
+      "clientId": "test-offline",
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,

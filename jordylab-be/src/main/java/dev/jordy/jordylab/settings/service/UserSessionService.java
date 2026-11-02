@@ -5,7 +5,6 @@ import dev.jordy.jordylab.settings.rest.client.KeycloakUnavailableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,23 +15,24 @@ import java.util.UUID;
 /**
  * A person's active sessions, and ending one or all of them (spec 014 US5, FR-018 to FR-020).
  *
- * <p>Phone sessions are the ones opened for {@code jordylab-mobile}. They exist twice in Keycloak: an ordinary session
- * while the app is open, and an offline session (the biometric-unlock token) that a normal logout does not touch. Which
- * list a session came from decides how it is ended, so the service looks the session up rather than trusting the panel.
+ * <p>Offline sessions are the ones opened for {@code gamecatalog-script} by the game-library scanner (device-code login
+ * with {@code offline_access}); a normal logout does not end them. Which list a session came from decides how it is
+ * ended, so the service looks the session up rather than trusting the panel. The phone app's own offline token was
+ * removed with the native app (spec 017).
  */
 @Service
 @RequiredArgsConstructor
 public class UserSessionService {
 
     public enum SessionKind {
-        WEB, PHONE
+        WEB, SCANNER
     }
 
     public record PersonSession(String id, SessionKind kind, boolean offline, Instant startedAt,
             Instant lastAccessedAt) {
     }
 
-    private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
+    private static final String SCANNER_CLIENT_ID = "gamecatalog-script";
 
     private final KeycloakAdminClient keycloakAdminClient;
 
@@ -66,16 +66,14 @@ public class UserSessionService {
         keycloakAdminClient.deleteSession(sessionId, offline);
     }
 
-    /** FR-019: ending all includes the phone's offline sessions, which a plain logout leaves alive. */
+    /** FR-019: ending all includes the scanner's offline sessions, which a plain logout leaves alive. */
     public void endAllSessions(UUID callerId, UUID targetUserId) {
         refuseOwnAccount(callerId, targetUserId);
         requireUser(targetUserId);
         String subject = targetUserId.toString();
         keycloakAdminClient.endSessions(subject);
-        try {
-            keycloakAdminClient.revokeConsent(subject, MOBILE_CLIENT_ID);
-        } catch (HttpClientErrorException.NotFound neverUsedThePhoneApp) {
-            // Expected for most people.
+        for (KeycloakAdminClient.KeycloakSession offlineSession : offlineSessions(subject)) {
+            keycloakAdminClient.deleteSession(offlineSession.id(), true);
         }
     }
 
@@ -95,18 +93,18 @@ public class UserSessionService {
     }
 
     private List<KeycloakAdminClient.KeycloakSession> offlineSessions(String subject) {
-        Optional<String> mobileClientUuid = keycloakAdminClient.findClientUuid(MOBILE_CLIENT_ID);
-        if (mobileClientUuid.isEmpty()) {
+        Optional<String> scannerClientUuid = keycloakAdminClient.findClientUuid(SCANNER_CLIENT_ID);
+        if (scannerClientUuid.isEmpty()) {
             return List.of();
         }
 
-        return keycloakAdminClient.listOfflineSessions(subject, mobileClientUuid.get());
+        return keycloakAdminClient.listOfflineSessions(subject, scannerClientUuid.get());
     }
 
     private PersonSession toPersonSession(KeycloakAdminClient.KeycloakSession session, boolean offline) {
-        boolean phone = offline || session.clientIds().contains(MOBILE_CLIENT_ID);
+        boolean scanner = offline || session.clientIds().contains(SCANNER_CLIENT_ID);
 
-        return new PersonSession(session.id(), phone ? SessionKind.PHONE : SessionKind.WEB, offline,
+        return new PersonSession(session.id(), scanner ? SessionKind.SCANNER : SessionKind.WEB, offline,
                 session.startedAt(), session.lastAccessedAt());
     }
 

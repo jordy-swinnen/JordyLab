@@ -20,7 +20,7 @@ Was: `jordylab-be/src/main/java/dev/jordy/jordylab/mobile/domain/MobileRelease.j
 | published_at | TIMESTAMPTZ | |
 | created_at / updated_at | TIMESTAMPTZ | audit columns |
 
-Dropped by `V20261102003__mobile_drop_schema.sql` (research D8) together with the `mobile` schema. **No data migration**: release metadata has no consumer after the APK stack is gone; the table's contents are dead the moment the endpoints are removed.
+Dropped by `V20261103001__mobile_drop_schema.sql` (research D8) together with the `mobile` schema. **No data migration**: release metadata has no consumer after the APK stack is gone; the table's contents are dead the moment the endpoints are removed.
 
 ### Domain events (deleted)
 

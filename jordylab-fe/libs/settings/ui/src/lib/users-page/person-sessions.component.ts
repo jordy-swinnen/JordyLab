@@ -4,7 +4,7 @@ import { UserSession } from '@jordylab-fe/settings/api';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 /**
- * One person's sessions (spec 014 US5). Ending one signs out only that device; ending all also ends the phone app's
+ * One person's sessions (spec 014 US5). Ending one signs out only that device; ending all also ends the scanner's
  * offline session. The confirmation for "end all" is asked by the container.
  */
 @Component({
@@ -61,7 +61,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
             <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
               <div>
                 <p class="text-foreground">
-                  {{ session.kind === 'PHONE' ? 'Phone app' : 'Web' }}
+                  {{ session.kind === 'SCANNER' ? 'Scanner' : 'Web' }}
                   @if (session.offline) {
                     <span class="text-xs text-muted-foreground">(offline session)</span>
                   }

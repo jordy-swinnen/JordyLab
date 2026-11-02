@@ -85,7 +85,6 @@ class UserDeletionServiceTest {
         InOrder order = inOrder(keycloakAdminClient);
         order.verify(keycloakAdminClient).setEnabled(GUEST_SUBJECT, false);
         order.verify(keycloakAdminClient).endSessions(GUEST_SUBJECT);
-        order.verify(keycloakAdminClient).revokeConsent(GUEST_SUBJECT, "jordylab-mobile");
         order.verify(keycloakAdminClient).deleteUser(GUEST_SUBJECT);
         verify(guestChatUsageRepository).deleteByUserSubject(GUEST_SUBJECT);
         verify(guestChatLimitService).clearPersonal(GUEST_SUBJECT);
@@ -94,10 +93,9 @@ class UserDeletionServiceTest {
     }
 
     @Test
-    void aMissingMobileConsentIsNotAFailure() {
+    void aMissingScannerClientIsNotAFailure() {
         when(keycloakAdminClient.findUser(GUEST_SUBJECT)).thenReturn(Optional.of(user(GUEST_ID, List.of("guest"))));
-        doThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, new byte[0], null))
-                .when(keycloakAdminClient).revokeConsent(GUEST_SUBJECT, "jordylab-mobile");
+        when(keycloakAdminClient.findClientUuid("gamecatalog-script")).thenReturn(Optional.empty());
 
         service.deletePerson(ADMIN_ID, GUEST_ID);
 

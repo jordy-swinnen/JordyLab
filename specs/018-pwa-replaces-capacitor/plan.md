@@ -99,7 +99,7 @@ jordylab-be/
     └── fna/                          # BriefingGeneratorService calls NtfyClient directly;
                                       #   BriefingReady event DELETED
 + resources: application.yaml (jordylab.mobile.* out, jordylab.notifications.* in),
-  Flyway V20261102003__mobile_drop_schema.sql, compose/keycloak-realm-export.json cleanup
+  Flyway V20261103001__mobile_drop_schema.sql, compose/keycloak-realm-export.json cleanup
 
 deploy/
 ├── k8s/base/backend.yaml             # mobile-releases volume/mount DELETED

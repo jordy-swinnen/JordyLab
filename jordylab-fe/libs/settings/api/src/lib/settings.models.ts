@@ -18,9 +18,9 @@ export interface PersonChatLimit {
   source: ChatLimitSource;
 }
 
-export type SessionKind = 'WEB' | 'PHONE';
+export type SessionKind = 'WEB' | 'SCANNER';
 
-/** One active sign-in (spec 014 US5). Offline means the phone app's biometric-unlock session. */
+/** One active sign-in (spec 014 US5). Offline means the scanner's device-code token, which a logout leaves alive. */
 export interface UserSession {
   id: string;
   kind: SessionKind;

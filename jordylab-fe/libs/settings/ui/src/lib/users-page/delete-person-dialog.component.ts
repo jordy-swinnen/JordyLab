@@ -31,7 +31,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
           Delete {{ displayName() }}?
         </h3>
         <p brnAlertDialogDescription class="mt-3 text-sm text-muted-foreground">
-          Every session ends, including the phone app, and their chat usage, game votes and limits are
+          Every session ends, including the scanner's, and their chat usage, game votes and limits are
           removed. This cannot be undone.
         </p>
         <div class="mt-6 flex justify-end gap-3">

@@ -82,7 +82,7 @@ Every decision below was verified against the repo unless marked otherwise. Sour
 
 ## D8 — Flyway drops the `mobile` schema and cleans the stale event-publication rows
 
-**Decision**: One migration, `V20261102003__mobile_drop_schema.sql`: `DROP TABLE IF EXISTS mobile.mobile_release;` then `DROP SCHEMA IF EXISTS mobile CASCADE;`, plus `DELETE`s on the Modulith `event_publication` table for `serialized_event_type` values ending in `UserSignUpPending` or `BriefingReady` (exact table/column names to be read from `V20260925__create_event_publication_table.sql` at implementation time — do not guess them into the migration).
+**Decision**: One migration, `V20261103001__mobile_drop_schema.sql`: `DROP TABLE IF EXISTS mobile.mobile_release;` then `DROP SCHEMA IF EXISTS mobile CASCADE;`, plus `DELETE`s on the Modulith `event_publication` table for `serialized_event_type` values ending in `UserSignUpPending` or `BriefingReady` (exact table/column names to be read from `V20260925__create_event_publication_table.sql` at implementation time — do not guess them into the migration).
 
 **Rationale**: The schema-ownership rule says each module owns its schema; when the module dies its schema dies with it in a named migration (never edit `V20260928004`). The event-publication cleanup prevents Spring Modulith's registry from holding rows whose event classes no longer exist — a row that is still *incomplete* would try to deserialize a deleted class on resubmission and fail obscurely; deleting both complete and incomplete rows for those two types is safe because their only listener is gone.
 

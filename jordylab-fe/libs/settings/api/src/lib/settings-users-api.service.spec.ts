@@ -79,10 +79,10 @@ describe('SettingsUsersApiService', () => {
   });
 
   it('ends one session and passes the kind', () => {
-    spectator.service.endSession('user-1', 's1', 'PHONE').subscribe();
+    spectator.service.endSession('user-1', 's1', 'SCANNER').subscribe();
 
     spectator
-      .expectOne('/api/settings/users/user-1/sessions/s1?kind=PHONE', HttpMethod.DELETE)
+      .expectOne('/api/settings/users/user-1/sessions/s1?kind=SCANNER', HttpMethod.DELETE)
       .flush(null);
   });
 

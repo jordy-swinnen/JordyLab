@@ -9,7 +9,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.UUID;
 
@@ -30,7 +29,7 @@ import java.util.UUID;
 public class UserDeletionService {
 
     private static final String ADMIN_ROLE = "admin";
-    private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
+    private static final String SCANNER_CLIENT_ID = "gamecatalog-script";
 
     private final KeycloakAdminClient keycloakAdminClient;
     private final GuestChatUsageRepository guestChatUsageRepository;
@@ -57,11 +56,9 @@ public class UserDeletionService {
 
     private void endEverySession(String subject) {
         keycloakAdminClient.endSessions(subject);
-        try {
-            keycloakAdminClient.revokeConsent(subject, MOBILE_CLIENT_ID);
-        } catch (HttpClientErrorException.NotFound neverUsedThePhoneApp) {
-            // Expected for most people: a plain logout does not end offline_access sessions, so revoke them when present.
-        }
+        keycloakAdminClient.findClientUuid(SCANNER_CLIENT_ID).ifPresent(clientUuid ->
+                keycloakAdminClient.listOfflineSessions(subject, clientUuid)
+                        .forEach(session -> keycloakAdminClient.deleteSession(session.id(), true)));
     }
 
     private void removeLocalData(String subject) {

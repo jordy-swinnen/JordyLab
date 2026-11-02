@@ -19,14 +19,14 @@ describe('PersonSessionsComponent', () => {
     return created;
   };
 
-  it('lists a web session and a phone offline session with their kind', () => {
+  it('lists a web session and a scanner offline session with their kind', () => {
     spectator = render([
       aUserSessionMock({ id: 'web-1', kind: 'WEB' }),
-      aUserSessionMock({ id: 'phone-1', kind: 'PHONE', offline: true }),
+      aUserSessionMock({ id: 'scanner-1', kind: 'SCANNER', offline: true }),
     ]);
 
     expect(spectator.element).toHaveText('Web');
-    expect(spectator.element).toHaveText('Phone app');
+    expect(spectator.element).toHaveText('Scanner');
     expect(spectator.element).toHaveText('(offline session)');
   });
 

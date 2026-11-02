@@ -64,7 +64,7 @@ The authoritative list of everything this feature deletes. Every line must be go
 - `application.yaml`: `jordylab.mobile.*` block (replaced by `jordylab.notifications.*`), `spring.servlet.multipart` 200 MB/210 MB sizes (APK-upload only — revert to defaults)
 - `build.gradle.kts`: `com.android.tools.build:apksig` + the `google()` repository block
 - `compose/keycloak-realm-export.json`: `jordylab-mobile`, `mobile-release-ci` (+ service account), `mobile-release-publisher` role/scope-mapping, `admin` composite description mention
-- **Migration added, not removed**: `V20261102003__mobile_drop_schema.sql` (research D8)
+- **Migration added, not removed**: `V20261103001__mobile_drop_schema.sql` (research D8)
 
 ## Deploy + CI
 

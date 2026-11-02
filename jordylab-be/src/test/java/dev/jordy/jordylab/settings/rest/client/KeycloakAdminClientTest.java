@@ -189,7 +189,7 @@ class KeycloakAdminClientTest {
                 """)));
         stubFor(get(urlEqualTo("/admin/realms/jordylab-test/users/u1/offline-sessions/c1"))
                 .willReturn(json("""
-                        [ {"id": "s2", "start": 3000, "lastAccess": 4000, "clients": {"jordylab-mobile": ""}} ]
+                        [ {"id": "s2", "start": 3000, "lastAccess": 4000, "clients": {"gamecatalog-script": ""}} ]
                         """)));
 
         assertSoftly(softly -> {
@@ -198,25 +198,25 @@ class KeycloakAdminClientTest {
                 softly.assertThat(session.clientIds()).containsExactly("jordylab-host");
             });
             softly.assertThat(client.listOfflineSessions("u1", "c1")).singleElement().satisfies(session ->
-                    softly.assertThat(session.clientIds()).containsExactly("jordylab-mobile"));
+                    softly.assertThat(session.clientIds()).containsExactly("gamecatalog-script"));
         });
     }
 
     @Test
     void findsTheClientUuidOnceAndEndsAnOfflineSessionOnItsOwn() {
         stubToken();
-        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=jordylab-mobile"))
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=gamecatalog-script"))
                 .willReturn(json("""
-                        [ {"id": "c1", "clientId": "jordylab-mobile"} ]
+                        [ {"id": "c1", "clientId": "gamecatalog-script"} ]
                         """)));
         stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/sessions/s1?isOffline=true"))
                 .willReturn(aResponse().withStatus(204)));
 
-        assertThat(client.findClientUuid("jordylab-mobile")).contains("c1");
-        assertThat(client.findClientUuid("jordylab-mobile")).contains("c1");
+        assertThat(client.findClientUuid("gamecatalog-script")).contains("c1");
+        assertThat(client.findClientUuid("gamecatalog-script")).contains("c1");
         client.deleteSession("s1", true);
 
-        verify(1, getRequestedFor(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=jordylab-mobile")));
+        verify(1, getRequestedFor(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=gamecatalog-script")));
         verify(deleteRequestedFor(urlEqualTo("/admin/realms/jordylab-test/sessions/s1?isOffline=true")));
     }
 

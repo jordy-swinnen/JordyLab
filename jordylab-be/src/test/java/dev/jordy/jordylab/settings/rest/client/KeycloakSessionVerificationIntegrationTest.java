@@ -20,9 +20,10 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
  * (research R3, quickstart section 1).
  *
  * <ul>
- *   <li><strong>T-V1</strong>: one phone offline session can be deleted on its own with {@code ?isOffline=true}, and the
- *   refresh token of that same offline grant then stops working. Phone sessions are offline sessions of the
- *   {@code jordylab-mobile} client, which the regular logout does not touch.</li>
+ *   <li><strong>T-V1</strong>: one offline session can be deleted on its own with {@code ?isOffline=true}, and the
+ *   refresh token of that same offline grant then stops working. The grant comes from a test-only client
+ *   ({@code test-offline}) because the production scanner ({@code gamecatalog-script}) only allows the device-code
+ *   flow; a normal logout does not end such an offline session either way.</li>
  *   <li><strong>T-V2</strong>: the {@code jordylab-backend} service account may end sessions and delete users — the
  *   two Admin REST calls the deletion and session stories rely on. Its scopes ({@code manage-users}, {@code view-users})
  *   are granted by the base class, mirroring the live realm (deploy README, 2026-09-30).</li>
@@ -34,30 +35,30 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 class KeycloakSessionVerificationIntegrationTest extends KeycloakIntegrationTest {
 
     private static final String REALM = "jordylab-test";
-    private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
+    private static final String OFFLINE_CLIENT_ID = "test-offline";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Test
-    void onePhoneOfflineSessionCanBeDeletedOnItsOwn() throws Exception {
+    void oneOfflineSessionCanBeDeletedOnItsOwn() throws Exception {
         String adminToken = masterAdminToken();
         String offlineUserId = createUser(adminToken, "offline-user", "offline-password", "Offline", "User");
 
-        JsonNode offlineGrant = postForm(tokenUrl(), passwordGrant(MOBILE_CLIENT_ID, "offline-user", "offline-password",
+        JsonNode offlineGrant = postForm(tokenUrl(), passwordGrant(OFFLINE_CLIENT_ID, "offline-user", "offline-password",
                 "openid offline_access"));
         String offlineRefreshToken = offlineGrant.path("refresh_token").asText();
-        String mobileClientUuid = findClientUuid(adminToken, MOBILE_CLIENT_ID);
+        String scannerClientUuid = findClientUuid(adminToken, OFFLINE_CLIENT_ID);
         JsonNode offlineSessions = OBJECT_MAPPER.readTree(get(adminToken,
-                adminApiUrl() + "/users/" + offlineUserId + "/offline-sessions/" + mobileClientUuid));
+                adminApiUrl() + "/users/" + offlineUserId + "/offline-sessions/" + scannerClientUuid));
         String sessionId = offlineSessions.get(0).path("id").asText();
 
         Boolean deleted = delete(adminToken, sessionsApiUrl() + "/" + sessionId + "?isOffline=true");
         JsonNode afterDelete = OBJECT_MAPPER.readTree(get(adminToken,
-                adminApiUrl() + "/users/" + offlineUserId + "/offline-sessions/" + mobileClientUuid));
-        boolean sameGrantStillRefreshes = refreshSucceeds(MOBILE_CLIENT_ID, offlineRefreshToken);
+                adminApiUrl() + "/users/" + offlineUserId + "/offline-sessions/" + scannerClientUuid));
+        boolean sameGrantStillRefreshes = refreshSucceeds(OFFLINE_CLIENT_ID, offlineRefreshToken);
 
         assertSoftly(softly -> {
             softly.assertThat(offlineRefreshToken).as("offline grant returned a refresh token").isNotBlank();
-            softly.assertThat(offlineSessions).as("the jordylab-mobile grant created exactly one offline session").hasSize(1);
+            softly.assertThat(offlineSessions).as("the offline grant created exactly one offline session").hasSize(1);
             softly.assertThat(deleted).isTrue();
             softly.assertThat(afterDelete).as("the deleted offline session is gone").isEmpty();
             softly.assertThat(sameGrantStillRefreshes).as("its refresh token no longer works").isFalse();
