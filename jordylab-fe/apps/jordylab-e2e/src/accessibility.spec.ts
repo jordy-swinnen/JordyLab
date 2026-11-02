@@ -66,6 +66,36 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
     });
   }
 
+  // Every theme must pass on the two screens people use most, on both screen sizes.
+  const THEMES = ['content', 'oxblood', 'flare', 'paper', 'glasshouse', 'heather'] as const;
+  for (const screen of SCREENS) {
+    for (const theme of THEMES) {
+      test.describe(`${theme} theme on ${screen.name}`, () => {
+        test.use({ viewport: screen.viewport });
+
+        test.beforeEach(async ({ page }) => {
+          await page.addInitScript((id) => window.localStorage.setItem('jordylab.theme', id), theme);
+        });
+
+        test('the library has no violations', async ({ page }) => {
+          await page.goto('/games/grid');
+          await expect(page.getByRole('heading', { level: 2, name: 'Library' })).toBeVisible();
+          await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(theme);
+
+          expect(await violationsOf(page)).toEqual([]);
+        });
+
+        test('a game detail page has no violations', async ({ page }) => {
+          await page.goto('/games/grid');
+          await page.getByRole('link', { name: /Chrono Trigger/ }).click();
+          await expect(page.getByRole('heading', { level: 2, name: 'Chrono Trigger' })).toBeVisible();
+
+          expect(await violationsOf(page)).toEqual([]);
+        });
+      });
+    }
+  }
+
   test('the login page has no violations', async ({ browser }) => {
     const context = await browser.newContext({ baseURL: environment.baseUrl, storageState: undefined });
     await pointAppAtKeycloak(context, environment.keycloakUrl);

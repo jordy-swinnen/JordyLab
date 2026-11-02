@@ -18,7 +18,14 @@ async function openAppSettings(page: Page): Promise<void> {
 
 test.describe('Themes', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript((key) => window.localStorage.removeItem(key), STORAGE_KEY);
+    // Start from "no stored choice" once per tab; a later reload must keep what the test chose in between.
+    await page.addInitScript((key) => {
+      if (window.sessionStorage.getItem('e2e-theme-reset')) {
+        return;
+      }
+      window.sessionStorage.setItem('e2e-theme-reset', '1');
+      window.localStorage.removeItem(key);
+    }, STORAGE_KEY);
   });
 
   test('a dark device with no stored choice shows Content Led', async ({ page }) => {

@@ -11,7 +11,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="flex min-h-[80vh] items-center justify-center">
-      <div class="panel w-full max-w-md p-9">
+      <div class="panel w-full max-w-[400px] p-8">
         <div class="flex items-center gap-3">
           <svg width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true">
             <rect width="48" height="48" rx="13" fill="hsl(var(--primary))" />
@@ -25,8 +25,8 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
             <circle cx="17" cy="21" r="3.6" fill="hsl(var(--primary-foreground))" />
             <circle cx="21.5" cy="12.5" r="2.4" fill="hsl(var(--primary-foreground))" />
           </svg>
-          <h1 class="font-display text-[28px] leading-none tracking-[-0.03em]" style="font-variation-settings: 'wdth' 88">
-            <span class="font-normal">Jordy</span><span class="font-extrabold text-primary">Lab</span>
+          <h1 class="text-[28px] leading-none tracking-[-0.03em]">
+            <span class="font-normal">Jordy</span><span class="font-extrabold text-accent-text">Lab</span>
           </h1>
         </div>
         <p class="mt-6 text-[15px] leading-relaxed text-secondary-foreground">
@@ -36,7 +36,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
           Sign in with Keycloak
         </button>
         @if (failure()) {
-          <p class="mt-4 text-sm text-destructive" role="alert">{{ failure() }}</p>
+          <p class="mt-4 text-sm font-medium text-destructive" role="alert">{{ failure() }}</p>
         }
         @if (biometricEnabled()) {
           <button

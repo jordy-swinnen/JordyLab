@@ -22,7 +22,7 @@ import { AuthService } from './auth.service';
       [cdkMenuPosition]="positions()"
       [class]="
         compact()
-          ? 'flex items-center gap-2 rounded-full text-sm text-muted-foreground hover:text-foreground'
+          ? 'flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full text-sm text-muted-foreground hover:text-foreground'
           : 'flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left transition-colors hover:border-input'
       "
     >
@@ -45,7 +45,7 @@ import { AuthService } from './auth.service';
     <ng-template #menu>
       <div
         cdkMenu
-        class="min-w-48 rounded-xl border border-border bg-card p-1 text-sm text-foreground shadow-lg"
+        class="min-w-48 rounded-xl border border-input bg-card p-1 text-sm text-foreground shadow-modal"
       >
         <button type="button" cdkMenuItem data-testid="user-menu-password" [class]="itemClass" (cdkMenuItemTriggered)="onChangePassword()">
           Change password
@@ -81,7 +81,7 @@ export class UserMenuComponent {
       : [{ originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -8 }],
   );
   protected readonly itemClass =
-    'flex w-full items-center rounded-lg px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none';
+    'flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none';
 
   onChangePassword(): void {
     void this.#auth.requestAction('UPDATE_PASSWORD');

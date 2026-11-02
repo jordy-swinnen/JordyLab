@@ -1,5 +1,6 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { AuthService } from '@jordylab-fe/shared/auth';
+import { PageHeaderComponent } from '@jordylab-fe/shared/layout';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 /**
@@ -10,18 +11,17 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 @Component({
   selector: 'app-awaiting-approval',
   standalone: true,
-  imports: [HlmButtonDirective],
+  imports: [HlmButtonDirective, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="flex min-h-[80vh] items-center justify-center">
-      <div class="panel w-full max-w-md p-9">
-        <p class="eyebrow">Awaiting approval</p>
-        <h1 class="page-title mt-3">You're almost in</h1>
+      <div class="panel w-full max-w-[400px] p-8">
+        <lib-page-header title="You're almost in" subtitle="Awaiting approval" />
         <p class="mt-4 text-[15px] leading-relaxed text-secondary-foreground">
           Your account has been created, but an administrator still has to
           approve it before you can open the Game Catalog. Check back soon.
         </p>
-        <p class="mono-label mt-4 text-[12px]">
+        <p class="label mt-4">
           Signed in as {{ username() ?? 'unknown' }}
         </p>
         <button
