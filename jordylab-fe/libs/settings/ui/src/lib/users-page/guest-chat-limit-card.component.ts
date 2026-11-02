@@ -29,12 +29,13 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
               step="1"
               [value]="current.dailyLimit"
               #limitInput
-              class="mt-1 w-28 rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
+              class="mt-1 h-11 w-28 rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
               data-testid="guest-limit-input"
             />
           </label>
           <button
             hlmBtn
+            class="h-11"
             variant="default"
             [disabled]="saving()"
             (click)="onSave(limitInput.valueAsNumber)"

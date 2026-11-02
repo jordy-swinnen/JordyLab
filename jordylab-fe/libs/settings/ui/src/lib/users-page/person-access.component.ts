@@ -34,6 +34,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
             } @else if (app.grantable) {
               <button
                 hlmBtn
+                class="h-11"
                 variant="outline"
                 [disabled]="busy()"
                 (click)="toggle(app)"
@@ -44,6 +45,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
             } @else {
               <button
                 hlmBtn
+                class="h-11"
                 variant="outline"
                 disabled
                 [attr.data-testid]="'disabled-app-' + app.key"

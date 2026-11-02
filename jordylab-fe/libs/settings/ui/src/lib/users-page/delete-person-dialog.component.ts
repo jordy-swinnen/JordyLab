@@ -18,6 +18,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
       <button
         brnAlertDialogTrigger
         hlmBtn
+        class="h-11"
         variant="outline"
         [disabled]="busy()"
         [attr.data-testid]="'delete-user-' + user().id"
@@ -37,6 +38,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
           <button
             brnDialogClose
             hlmBtn
+            class="h-11"
             variant="outline"
             [attr.data-testid]="'cancel-delete-' + user().id"
             (click)="ctx.close()"
@@ -45,6 +47,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
           </button>
           <button
             hlmBtn
+            class="h-11"
             variant="destructive"
             [attr.data-testid]="'confirm-delete-' + user().id"
             (click)="confirm.emit(); ctx.close()"

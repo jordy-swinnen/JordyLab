@@ -47,8 +47,10 @@ public abstract class KeycloakIntegrationTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @Container
-    static GenericContainer<?> keycloak = new GenericContainer<>(DockerImageName.parse("quay.io/keycloak/keycloak:26.7.4"))
+    // Started once per JVM and never stopped between test classes: @Container would stop it after the first class and
+    // leave the cached Spring contexts talking to a dead Keycloak (flaky 403s/401s). Ryuk or the CI VM reaps it.
+    static final GenericContainer<?> keycloak = new GenericContainer<>(
+            DockerImageName.parse("quay.io/keycloak/keycloak:26.7.4"))
             .withExposedPorts(8080)
             .withEnv("KC_BOOTSTRAP_ADMIN_USERNAME", "test-admin")
             .withEnv("KC_BOOTSTRAP_ADMIN_PASSWORD", "test-admin-password")
@@ -61,6 +63,10 @@ public abstract class KeycloakIntegrationTest {
                     .forPort(8080)
                     .forStatusCode(200)
                     .withStartupTimeout(Duration.ofMinutes(3)));
+
+    static {
+        keycloak.start();
+    }
 
     @DynamicPropertySource
     static void keycloakProperties(DynamicPropertyRegistry registry) {

@@ -24,12 +24,13 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
               step="1"
               [value]="chatLimit.limit"
               #limitInput
-              class="w-24 rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
+              class="h-11 w-24 rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
               [attr.data-testid]="'chat-limit-input-' + user().id"
             />
           </label>
           <button
             hlmBtn
+            class="h-11"
             variant="outline"
             [disabled]="busy()"
             (click)="setPersonal.emit(limitInput.valueAsNumber)"
@@ -39,6 +40,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
           </button>
           <button
             hlmBtn
+            class="h-11"
             variant="ghost"
             [disabled]="busy()"
             (click)="clearPersonal.emit()"

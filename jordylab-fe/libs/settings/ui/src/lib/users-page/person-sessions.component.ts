@@ -20,6 +20,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
           <div class="flex items-center gap-2">
             <button
               hlmBtn
+              class="h-11"
               variant="outline"
               (click)="confirmingEndAll.set(false)"
               data-testid="cancel-end-all"
@@ -28,6 +29,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
             </button>
             <button
               hlmBtn
+              class="h-11"
               variant="destructive"
               [disabled]="actioning()"
               (click)="confirmEndAll()"
@@ -39,6 +41,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
         } @else {
           <button
             hlmBtn
+            class="h-11"
             variant="outline"
             [disabled]="actioning() || sessions().length === 0"
             (click)="confirmingEndAll.set(true)"
@@ -70,6 +73,7 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
               </div>
               <button
                 hlmBtn
+                class="h-11"
                 variant="outline"
                 [disabled]="actioning()"
                 (click)="endOne.emit(session)"
