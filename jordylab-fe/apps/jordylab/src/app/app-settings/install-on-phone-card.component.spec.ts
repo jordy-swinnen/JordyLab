@@ -29,6 +29,7 @@ describe('InstallOnPhoneCardComponent', () => {
     promptInstall.mockClear();
     Object.defineProperty(window, 'matchMedia', {
       value: () => ({ matches: false }) as MediaQueryList,
+      writable: true,
       configurable: true,
     });
     spectator = createComponent();
@@ -55,6 +56,7 @@ describe('InstallOnPhoneCardComponent', () => {
   it('is absent once the app runs standalone (nothing left to install)', () => {
     Object.defineProperty(window, 'matchMedia', {
       value: () => ({ matches: true }) as MediaQueryList,
+      writable: true,
       configurable: true,
     });
     spectator = createComponent();

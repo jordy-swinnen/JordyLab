@@ -52,8 +52,9 @@ class UserManagementIntegrationTest extends KeycloakIntegrationTest {
         String guestAfterRemoval = accessTokenFor(NO_APPS_USERNAME, NO_APPS_PASSWORD);
         assertSoftly(softly -> {
             softly.assertThat(status(as(get("/api/gamecatalog/games"), guestAfterRemoval))).isEqualTo(403);
-            // Not signed out: approval is untouched, so a non-app route still authorizes the person.
-            softly.assertThat(status(as(get("/api/mobile/releases/latest"), guestAfterRemoval))).isEqualTo(404);
+            // Not signed out: the caller is still authenticated, so the deny-all refuses the removed APK
+            // endpoint with 403 (an anonymous request would be 401).
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), guestAfterRemoval))).isEqualTo(403);
         });
     }
 

@@ -37,6 +37,7 @@ describe('InstallPromptStore', () => {
     Object.defineProperty(navigator, 'standalone', { value: undefined, configurable: true });
     Object.defineProperty(window, 'matchMedia', {
       value: () => ({ matches: false }) as MediaQueryList,
+      writable: true,
       configurable: true,
     });
   });
@@ -72,6 +73,7 @@ describe('InstallPromptStore', () => {
   it('shows nothing once the app runs standalone, on Android or iOS (FR-004)', () => {
     Object.defineProperty(window, 'matchMedia', {
       value: () => ({ matches: true }) as MediaQueryList,
+      writable: true,
       configurable: true,
     });
     create('web-android', true);
