@@ -23,12 +23,14 @@
       "enabled": true
     },
     "github": {
+      "type": "local",
+      "command": ["sh", "scripts/mcp/github-mcp.sh"],
+      "enabled": true
+    },
+    "linear": {
       "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "enabled": true,
-      "headers": {
-        "Authorization": "Bearer {env:GITHUB_PAT}"
-      }
+      "url": "https://mcp.linear.app/mcp",
+      "enabled": true
     }
   },
   "agent": {
