@@ -46,6 +46,9 @@ title. The folder link attached to the issue (`get_issue` attachments) is the sa
 | **same** | nothing differs | nothing |
 | **orphan** | an issue's key folder no longer exists | propose Canceled plus a comment "removed from the repository"; never delete |
 
+A folder rename shows up as one **new** item and one **orphan** with the same title. Say so in the table ("looks like a rename")
+and propose updating the old issue's key line to the new folder instead of creating a second issue and cancelling the first.
+
 A draft that has a spec shares the spec's issue: the issue carries both `Spec:` and `Draft:` lines. A draft that was
 its own issue and now has a spec: update that issue (add the `Spec:` line and title prefix), do not create a second.
 

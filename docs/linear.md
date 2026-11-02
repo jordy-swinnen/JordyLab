@@ -59,7 +59,7 @@ are **created by hand** (Linear's tools can list views but not create them), onc
 | Open work by app | Status is not *Done*, *Canceled*, *Duplicate* | Group by Label (App), then status |
 | Open ideas | Label *Idea*; status is not *Done*, *Canceled* | Group by App label, newest first |
 | Open bugs | Label *Bug*; status is not *Done*, *Canceled* | Group by status, priority first |
-| Ready to build | Status is *Specified* or *Todo* | Group by project |
+| Specified & Todo | Status is *Specified* or *Todo* | Group by project |
 
 How: Linear → the team → Views → New view, set the filter, name it exactly as above, and share it with the team.
 Triage needs no view: it is the team's built-in Triage inbox. Status of this step: owner handoff H-04 below.
@@ -170,7 +170,7 @@ Things only the owner can do. Each stays open until the owner says it is done.
 | H-01 | T007 | Claude Code: approve the project MCP servers, run `/mcp` (no argument), pick `linear` → Authenticate. OpenCode: `opencode mcp auth linear`, then `opencode mcp list`. | 2026-11-01 (owner: both connected) |
 | H-02 | T008 | Triage on: Settings → Teams → JordyLab → Triage. States: Settings → Teams → JordyLab → **Issue statuses** (listed on the team overview page; not under "Workflows & automations"); `+` in the *Backlog* group row adds a state. | 2026-11-01: Triage on by owner; *Drafted* and *Specified* added by the agent in the browser |
 | H-03 | T013 | In the existing Claude project used for tickets: Set project instructions → paste the block above. Then ask for one test ticket and a two-ticket list; repeat from the phone app inside the same project. | 2026-11-02 (owner: pasted; JOR-8 created; re-paste after the Triage fix) |
-| H-04 | T027 | Create the four saved views from "Saved views" above (Linear → team → Views → New view). | |
+| H-04 | T027 | Create the four saved views from "Saved views" above (Linear → team → Views → New view). | Done 2026-11-02 (all four exist and are shared; the fourth is named "Specified & Todo") |
 | H-05 | T033 | Connect the GitHub integration, keep the default pull-request automation, add the commit webhook. | 2026-11-02 (owner; integration and automation checked on PRs #159, #160, #162) |
 
 ### Tool coverage
