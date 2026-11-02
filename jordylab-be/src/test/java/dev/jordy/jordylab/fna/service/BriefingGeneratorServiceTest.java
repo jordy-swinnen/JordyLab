@@ -43,6 +43,8 @@ class BriefingGeneratorServiceTest {
             new SystemPromptTemplate(new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH)).render();
     private static final String NO_ARTICLES_FALLBACK = "No articles available yet.";
     private static final String NO_POSITIONS_FALLBACK = "No portfolio positions configured. Provide a general European market briefing.";
+    private static final String NO_WISHLIST_FALLBACK = "No wishlist stocks configured.";
+    private static final String WISHLIST_HEADING = "My wishlist (stocks I do not own yet, considering):";
     private static final String BELGIAN_INVESTOR_PERSONA = "Belgian retail investor";
 
     @Mock
@@ -81,8 +83,9 @@ class BriefingGeneratorServiceTest {
                 .thenReturn(List.of(ArticleTestBuilder.anArticle()
                         .fullContent("The BEL20 index closed at a record high today")
                         .build()));
-        when(positionRepository.findAllByOrderByTickerAsc())
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc())
                 .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultPortfolioPosition()));
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc()).thenReturn(List.of());
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
         when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
@@ -109,9 +112,110 @@ class BriefingGeneratorServiceTest {
     }
 
     @Test
+    void includesWishlistStocksAsTheirOwnGroupWithPriceAndTimestamp() {
+        when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc())
+                .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultPortfolioPosition()));
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc())
+                .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultWishlistPosition()));
+
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aDefaultSuccessResult());
+        ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
+        when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        briefingGeneratorService.generateBriefing();
+
+        String userPrompt = userPromptCaptor.getValue();
+        assertSoftly(softly -> {
+            softly.assertThat(userPrompt).contains(WISHLIST_HEADING);
+            softly.assertThat(userPrompt).contains(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER);
+            softly.assertThat(userPrompt).contains("€" + PortfolioPositionTestBuilder.DEFAULT_LAST_PRICE);
+            softly.assertThat(userPrompt).contains(PortfolioPositionTestBuilder.DEFAULT_LAST_PRICE_FETCHED_AT.toString());
+            softly.assertThat(userPrompt).doesNotContain(NO_WISHLIST_FALLBACK);
+            softly.assertThat(userPrompt).contains("My portfolio:");
+            softly.assertThat(userPrompt).contains(PortfolioPositionTestBuilder.DEFAULT_TICKER);
+        });
+    }
+
+    @Test
+    void statesThatNoWishlistStocksAreConfiguredWhenTheWishlistIsEmpty() {
+        when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc()).thenReturn(List.of());
+
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aSuccessResult("General briefing"));
+        ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
+        when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        briefingGeneratorService.generateBriefing();
+
+        assertSoftly(softly -> {
+            softly.assertThat(userPromptCaptor.getValue()).contains(NO_WISHLIST_FALLBACK);
+            softly.assertThat(userPromptCaptor.getValue()).contains(NO_POSITIONS_FALLBACK);
+            softly.assertThat(briefingCaptor.getValue().getContent()).isEqualTo("General briefing");
+        });
+    }
+
+    @Test
+    void notesAWishlistStockWhosePriceIsUnavailable() {
+        when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc())
+                .thenReturn(List.of(PortfolioPositionTestBuilder.aWishlistPosition()
+                        .lastPrice(null)
+                        .lastPriceFetchedAt(null)
+                        .build()));
+
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aDefaultSuccessResult());
+        ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
+        when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        briefingGeneratorService.generateBriefing();
+
+        assertSoftly(softly -> {
+            softly.assertThat(userPromptCaptor.getValue()).contains(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER);
+            softly.assertThat(userPromptCaptor.getValue()).contains("price unavailable");
+            softly.assertThat(briefingCaptor.getValue().getContent()).isNotNull();
+        });
+    }
+
+    @Test
+    void asksForAWishlistEvaluationAndADiscoveryTickerInTheWatchlistSection() {
+        when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc())
+                .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultWishlistPosition()));
+
+        ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+        when(aiService.call(eq(AiFeature.FNA_BRIEFING), systemPromptCaptor.capture(), userPromptCaptor.capture()))
+                .thenReturn(AiCallResultTestBuilder.aDefaultSuccessResult());
+        ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
+        when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        briefingGeneratorService.generateBriefing();
+
+        assertSoftly(softly -> {
+            softly.assertThat(systemPromptCaptor.getValue()).contains("## Portfolio Impact");
+            softly.assertThat(systemPromptCaptor.getValue()).contains("## European Market Summary");
+            softly.assertThat(systemPromptCaptor.getValue()).contains("## Watchlist Suggestion");
+            softly.assertThat(systemPromptCaptor.getValue()).contains("wishlist");
+            softly.assertThat(userPromptCaptor.getValue()).contains("My wishlist");
+            softly.assertThat(briefingCaptor.getValue().getContent()).isNotNull();
+        });
+    }
+
+    @Test
     void handlesEmptyArticlesAndPositionsWithFallbackText() {
         when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
-        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc()).thenReturn(List.of());
 
         ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
@@ -134,7 +238,8 @@ class BriefingGeneratorServiceTest {
     @Test
     void throwsAndDoesNotSaveBriefingOnAiFailure() {
         when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
-        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc()).thenReturn(List.of());
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
         when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))
@@ -153,7 +258,8 @@ class BriefingGeneratorServiceTest {
     @Test
     void doesNotRetryWithinSameTickOnAiFailure() {
         when(articleRepository.findTop50ByOrderByPublishedAtDesc()).thenReturn(List.of());
-        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of());
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc()).thenReturn(List.of());
 
         ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
         when(aiService.call(eq(AiFeature.FNA_BRIEFING), eq(SYSTEM_PROMPT), userPromptCaptor.capture()))

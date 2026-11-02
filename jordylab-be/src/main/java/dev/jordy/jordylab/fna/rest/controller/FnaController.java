@@ -5,6 +5,7 @@ import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.rest.controller.model.ManualArticleRequest;
 import dev.jordy.jordylab.fna.rest.controller.model.ManualArticleResponse;
 import dev.jordy.jordylab.fna.rest.controller.model.PortfolioPositionDto;
+import dev.jordy.jordylab.fna.rest.controller.model.WishlistItemDto;
 import dev.jordy.jordylab.fna.service.FnaService;
 import dev.jordy.jordylab.fna.service.ManualArticleSubmissionService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,24 @@ public class FnaController {
     @DeleteMapping("/portfolio/{id}")
     public ResponseEntity<Void> removePosition(@PathVariable UUID id) {
         fnaService.removePosition(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Wishlist stocks (spec 016): tickers the investor is considering but does not own. */
+    @GetMapping("/wishlist")
+    public ResponseEntity<List<WishlistItemDto>> getWishlist() {
+        return ResponseEntity.ok(fnaService.getWishlistItems());
+    }
+
+    @PutMapping("/wishlist/{ticker}")
+    public ResponseEntity<WishlistItemDto> addWishlistItem(@PathVariable String ticker) {
+        return ResponseEntity.ok(fnaService.addWishlistItem(ticker));
+    }
+
+    @DeleteMapping("/wishlist/{id}")
+    public ResponseEntity<Void> removeWishlistItem(@PathVariable UUID id) {
+        fnaService.removeWishlistItem(id);
 
         return ResponseEntity.noContent().build();
     }

@@ -15,6 +15,9 @@ public class PortfolioPositionTestBuilder {
     public static final BigDecimal DEFAULT_LAST_PRICE = new BigDecimal("72.50");
     public static final Instant DEFAULT_LAST_PRICE_FETCHED_AT = Instant.parse("2026-03-15T09:00:00Z");
 
+    public static final UUID DEFAULT_WISHLIST_ID = UUID.fromString("33333333-0000-0000-0000-000000000004");
+    public static final String DEFAULT_WISHLIST_TICKER = "ASML.AS";
+
     public static PortfolioPosition aDefaultPortfolioPosition() {
         return aPortfolioPosition().build();
     }
@@ -24,6 +27,19 @@ public class PortfolioPositionTestBuilder {
                 .id(DEFAULT_ID)
                 .ticker(DEFAULT_TICKER)
                 .shareCount(DEFAULT_SHARE_COUNT)
+                .lastPrice(DEFAULT_LAST_PRICE)
+                .lastPriceFetchedAt(DEFAULT_LAST_PRICE_FETCHED_AT);
+    }
+
+    public static PortfolioPosition aDefaultWishlistPosition() {
+        return aWishlistPosition().build();
+    }
+
+    public static PortfolioPosition.PortfolioPositionBuilder aWishlistPosition() {
+        return PortfolioPosition.builder()
+                .id(DEFAULT_WISHLIST_ID)
+                .ticker(DEFAULT_WISHLIST_TICKER)
+                .shareCount(null)
                 .lastPrice(DEFAULT_LAST_PRICE)
                 .lastPriceFetchedAt(DEFAULT_LAST_PRICE_FETCHED_AT);
     }

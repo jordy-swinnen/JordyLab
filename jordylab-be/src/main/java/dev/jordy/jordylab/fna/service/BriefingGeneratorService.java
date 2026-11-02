@@ -54,15 +54,19 @@ public class BriefingGeneratorService {
     @Transactional
     public Briefing generateBriefing() {
         List<Article> articles = articleRepository.findTop50ByOrderByPublishedAtDesc();
-        List<PortfolioPosition> positions = positionRepository.findAllByOrderByTickerAsc();
+        List<PortfolioPosition> positions = positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc();
+        List<PortfolioPosition> wishlist = positionRepository.findAllByShareCountIsNullOrderByTickerAsc();
 
         String articleContext = buildArticleContext(articles);
         String portfolioContext = buildPortfolioContext(positions);
+        String wishlistContext = buildWishlistContext(wishlist);
 
         String userPrompt = "Recent financial news:\n" + articleContext
                 + "\n\nMy portfolio:\n" + portfolioContext
+                + "\n\nMy wishlist (stocks I do not own yet, considering):\n" + wishlistContext
                 + "\n\nAnalyse how the recent news affects my portfolio positions, summarise the broader European market themes, "
-                + "and suggest one ticker I don't currently hold that looks interesting based on the recent news.";
+                + "and fill the Watchlist Suggestion section as instructed: evaluate the wishlist stocks above (when there are any) "
+                + "and also name one extra ticker that is neither held nor on the wishlist.";
 
         AiCallResult result = aiService.call(AiFeature.FNA_BRIEFING, systemPrompt, userPrompt);
 
@@ -116,6 +120,26 @@ public class BriefingGeneratorService {
 
                     return position.getTicker() + ": " + position.getShareCount()
                             + " shares, last price €" + position.getLastPrice()
+                            + " (as of " + fetchedAt + ")";
+                })
+                .collect(Collectors.joining("\n"));
+    }
+
+    private String buildWishlistContext(List<PortfolioPosition> wishlist) {
+        if (wishlist.isEmpty()) {
+            return "No wishlist stocks configured.";
+        }
+
+        return wishlist.stream()
+                .map(position -> {
+                    if (position.getLastPrice() == null) {
+                        return position.getTicker() + ": price unavailable";
+                    }
+                    String fetchedAt = position.getLastPriceFetchedAt() != null
+                            ? position.getLastPriceFetchedAt().toString()
+                            : "unknown";
+
+                    return position.getTicker() + ": last price €" + position.getLastPrice()
                             + " (as of " + fetchedAt + ")";
                 })
                 .collect(Collectors.joining("\n"));

@@ -3,6 +3,7 @@ package dev.jordy.jordylab.fna.rest.controller;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.service.BriefingGenerationException;
 import dev.jordy.jordylab.fna.service.FnaService;
+import dev.jordy.jordylab.fna.service.TickerAlreadyHeldException;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +81,53 @@ class FnaControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(fnaService).removePosition(POSITION_ID);
+    }
+
+    @Test
+    void getWishlistReturnsWishlistItemList() throws Exception {
+        when(fnaService.getWishlistItems()).thenReturn(List.of(WishlistItemDtoTestBuilder.aDefaultWishlistItemDto()));
+
+        mockMvc.perform(get("/api/fna/wishlist"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].ticker").value(WishlistItemDtoTestBuilder.DEFAULT_TICKER))
+                .andExpect(jsonPath("$[0].shareCount").doesNotExist());
+    }
+
+    @Test
+    void addWishlistItemReturnsTheItem() throws Exception {
+        when(fnaService.addWishlistItem("ASML.AS")).thenReturn(WishlistItemDtoTestBuilder.aDefaultWishlistItemDto());
+
+        mockMvc.perform(put("/api/fna/wishlist/ASML.AS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ticker").value(WishlistItemDtoTestBuilder.DEFAULT_TICKER))
+                .andExpect(jsonPath("$.lastPrice").value(WishlistItemDtoTestBuilder.DEFAULT_LAST_PRICE.doubleValue()));
+    }
+
+    @Test
+    void addWishlistItemReturns409WhenTheTickerIsAlreadyHeld() throws Exception {
+        when(fnaService.addWishlistItem("KBC.BR")).thenThrow(new TickerAlreadyHeldException("KBC.BR"));
+
+        mockMvc.perform(put("/api/fna/wishlist/KBC.BR"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("TICKER_ALREADY_HELD"));
+    }
+
+    @Test
+    void addWishlistItemReturns400ForABlankTicker() throws Exception {
+        when(fnaService.addWishlistItem(" ")).thenThrow(new IllegalArgumentException("ticker is required"));
+
+        mockMvc.perform(put("/api/fna/wishlist/{ticker}", " "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("INVALID_POSITION"));
+    }
+
+    @Test
+    void removeWishlistItemReturnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/fna/wishlist/{id}", POSITION_ID))
+                .andExpect(status().isNoContent());
+
+        verify(fnaService).removeWishlistItem(POSITION_ID);
     }
 
     @Test

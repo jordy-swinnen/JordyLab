@@ -1,7 +1,7 @@
 import { Component, computed, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { PortfolioPositionRow } from '@jordylab-fe/fna/api';
+import { PortfolioPositionRow, WishlistItem } from '@jordylab-fe/fna/api';
 import { EmptyStateComponent, PageHeaderComponent } from '@jordylab-fe/shared/layout';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
@@ -29,11 +29,15 @@ interface AllocationSegment {
 })
 export class PortfolioManagerViewComponent {
   positions = input.required<PortfolioPositionRow[]>();
+  wishlist = input.required<WishlistItem[]>();
+  wishlistError = input<string | null>(null);
   totalWorth = input.required<number>();
   hasAnyPrices = input.required<boolean>();
 
   addPosition = output<{ ticker: string; shares: number }>();
   deletePosition = output<string>();
+  addWishlistItem = output<string>();
+  deleteWishlistItem = output<string>();
 
   protected readonly swatch = (index: number): string =>
     SWATCHES[index % SWATCHES.length];
@@ -57,6 +61,9 @@ export class PortfolioManagerViewComponent {
 
   newTicker = signal('');
   newShares = signal<number | null>(null);
+  newWishlistTicker = signal('');
+  promotingId = signal<string | null>(null);
+  promoteShares = signal<number | null>(null);
 
   onAddPosition(): void {
     const ticker = this.newTicker();
@@ -66,5 +73,32 @@ export class PortfolioManagerViewComponent {
     this.addPosition.emit({ ticker, shares });
     this.newTicker.set('');
     this.newShares.set(null);
+  }
+
+  onAddWishlistItem(): void {
+    const ticker = this.newWishlistTicker().trim();
+    if (!ticker) return;
+
+    this.addWishlistItem.emit(ticker);
+    this.newWishlistTicker.set('');
+  }
+
+  startPromoting(item: WishlistItem): void {
+    this.promotingId.set(item.id);
+    this.promoteShares.set(null);
+  }
+
+  cancelPromoting(): void {
+    this.promotingId.set(null);
+    this.promoteShares.set(null);
+  }
+
+  /** Moves a wishlist ticker into held positions, keeping the row (and its cached price) in place. */
+  confirmPromoting(item: WishlistItem): void {
+    const shares = this.promoteShares();
+    if (shares === null || shares <= 0) return;
+
+    this.addPosition.emit({ ticker: item.ticker, shares });
+    this.cancelPromoting();
   }
 }

@@ -164,6 +164,40 @@ class FnaRepositoryTest {
     }
 
     @Test
+    void separatesHeldPositionsFromWishlistItems() {
+        positionRepository.save(PortfolioPositionTestBuilder.aPortfolioPosition()
+                .id(UUID.fromString("33333333-0000-0000-0000-000000000041"))
+                .ticker("KBC.BR")
+                .build());
+        positionRepository.save(PortfolioPositionTestBuilder.aWishlistPosition()
+                .id(UUID.fromString("33333333-0000-0000-0000-000000000042"))
+                .ticker("ASML.AS")
+                .build());
+
+        List<PortfolioPosition> held = positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc();
+        List<PortfolioPosition> wishlisted = positionRepository.findAllByShareCountIsNullOrderByTickerAsc();
+
+        assertSoftly(softly -> {
+            softly.assertThat(held).extracting(PortfolioPosition::getTicker).containsExactly("KBC.BR");
+            softly.assertThat(wishlisted).extracting(PortfolioPosition::getTicker).containsExactly("ASML.AS");
+            softly.assertThat(positionRepository.findAllByOrderByTickerAsc()).hasSize(2);
+        });
+    }
+
+    @Test
+    void persistsAWishlistItemWithoutAShareCount() {
+        PortfolioPosition saved = positionRepository.saveAndFlush(PortfolioPositionTestBuilder.aWishlistPosition().build());
+        entityManager.clear();
+
+        PortfolioPosition reloaded = positionRepository.findById(saved.getId()).orElseThrow();
+
+        assertSoftly(softly -> {
+            softly.assertThat(reloaded.getShareCount()).isNull();
+            softly.assertThat(reloaded.isWishlisted()).isTrue();
+        });
+    }
+
+    @Test
     void shareCountKeepsTheDigitsOfASmallCryptoPosition() {
         PortfolioPosition saved = positionRepository.saveAndFlush(PortfolioPositionTestBuilder.aPortfolioPosition()
                 .shareCount(new BigDecimal("0.002106"))

@@ -3,9 +3,13 @@
 } @else {
   <lib-portfolio-manager-view
     [positions]="positions()"
+    [wishlist]="wishlist()"
+    [wishlistError]="wishlistError()"
     [totalWorth]="totalWorth()"
     [hasAnyPrices]="hasAnyPrices()"
     (addPosition)="addPosition($event)"
     (deletePosition)="deletePosition($event)"
+    (addWishlistItem)="addWishlistItem($event)"
+    (deleteWishlistItem)="deleteWishlistItem($event)"
   />
 }

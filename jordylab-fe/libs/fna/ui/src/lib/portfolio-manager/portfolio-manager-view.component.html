@@ -168,3 +168,132 @@
     </p>
   </div>
 </div>
+
+<!-- Wishlist: stocks under consideration, not owned. Kept out of total worth and allocation. -->
+<div class="panel mt-8 overflow-hidden">
+  <div class="flex flex-wrap items-end justify-between gap-4 px-7 pt-6">
+    <div>
+      <p class="label">Wishlist</p>
+      <h3 class="mt-1 text-[17px] font-semibold text-foreground">
+        Considering · {{ wishlist().length }}
+        {{ wishlist().length === 1 ? 'stock' : 'stocks' }}
+      </h3>
+    </div>
+  </div>
+
+  @if (wishlist().length === 0) {
+    <div class="p-4">
+      <lib-empty-state
+        title="No wishlist stocks yet."
+        hint="Track a stock you do not own: the briefing comments on it and it never counts towards your total worth."
+        actionLabel="Add to wishlist"
+        actionKind="secondary"
+        (actionClicked)="wishlistField.focus()"
+      />
+    </div>
+  } @else {
+    <div class="mt-5 overflow-x-auto" tabindex="0" role="region" aria-label="Wishlist table">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border bg-secondary">
+            <th class="label px-7 py-4 text-left font-medium">Ticker</th>
+            <th class="label px-4 py-4 text-right font-medium">Last price</th>
+            <th class="label px-4 py-4 text-right font-medium">Updated</th>
+            <th class="px-7 py-4"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of wishlist(); track item.id) {
+            <tr
+              class="group border-b border-border transition-colors duration-150 hover:bg-secondary/60"
+              data-testid="wishlist-row"
+            >
+              <td class="px-7 py-5">
+                <span class="text-[17px] font-medium text-foreground">{{ item.ticker }}</span>
+              </td>
+              <td class="px-4 py-5 text-right">
+                @if (item.lastPrice !== null) {
+                  <span class="text-[15px] tabular-nums text-secondary-foreground">
+                    €{{ item.lastPrice | number: '1.2-2' }}
+                  </span>
+                } @else {
+                  <span class="text-muted-foreground">—</span>
+                }
+              </td>
+              <td class="px-4 py-5 text-right text-[13px] text-muted-foreground">
+                @if (item.lastPriceFetchedAt) {
+                  {{ item.lastPriceFetchedAt | date: 'short' }}
+                } @else {
+                  <span>—</span>
+                }
+              </td>
+              <td class="px-7 py-5 text-right">
+                @if (promotingId() === item.id) {
+                  <span class="inline-flex flex-wrap items-center justify-end gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      aria-label="Promote shares"
+                      class="h-11 w-28 rounded-xl border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      placeholder="Shares"
+                      [value]="promoteShares() ?? ''"
+                      (input)="promoteShares.set(+$any($event.target).value || null)"
+                    />
+                    <button hlmBtn size="sm" class="h-11" (click)="confirmPromoting(item)">Confirm</button>
+                    <button hlmBtn variant="ghost" size="sm" class="h-11" (click)="cancelPromoting()">Cancel</button>
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-2">
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      class="h-11 text-muted-foreground hover:text-foreground"
+                      (click)="startPromoting(item)"
+                    >
+                      Promote
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      class="h-11 text-muted-foreground hover:text-destructive"
+                      (click)="deleteWishlistItem.emit(item.id)"
+                    >
+                      Remove
+                    </button>
+                  </span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Add to wishlist form -->
+  <div class="flex flex-wrap items-center gap-3 bg-rail px-7 py-[18px]">
+    <input
+      #wishlistField
+      type="text"
+      aria-label="Wishlist ticker"
+      class="h-11 w-40 rounded-xl border border-input bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      placeholder="TICKER"
+      [value]="newWishlistTicker()"
+      (input)="newWishlistTicker.set($any($event.target).value)"
+    />
+    <button hlmBtn class="h-11 px-5" (click)="onAddWishlistItem()">
+      Add to wishlist
+    </button>
+    @if (wishlistError()) {
+      <p class="basis-full text-sm text-destructive" data-testid="wishlist-error">
+        {{ wishlistError() }}
+      </p>
+    }
+    <p class="basis-full text-xs text-muted-foreground">
+      Stocks you don't own yet. They get advice in the briefing but never count towards your total worth.
+    </p>
+  </div>
+</div>
