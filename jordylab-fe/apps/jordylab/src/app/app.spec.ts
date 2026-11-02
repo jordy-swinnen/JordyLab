@@ -73,7 +73,7 @@ describe('App', () => {
     spectator.detectChanges();
 
     const links = spectator
-      .queryAll('nav a')
+      .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.textContent?.trim());
 
     expect(links).toEqual([
@@ -86,6 +86,7 @@ describe('App', () => {
       'Briefing',
       'Users',
       'AI Models',
+      'App',
     ]);
   });
 
@@ -94,7 +95,7 @@ describe('App', () => {
     spectator.detectChanges();
 
     const hrefs = spectator
-      .queryAll('nav a')
+      .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
@@ -107,15 +108,16 @@ describe('App', () => {
       '/fna/briefing',
       '/settings/users',
       '/settings/ai-models',
+      '/settings/app',
     ]);
   });
 
-  it('shows a guest only the Game Catalog library and LibBot, with Sources, Consoles, FNA and Settings hidden', () => {
+  it('shows a guest the Game Catalog library and LibBot and App settings, with Sources, Consoles, FNA and the admin settings hidden', () => {
     const links = spectator
-      .queryAll('nav a')
+      .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.textContent?.trim());
 
-    expect(links).toEqual(['Library', 'LibBot']);
+    expect(links).toEqual(['Library', 'LibBot', 'App']);
   });
 
   it('renders a router outlet for the domain routes', () => {
@@ -152,7 +154,7 @@ describe('App', () => {
   describe('Settings nav group', () => {
     it('is hidden for a non-admin user', () => {
       const links = spectator
-        .queryAll('nav a')
+        .queryAll('nav[aria-label="Primary"] a')
         .map((link) => link.textContent?.trim());
 
       expect(links).not.toContain('Users');
@@ -162,7 +164,7 @@ describe('App', () => {
       isAdmin.set(true);
       spectator.detectChanges();
 
-      const links = spectator.queryAll('nav a');
+      const links = spectator.queryAll('nav[aria-label="Primary"] a');
       const settingsLink = links.find(
         (link) => link.textContent?.trim() === 'Users',
       );
@@ -213,11 +215,31 @@ describe('App', () => {
     });
   });
 
-  it('keeps the native-only App settings entry out of the web navigation, even for an admin', () => {
-    isAdmin.set(true);
-
+  it('shows the App settings entry on the web to everyone, because the theme choice lives there', () => {
     const settings = spectator.component['visibleGroups']().find((group) => group.label === 'Settings');
 
-    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/users', '/settings/ai-models']);
+    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/app']);
+  });
+
+  describe('phone tab bar', () => {
+    const tabLabels = () => spectator.queryAll('lib-tab-bar a').map((tab) => tab.textContent?.trim());
+
+    it('shows Library, LibBot and More to a guest', () => {
+      expect(tabLabels()).toEqual(['Library', 'LibBot', 'More']);
+    });
+
+    it('adds Finance for an administrator', () => {
+      isAdmin.set(true);
+      spectator.detectChanges();
+
+      expect(tabLabels()).toEqual(['Library', 'LibBot', 'Finance', 'More']);
+    });
+
+    it('is not shown to an account with no application role', () => {
+      hasAppRole.set(false);
+      spectator.detectChanges();
+
+      expect(spectator.query('lib-tab-bar')).toBeNull();
+    });
   });
 });

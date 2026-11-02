@@ -1,4 +1,7 @@
+// The colour file and the plugin are workspace-root files, not libraries, so they have no alias to import through.
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { themes } from '../../../../../../themes.js';
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { hexToHslTriplet } from '../../../../../../tailwind.theme.js';
 
 type Channels = readonly [number, number, number];

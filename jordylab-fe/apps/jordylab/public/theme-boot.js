@@ -1,22 +1,22 @@
 (function () {
-  var storageKey = 'jordylab.theme';
-  var themeIds = ['content', 'oxblood', 'flare', 'paper', 'glasshouse', 'heather'];
-  var defaultDarkThemeId = 'content';
-  var defaultLightThemeId = 'paper';
-  var preference = 'system';
+  const storageKey = 'jordylab.theme';
+  const themeIds = ['content', 'oxblood', 'flare', 'paper', 'glasshouse', 'heather'];
+  const defaultDarkThemeId = 'content';
+  const defaultLightThemeId = 'paper';
+  let preference = 'system';
 
   try {
-    var stored = window.localStorage.getItem(storageKey);
+    const stored = window.localStorage.getItem(storageKey);
     if (stored === 'system' || themeIds.indexOf(stored) >= 0) {
       preference = stored;
     }
-  } catch (error) {
+  } catch {
     preference = 'system';
   }
 
-  var theme = preference;
+  let theme = preference;
   if (preference === 'system') {
-    var deviceIsLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    const deviceIsLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
     theme = deviceIsLight ? defaultLightThemeId : defaultDarkThemeId;
   }
 
