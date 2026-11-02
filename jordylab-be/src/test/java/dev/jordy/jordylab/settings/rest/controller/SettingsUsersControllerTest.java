@@ -1,8 +1,14 @@
 package dev.jordy.jordylab.settings.rest.controller;
 
 import dev.jordy.jordylab.settings.rest.client.KeycloakUnavailableException;
+import dev.jordy.jordylab.settings.service.AdminAccountProtectedException;
 import dev.jordy.jordylab.settings.service.AppUser;
+import dev.jordy.jordylab.settings.service.CannotChangeOwnAccountException;
+import dev.jordy.jordylab.settings.service.GuestChatLimitService;
 import dev.jordy.jordylab.settings.service.KeycloakUserAdministrationService;
+import dev.jordy.jordylab.settings.service.UserDeletionFailedException;
+import dev.jordy.jordylab.settings.service.UserDeletionService;
+import dev.jordy.jordylab.settings.service.UserSessionService;
 import dev.jordy.jordylab.settings.service.LastAdminProtectedException;
 import dev.jordy.jordylab.settings.service.UserNotApprovedException;
 import dev.jordy.jordylab.settings.service.UserNotFoundException;
@@ -23,6 +29,8 @@ import java.util.UUID;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -33,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SettingsUsersControllerTest {
 
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+    private static final UUID ADMIN_ID = UUID.fromString("00000000-0000-0000-0000-00000000000a");
     private static final Instant CREATED_AT = Instant.parse("2026-09-27T18:40:11Z");
 
     @Autowired
@@ -41,11 +50,62 @@ class SettingsUsersControllerTest {
     @MockitoBean
     private KeycloakUserAdministrationService userAdministrationService;
 
+    @MockitoBean
+    private GuestChatLimitService guestChatLimitService;
+
+    @MockitoBean
+    private UserDeletionService userDeletionService;
+
+    @MockitoBean
+    private UserSessionService userSessionService;
+
+    @Test
+    void deleteReturnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/settings/users/{id}", USER_ID).with(adminJwt()))
+                .andExpect(status().isNoContent());
+
+        verify(userDeletionService).deletePerson(ADMIN_ID, USER_ID);
+    }
+
+    @Test
+    void deletingTheAdminOwnAccountIsABadRequest() throws Exception {
+        doThrow(new CannotChangeOwnAccountException(ADMIN_ID)).when(userDeletionService)
+                .deletePerson(ADMIN_ID, ADMIN_ID);
+
+        mockMvc.perform(delete("/api/settings/users/{id}", ADMIN_ID).with(adminJwt()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("CANNOT_CHANGE_OWN_ACCOUNT"));
+    }
+
+    @Test
+    void deletingAnAdminAccountIsABadRequest() throws Exception {
+        doThrow(new AdminAccountProtectedException(USER_ID)).when(userDeletionService)
+                .deletePerson(ADMIN_ID, USER_ID);
+
+        mockMvc.perform(delete("/api/settings/users/{id}", USER_ID).with(adminJwt()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("ADMIN_PROTECTED"));
+    }
+
+    @Test
+    void aDeletionThatCannotFinishReportsTheStage() throws Exception {
+        doThrow(new UserDeletionFailedException(UserDeletionFailedException.Stage.DELETE_ACCOUNT,
+                new IllegalStateException("boom"))).when(userDeletionService).deletePerson(ADMIN_ID, USER_ID);
+
+        mockMvc.perform(delete("/api/settings/users/{id}", USER_ID).with(adminJwt()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.reason").value("KEYCLOAK_UNAVAILABLE"))
+                .andExpect(jsonPath("$.stage").value("DELETE_ACCOUNT"));
+    }
+
     @Test
     void listsUsersWithDerivedStatus() throws Exception {
         AppUser pending = new AppUser(USER_ID, "friend@example.org", "Ada", "Palmer", CREATED_AT, true, Set.of(),
                 UserStatus.PENDING);
         when(userAdministrationService.listUsers(UserStatus.PENDING)).thenReturn(List.of(pending));
+        when(guestChatLimitService.effectiveFor(USER_ID.toString()))
+                .thenReturn(new GuestChatLimitService.EffectiveGuestChatLimit(20,
+                        GuestChatLimitService.LimitSource.ENVIRONMENT));
 
         mockMvc.perform(get("/api/settings/users").param("status", "PENDING"))
                 .andExpect(status().isOk())
@@ -70,6 +130,10 @@ class SettingsUsersControllerTest {
         mockMvc.perform(get("/api/settings/users/pending-count"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(3));
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor adminJwt() {
+        return jwt().jwt(jwt -> jwt.subject(ADMIN_ID.toString()));
     }
 
     @Test

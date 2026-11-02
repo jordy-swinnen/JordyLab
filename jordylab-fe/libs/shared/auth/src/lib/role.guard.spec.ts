@@ -37,7 +37,7 @@ describe('roleGuard', () => {
     });
   });
 
-  const runGuard = (...allowedRoles: Array<'admin' | 'guest'>) =>
+  const runGuard = (...allowedRoles: Array<'admin' | 'guest' | 'app-gamecatalog'>) =>
     TestBed.runInInjectionContext(() =>
       roleGuard(...allowedRoles)(
         {} as ActivatedRouteSnapshot,
@@ -92,14 +92,43 @@ describe('roleGuard', () => {
     expect(result).toBe('parsed:/awaiting-approval');
   });
 
-  it('sends a guest denied an admin route to their own landing route', async () => {
+  it('sends a guest with the app grant denied an admin route to their own landing route', async () => {
     authenticated = true;
-    roles.set(['guest']);
+    roles.set(['guest', 'app-gamecatalog']);
 
     const result = await runGuard('admin');
 
     expect(parseUrl).toHaveBeenCalledWith('/games/grid');
     expect(result).toBe('parsed:/games/grid');
+  });
+
+  it('sends an approved guest without any app grant to the no-apps page', async () => {
+    authenticated = true;
+    roles.set(['guest']);
+
+    const result = await runGuard('admin');
+
+    expect(parseUrl).toHaveBeenCalledWith('/no-apps');
+    expect(result).toBe('parsed:/no-apps');
+  });
+
+  it('allows a guest with the app grant onto the Game Catalog route', async () => {
+    authenticated = true;
+    roles.set(['guest', 'app-gamecatalog']);
+
+    const result = await runGuard('admin', 'app-gamecatalog');
+
+    expect(result).toBe(true);
+  });
+
+  it('refuses a guest without the app grant on the Game Catalog route', async () => {
+    authenticated = true;
+    roles.set(['guest']);
+
+    const result = await runGuard('admin', 'app-gamecatalog');
+
+    expect(parseUrl).toHaveBeenCalledWith('/no-apps');
+    expect(result).toBe('parsed:/no-apps');
   });
 
   it('sends an admin denied a guest-only route to their own landing route', async () => {

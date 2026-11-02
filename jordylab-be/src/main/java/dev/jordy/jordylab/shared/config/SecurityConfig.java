@@ -28,8 +28,9 @@ import java.util.List;
  * {@code ROLE_*} authorities.
  *
  * <p>Authorization is deny-by-default and follows the access matrix: FNA and Settings
- * require {@code admin}; Game Catalog reads and chat are open to {@code admin} or
- * {@code guest}; Game Catalog writes, sources, library sync and the client download
+ * require {@code admin}; Game Catalog reads and chat are open to {@code admin} or the
+ * per-person grant role {@code app-gamecatalog} (spec 014; an approved guest without that
+ * grant is refused); Game Catalog writes, sources, library sync and the client download
  * require {@code admin}; the scan client keeps its {@code gamecatalog-scanner} device
  * role. Mobile release/download-link requests are open to {@code admin} or {@code guest};
  * publishing a release is restricted to the {@code mobile-release-publisher} service
@@ -70,11 +71,11 @@ public class SecurityConfig {
                     .hasAnyRole("admin", "guest")
                     .requestMatchers(HttpMethod.GET, "/api/gamecatalog/games/**",
                             "/api/gamecatalog/platforms", "/api/gamecatalog/places")
-                    .hasAnyRole("admin", "guest")
+                    .hasAnyRole("admin", "app-gamecatalog")
                     .requestMatchers(HttpMethod.PUT, "/api/gamecatalog/games/*/mark",
                             "/api/gamecatalog/games/*/installations/*/rom-status")
-                    .hasAnyRole("admin", "guest")
-                    .requestMatchers("/api/gamecatalog/libbot/**").hasAnyRole("admin", "guest")
+                    .hasAnyRole("admin", "app-gamecatalog")
+                    .requestMatchers("/api/gamecatalog/libbot/**").hasAnyRole("admin", "app-gamecatalog")
                     .requestMatchers("/api/gamecatalog/**").hasRole("admin")
                     .requestMatchers("/api/**").denyAll()
                 .anyRequest().denyAll())

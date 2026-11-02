@@ -209,5 +209,8 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
   `webOrigins` in `compose/keycloak-realm-export.json` already list the standalone harness ports
   (`:4300`, `:4400`) alongside the host's `:4200`. Roles: `jordylab-user` (default for any
   logged-in user), `gamecatalog-scanner` (required for the script's `/scan` access — the script
-  uses a separate `gamecatalog-script` device-code client).
+  uses a separate `gamecatalog-script` device-code client). Since spec 014, `guest` means approved
+  only; the Game Catalog needs the per-app grant `app-gamecatalog`, and an approved person with no
+  grant lands on `/no-apps`. `roleGuard('admin', 'app-gamecatalog')` mirrors the backend on the
+  `games` route, and the nav hides the Game Catalog without the grant.
 - `apps/gamecatalog` calls `/api/gamecatalog/ingest/client?libraryType=steam` (or `emudeck`) to download the scan client for the user. Both endpoints sit behind the host's auth interceptor.

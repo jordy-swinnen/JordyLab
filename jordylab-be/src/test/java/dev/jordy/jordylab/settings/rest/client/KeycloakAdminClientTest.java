@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
@@ -199,6 +200,57 @@ class KeycloakAdminClientTest {
                 .willReturn(aResponse().withStatus(500)));
 
         assertThatThrownBy(() -> client.listUsers()).isInstanceOf(KeycloakUnavailableException.class);
+    }
+
+    @Test
+    void listsRegularAndOfflineSessionsWithTheirClients() {
+        stubToken();
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/users/u1/sessions")).willReturn(json("""
+                [ {"id": "s1", "start": 1000, "lastAccess": 2000, "clients": {"jordylab-host": ""}} ]
+                """)));
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/users/u1/offline-sessions/c1"))
+                .willReturn(json("""
+                        [ {"id": "s2", "start": 3000, "lastAccess": 4000, "clients": {"jordylab-mobile": ""}} ]
+                        """)));
+
+        assertSoftly(softly -> {
+            softly.assertThat(client.listUserSessions("u1")).singleElement().satisfies(session -> {
+                softly.assertThat(session.id()).isEqualTo("s1");
+                softly.assertThat(session.clientIds()).containsExactly("jordylab-host");
+            });
+            softly.assertThat(client.listOfflineSessions("u1", "c1")).singleElement().satisfies(session ->
+                    softly.assertThat(session.clientIds()).containsExactly("jordylab-mobile"));
+        });
+    }
+
+    @Test
+    void findsTheClientUuidOnceAndEndsAnOfflineSessionOnItsOwn() {
+        stubToken();
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=jordylab-mobile"))
+                .willReturn(json("""
+                        [ {"id": "c1", "clientId": "jordylab-mobile"} ]
+                        """)));
+        stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/sessions/s1?isOffline=true"))
+                .willReturn(aResponse().withStatus(204)));
+
+        assertThat(client.findClientUuid("jordylab-mobile")).contains("c1");
+        assertThat(client.findClientUuid("jordylab-mobile")).contains("c1");
+        client.deleteSession("s1", true);
+
+        verify(1, getRequestedFor(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=jordylab-mobile")));
+        verify(deleteRequestedFor(urlEqualTo("/admin/realms/jordylab-test/sessions/s1?isOffline=true")));
+    }
+
+    @Test
+    void deletesAUserAndTreatsAnAlreadyDeletedOneAsDone() {
+        stubToken();
+        stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/users/u1")).willReturn(aResponse().withStatus(204)));
+        stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/users/u2")).willReturn(aResponse().withStatus(404)));
+
+        client.deleteUser("u1");
+        client.deleteUser("u2");
+
+        verify(deleteRequestedFor(urlEqualTo("/admin/realms/jordylab-test/users/u1")));
     }
 
     private void stubToken() {

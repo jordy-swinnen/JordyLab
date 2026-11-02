@@ -10,6 +10,14 @@ export function anAppUserMock(overrides: Partial<AppUser> = {}): AppUser {
     enabled: true,
     realmRoles: [],
     status: 'PENDING',
+    isAdmin: false,
+    apps: [
+      { key: 'gamecatalog', name: 'Game Catalog', granted: false, grantable: true, reason: null },
+      { key: 'fna', name: 'FNA', granted: false, grantable: false, reason: "Holds the admin's private data" },
+      { key: 'settings', name: 'Settings', granted: false, grantable: false, reason: 'Administration only' },
+    ],
+    chatLimit: { limit: 20, source: 'ENVIRONMENT' },
+    sessionCount: 0,
     ...overrides,
   };
 }

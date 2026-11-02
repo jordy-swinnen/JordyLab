@@ -1,5 +1,9 @@
 # Contract — Access Matrix & Error Shapes
 
+> **Superseded in part by spec 014** (`specs/014-user-management/contracts/user-management-api.md`): the Game Catalog
+> rows now require the per-app grant role `app-gamecatalog` instead of `guest`, `/api/settings/apps` and the user app,
+> limit, session and delete routes are added, and `/api/settings/**` stays admin-only.
+
 The complete authorization contract after this feature (spec FR-002, research D5/D10/D12). **Deny by default**: anything
 not listed here is refused. Enforcement is backend-first; the frontend mirrors it for UX only.
 

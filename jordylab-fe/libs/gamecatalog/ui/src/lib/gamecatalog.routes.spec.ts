@@ -59,10 +59,16 @@ describe('gamecatalogRoutes', () => {
     ]);
   });
 
-  it('guards the shell for admin or guest', async () => {
-    roles.set(['guest']);
+  it('guards the shell for admin or a person with the app grant', async () => {
+    roles.set(['guest', 'app-gamecatalog']);
 
     await expect(runGuard(shell().canActivate)).resolves.toBe(true);
+  });
+
+  it('sends an approved guest without the app grant away from the shell', async () => {
+    roles.set(['guest']);
+
+    await expect(runGuard(shell().canActivate)).resolves.toBe('parsed:/no-apps');
   });
 
   it('sends a role-less account away from the shell', async () => {
@@ -72,7 +78,8 @@ describe('gamecatalogRoutes', () => {
   });
 
   it('guards the sources child to admin only', async () => {
-    roles.set(['guest']);
+    // A normal approved guest holds the Game Catalog grant, so their landing route exists.
+    roles.set(['guest', 'app-gamecatalog']);
 
     await expect(runGuard(child('sources')?.canActivate)).resolves.toBe(
       'parsed:/games/grid',
@@ -86,7 +93,7 @@ describe('gamecatalogRoutes', () => {
   });
 
   it('guards the consoles children to admin only', async () => {
-    roles.set(['guest']);
+    roles.set(['guest', 'app-gamecatalog']);
 
     for (const path of ['consoles', 'consoles/:id/games/bulk']) {
       await expect(runGuard(child(path)?.canActivate)).resolves.toBe('parsed:/games/grid');

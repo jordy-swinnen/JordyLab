@@ -45,6 +45,22 @@ class ConversationStoreTest {
         });
     }
 
+    /** Spec 014 FR-015: a deleted person's conversations go, and nobody else's. */
+    @Test
+    void forgettingAPersonRemovesEveryConversationOfTheirsAndNobodyElses() {
+        store.append("alice", CONVERSATION, turn(1));
+        store.append("alice", "another", turn(2));
+        store.append("alice2", CONVERSATION, turn(3));
+
+        store.forget("alice");
+
+        assertSoftly(softly -> {
+            softly.assertThat(store.history("alice", CONVERSATION)).isEmpty();
+            softly.assertThat(store.history("alice", "another")).isEmpty();
+            softly.assertThat(store.history("alice2", CONVERSATION)).hasSize(1);
+        });
+    }
+
     @Test
     void anotherUserCannotReadOrClearAConversationWithTheSameId() {
         store.append("alice", CONVERSATION, turn(1));

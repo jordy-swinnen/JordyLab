@@ -320,13 +320,22 @@ class SomeObjectTestBuilder {
 
 - Backend auth is OAuth2 resource server + JWT. Issuer-uri is `${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab` in `application.yaml`.
 - Spring Security config lives in `shared/config/SecurityConfig.java`. Realm roles map to `ROLE_*` authorities via the `realm_access.roles` claim.
-- Endpoint gates:
+- Endpoint gates (spec 014): the Game Catalog reads, marks, ROM status and LibBot require `admin` or the per-app grant
+  `app-gamecatalog`; approval alone (`guest`) no longer opens the catalog. Settings and FNA stay `admin`.
   - `POST /api/gamecatalog/ingest/check` → `hasRole("gamecatalog-scanner")` (client asks if a scan is needed)
   - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (client, device-code)
-  - `GET  /api/gamecatalog/ingest/client` → `hasRole("jordylab-user")` (web UI downloads it)
+  - `GET  /api/gamecatalog/ingest/client` → `hasRole("admin")` (web UI downloads it)
   - other `/api/**` → `authenticated()` (any logged-in user)
   - `/actuator/health`, `/actuator/info`, `/h2-console/**` → `permitAll()` (dev only)
 - CORS allowed origins configured via `jordylab.cors.allowed-origins` property (defaults to `http://localhost:4200,4300,4400` for the per-port dev servers).
+- The realm's access-token lifetime is **60 seconds** (spec 014). The backend validates JWTs statelessly, so that lifespan
+  is what bounds "a revoked person, a removed app or a deleted account stops working within one minute". Do not raise it
+  without revisiting spec 014 FR-007/SC-002.
+- Per-app grants are Keycloak realm roles (`app-gamecatalog` today), assigned by Settings → Users. The settings user
+  routes (`apps`, `chat-limit`, `sessions`, delete) all live under `/api/settings/users/**`; the app registry is
+  `GET /api/settings/apps`. FNA and Settings have no grant role by design (they hold the admin's own data).
+- The Keycloak service account needs `view-users`, `manage-users`, `view-realm` and `view-clients` (`view-clients` is
+  used to resolve the phone app's client UUID for its offline sessions).
 - The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client handles its own token via Keycloak Device Authorization Grant (offline token, scoped to `gamecatalog-scanner` only) and caches it at `~/.config/jordylab/scan/token.json`.
 
 # Game library scan flow (feature 003 — Python client)

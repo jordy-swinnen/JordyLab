@@ -3,6 +3,7 @@ import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
+import { NoAppsComponent } from './no-apps/no-apps.component';
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
@@ -10,6 +11,13 @@ export const appRoutes: Route[] = [
     path: 'awaiting-approval',
     canActivate: [authGuard],
     component: AwaitingApprovalComponent,
+  },
+  {
+    // Spec 014: approved, but the admin has not granted any app yet. A pending account must still
+    // see "awaiting approval", never the "approved, nothing shared" wording.
+    path: 'no-apps',
+    canActivate: [authGuard, roleGuard('admin', 'guest')],
+    component: NoAppsComponent,
   },
   {
     // Spec US5 — ShareTargetService navigates here on a native shareReceived event.
@@ -25,8 +33,9 @@ export const appRoutes: Route[] = [
     loadChildren: () => import('@jordylab-fe/fna/ui').then((m) => m.fnaRoutes),
   },
   {
+    // Spec 014: the Game Catalog needs the per-app grant, not just approval.
     path: 'games',
-    canActivate: [authGuard, roleGuard('admin', 'guest')],
+    canActivate: [authGuard, roleGuard('admin', 'app-gamecatalog')],
     loadChildren: () =>
       import('@jordylab-fe/gamecatalog/ui').then((m) => m.gamecatalogRoutes),
   },

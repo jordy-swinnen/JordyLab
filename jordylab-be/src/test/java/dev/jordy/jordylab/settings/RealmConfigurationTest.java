@@ -30,8 +30,8 @@ class RealmConfigurationTest {
 
     /**
      * The admin holds every JordyLab role (Jordy, spec 011 Q-07) so the owner can also scan without a
-     * hand-assigned role (BUG-028). {@code mobile-release-publisher} is deliberately excluded: only
-     * the CI identity may publish Android releases (spec 007 FR-004).
+     * hand-assigned role (BUG-028) and always has every app (spec 014 FR-005). {@code mobile-release-publisher}
+     * is deliberately excluded: only the CI identity may publish Android releases (spec 007 FR-004).
      */
     @ParameterizedTest
     @ValueSource(strings = {DEV_REALM, PROD_REALM})
@@ -42,9 +42,38 @@ class RealmConfigurationTest {
 
         assertSoftly(softly -> {
             softly.assertThat(adminRole.path("composite").asBoolean()).isTrue();
-            softly.assertThat(composedRealmRoles).containsExactlyInAnyOrder("guest", "gamecatalog-scanner");
+            softly.assertThat(composedRealmRoles)
+                    .containsExactlyInAnyOrder("guest", "app-gamecatalog", "gamecatalog-scanner");
             softly.assertThat(composedRealmRoles).doesNotContain("mobile-release-publisher");
         });
+    }
+
+    /**
+     * Spec 014 R1: one realm role per grantable app, assigned per person. It must not be composite, because the
+     * panel grants it to a single person rather than through another role.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {DEV_REALM, PROD_REALM})
+    void appGameCatalogRoleIsASimpleRealmRole(String realmFile) throws IOException {
+        JsonNode appRole = realmRole(realmFile, "app-gamecatalog");
+
+        assertSoftly(softly -> {
+            softly.assertThat(appRole.path("name").asText()).isEqualTo("app-gamecatalog");
+            softly.assertThat(appRole.path("composite").asBoolean(false)).isFalse();
+        });
+    }
+
+    /**
+     * Spec 014 R2: the backend validates JWTs statelessly, so a removed role or a deleted account stops working
+     * only when the access token expires. That lifetime (60 s) is the bound behind FR-007, SC-001 and SC-002 and
+     * must not drift back to the 30 minutes that left a revoked person working for half an hour.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {DEV_REALM, PROD_REALM})
+    void accessTokenLifetimeKeepsAccessChangesWithinOneMinute(String realmFile) throws IOException {
+        JsonNode realm = objectMapper.readTree(Path.of(realmFile).toFile());
+
+        assertThat(realm.path("accessTokenLifespan").asInt()).isEqualTo(60);
     }
 
     /**
@@ -62,10 +91,22 @@ class RealmConfigurationTest {
                 mapping.path("roles").forEach(role -> mappedRoles.add(role.asText()));
             }
         }
+        List<String> serviceAccountClientRoles = new ArrayList<>();
+        for (JsonNode user : realm.path("users")) {
+            if ("service-account-jordylab-backend".equals(user.path("username").asText())) {
+                user.path("clientRoles").path("realm-management")
+                        .forEach(role -> serviceAccountClientRoles.add(role.asText()));
+            }
+        }
 
         assertSoftly(softly -> {
             softly.assertThat(backendClient(realm).path("fullScopeAllowed").asBoolean(true)).isFalse();
-            softly.assertThat(mappedRoles).containsExactlyInAnyOrder("view-users", "manage-users", "view-realm");
+            softly.assertThat(mappedRoles)
+                    .containsExactlyInAnyOrder("view-users", "manage-users", "view-realm", "view-clients");
+            // The import applies the service-account user's clientRoles; the scope mapping alone did not grant
+            // view-clients on a fresh realm (verified 2026-11-02), so both must list it.
+            softly.assertThat(serviceAccountClientRoles)
+                    .containsExactlyInAnyOrder("view-users", "manage-users", "view-realm", "view-clients");
         });
     }
 
