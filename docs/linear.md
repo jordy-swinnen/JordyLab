@@ -220,6 +220,11 @@ Seen on 2026-11-01 through the Linear connector of the Claude account (the proje
   branch with its own `JOR-n:` commits finds the newest. One comment was posted on a test issue and read back.
 - **OpenCode (T053):** `opencode debug skill` lists no project skills at all, not even the old `agent-handover`, so
   it cannot confirm the new ones. Check in a real OpenCode session: ask it which skills it has.
+- 2026-11-02, OpenCode (headless `opencode run`): without a Linear sign-in the capture skill loaded, said Linear was
+  unavailable, named `opencode mcp auth linear` and repeated the full ticket text (the outage message passes). The
+  commit rules held in a throwaway worktree: no key invented, asked once; with a key given it committed in the right
+  shape. The live capture is still open: `opencode mcp list` shows `linear` as needing authentication and
+  `~/.local/share/opencode/mcp-auth.json` holds no token for it (the sign-in was started but not finished).
 
 ## Rebuild checklist
 
@@ -240,8 +245,3 @@ Done by hand: states, label groups' first creation by the owner or an agent thro
 GitHub integration settings, the sign-ins. Done by an agent through the connector: labels, issues, projects, comments,
 and everything the `linear-capture` and `linear-sync-drafts` skills do. Estimated time on a fresh workspace: well under
 an hour, most of it the sign-ins and the views.
-- 2026-11-02, OpenCode (headless `opencode run`): without a Linear sign-in the capture skill loaded, said Linear was
-  unavailable, named `opencode mcp auth linear` and repeated the full ticket text (the outage message passes). The
-  commit rules held in a throwaway worktree: no key invented, asked once; with a key given it committed in the right
-  shape. The live capture is still open: `opencode mcp list` shows `linear` as needing authentication and
-  `~/.local/share/opencode/mcp-auth.json` holds no token for it (the sign-in was started but not finished).
