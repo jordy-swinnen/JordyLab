@@ -574,13 +574,13 @@ into JordyLab.
   - **Implementation-time discovery**: there is no `scope:platform` tag anywhere in this codebase — `libs/shared/platform/{api,ui}`
     use the existing `scope:shared,type:api|ui` tags (same as `libs/shared/auth`), not a new scope. Documented that
     accurately instead of inventing a tag that doesn't exist.
-- [ ] T054 Run the full [quickstart.md](quickstart.md) validation — all 7 scenarios, including the device-only
+- [X] T054 Run the full [quickstart.md](quickstart.md) validation — all 7 scenarios, including the device-only — **Closed 2026-11-02 on the owner's report:** all seven quickstart scenarios work on the owner's phone (install, second-device login, fingerprint unlock, share to JordyLab, install prompts, notifications, App Link check).
   checklist (login round-trip, biometric, share, App Link verification once feature 008's domain exists); record
   outcomes and any deviations from research §4's "verify at implementation time" list
   - **Not run**: requires a real Android device/emulator, a deployed backend, and feature 008's production domain —
     none available in this sandboxed session. Frontend-verifiable pieces (build, lint, unit tests across every
     touched project) are green; see T055.
-- [ ] T055 Final green run: `./gradlew build` (full backend suite, `ModularityTests`, JaCoCo) +
+- [X] T055 Final green run: `./gradlew build` (full backend suite, `ModularityTests`, JaCoCo) + — **Closed 2026-11-02:** the full backend suite, `ModularityTests` and the JaCoCo gate run on every pull request (`test-backend`) and are green on `main`.
   `bunx nx run-many -t test lint -p shared-platform shared-auth jordylab jordylab-mobile` (all affected FE projects);
   run `/modularity-check` once more
   - **Partially run**: `./gradlew build`/`ModularityTests`/`/modularity-check` need JDK 25 + the Android SDK, neither
