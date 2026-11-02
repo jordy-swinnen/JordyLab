@@ -66,7 +66,7 @@
 
 <div class="mt-8">
   @if (loading()) {
-    <div class="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-[22px] md:gap-y-[30px] lg:grid-cols-4" aria-label="Loading games">
+    <div class="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-[22px] md:gap-y-[30px] lg:grid-cols-5" aria-label="Loading games">
       @for (card of skeletonCards; track card) {
         <div>
           <hlm-skeleton class="aspect-[2/3] w-full rounded-xl" />
@@ -112,10 +112,10 @@
       }
     </div>
   } @else {
-    <div class="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-[22px] md:gap-y-[30px] lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-[22px] md:gap-y-[30px] lg:grid-cols-5">
       @for (game of games(); track game.id) {
         <article class="flex min-w-0 flex-col gap-3" data-testid="game-card">
-          <a [routerLink]="['/games', game.id]" class="card-link group flex flex-col gap-3 outline-none">
+          <a [routerLink]="['/games', game.id]" class="card-link group flex flex-1 flex-col gap-3 outline-none">
             <div class="cover-frame relative">
               @if (coverUrl(game); as artworkSrc) {
                 <img
@@ -138,7 +138,7 @@
                 <lib-vote-rail [votes]="game.votes" [myMark]="game.myMark" />
               </div>
             </div>
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-1 flex-col gap-2">
               <h3
                 class="line-clamp-2 min-h-[2.5em] text-base font-semibold leading-tight tracking-[-0.01em] text-foreground [overflow-wrap:anywhere]"
               >

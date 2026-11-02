@@ -1,4 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
+import { brandIconDataUri } from './brand-icon';
 import {
   DEFAULT_DARK_THEME_ID,
   DEFAULT_LIGHT_THEME_ID,
@@ -69,10 +70,21 @@ export class ThemeStore {
   #apply(): void {
     const root = document.documentElement;
     root.setAttribute('data-theme', this.activeTheme());
-    const ground = getComputedStyle(root).getPropertyValue('--background').trim();
+    const styles = getComputedStyle(root);
+    const ground = styles.getPropertyValue('--background').trim();
     if (!ground) {
       return;
     }
     document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', `hsl(${ground})`));
+    this.#applyBrandIcon(styles.getPropertyValue('--primary').trim(), styles.getPropertyValue('--primary-foreground').trim());
+  }
+
+  /** The browser tab's icon takes the theme's accent, like the mark inside the app. */
+  #applyBrandIcon(accent: string, accentInk: string): void {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link || !accent || !accentInk) {
+      return;
+    }
+    link.setAttribute('href', brandIconDataUri(`hsl(${accent})`, `hsl(${accentInk})`));
   }
 }

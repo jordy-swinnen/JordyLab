@@ -4,6 +4,7 @@
   (download)="onUpdateDownload()"
 />
 } @else {
+<div class="fixed inset-x-0 top-0 z-40 h-[var(--inset-top)] bg-background lg:hidden" aria-hidden="true"></div>
 <div class="min-h-screen lg:flex">
   <lib-install-prompt [status]="installStatus()" (download)="onInstallDownload()" />
   @if (latestRelease()?.updateAvailable) {
@@ -80,7 +81,9 @@
     }
   </aside>
 
-  <header class="flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
+  <header
+    class="flex h-[calc(3.5rem+var(--inset-top))] items-center justify-between border-b border-border bg-background px-4 pt-[var(--inset-top)] lg:hidden"
+  >
     <a routerLink="/" class="flex min-h-11 items-center gap-2" aria-label="JordyLab home">
       <lib-brand-mark [size]="26" [radius]="8" />
       <lib-wordmark class="text-[22px]" />

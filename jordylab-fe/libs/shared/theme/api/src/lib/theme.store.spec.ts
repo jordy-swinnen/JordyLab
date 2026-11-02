@@ -16,7 +16,7 @@ describe('ThemeStore', () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
-    document.head.innerHTML = '<meta name="theme-color" content="#000000">';
+    document.head.innerHTML = '<meta name="theme-color" content="#000000"><link rel="icon" href="favicon.svg">';
     deviceIsLight = false;
     changeListener = undefined;
     vi.stubGlobal(
@@ -125,6 +125,37 @@ describe('ThemeStore', () => {
     store.choose('paper');
 
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('hsl(240 3% 8%)');
+  });
+});
+
+describe('ThemeStore browser tab icon', () => {
+  beforeEach(() => {
+    document.head.innerHTML = '<meta name="theme-color" content="#000000"><link rel="icon" href="favicon.svg">';
+    document.documentElement.style.setProperty('--background', '240 3% 8%');
+    document.documentElement.style.setProperty('--primary', '350 82% 62%');
+    document.documentElement.style.setProperty('--primary-foreground', '353 80% 9%');
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener: vi.fn() })) as unknown as typeof window.matchMedia;
+  });
+
+  afterEach(() => {
+    document.documentElement.removeAttribute('style');
+  });
+
+  it('draws the mark in the accent colours of the active theme', () => {
+    TestBed.resetTestingModule();
+    TestBed.inject(ThemeStore);
+
+    const icon = decodeURIComponent(document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? '');
+
+    expect(icon).toContain('fill="hsl(350 82% 62%)"');
+    expect(icon).toContain('stroke="hsl(353 80% 9%)"');
+  });
+
+  it('leaves the icon alone when the page has none', () => {
+    document.head.innerHTML = '';
+    TestBed.resetTestingModule();
+
+    expect(() => TestBed.inject(ThemeStore)).not.toThrow();
   });
 });
 

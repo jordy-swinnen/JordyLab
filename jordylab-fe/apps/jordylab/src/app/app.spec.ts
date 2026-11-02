@@ -222,17 +222,38 @@ describe('App', () => {
   });
 
   describe('phone tab bar', () => {
-    const tabLabels = () => spectator.queryAll('lib-tab-bar a').map((tab) => tab.textContent?.trim());
+    const tabLabels = () => spectator.queryAll('lib-tab-bar nav > *').map((tab) => tab.textContent?.trim());
 
-    it('shows Library, LibBot and More to a guest', () => {
-      expect(tabLabels()).toEqual(['Library', 'LibBot', 'More']);
+    it('shows Games and Settings to a guest', () => {
+      expect(tabLabels()).toEqual(['Games', 'Settings']);
     });
 
     it('adds Finance for an administrator', () => {
       isAdmin.set(true);
       spectator.detectChanges();
 
-      expect(tabLabels()).toEqual(['Library', 'LibBot', 'Finance', 'More']);
+      expect(tabLabels()).toEqual(['Games', 'Finance', 'Settings']);
+    });
+
+    it('lifts the pages of a module out of its tab', () => {
+      isAdmin.set(true);
+      spectator.detectChanges();
+
+      spectator.click(spectator.queryAll('lib-tab-bar nav > button')[0]);
+
+      expect(spectator.queryAll('[data-testid="tab-bar-options"] a').map((link) => link.textContent?.trim())).toEqual([
+        'Library',
+        'LibBot',
+        'Sources',
+        'Consoles',
+      ]);
+    });
+
+    it('goes straight to the only page of a module', () => {
+      const settingsTab = spectator.queryAll('lib-tab-bar nav > *')[1];
+
+      expect(settingsTab.tagName).toBe('A');
+      expect(settingsTab.getAttribute('href')).toBe('/settings/app');
     });
 
     it('is not shown to an account with no application role', () => {

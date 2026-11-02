@@ -3,7 +3,6 @@ import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
-import { MorePageComponent } from './more/more-page.component';
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
@@ -36,11 +35,6 @@ export const appRoutes: Route[] = [
     path: 'settings/app',
     canActivate: [authGuard, roleGuard('admin', 'guest')],
     component: AppSettingsPageComponent,
-  },
-  {
-    path: 'more',
-    canActivate: [authGuard, roleGuard('admin', 'guest')],
-    component: MorePageComponent,
   },
   {
     path: 'settings',
