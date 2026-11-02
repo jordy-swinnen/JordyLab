@@ -93,7 +93,7 @@ description: "Task list for Game Catalog implementation (as shipped: downloaded 
 - [x] T043 Coverage gates: `./gradlew build` passes JaCoCo verification; per-lib line coverage is >= 80% (gamecatalog-api 99%, gamecatalog-ui 95%, fna-api 100%, fna-ui 85%)
 - [x] T044 [P] Root `AGENTS.md` describes the script + device-grant scan flow and the built `gamecatalog` module
 - [x] T045 Update `README.md` / `AGENTS.md` run instructions from Docker to Podman
-- [ ] T046 Production smoke (VPS + JordyBox): deferred until deploy
+- [X] T046 Production smoke (VPS + JordyBox): deferred until deploy — **Closed 2026-11-02 (JOR-migration review):** the production smoke happened through the production passes of spec 011 (signed-in pass on `v0.0.1-rc8` and later, scanner runs on JordyBox) and spec 013 (`rc20` to `rc24`), recorded in `docs/testing/bug-log.md` and `specs/013-gamecatalog-refinement-ai/validation-results.md`.
 
 ---
 
