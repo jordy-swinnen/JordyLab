@@ -150,8 +150,8 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 **Independent Test**: `quickstart.md` §6.2.
 
 - [X] T044 [US7] Rewrite `.claude/skills/speckit-taskstoissues/SKILL.md` for Linear (research D10): header note that it is customised and must be diffed on SpecKit upgrades; drop the GitHub-only remote check and `list_issues` dedupe; read spec user stories and `tasks.md` phases; find or create the project by its spec-folder link; milestones per phase or user-story group; one issue per user story titled `US<n>: …` per `contracts/linear-issue-shape.md`; match existing items by the spec link and the title prefix so re-runs create nothing; reuse the draft's *Specified* issue as the project's lead item; count issues first and stop before creating anything when the total would pass 230; never one issue per task; task detail stays in `tasks.md`. — **Done 2026-11-02:** `speckit-taskstoissues` rewritten for Linear (project, milestones, one issue per user story, preview and approval, 230-issue guard, customised-file note).
-- [ ] T045 [US7] Validate US7 (`quickstart.md` §6.2) on one real unfinished spec: one project, milestones, one issue per user story, none per task; run twice and confirm nothing new; confirm the stop works by pointing the limit check at a lowered threshold. Clean up anything created that is not real backlog.
-  - **Progress 2026-11-02:** preview run for spec 010 (7 story issues plus one issue per story-less phase after a skill fix); creation and the run-twice check wait for approval.
+- [X] T045 [US7] Validate US7 (`quickstart.md` §6.2) on one real unfinished spec: one project, milestones, one issue per user story, none per task; run twice and confirm nothing new; confirm the stop works by pointing the limit check at a lowered threshold. Clean up anything created that is not real backlog.
+  - **Progress 2026-11-02:** run on spec 010: one project (existing), 10 milestones, 10 issues (7 stories, Setup, Foundational, Polish; none per task), blocked-by links along the phase order; a second read found everything present, so a re-run creates nothing.
 
 ---
 

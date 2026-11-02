@@ -207,7 +207,7 @@ Seen on 2026-11-01 through the Linear connector of the Claude account (the proje
   obeyed. The owner then confirmed rows 1 and 2: exactly those two issues got their App and Type labels and moved to Backlog, the third (with the injected text) stayed in Triage untouched. All three test issues were deleted afterwards.
 - **Tasks-to-issues (T045):** the preview for spec 010 found its project and tracking issue and listed 7 story issues
   (US0 to US6) with 26 tasks that carry no story label (Setup, Foundational, Polish). That gap is fixed: each such phase
-  becomes one issue (Chore). Creation is waiting for the owner's approval, so the run-twice check is still open.
+  becomes one issue (Chore). With the owner's approval it created 10 milestones (one per phase) and 10 issues (JOR-61 to JOR-70: seven stories, Setup, Foundational, Polish) in project P-JOR-3, linked as blocked-by along the phase order (Setup, spike, Foundational, stories, Polish). Reading the project again as step 4 does found every `US<n>:` and phase issue and all milestones, so a second run would skip all rows and create nothing.
 - **Handover comment (T050):** the key lookup was wrong for a branch without a key (it picked the newest commit of
   `main`, JOR-17). It now looks only at commits made on the branch (`git log origin/main..HEAD`). With that rule: a branch
   name with a key finds it, a keyless branch with no commits of its own finds nothing (no comment, no error), a keyless
