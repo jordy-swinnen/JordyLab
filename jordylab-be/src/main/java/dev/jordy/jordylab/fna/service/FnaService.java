@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.fna.service;
 
+import com.google.common.base.Preconditions;
 import dev.jordy.jordylab.fna.domain.Briefing;
 import dev.jordy.jordylab.fna.domain.PortfolioPosition;
 import dev.jordy.jordylab.fna.domain.repository.ArticleRepository;
@@ -8,8 +9,10 @@ import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.fna.rest.controller.model.ArticleSummaryDto;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.rest.controller.model.PortfolioPositionDto;
+import dev.jordy.jordylab.fna.rest.controller.model.WishlistItemDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -39,14 +42,18 @@ public class FnaService {
                 .toList();
     }
 
+    /** Held positions only: wishlist items have no share count and never contribute to worth or allocation. */
     public List<PortfolioPositionDto> getPortfolioPositions() {
-        return positionRepository.findAllByOrderByTickerAsc().stream()
+        return positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc().stream()
                 .map(this::toPositionDto)
                 .toList();
     }
 
     public PortfolioPositionDto upsertPosition(String typedTicker, BigDecimal shareCount) {
-        String ticker = typedTicker.trim().toUpperCase(Locale.ROOT);
+        Preconditions.checkArgument(shareCount != null && shareCount.compareTo(BigDecimal.ZERO) > 0,
+                "shareCount must be positive");
+        String ticker = normaliseTicker(typedTicker);
+        // A ticker already on the wishlist is promoted in place: it keeps its resolved symbol and cached price.
         PortfolioPosition position = positionRepository.findByTicker(ticker)
                 .map(existing -> {
                     existing.updateShareCount(shareCount);
@@ -70,6 +77,36 @@ public class FnaService {
         positionRepository.deleteById(id);
     }
 
+    public List<WishlistItemDto> getWishlistItems() {
+        return positionRepository.findAllByShareCountIsNullOrderByTickerAsc().stream()
+                .map(this::toWishlistItemDto)
+                .toList();
+    }
+
+    public WishlistItemDto addWishlistItem(String typedTicker) {
+        String ticker = normaliseTicker(typedTicker);
+        PortfolioPosition position = positionRepository.findByTicker(ticker)
+                .map(existing -> {
+                    if (existing.isHeld()) {
+                        throw new TickerAlreadyHeldException(ticker);
+                    }
+
+                    return existing;
+                })
+                .orElseGet(() -> PortfolioPosition.builder()
+                        .ticker(ticker)
+                        .build());
+
+        PortfolioPosition saved = positionRepository.save(position);
+        stockPriceService.refresh(saved);
+
+        return toWishlistItemDto(saved);
+    }
+
+    public void removeWishlistItem(UUID id) {
+        positionRepository.deleteById(id);
+    }
+
     public Optional<BriefingDto> getLatestBriefing() {
         return briefingRepository.findTopByOrderByGeneratedAtDesc()
                 .map(this::toBriefingDto);
@@ -79,11 +116,26 @@ public class FnaService {
         return toBriefingDto(briefingGeneratorService.generateBriefing());
     }
 
+    private String normaliseTicker(String typedTicker) {
+        Preconditions.checkArgument(StringUtils.hasText(typedTicker), "ticker is required");
+
+        return typedTicker.trim().toUpperCase(Locale.ROOT);
+    }
+
     private PortfolioPositionDto toPositionDto(PortfolioPosition position) {
         return new PortfolioPositionDto(
                 position.getId(),
                 position.getTicker(),
                 position.getShareCount(),
+                position.getLastPrice(),
+                position.getLastPriceFetchedAt()
+        );
+    }
+
+    private WishlistItemDto toWishlistItemDto(PortfolioPosition position) {
+        return new WishlistItemDto(
+                position.getId(),
+                position.getTicker(),
                 position.getLastPrice(),
                 position.getLastPriceFetchedAt()
         );

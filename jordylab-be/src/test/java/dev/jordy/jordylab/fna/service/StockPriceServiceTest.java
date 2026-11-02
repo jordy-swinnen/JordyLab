@@ -18,6 +18,7 @@ import java.util.List;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verify;
 
@@ -68,6 +69,70 @@ class StockPriceServiceTest {
 
         verify(positionRepository).findAllByOrderByTickerAsc();
         verifyNoMoreInteractions(positionRepository);
+    }
+
+    @Test
+    void refreshPricesAWishlistItemWithoutGivingItAShareCount() {
+        stubChart("ASML.AS", "642.80", "EUR");
+        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition()
+                .ticker("ASML.AS")
+                .priceSymbol("ASML.AS")
+                .build();
+
+        stockPriceService.refresh(wishlistItem);
+
+        assertSoftly(softly -> {
+            softly.assertThat(wishlistItem.getShareCount()).isNull();
+            softly.assertThat(wishlistItem.isWishlisted()).isTrue();
+            softly.assertThat(wishlistItem.getLastPrice()).isEqualByComparingTo("642.80");
+        });
+    }
+
+    @Test
+    void refreshAllPricesCoversHeldPositionsAndWishlistItems() {
+        stubChart("KBC.BR", "65.50", "EUR");
+        stubChart("ASML.AS", "642.80", "EUR");
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .ticker("KBC.BR")
+                .priceSymbol("KBC.BR")
+                .build();
+        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition()
+                .ticker("ASML.AS")
+                .priceSymbol("ASML.AS")
+                .build();
+
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(held, wishlistItem));
+
+        stockPriceService.refreshAllPrices();
+
+        assertSoftly(softly -> {
+            softly.assertThat(held.getLastPrice()).isEqualByComparingTo("65.50");
+            softly.assertThat(wishlistItem.getLastPrice()).isEqualByComparingTo("642.80");
+            softly.assertThat(wishlistItem.getShareCount()).isNull();
+        });
+        verify(positionRepository).save(held);
+        verify(positionRepository).save(wishlistItem);
+    }
+
+    @Test
+    void keepsAnUnpricedWishlistItemWhenNoSymbolQuotesIt() {
+        for (String suffix : List.of("-EUR", ".PA", ".AS", ".BR", ".DE", ".MI", "")) {
+            stubNotFound("ZZZZ" + suffix);
+        }
+        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition()
+                .ticker("ZZZZ")
+                .priceSymbol(null)
+                .lastPrice(null)
+                .lastPriceFetchedAt(null)
+                .build();
+
+        stockPriceService.refresh(wishlistItem);
+
+        assertSoftly(softly -> {
+            softly.assertThat(wishlistItem.getLastPrice()).isNull();
+            softly.assertThat(wishlistItem.getShareCount()).isNull();
+        });
+        verifyNoInteractions(positionRepository);
     }
 
     private static void stubChart(String symbol, String price, String currency) {

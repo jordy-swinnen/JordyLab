@@ -18,6 +18,14 @@ export interface PortfolioPositionRow extends PortfolioPosition {
   value: number | null;
 }
 
+/** A stock the investor is considering but does not hold: no share count, only a price (spec 015). */
+export interface WishlistItem {
+  id: string;
+  ticker: string;
+  lastPrice: number | null;
+  lastPriceFetchedAt: string | null;
+}
+
 export interface Briefing {
   id: string;
   generatedAt: string;

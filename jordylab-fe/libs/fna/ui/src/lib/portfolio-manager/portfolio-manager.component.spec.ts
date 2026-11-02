@@ -1,16 +1,21 @@
 import { computed, signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { aPortfolioPositionMock, PortfolioPosition, PortfolioStore } from '@jordylab-fe/fna/api';
+import { aPortfolioPositionMock, aWishlistItemMock, PortfolioPosition, WishlistItem, PortfolioStore } from '@jordylab-fe/fna/api';
 import { PortfolioManagerComponent } from './portfolio-manager.component';
 
 describe('PortfolioManagerComponent', () => {
   const positions = signal<PortfolioPosition[]>([]);
+  const wishlist = signal<WishlistItem[]>([]);
   const error = signal<string | null>(null);
+  const wishlistError = signal<string | null>(null);
   const upsertPosition = vi.fn();
   const removePosition = vi.fn();
+  const addWishlistItem = vi.fn();
+  const removeWishlistItem = vi.fn();
 
   const storeMock = {
     positions: positions.asReadonly(),
+    wishlist: wishlist.asReadonly(),
     positionRows: computed(() =>
       positions().map((position) => ({
         ...position,
@@ -18,6 +23,7 @@ describe('PortfolioManagerComponent', () => {
       }))
     ),
     error: error.asReadonly(),
+    wishlistError: wishlistError.asReadonly(),
     totalWorth: computed(() =>
       positions().reduce((sum, position) => {
         if (position.lastPrice !== null) {
@@ -31,6 +37,8 @@ describe('PortfolioManagerComponent', () => {
     load: vi.fn(),
     upsertPosition,
     removePosition,
+    addWishlistItem,
+    removeWishlistItem,
   };
 
   const createComponent = createComponentFactory({
@@ -42,9 +50,13 @@ describe('PortfolioManagerComponent', () => {
 
   beforeEach(() => {
     positions.set([]);
+    wishlist.set([]);
     error.set(null);
+    wishlistError.set(null);
     upsertPosition.mockClear();
     removePosition.mockClear();
+    addWishlistItem.mockClear();
+    removeWishlistItem.mockClear();
     spectator = createComponent();
   });
 
@@ -139,4 +151,100 @@ describe('PortfolioManagerComponent', () => {
 
     expect(spectator.query('input[aria-label="Shares"]')?.getAttribute('step')).toBe('any');
   });
+
+  it('renders a wishlist row per wishlist item', () => {
+    wishlist.set([aWishlistItemMock(), aWishlistItemMock({ id: 'w2', ticker: 'SAP' })]);
+    spectator.detectChanges();
+
+    const rows = spectator.queryAll('[data-testid="wishlist-row"]');
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveText('ASML');
+    expect(rows[1]).toHaveText('SAP');
+  });
+
+  it('shows the wishlist price and a dash when the wishlist item is unpriced', () => {
+    wishlist.set([
+      aWishlistItemMock({ id: 'w1', ticker: 'ASML', lastPrice: 642.8 }),
+      aWishlistItemMock({ id: 'w2', ticker: 'SAP', lastPrice: null, lastPriceFetchedAt: null }),
+    ]);
+    spectator.detectChanges();
+
+    const rows = spectator.queryAll('[data-testid="wishlist-row"]');
+
+    expect(rows[0]).toHaveText('€642.80');
+    expect(rows[1]).toHaveText('—');
+  });
+
+  it('keeps wishlist items out of total worth, allocation and the position count', () => {
+    positions.set([aPortfolioPositionMock({ shareCount: 10, lastPrice: 70.5 })]);
+    wishlist.set([aWishlistItemMock({ lastPrice: 642.8 })]);
+    spectator.detectChanges();
+
+    expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
+    expect(spectator.query('span.uppercase')).toHaveText('1 position');
+    expect(spectator.queryAll('ul li')).toHaveLength(1);
+  });
+
+  it('shows the wishlist conflict inline without hiding the portfolio', () => {
+    positions.set([aPortfolioPositionMock()]);
+    wishlistError.set('This ticker is already in your portfolio.');
+    spectator.detectChanges();
+
+    expect(spectator.query('[data-testid="wishlist-error"]')).toHaveText(
+      'This ticker is already in your portfolio.'
+    );
+    expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
+    expect(spectator.query('[data-testid="wishlist-row"]')).toBeNull();
+  });
+
+  it('adds a wishlist ticker via the store', () => {
+    spectator.detectChanges();
+
+    spectator.component.addWishlistItem('ASML');
+
+    expect(addWishlistItem).toHaveBeenCalledWith('ASML');
+  });
+
+  it('deletes a wishlist item via the store', () => {
+    spectator.detectChanges();
+
+    spectator.component.deleteWishlistItem('w1');
+
+    expect(removeWishlistItem).toHaveBeenCalledWith('w1');
+  });
+
+  it('promotes a wishlist item with the entered share count', () => {
+    wishlist.set([aWishlistItemMock({ id: 'w1', ticker: 'ASML' })]);
+    spectator.detectChanges();
+
+    clickButton('Promote');
+    spectator.typeInElement('2', 'input[aria-label="Promote shares"]');
+    clickButton('Confirm');
+
+    expect(upsertPosition).toHaveBeenCalledWith('ASML', 2);
+  });
+
+  it('does not promote with a missing or non-positive share count', () => {
+    wishlist.set([aWishlistItemMock({ id: 'w1', ticker: 'ASML' })]);
+    spectator.detectChanges();
+
+    clickButton('Promote');
+    spectator.typeInElement('0', 'input[aria-label="Promote shares"]');
+    clickButton('Confirm');
+
+    expect(upsertPosition).not.toHaveBeenCalled();
+  });
+
+  function clickButton(label: string): void {
+    const button = spectator
+      .queryAll('button')
+      .find((candidate) => candidate.textContent?.trim() === label);
+
+    if (!button) {
+      throw new Error(`No button labelled ${label}`);
+    }
+
+    spectator.click(button);
+  }
 });

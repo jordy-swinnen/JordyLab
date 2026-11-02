@@ -7,6 +7,7 @@ import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.fna.rest.controller.model.ArticleSummaryDto;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.rest.controller.model.PortfolioPositionDto;
+import dev.jordy.jordylab.fna.rest.controller.model.WishlistItemDto;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -100,6 +101,138 @@ class FnaServiceTest {
             softly.assertThat(result.id()).isEqualTo(existingId);
             softly.assertThat(existing.getShareCount()).isEqualByComparingTo(BigDecimal.valueOf(50));
         });
+    }
+
+    @Test
+    void upsertPositionRejectsZeroShares() {
+        assertThatThrownBy(() -> fnaService.upsertPosition("KBC.BR", BigDecimal.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void upsertPositionRejectsNegativeShares() {
+        assertThatThrownBy(() -> fnaService.upsertPosition("KBC.BR", BigDecimal.valueOf(-2)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void upsertPositionRejectsMissingShares() {
+        assertThatThrownBy(() -> fnaService.upsertPosition("KBC.BR", null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void upsertPositionPromotesAWishlistItemInPlace() {
+        UUID wishlistId = PortfolioPositionTestBuilder.DEFAULT_WISHLIST_ID;
+        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition().build();
+
+        when(positionRepository.findByTicker(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER))
+                .thenReturn(Optional.of(wishlistItem));
+        when(positionRepository.save(wishlistItem)).thenReturn(wishlistItem);
+
+        PortfolioPositionDto result = fnaService.upsertPosition(
+                PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER, BigDecimal.valueOf(2));
+
+        assertSoftly(softly -> {
+            softly.assertThat(result.id()).isEqualTo(wishlistId);
+            softly.assertThat(result.shareCount()).isEqualByComparingTo(BigDecimal.valueOf(2));
+            softly.assertThat(wishlistItem.isHeld()).isTrue();
+        });
+        verify(stockPriceService).refresh(wishlistItem);
+    }
+
+    @Test
+    void getPortfolioPositionsReturnsHeldPositionsOnly() {
+        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc())
+                .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultPortfolioPosition()));
+
+        List<PortfolioPositionDto> result = fnaService.getPortfolioPositions();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().ticker()).isEqualTo(PortfolioPositionTestBuilder.DEFAULT_TICKER);
+    }
+
+    @Test
+    void getWishlistItemsMapsItemsWithoutAShareCount() {
+        when(positionRepository.findAllByShareCountIsNullOrderByTickerAsc())
+                .thenReturn(List.of(PortfolioPositionTestBuilder.aDefaultWishlistPosition()));
+
+        List<WishlistItemDto> result = fnaService.getWishlistItems();
+
+        assertThat(result).hasSize(1);
+        assertSoftly(softly -> {
+            WishlistItemDto dto = result.getFirst();
+            softly.assertThat(dto.id()).isEqualTo(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_ID);
+            softly.assertThat(dto.ticker()).isEqualTo(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER);
+            softly.assertThat(dto.lastPrice()).isEqualByComparingTo(PortfolioPositionTestBuilder.DEFAULT_LAST_PRICE);
+            softly.assertThat(dto.lastPriceFetchedAt())
+                    .isEqualTo(PortfolioPositionTestBuilder.DEFAULT_LAST_PRICE_FETCHED_AT);
+        });
+    }
+
+    @Test
+    void addWishlistItemCreatesAnItemWithoutAShareCountAndPricesIt() {
+        when(positionRepository.findByTicker("ASML")).thenReturn(Optional.empty());
+        ArgumentCaptor<PortfolioPosition> captor = ArgumentCaptor.forClass(PortfolioPosition.class);
+        when(positionRepository.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WishlistItemDto result = fnaService.addWishlistItem("ASML");
+
+        verify(stockPriceService).refresh(captor.getValue());
+        assertSoftly(softly -> {
+            softly.assertThat(captor.getValue().getTicker()).isEqualTo("ASML");
+            softly.assertThat(captor.getValue().getShareCount()).isNull();
+            softly.assertThat(result.ticker()).isEqualTo("ASML");
+        });
+    }
+
+    @Test
+    void addWishlistItemIsIdempotentForAnExistingWishlistTicker() {
+        PortfolioPosition existing = PortfolioPositionTestBuilder.aWishlistPosition().build();
+        when(positionRepository.findByTicker(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER))
+                .thenReturn(Optional.of(existing));
+        when(positionRepository.save(existing)).thenReturn(existing);
+
+        WishlistItemDto result = fnaService.addWishlistItem(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_TICKER);
+
+        assertThat(result.id()).isEqualTo(PortfolioPositionTestBuilder.DEFAULT_WISHLIST_ID);
+        verify(stockPriceService).refresh(existing);
+    }
+
+    @Test
+    void addWishlistItemRejectsATickerAlreadyHeld() {
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition().build();
+        when(positionRepository.findByTicker(PortfolioPositionTestBuilder.DEFAULT_TICKER))
+                .thenReturn(Optional.of(held));
+
+        assertThatThrownBy(() -> fnaService.addWishlistItem(PortfolioPositionTestBuilder.DEFAULT_TICKER))
+                .isInstanceOf(TickerAlreadyHeldException.class);
+    }
+
+    @Test
+    void addWishlistItemNormalisesWhatTheUserTyped() {
+        when(positionRepository.findByTicker("ASML")).thenReturn(Optional.empty());
+        ArgumentCaptor<PortfolioPosition> captor = ArgumentCaptor.forClass(PortfolioPosition.class);
+        when(positionRepository.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        fnaService.addWishlistItem("  asml ");
+
+        assertThat(captor.getValue().getTicker()).isEqualTo("ASML");
+    }
+
+    @Test
+    void addWishlistItemRejectsABlankTicker() {
+        assertThatThrownBy(() -> fnaService.addWishlistItem("   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void removeWishlistItemDeletesById() {
+        UUID wishlistId = PortfolioPositionTestBuilder.DEFAULT_WISHLIST_ID;
+
+        fnaService.removeWishlistItem(wishlistId);
+
+        verify(positionRepository).deleteById(wishlistId);
     }
 
     @Test
