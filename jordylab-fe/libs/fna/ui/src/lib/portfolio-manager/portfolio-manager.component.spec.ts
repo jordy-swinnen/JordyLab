@@ -86,7 +86,8 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('h2')).toHaveText('Portfolio');
-    expect(spectator.query('span.uppercase')).toHaveText('0 positions');
+    expect(spectator.element).toHaveText('0 positions');
+    expect(spectator.element).toHaveText('No holdings yet.');
   });
 
   it('surfaces an error state when the store reports an error', () => {

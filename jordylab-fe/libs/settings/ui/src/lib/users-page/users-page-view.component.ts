@@ -3,7 +3,7 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
 import { AppUser } from '@jordylab-fe/settings/api';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
-import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
+import { ErrorStateComponent, PageHeaderComponent, SkeletonRowsComponent } from '@jordylab-fe/shared/layout';
 
 interface TemporaryPassword {
   userId: string;
@@ -13,7 +13,7 @@ interface TemporaryPassword {
 @Component({
   selector: 'lib-users-page-view',
   standalone: true,
-  imports: [DatePipe, HlmBadgeDirective, HlmButtonDirective, HlmSkeletonComponent],
+  imports: [DatePipe, HlmBadgeDirective, HlmButtonDirective, ErrorStateComponent, PageHeaderComponent, SkeletonRowsComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './users-page-view.component.html',
 })
@@ -31,6 +31,7 @@ export class UsersPageViewComponent {
   revoke = output<string>();
   resetPassword = output<string>();
   dismissTemporaryPassword = output<void>();
+  reload = output<void>();
 
   displayName(user: AppUser): string {
     const name = `${user.firstName} ${user.lastName}`.trim();

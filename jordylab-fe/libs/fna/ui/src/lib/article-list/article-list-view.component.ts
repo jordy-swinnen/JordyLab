@@ -1,3 +1,4 @@
+import { EmptyStateComponent, PageHeaderComponent, SkeletonRowsComponent } from '@jordylab-fe/shared/layout';
 import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ArticleSummary } from '@jordylab-fe/fna/api';
@@ -11,7 +12,7 @@ interface ArticleDay {
 @Component({
   selector: 'lib-article-list-view',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, EmptyStateComponent, PageHeaderComponent, SkeletonRowsComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './article-list-view.component.html',
 })

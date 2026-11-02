@@ -24,11 +24,16 @@ import { AiModelsPageViewComponent } from './ai-models-page-view.component';
       (closePicker)="onClosePicker()"
       (searchChange)="onSearch($event)"
       (choose)="onChoose($event)"
+      (reload)="onReload()"
     />
   `,
 })
 export class AiModelsPageComponent {
   readonly #store = inject(AiModelsStore);
+
+  onReload(): void {
+    this.#store.load();
+  }
 
   readonly features = this.#store.features;
   readonly loading = this.#store.loading;

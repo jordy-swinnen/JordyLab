@@ -16,6 +16,7 @@ import { UsersPageViewComponent } from './users-page-view.component';
       [error]="error()"
       [actioningId]="actioningId()"
       [temporaryPassword]="temporaryPassword()"
+      (reload)="onReload()"
       (approve)="onApprove($event)"
       (reject)="onReject($event)"
       (revoke)="onRevoke($event)"
@@ -34,6 +35,10 @@ export class UsersPageComponent {
   readonly error = this.#store.error;
   readonly actioningId = this.#store.actioningId;
   readonly temporaryPassword = this.#store.temporaryPassword;
+
+  onReload(): void {
+    this.#store.load();
+  }
 
   onApprove(id: string): void {
     this.#store.approve(id);

@@ -34,7 +34,7 @@ describe('ArticleListComponent', () => {
   });
 
   it('displays a loading state before articles arrive', () => {
-    expect(spectator.query('lib-article-list-view span.text-sm')).toHaveText('Fetching latest articles…');
+    expect(spectator.query('lib-article-list-view [role="status"]')).toHaveText('Fetching latest articles…');
   });
 
   it('displays populated articles', () => {
@@ -50,7 +50,7 @@ describe('ArticleListComponent', () => {
     articles.set([]);
     spectator.detectChanges();
 
-    expect(spectator.query('p.text-sm')).toHaveText('No articles available.');
+    expect(spectator.element).toHaveText('No articles yet.');
   });
 
   it('surfaces an error state when the store reports an error', () => {
