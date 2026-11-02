@@ -234,3 +234,4 @@ Done by hand: states, label groups' first creation by the owner or an agent thro
 GitHub integration settings, the sign-ins. Done by an agent through the connector: labels, issues, projects, comments,
 and everything the `linear-capture` and `linear-sync-drafts` skills do. Estimated time on a fresh workspace: well under
 an hour, most of it the sign-ins and the views.
+
