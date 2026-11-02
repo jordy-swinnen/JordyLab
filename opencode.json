@@ -16,6 +16,7 @@
       }
     }
   },
+  "instructions": [".github/instructions/commits-and-pull-requests.instructions.md"],
   "mcp": {
     "nx-mcp": {
       "type": "local",
@@ -23,29 +24,33 @@
       "enabled": true
     },
     "github": {
+      "type": "local",
+      "command": ["sh", "scripts/mcp/github-mcp.sh"],
+      "enabled": true
+    },
+    "linear": {
       "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "enabled": true,
-      "headers": {
-        "Authorization": "Bearer {env:GITHUB_PAT}"
-      }
+      "url": "https://mcp.linear.app/mcp",
+      "enabled": true
     }
   },
   "agent": {
     "planner": {
       "mode": "primary",
-      "description": "SpecKit: constitution, specify, clarify, plan, tasks. Highest-capability model; errors here propagate into every later step.",
-      "model": "opencode-go/gemini-4-argon"
+      "description": "SpecKit: constitution, specify, clarify, plan, tasks. Use for work where an error propagates into every later step.",
+      "model": "opencode-go/claude-haiku-5-5",
+      "variant": "xhigh"
     },
     "reviewer": {
       "mode": "primary",
       "description": "SpecKit: analyze, converge. Different model creator than the planner for an independent review.",
-      "model": "opencode-go/kimi-k3.1-pro"
+      "model": "opencode-go/mimo-v2.6-pro"
     },
     "worker": {
       "mode": "primary",
       "description": "SpecKit: implement, checklist, taskstoissues. Cheap, fast, very high request quota.",
-      "model": "opencode-go/deepseek-v4.1-flash"
+      "model": "opencode-go/deepseek-v4.1-flash",
+      "variant": "max"
     },
     "build": {
       "model": "opencode-go/deepseek-v4.1-flash"

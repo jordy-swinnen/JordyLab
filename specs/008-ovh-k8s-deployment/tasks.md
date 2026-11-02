@@ -123,10 +123,11 @@ confirm the certificate is valid (once the cluster from Phase 10/US8 is bootstra
 - [X] T022 [P] [US1] Write `docs/runbook.md`'s "DNS & first TLS issuance" section with exact steps and
   verification commands — **(operator step)**: Jordy points DNS at the VPS and verifies the certificate; do not
   change DNS yourself
-- [ ] T023 [US1] Once the cluster is bootstrapped and a first deploy has run, execute the US1 checks from
+- [X] T023 [US1] Once the cluster is bootstrapped and a first deploy has run, execute the US1 checks from
   `quickstart.md` (curl checks, `/auth/admin` unreachability, the mobile-data browser test) and record the results
   in the runbook — **DEFERRED**: no live cluster exists yet; cannot be executed until Jordy completes Phase 10's
   bootstrap and a first real deploy
+  - **Closed 2026-11-02:** the public checks ran against production: `https://jordylab.be/` 200 over HTTP/2 with a valid Let's Encrypt certificate (until 2026-12-29), `http://` answers 301 to https, `/auth/realms/jordylab` 200 from Keycloak, `/auth/admin` and `/auth/realms/master` return the web app's page (BUG-022 fallback, Keycloak admin not routed), 6443 closed. Two differences from the quickstart text: `/api/actuator/health` answers 401 (actuator is not public, per `contracts/http-routing.md`), and the mobile-data browser test is not recorded separately.
 
 **Checkpoint**: US1's manifests and code are complete; full verification needs Phase 10 (bootstrap) and Phase 6
 (deploy pipeline) to have run at least once.
@@ -363,8 +364,10 @@ includes the VPS's own Tailscale membership (T065), not just the CI side (T034/T
   `ci-deploy`, `jordylab-gateway`, `jordylab-tls`, `keycloak-config` all spelled identically everywhere; no drift
 - [ ] T073 Run the full `quickstart.md` validation pass end-to-end once bootstrap and a first deploy are complete;
   record the results — **DEFERRED**: no live cluster exists yet
+  - **Progress 2026-11-02:** the public part (US1) and the security check ran today; the rest of the quickstart (secrets, approvals and rollback, backups, local setup) is covered by the production campaign of spec 011. Left open until the owner confirms that is enough.
 - [ ] T074 Final security review: confirm a public port scan matches FR-019/SC-008 exactly (only 22/80/443 public,
   6443 never public) — **DEFERRED**: no live VPS exists yet
+  - **Result 2026-11-02:** the port scan does not match FR-019 / SC-008 exactly: besides 22, 80 and 443 the ports **31460** and **32531** accept connections (Traefik NodePorts answering 404), logged as BUG-078. 6443 is not reachable. UDP was not scanned. Left open until BUG-078 is fixed and the scan rerun.
 
 ---
 
