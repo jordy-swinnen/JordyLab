@@ -42,3 +42,19 @@ Facts checked against the repository on 2026-11-02, for the draft in `spec-draft
 ## Port scan (open finding, not decided)
 
 A port scan of the production VPS found two public TCP ports besides 22, 80 and 443. The probable cause is Traefik NodePorts from k3s ServiceLB. A Compose host has no NodePorts, so the port problem goes away with the move, but the same scan must run on the new host before cutover. Open point to check: whether the host firewall (`ufw`) filters the NodePort path at all. If it does not, the new host needs its own rule set, not only the same `ufw` 22/80/443 list.
+
+## Local backup taken 2026-11-02 (pre-migration safety net)
+
+Taken from the running production cluster with read-only commands. The files are outside the repo, in `~/jordylab-backups/prod-2026-11-02/`, mode 600 in a 700 folder. They contain password hashes and realm secrets, so keep them out of cloud-synced folders.
+
+| File | Contents | Check |
+|------|----------|-------|
+| `jordylab-db.dump.age` | `pg_dump -Fc` of the `jordylab` database (includes the `keycloak` schema), encrypted with age to the SOPS age key's public key | Header is `PGDMP`. Restored into a throwaway `pgvector/pgvector:pg16` container: exit 0, no error lines. Per-table row counts match production for all 122 tables. |
+| `volumes-artwork-apk.tar.age` | `/var/jordylab/artwork` and `/var/jordylab/mobile-releases` from the backend pod, as a tar, encrypted the same way | Lists the entries. Artwork is about 4 KB (nearly empty), mobile releases about 291 MB. |
+| `rowcounts-prod.txt`, `rowcounts-restore.txt` | Per-table counts used for the comparison | Identical |
+
+Notes for the restore step:
+
+- The dump was made with `--no-owner --no-privileges`, so after a restore the restoring user owns every object. Before Keycloak starts on the new stack, create the `jordylab` and `keycloak` roles and give them back the `jordylab` database and `keycloak` schema.
+- The counts were taken with production live. Writes after 22:33 on 2026-11-02 are not in this dump, so the maintenance-window dump replaces it.
+- Before the move, the production Postgres pod had 4 restarts (last 31 hours before the check), and the ntfy pod had 2.

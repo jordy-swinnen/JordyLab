@@ -35,14 +35,25 @@ Docker Engine and the Compose plugin on the same kind of VPS (Ubuntu LTS, `ufw` 
 - The deploy workflow from `continuous-deploy` is retargeted to Compose, including readiness waiting and automatic rollback.
 - `docs/runbook.md`, the `jordylab-ops` skill and the `jordylab-devops` agent are rewritten for Compose. `docs/learn/` Kubernetes notes stay as history.
 
-## Migration plan (proposed)
+## Migration plan
 
-1. Provision a second VPS temporarily (billable, so done by Jordy), build the Compose stack on it.
-2. Restore the latest base backup plus WAL from object storage into the new Postgres. This doubles as the restore drill.
-3. Lower the DNS TTL, cut over, verify, keep the old node for a rollback window, then decommission.
+Decided 2026-11-02: no second VPS. The move happens on the same host, and a backup held on the owner's Mac is the safety net.
+
+1. Before any change, back up production to the owner's Mac, encrypted with age: a dump of the `jordylab` database (it includes the `keycloak` schema), plus the artwork and APK volumes.
+2. Restore the database dump into a throwaway local Postgres on the Mac and compare row counts with production. This proves the backup before anything is removed.
+3. Open a maintenance window. Stop the workloads, then take a final database dump so no writes are lost.
+4. Remove k3s, install Docker Engine and the Compose stack on the same host, restore the database and the volumes from the Mac backup, verify, and reopen traffic. The IP does not change, so DNS does not need to move.
+5. Keep the Mac backup and the object-storage backups until pgBackRest has taken its first base backup on the new stack.
+
+Trade-offs of this plan, recorded here so they are not forgotten:
+
+- **Rollback is a rebuild, not a switch.** There is no old node. If the Compose stack fails, the way back is to reinstall k3s on the same host and restore from the Mac backup. This is slower than the earlier two-VPS plan.
+- **Point-in-time restore before the cutover uses the old chain.** The old Barman chain in the bucket is not readable by pgBackRest. It stays in the bucket until its 30-day retention runs out, and restoring to a time before the cutover needs the old tooling.
+- **Downtime covers the whole copy.** The maintenance window lasts from the final dump to the restore finishing.
 
 ## Success criteria
 
+- The Mac backup restores into a throwaway Postgres with row counts matching production, before k3s is removed.
 - A point-in-time restore to a chosen timestamp succeeds on the new stack.
 - A deploy and a rollback both complete through the workflow with no manual server access.
 - Memory use on the host is lower than on k3s (measure before and after, no assumption).
