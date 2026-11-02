@@ -1,19 +1,6 @@
-@if (latestRelease()?.updateRequired) {
-<lib-update-required
-  [latestVersionName]="latestRelease()!.versionName"
-  (download)="onUpdateDownload()"
-/>
-} @else {
 <div class="fixed inset-x-0 top-0 z-40 h-[var(--inset-top)] bg-background lg:hidden" aria-hidden="true"></div>
 <div class="min-h-screen lg:flex">
-  <lib-install-prompt [status]="installStatus()" (download)="onInstallDownload()" />
-  @if (latestRelease()?.updateAvailable) {
-  <lib-update-available-banner
-    [versionName]="latestRelease()!.versionName"
-    [releaseNotes]="latestRelease()!.releaseNotes"
-    (download)="onUpdateDownload()"
-  />
-  }
+  <lib-install-prompt />
   @if (hasAppRole()) {
   <aside
     class="hidden border-r border-border bg-rail lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[220px] lg:flex-shrink-0 lg:flex-col lg:px-3.5 lg:pb-5 lg:pt-[26px]"
@@ -73,7 +60,7 @@
       class="mt-3 flex w-full items-center gap-2 rounded-xl border border-border p-3 text-left text-sm text-secondary-foreground transition-colors hover:border-input"
       (click)="showQrEntry.set(!showQrEntry())"
     >
-      Get the Android app
+      Get the phone app
     </button>
     @if (showQrEntry()) {
     <lib-android-app-qr-entry />
@@ -102,4 +89,3 @@
   <lib-tab-bar class="fixed inset-x-0 bottom-0 z-30 bg-rail lg:hidden" [items]="tabs()" />
   }
 </div>
-}

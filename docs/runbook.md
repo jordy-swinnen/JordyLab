@@ -356,8 +356,8 @@ df -h /var/lib/rancher/k3s
 
 ## 20. Release a version (one tag → GitHub Release → deploy)
 
-**Status: implemented 2026-09-30** (spec 011 BUG-008). Releasing is one action on GitHub, covering the web app
-and the Android APK together.
+**Status: implemented 2026-09-30** (spec 011 BUG-008). Releasing is one action on GitHub; it covers the web app
+only — the Android APK job was removed with the native app (spec 018 US4).
 
 ### The flow
 
@@ -378,12 +378,7 @@ and the Android APK together.
    - **deploy** — calls `deploy-prod.yml` with the tag; it waits for your `production` approval (§9) and deploys
      `ghcr.io/jordy-swinnen/jordylab-*:vX.Y.Z`;
    - **publish** — the draft becomes public only once the deploy succeeded (a rejected or failed deploy leaves
-     only a draft, which you can delete);
-   - **apk** — builds and signs the Android APK with `versionName` X.Y.Z and
-     `versionCode` = MAJOR·1000000 + MINOR·10000 + PATCH·100 + (rcN, or 99 for a final release), so every tag
-     installs as an update; publishes it to `POST /api/mobile/releases` as the `mobile-release-ci` service
-     account. The APK is **not** attached to the GitHub Release: the repo is public and spec 007 FR-002 allows
-     downloads only for approved users (signed, short-lived links).
+     only a draft, which you can delete).
 4. Verify with the `quickstart.md` US1 checks.
 
 ### Deploy or roll back to any version
@@ -391,17 +386,29 @@ and the Android APK together.
 See §11: *Deploy to Production* → *Run workflow* with the release tag. `deploy-prod.yml` accepts only
 `vX.Y.Z[-rcN]` and deploys that tag's images and manifests.
 
-### APK publish credentials
+### Removing the Android app stack (one-time cutover, after the first release with spec 018)
 
-The `apk` job logs in as `mobile-release-ci`. Its GitHub secret is a **repository** secret (`--repo`, no `--env`: the job
-has no `environment:`, so a secret set on the `production` environment is invisible to it — spec 011 BUG-057) and must equal the value Keycloak uses, which comes
-from `jordylab-secrets/MOBILE_RELEASE_CI_CLIENT_SECRET`. Set it from the cluster, so it is never
-displayed or retyped. The `[ -n "$V" ]` guard matters: if `kubectl` fails (e.g. no `KUBECONFIG` in that shell), a
-plain pipe would store an **empty** secret.
+Do these once, after the release that removed the `mobile` module is running in production. Each is verifiable and
+safe to skip temporarily; none of them changes the web app.
 
-```bash
-V=$(KUBECONFIG=~/.kube/jordylab.yaml kubectl -n jordylab get secret jordylab-secrets -o jsonpath='{.data.MOBILE_RELEASE_CI_CLIENT_SECRET}') && [ -n "$V" ] && printf '%s' "$V" | base64 -d | gh secret set MOBILE_RELEASE_CI_CLIENT_SECRET --repo jordy-swinnen/JordyLab; unset V
-```
+1. Deploy the release (above). The backend boots with `jordylab.notifications.*` and `/.well-known/assetlinks.json`
+   now answers 403 (expected — the endpoint is gone).
+2. Delete the APK volume once no pod mounts it: `kubectl -n jordylab delete pvc mobile-releases`.
+3. Delete the native identity entries from the live realm (the realm file no longer contains them; a first-boot import
+   would not remove them):
+   ```bash
+   kubectl -n jordylab exec -it deploy/keycloak -- /opt/keycloak/bin/kcadm.sh config credentials \
+     --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg
+   kubectl -n jordylab exec -it deploy/keycloak -- /opt/keycloak/bin/kcadm.sh get clients -r jordylab -q clientId=jordylab-mobile --fields id --config /tmp/kc.cfg
+   ```
+   Delete that client's id with `delete clients/<id> -r jordylab`, then the same for `mobile-release-ci`, then
+   `delete roles/mobile-release-publisher -r jordylab`. Confirm `get clients -r jordylab` no longer lists them.
+4. Remove the retired CI secret from GitHub (`gh secret remove MOBILE_RELEASE_CI_CLIENT_SECRET --repo jordy-swinnen/JordyLab`
+   and, if present, `--env production`).
+5. SOPS: `MOBILE_RELEASE_CI_CLIENT_SECRET` and `MOBILE_DOWNLOAD_LINK_SECRET` are already gone from
+   `deploy/k8s/overlays/prod/secrets.sops.yaml` in the repo; the cluster Secret follows the next deploy.
+6. Verify: a throw-away sign-up produces the ntfy push and its tap opens `/settings/users`; the manifest audit on
+   `https://jordylab.be` reports the app installable.
 
 ### GitHub settings (owner only)
 
@@ -410,18 +417,7 @@ the Build checks.
 
 ## 21. Manual tests the E2E campaign could not run
 
-See [`docs/testing/manual-test-runbook.md`](testing/manual-test-runbook.md): Android app behaviour, a signed-in pass on production, the JordyBox scan, a VPS reboot, point-in-time restore, CSP rollout, colour contrast and a full rebuild.
-
-### Fingerprint sign-in: no error flash (spec 013 US14, SC-018)
-
-Do this on the phone with the build under test, with fingerprint unlock turned on. Repeat **20 times**, closing the app completely in between:
-
-1. Open the app and tap "Unlock with fingerprint" (or let the prompt appear), then touch the sensor with the registered finger.
-2. **Expected, every time:** the app opens the library. At **no moment** is a red message shown, not for a split second while the screen changes.
-3. Once, with the phone in aeroplane mode: "Unlock with fingerprint" shows only a message about the connection, nothing about a rejected session.
-4. Once, after an admin revoked your access in Settings → Users: one message that says the stored session is no longer accepted, shown once, and "Sign in" still works.
-
-A single red flash on any of the 20 is a failure: note the time and the app version in `docs/testing/bug-log.md`.
+See [`docs/testing/manual-test-runbook.md`](testing/manual-test-runbook.md): a signed-in pass on production, the phone PWA install and share sheet, the JordyBox scan, a VPS reboot, point-in-time restore, CSP rollout, colour contrast and a full rebuild.
 
 ---
 

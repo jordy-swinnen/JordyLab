@@ -1,15 +1,19 @@
 import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { InstallPromptStore, InstallPromptKind } from '@jordylab-fe/shared/platform/api';
+import { InstallPromptKind, InstallPromptStore } from '@jordylab-fe/shared/platform/api';
 import { InstallPromptComponent } from './install-prompt.component';
 
 describe('InstallPromptComponent', () => {
   const promptKind = signal<InstallPromptKind>(null);
+  const canPromptInstall = signal(false);
   const dismiss = vi.fn();
+  const promptInstall = vi.fn(() => Promise.resolve<'accepted' | 'dismissed' | 'unavailable'>('accepted'));
 
   const storeMock = {
     promptKind: promptKind.asReadonly(),
+    canPromptInstall: canPromptInstall.asReadonly(),
     dismiss,
+    promptInstall,
   };
 
   const createComponent = createComponentFactory({
@@ -21,7 +25,9 @@ describe('InstallPromptComponent', () => {
 
   beforeEach(() => {
     promptKind.set(null);
+    canPromptInstall.set(false);
     dismiss.mockClear();
+    promptInstall.mockClear();
     spectator = createComponent();
   });
 
@@ -30,27 +36,41 @@ describe('InstallPromptComponent', () => {
     expect(spectator.query('.jordylab-install-sheet')).toBeFalsy();
   });
 
-  it('renders the Android dialog with 3 steps when promptKind is android', () => {
+  it('offers the browser install prompt when the browser provided it', () => {
     promptKind.set('android');
+    canPromptInstall.set(true);
     spectator.detectChanges();
 
     expect(spectator.query('.jordylab-install-dialog')).toBeTruthy();
-    expect(spectator.queryAll('li')).toHaveLength(3);
+    const dialog = spectator.query('.jordylab-install-dialog');
+    expect(dialog?.textContent).toContain('Install app');
+    expect(dialog?.textContent).toContain('Uninstall it');
   });
 
-  it('emits download when the Download button is clicked', () => {
+  it('triggers store.promptInstall() when the Install button is clicked', () => {
     promptKind.set('android');
+    canPromptInstall.set(true);
     spectator.detectChanges();
-    const downloadSpy = vi.fn();
-    spectator.output('download').subscribe(downloadSpy);
 
     spectator.click('.jordylab-install-dialog button:first-of-type');
 
-    expect(downloadSpy).toHaveBeenCalled();
+    expect(promptInstall).toHaveBeenCalled();
+  });
+
+  it('falls back to browser-menu instructions when no install prompt is available', () => {
+    promptKind.set('android');
+    canPromptInstall.set(false);
+    spectator.detectChanges();
+
+    const dialog = spectator.query('.jordylab-install-dialog');
+    expect(dialog?.textContent).toContain('browser menu');
+    expect(dialog?.textContent).not.toContain('Install app\n');
+    expect(spectator.queryAll('.jordylab-install-dialog button')).toHaveLength(1);
   });
 
   it('calls store.dismiss() when Not now is clicked', () => {
     promptKind.set('android');
+    canPromptInstall.set(true);
     spectator.detectChanges();
 
     spectator.click('.jordylab-install-dialog button:last-of-type');
@@ -58,11 +78,14 @@ describe('InstallPromptComponent', () => {
     expect(dismiss).toHaveBeenCalled();
   });
 
-  it('renders the iOS sheet when promptKind is ios', () => {
+  it('renders the iOS instruction sheet with the APK-removal note', () => {
     promptKind.set('ios');
     spectator.detectChanges();
 
     expect(spectator.query('.jordylab-install-sheet')).toBeTruthy();
+    const sheet = spectator.query('.jordylab-install-sheet');
+    expect(sheet?.textContent).toContain('Add to Home Screen');
+    expect(sheet?.textContent).toContain('Uninstall it');
   });
 
   it('calls store.dismiss() when the iOS sheet is closed', () => {
@@ -72,28 +95,5 @@ describe('InstallPromptComponent', () => {
     spectator.click('.jordylab-install-sheet button');
 
     expect(dismiss).toHaveBeenCalled();
-  });
-
-  it('says it is preparing and disables Download while the link is requested', () => {
-    promptKind.set('android');
-    spectator.setInput('status', 'preparing');
-
-    expect(spectator.query('[role="status"]')?.textContent).toContain('Preparing');
-    expect(spectator.query<HTMLButtonElement>('.jordylab-install-dialog button')?.disabled).toBe(true);
-  });
-
-  it('tells the user where to find the file once the download has been requested', () => {
-    promptKind.set('android');
-    spectator.setInput('status', 'started');
-
-    expect(spectator.query('[role="status"]')?.textContent).toContain('Download requested');
-  });
-
-  it('shows an error and offers Try again when the download could not be prepared', () => {
-    promptKind.set('android');
-    spectator.setInput('status', 'failed');
-
-    expect(spectator.query('[role="alert"]')?.textContent).toContain('Could not prepare');
-    expect(spectator.query('.jordylab-install-dialog button')?.textContent).toContain('Try again');
   });
 });

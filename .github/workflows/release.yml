@@ -8,7 +8,7 @@ name: Release
 # 3. release — *draft* GitHub Release with generated notes (vX.Y.Z-rcN → prerelease)
 # 4. deploy  — deploy-prod.yml with the release tag, behind the `production` approval
 # 5. publish — the draft becomes public only after the deploy succeeded
-# 6. apk     — signed Android APK, versioned from the tag, published to /api/mobile/releases
+# (The Android APK job was removed with the native app, spec 018 US4.)
 
 on:
   push:
@@ -31,7 +31,6 @@ jobs:
     outputs:
       sha: ${{ steps.check.outputs.sha }}
       version_name: ${{ steps.check.outputs.version_name }}
-      version_code: ${{ steps.check.outputs.version_code }}
       prerelease: ${{ steps.check.outputs.prerelease }}
     permissions:
       contents: read
@@ -41,7 +40,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify the tag and derive the Android version
+      - name: Verify the tag
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,8 +49,7 @@ jobs:
           if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
             echo "::error::'$TAG' is not vX.Y.Z or vX.Y.Z-rcN"; exit 1
           fi
-          major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}" rc="${BASH_REMATCH[5]}"
-          (( minor <= 99 && patch <= 99 && ${rc:-0} <= 98 )) || { echo "::error::minor/patch ≤ 99 and rc ≤ 98 keep the version code monotonic"; exit 1; }
+          rc="${BASH_REMATCH[5]}"
 
           sha="$(git rev-list -n 1 "$TAG")"
           git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$TAG ($sha) is not on main"; exit 1; }
@@ -59,16 +57,12 @@ jobs:
           builds="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?head_sha=$sha&event=push&status=success" --jq '.total_count')"
           [ "$builds" -gt 0 ] || { echo "::error::no successful Build (push to main) for $sha — its images don't exist"; exit 1; }
 
-          # Android needs a strictly increasing integer: MAJOR·1000000 + MINOR·10000 + PATCH·100 + (rcN or 99 for final),
-          # so v0.1.0-rc1 < v0.1.0-rc2 < v0.1.0 < v0.1.1-rc1.
-          version_code=$(( major * 1000000 + minor * 10000 + patch * 100 + ${rc:-99} ))
           {
             echo "sha=$sha"
             echo "version_name=${TAG#v}"
-            echo "version_code=$version_code"
             echo "prerelease=$([ -n "$rc" ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
-          echo "Release $TAG → commit $sha, Android versionCode $version_code"
+          echo "Release $TAG → commit $sha"
 
   retag:
     needs: verify
@@ -133,123 +127,3 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
 
-  apk:
-    needs: [verify, deploy]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: jordylab-fe
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.verify.outputs.sha }}
-
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build the mobile web bundle
-        run: bunx nx build jordylab --configuration=mobile
-
-      - name: Sync the native Android project
-        working-directory: jordylab-fe/apps/jordylab-mobile
-        run: bunx cap sync android
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Decode the release keystore
-        working-directory: jordylab-fe/apps/jordylab-mobile/android
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.keystore
-
-      - name: Assemble the signed release APK
-        working-directory: jordylab-fe/apps/jordylab-mobile/android
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          VERSION_CODE: ${{ needs.verify.outputs.version_code }}
-          VERSION_NAME: ${{ needs.verify.outputs.version_name }}
-        run: |
-          # Passwords reach Gradle as env vars (app/build.gradle signingConfigs.release), never as -P flags.
-          ./gradlew assembleRelease \
-            -PjordylabVersionCode="$VERSION_CODE" \
-            -PjordylabVersionName="$VERSION_NAME" \
-            -PjordylabKeystoreFile="$(pwd)/release.keystore"
-
-      # Same check the backend makes on upload (FR-003, apksig ApkVerifier there), done here first so an unsigned
-      # APK or a wrong key fails the build with a clear message (spec 011 BUG-037). The expected certificate is
-      # the public value from the prod backend-config, so there is one source of truth.
-      - name: Verify the APK signature
-        working-directory: jordylab-fe/apps/jordylab-mobile/android
-        run: |
-          apksigner="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
-          [ -x "$apksigner" ] || { echo "::error::apksigner not found under \$ANDROID_HOME/build-tools — the runner image no longer ships the Android SDK"; exit 1; }
-          apk=app/build/outputs/apk/release/app-release.apk
-          # Fails (non-zero) unless the APK carries a valid signature for every platform it supports (v2/v3 here).
-          # apksigner exits non-zero unless every signature scheme the APK carries verifies for API 29+. Its report is
-          # printed for the log. The pinned release certificate is NOT compared here: apksigner printed no signer
-          # lines for the v2-only release APK in rc3-rc5 (spec 011 BUG-044), so a parse of its output never worked.
-          # The backend does that comparison on upload with apksig (SIGNING_CERT_MISMATCH) and refuses the publish.
-          "$apksigner" verify --verbose --min-sdk-version 29 "$apk"
-          echo "APK signature verified; the backend pins the certificate on upload"
-
-      - name: Remove the decoded keystore
-        if: always()
-        working-directory: jordylab-fe/apps/jordylab-mobile/android
-        run: rm -f release.keystore
-
-      - name: Publish the release
-        working-directory: jordylab-fe/apps/jordylab-mobile/android
-        env:
-          KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL }}
-          API_BASE_URL: ${{ secrets.JORDYLAB_API_BASE_URL }}
-          CLIENT_SECRET: ${{ secrets.MOBILE_RELEASE_CI_CLIENT_SECRET }}
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-          VERSION_CODE: ${{ needs.verify.outputs.version_code }}
-          VERSION_NAME: ${{ needs.verify.outputs.version_name }}
-        run: |
-          set -o pipefail
-          if ! token_response="$(curl -sS -f -X POST "$KEYCLOAK_URL/realms/jordylab/protocol/openid-connect/token" \
-              -d grant_type=client_credentials -d client_id=mobile-release-ci \
-              --data-urlencode "client_secret=$CLIENT_SECRET")"; then
-            echo "::error::Keycloak refused the mobile-release-ci credentials. The GitHub secret MOBILE_RELEASE_CI_CLIENT_SECRET must equal jordylab-secrets/MOBILE_RELEASE_CI_CLIENT_SECRET (docs/runbook.md §20)."
-            exit 1
-          fi
-          token="$(jq -r '.access_token // empty' <<<"$token_response")"
-          [ -n "$token" ] || { echo "::error::token response contained no access_token"; exit 1; }
-          echo "::add-mask::$token"
-          # From a file: curl -F would treat notes starting with @ or < as a file reference.
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body | head -c 4000 > "$RUNNER_TEMP/release-notes.txt"
-          # Not `curl -f`: that hides why the backend refused (spec 011 BUG-057). Print the status, the auth challenge
-          # and the error body (none of which carry secrets). Only a transport failure (000) or a 5xx is retried, for a
-          # backend that is still settling right after the deploy; every other answer (201, 4xx incl. 409 after an
-          # upload that actually went through) ends the loop so it is never retried into a misleading error.
-          for attempt in 1 2 3; do
-            rm -f "$RUNNER_TEMP/publish-response.txt" "$RUNNER_TEMP/publish-headers.txt"
-            status="$(curl -sS -o "$RUNNER_TEMP/publish-response.txt" -D "$RUNNER_TEMP/publish-headers.txt" -w '%{http_code}' \
-              -X POST "$API_BASE_URL/api/mobile/releases" \
-              -H "Authorization: Bearer $token" \
-              -F "versionName=$VERSION_NAME" \
-              -F "versionCode=$VERSION_CODE" \
-              -F "releaseNotes=<$RUNNER_TEMP/release-notes.txt" \
-              -F "file=@app/build/outputs/apk/release/app-release.apk;type=application/vnd.android.package-archive")" || status=000
-            echo "publish attempt $attempt: HTTP $status"
-            case "$status" in 201) break ;; 000|5??) ;; *) break ;; esac
-            [ "$attempt" = "3" ] && break
-            sleep 30
-          done
-          if [ "$status" != "201" ]; then
-            grep -i -E '^(www-authenticate|content-type):' "$RUNNER_TEMP/publish-headers.txt" 2>/dev/null || true
-            head -c 600 "$RUNNER_TEMP/publish-response.txt" 2>/dev/null || true; echo
-          fi
-          [ "$status" = "201" ] || { echo "::error::the backend refused the APK upload (HTTP $status), see the lines above"; exit 1; }

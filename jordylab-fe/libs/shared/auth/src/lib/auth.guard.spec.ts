@@ -55,9 +55,9 @@ describe('authGuard', () => {
   it('remembers a share screen that was opened while signed out, so login can return to it', async () => {
     init.mockResolvedValueOnce(false);
 
-    await runGuard('/mobile/share');
+    await runGuard('/share?text=remember%20me');
 
-    expect(createUrlTree).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/mobile/share' } });
+    expect(createUrlTree).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/share?text=remember%20me' } });
   });
 
   it('does not remember the root or the login page itself', async () => {

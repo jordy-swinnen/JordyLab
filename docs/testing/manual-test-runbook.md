@@ -16,9 +16,9 @@ password manager or from the app, never from this file.
 | MRB-01 | Signed-in pass on production (admin) | a browser | 15 min |
 | MRB-02 | Guest view on production | a second browser profile | 10 min |
 | MRB-03 | EmuDeck scan on JordyBox (after the cap fix) | JordyBox | 10 min |
-| MRB-04 | Android app: install, login, update prompt | an Android phone | 20 min |
-| MRB-05 | Android app: biometric unlock | an Android phone with a fingerprint | 10 min |
-| MRB-06 | Android app: share target | an Android phone | 10 min |
+| MRB-04 | Phone web app: install from the browser and launch standalone | an Android phone | 10 min |
+| MRB-05 | Retired: biometric unlock (native app removed) | — | — |
+| MRB-06 | Phone web app: share target | an Android phone | 10 min |
 | MRB-07 | Push notifications and taps | phone + ntfy app | 10 min |
 | MRB-08 | Steam family sync | a Steam family token | 10 min |
 | MRB-09 | VPS reboot keeps data and artwork | SSH to the VPS | 15 min |
@@ -78,62 +78,51 @@ password manager or from the app, never from this file.
 - If it fails: send the last lines of the output; add `BUG-<next>` (a new cap error means the library is larger than 50,000 games or 8 MiB).
 - Record result: 003 rows `PASS`; set BUG-047 to `VERIFIED-PROD`.
 
-### MRB-04: Android app: install, login, update prompt
-- Covers: 007-US1 (native side), 007-US2, 007-US2-AS1–AS4, 007-US3, 007-US3-AS1–AS3 | Area/spec: E / 007
-- Why the agent couldn't: hardware — needs an Android 10+ phone
-- You need: an Android phone, your admin account, 20 min; two releases live to test the update prompt (rc6 and any later tag)
+### MRB-04: Phone web app — install from the browser and launch standalone
+- Covers: 017-US1, 017-FR-001–FR-006 | Area/spec: E / 017
+- Why the agent couldn't: hardware — needs an Android phone with Chrome
+- You need: an Android phone, your admin account, 10 min
 - Environment: prod
 - Steps:
-  1. On the phone open `https://jordylab.be`, sign in, find the **Get the Android app** entry → expect: a short-lived download link for `0.0.1-rc6` (versionCode 106).
-  2. Download and install the APK (allow "install unknown apps" for your browser if asked) → expect: the app installs as *JordyLab*.
-  3. Open the app → **Sign in** → expect: Keycloak's login opens in the phone's browser and returns to the app signed in (not a WebView).
-  4. As a guest (MRB-02's account): same login → expect: only Library and Chat. As a pending user → expect: the "awaiting approval" screen.
-  5. Browse the library → expect: covers and data load as on the website.
-  6. Publish a newer release (tag `v0.0.1-rc7` or later, deploy it), then open the app → expect: an "update available" banner with a download link; the version check also appears when returning from the background.
-- Pass when: login, role views and the update banner all work.
-- If it fails: add `BUG-<next>` with the phone model and Android version.
-- Record result: 007-US2 and 007-US3 rows → `PASS`.
-- **Result 2026-10-02 (owner, Brave on Android, rc8):** the install dialog rendered as plain unstyled text and Download appeared to do nothing → BUG-049, fixed in rc9. Re-check on the phone after rc9: styled bottom sheet; tapping Download shows "Preparing…" then "Download requested", and `jordylab-0.0.1-rc9.apk` lands in Downloads. Installing and the rest of the app are still untested.
-- **Result 2026-10-05 (owner):** install, sign-in, the launcher icon, the in-app Update banner (rc15 → rc16) all work. **Done.**
+  1. On the phone open `https://jordylab.be` in Chrome and sign in → expect: the install sheet offers **Install app** (one tap opens Chrome's own install prompt) or, without the prompt, the browser-menu instructions plus the note about uninstalling the old Android app.
+  2. Tap **Install app** → expect: the JordyLab launcher icon appears; no "install unknown apps" permission and no APK download.
+  3. Launch from the home screen → expect: it opens standalone (no URL bar) on `https://jordylab.be`, signed in with the same session.
+  4. Open `More`/the Settings tab → **App** → expect: the "Install on this phone" card is gone while running standalone; the theme picker is there.
+  5. Uninstall the old sideloaded JordyLab app → expect: only one JordyLab icon remains and the share sheet lists JordyLab once.
+  6. Optional: tap **Not now** on a reinstall → expect: the sheet stays away for 30 days; **Settings → App** still offers the install steps.
+- Pass when: install, standalone launch, the Settings card behaviour and the old-APK removal all hold.
+- If it fails: add `BUG-<next>` with the phone model and Chrome version.
+- Record result: 017-US1 rows → `PASS`.
 
-### MRB-05: Android app: biometric unlock
-- Covers: 007-US4, 007-US4-AS1–AS3 | Area/spec: E / 007
-- Why the agent couldn't: hardware — a real fingerprint sensor is required
-- You need: the app from MRB-04, a phone with a fingerprint enrolled, 10 min
-- Environment: prod
-- Steps:
-  1. Signed in, enable **Unlock with fingerprint** (the toggle near the account menu / Android app entry) → expect: a fingerprint prompt, then the setting shows "on".
-  2. Close the app completely, reopen → expect: a fingerprint prompt, then straight into the app.
-  3. Fail the fingerprint three times / cancel → expect: falls back to the normal login, nothing cached is shown.
-  4. Turn the setting off, then sign out → expect: the next start asks for a full login.
-  5. As admin, **Revoke** the user in `Settings → Users` while biometrics are on, reopen the app → expect: login is required and the revoked account is refused.
-- Pass when: unlock works only with the fingerprint and is cleared by logout, off-switch and revoke.
-- If it fails: add `BUG-<next>`.
-- Record result: 007-US4 rows → `PASS`.
-- **Result 2026-10-05 (owner, rc15/rc16):** fingerprint unlock works (BUG-051/055 fixed): the switch is under Settings → App, reopening the app asks for the fingerprint. **Done.**
+### MRB-05: Retired — biometric unlock
+- The native app, and with it the in-app fingerprint unlock, was removed in favour of the installable web app (spec 018). The
+  browser keeps the session and the device's own password manager / passkey unlock covers the sign-in step; nothing in
+  JordyLab needs re-checking here.
+- **Result 2026-11-02:** retired with the native app (spec 018 US4).
 
-### MRB-06: Android app: share target
-- Covers: 007-US5, 007-US5-AS1–AS4 | Area/spec: E / 007
-- Why the agent couldn't: hardware — the Android share sheet
-- You need: the app from MRB-04, any app with a share button, 10 min
+### MRB-06: Phone web app — share target
+- Covers: 017-US2, 017-FR-007/FR-008 | Area/spec: E / 017
+- Why the agent couldn't: hardware — the Android share sheet, and the app must be installed
+- You need: the web app installed (MRB-04), any app with a share button, 10 min
 - Environment: prod
 - Steps:
-  1. In a browser share a link to *JordyLab* → expect: the app opens with the shared text/link.
-  2. As the admin: expect the choices **Ask the catalog** and **Save to FNA**. As a guest: only **Ask the catalog**.
-  3. Share while signed out → expect: login first, then the same share screen.
-- Pass when: the share arrives and the offered actions match the role.
+  1. In another app, share a link to *JordyLab* (the installed web app) → expect: it opens on **Share to JordyLab** with the shared text/link shown.
+  2. As the admin: expect **Ask LibBot** and **Save to FNA**; tapping Save to FNA opens Articles and the link is queued. Share a plain paragraph without a link → expect: Save to FNA is disabled with a one-line explanation.
+  3. As a guest (MRB-02's account): expect **Ask LibBot** only; it opens LibBot with the text prefilled in the question box.
+  4. Share while signed out → expect: login first, then the same share screen with the text intact.
+  5. Open `https://jordylab.be/share` directly → expect: a calm "Nothing was shared" state with a link to the Library.
+- Pass when: the share arrives, the offered actions match the role, and the payload survives a sign-in.
 - If it fails: add `BUG-<next>`.
-- Record result: 007-US5 rows → `PASS`.
-- **Result 2026-10-05 (owner, rc17): FAILED → BUG-062.** JordyLab is listed in the share sheet, but opening it only opened the app: shares that *start* the app were never handed to the share screen, and a share that needed a login was dropped after login. Fixed in PR #129 (the Android suite's share test now also covers the cold start). **Repeat on rc19 (HANDOFF-27 in `e2e-test-plan.md` §7 has the full step-by-step; the steps live there so they are not duplicated here).**
+- Record result: 017-US2 rows → `PASS`.
 
 ### MRB-07: Push notifications and taps
-- Covers: 007-US6 (native side), 007-FR-016 (the push itself passed on prod) | Area/spec: E / 007
+- Covers: 017-US3, 017-FR-009 (the push itself passed on prod; the native app is gone) | Area/spec: E / 017
 - Why the agent couldn't: hardware — a phone that receives the push
 - You need: the ntfy app subscribed to `https://jordylab.be/ntfy` with your topic (HANDOFF-10), the JordyLab app, 10 min
 - Environment: prod
 - Steps:
   1. Register a new account on `https://jordylab.be` (use a throw-away email) → within 5 minutes expect: a push "New JordyLab sign-up" on the phone with the name and email.
-  2. Tap the notification → expect: the JordyLab app opens on `Settings → Users` (or the browser if the app isn't installed).
+  2. Tap the notification → expect: the installed JordyLab web app opens on `Settings → Users` (or the browser if it isn't installed).
   3. Reject or approve the throw-away account afterwards.
 - Pass when: the push arrives and the tap lands on the Users page.
 - If it fails: check `kubectl -n jordylab logs deploy/backend | grep -i ntfy` (expect "Ntfy notifications enabled"); add `BUG-<next>`.

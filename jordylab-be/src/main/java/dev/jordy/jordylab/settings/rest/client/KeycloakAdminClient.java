@@ -150,10 +150,6 @@ public class KeycloakAdminClient {
      * {@link HttpClientErrorException.NotFound} when the user never granted that client consent
      * — callers decide whether that is expected.
      */
-    public void revokeConsent(String userId, String clientId) {
-        call(HttpMethod.DELETE, "/users/" + userId + "/consents/" + clientId, null);
-    }
-
     private String realmRole(String roleName) {
         return realmRoleCache.computeIfAbsent(roleName, name -> call(HttpMethod.GET, "/roles/" + name, null));
     }

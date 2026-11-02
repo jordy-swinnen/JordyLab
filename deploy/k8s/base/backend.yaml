@@ -64,8 +64,6 @@ spec:
           volumeMounts:
             - name: artwork
               mountPath: /var/jordylab/artwork
-            - name: mobile-releases
-              mountPath: /var/jordylab/mobile-releases
           resources:
             requests:
               cpu: 250m
@@ -77,9 +75,6 @@ spec:
         - name: artwork
           persistentVolumeClaim:
             claimName: gamecatalog-artwork
-        - name: mobile-releases
-          persistentVolumeClaim:
-            claimName: mobile-releases
 ---
 apiVersion: v1
 kind: Service

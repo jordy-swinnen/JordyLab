@@ -6,7 +6,7 @@ import { UserSession } from './settings.models';
 
 /**
  * One person's sessions (spec 014 US5), loaded only when their entry is opened. Ending one signs out only that device;
- * ending all also kills the phone app's offline session.
+ * ending all also kills the scanner's offline session.
  */
 @Injectable({ providedIn: 'root' })
 export class UserSessionsStore {

@@ -44,14 +44,14 @@ class SettingsUserSessionsControllerTest {
         when(userSessionService.listSessions(ADMIN_ID, USER_ID)).thenReturn(List.of(
                 new UserSessionService.PersonSession("web-1", UserSessionService.SessionKind.WEB, false,
                         Instant.parse("2026-11-02T08:01:00Z"), Instant.parse("2026-11-02T08:40:00Z")),
-                new UserSessionService.PersonSession("phone-1", UserSessionService.SessionKind.PHONE, true,
+                new UserSessionService.PersonSession("phone-1", UserSessionService.SessionKind.SCANNER, true,
                         Instant.parse("2026-10-28T17:20:00Z"), Instant.parse("2026-11-01T22:05:00Z"))));
 
         mockMvc.perform(get("/api/settings/users/{id}/sessions", USER_ID).with(adminJwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessions[0].kind").value("WEB"))
                 .andExpect(jsonPath("$.sessions[0].offline").value(false))
-                .andExpect(jsonPath("$.sessions[1].kind").value("PHONE"))
+                .andExpect(jsonPath("$.sessions[1].kind").value("SCANNER"))
                 .andExpect(jsonPath("$.sessions[1].offline").value(true));
     }
 

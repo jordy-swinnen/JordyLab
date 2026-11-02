@@ -72,23 +72,26 @@ Tag new libs with the right scope + type: `--tags="scope:<domain>,type:<ui|api>"
 - `scope:gamecatalog` → may depend on `scope:gamecatalog`, `scope:shared`
 - `scope:shared` → may depend on `scope:shared` only
 
-## Mobile app (`apps/jordylab-mobile`, feature 007)
+## Phone app — installable web app, no native wrapper (feature 017)
 
-`apps/jordylab-mobile` is **not** a separate Angular app — it has no `src/`. Its `capacitor.config.ts`
-points `webDir` at `dist/apps/jordylab/browser`, so Capacitor packages the exact same web build the
-`mobile` configuration in `apps/jordylab/project.json` produces (`fileReplacements` swap in
-`environments/environment.mobile.ts`). The Android native project lives under
-`apps/jordylab-mobile/android/`. There is no separate mobile bootstrap: platform-conditional
-behavior (native login, install prompts, update checks, biometric unlock, share target) is wired
-into the *same* `apps/jordylab/src/app/app.ts` used on web, gated by `PlatformService.isNative()` —
-see `specs/007-mobile-app/tasks.md` for the reasoning behind that choice.
+There is no separate mobile app. `apps/jordylab` is the phone app: installed from the browser, it runs the
+same build in standalone mode on the site's own origin. What makes it installable and app-like:
 
-`libs/shared/platform/{api,ui}` (tagged `scope:shared,type:api|ui` — **not** a new `scope:platform`
-tag) holds everything that only breaks inside a WebView: platform detection, the absolute-API-URL
-interceptor + `artworkUrl` pipe (native only prefixes `/api/**`), install-prompt/update-check
-signal stores, the App-Link (`appUrlOpen`) and share-target listeners, and the web app manifest.
-`libs/shared/auth` gained the native login flow (`AuthService`'s `Capacitor.isNativePlatform()`
-branch) and `BiometricUnlockService`.
+- `apps/jordylab/public/manifest.webmanifest` — `id`, `scope`, standalone display, maskable 192/512 icons and
+  the **Web Share Target** (`GET /share` with `title`/`text`/`url`). The manifest journey in
+  `apps/jordylab-e2e/src/pwa.spec.ts` asserts every field.
+- `apps/jordylab/public/sw.js` — an installability-only service worker: `install`/`activate` plus a `fetch`
+  listener that **never calls `respondWith`**, so nothing is cached (no offline support by design; `/api/**`,
+  LibBot SSE and `/auth/**` stay network-only). Registered from `apps/jordylab/src/main.ts`.
+- `libs/shared/platform/{api,ui}` — `PlatformService` (web-only Android/iOS/desktop detection),
+  `InstallPromptStore` (captures `beforeinstallprompt`, 30-day dismissal, `isRunningStandalone()`), the
+  one-time `InstallPromptComponent`, the "Install on this phone" card in `Settings → App`
+  (`apps/jordylab/src/app/app-settings/`) and the desktop QR entry.
+- `libs/shared/platform/ui/.../share-landing/` — reads the share query params (`url`, else the first `http(s)`
+  link inside `text`); "Ask LibBot" for everyone, "Save to FNA" for admins. The payload lives only in the URL,
+  and `AuthService.login(returnUrl)` sends Keycloak back to it after a sign-in.
+- Legacy native links redirect (`apps/jordylab/src/app/legacy-mobile-redirect.ts`): `/mobile/open?screen=…`
+  → the web route, `/mobile/callback` → `/login`.
 
 # Domain Routing
 
@@ -175,9 +178,10 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
 - **agent-browser / the browser pane versus these suites.** Use the browser pane for exploring, reproducing a bug, checking a
   deployed environment or anything that needs judgement. Use the suites to prove a journey still works: repeatable, run by CI, no
   agent needed. When a manual finding becomes a regression risk, turn it into a journey here.
-- **Android layer (Appium 3 + WebdriverIO, `apps/jordylab-mobile-e2e`)** for what only breaks inside the installed app: native Keycloak login (Custom Tab, App Link), install prompt, update check, share target. Runs on a hosted emulator in the
-  `E2E Android` workflow (on demand, after a Release, and when Android files change; not a required check); locally `e2e/run.sh android` needs the Android SDK and an emulator. Emulator and WebView pins: `apps/jordylab-mobile-e2e/PINS.md`.
-  Biometric unlock stays a manual checklist (README of that project).
+- **PWA layer** (`apps/jordylab-e2e/src/pwa.spec.ts`) for what only the installed web app does: the installability
+  manifest + service worker, and the Web Share Target journeys (guest, admin, signed-out return, empty state,
+  URL-in-text). A real phone install, the OS share sheet and the ntfy tap stay manual owner checks
+  (`docs/testing/manual-test-runbook.md`); there is no emulator or Appium suite any more (spec 018).
 
 # Themes and colours (spec 016)
 

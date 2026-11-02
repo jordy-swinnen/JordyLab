@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
+import { AuthService } from '@jordylab-fe/shared/auth';
 import { appConfig } from './app.config';
 import { createPreBootstrapAuth } from './pre-bootstrap-auth';
 import { environment } from '../environments/environment';
@@ -15,15 +15,15 @@ describe('application providers', () => {
 
   beforeEach(() => {
     // jsdom has no matchMedia; the theme store, started by an app initializer, asks the device whether it is light or dark.
-    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener: vi.fn() })) as unknown as typeof window.matchMedia;
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn(() => ({ matches: false, addEventListener: vi.fn() })) as unknown as typeof window.matchMedia,
+      writable: true,
+      configurable: true,
+    });
     TestBed.configureTestingModule({ providers: appConfig.providers });
   });
 
   it('can create the auth service', () => {
     expect(() => TestBed.inject(AuthService)).not.toThrow();
-  });
-
-  it('can create the biometric unlock service', () => {
-    expect(() => TestBed.inject(BiometricUnlockService)).not.toThrow();
   });
 });
