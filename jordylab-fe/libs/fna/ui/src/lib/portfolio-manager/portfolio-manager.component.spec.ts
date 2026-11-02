@@ -140,4 +140,14 @@ describe('PortfolioManagerComponent', () => {
 
     expect(spectator.query('input[aria-label="Shares"]')?.getAttribute('step')).toBe('any');
   });
+
+  it('loads the portfolio again when the error state is retried', () => {
+    storeMock.load.mockClear();
+    error.set('Failed to load portfolio.');
+    spectator.detectChanges();
+
+    spectator.click('lib-error-state button');
+
+    expect(storeMock.load).toHaveBeenCalledOnce();
+  });
 });

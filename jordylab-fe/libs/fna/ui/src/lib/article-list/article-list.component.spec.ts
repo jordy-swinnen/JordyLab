@@ -14,6 +14,7 @@ describe('ArticleListComponent', () => {
     error: error.asReadonly(),
     load: vi.fn(),
   };
+  const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
 
   const createComponent = createComponentFactory({
     component: ArticleListComponent,
@@ -66,5 +67,39 @@ describe('ArticleListComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.element).toHaveText('Today');
+  });
+
+  it('loads the articles again when the error state is retried', () => {
+    storeMock.load.mockClear();
+    error.set('Failed to load articles.');
+    spectator.detectChanges();
+
+    spectator.click('lib-error-state button');
+
+    expect(storeMock.load).toHaveBeenCalledOnce();
+  });
+
+  it('labels yesterday and older days', () => {
+    loading.set(false);
+    articles.set([
+      anArticleSummaryMock({ id: 'a1', publishedAt: daysAgo(1) }),
+      anArticleSummaryMock({ id: 'a2', publishedAt: daysAgo(5) }),
+    ]);
+    spectator.detectChanges();
+
+    expect(spectator.element).toHaveText('Yesterday');
+  });
+
+  it('gives each feed its own colour', () => {
+    loading.set(false);
+    articles.set([
+      anArticleSummaryMock({ id: 'a1', feedName: 'ECB Press Releases' }),
+      anArticleSummaryMock({ id: 'a2', feedName: 'Politico Europe' }),
+      anArticleSummaryMock({ id: 'a3', feedName: 'Somewhere else' }),
+    ]);
+    spectator.detectChanges();
+
+    expect(spectator.query('.text-accent-text')).toBeTruthy();
+    expect(spectator.query('.text-series-2')).toBeTruthy();
   });
 });

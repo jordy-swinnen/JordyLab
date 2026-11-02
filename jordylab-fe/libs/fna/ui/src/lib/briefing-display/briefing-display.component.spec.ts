@@ -74,4 +74,14 @@ describe('BriefingDisplayComponent', () => {
 
     expect(generate).toHaveBeenCalled();
   });
+
+  it('loads the briefing again when the error state is retried', () => {
+    storeMock.load.mockClear();
+    error.set('Failed to load briefing.');
+    spectator.detectChanges();
+
+    spectator.click('lib-error-state button');
+
+    expect(storeMock.load).toHaveBeenCalledOnce();
+  });
 });
