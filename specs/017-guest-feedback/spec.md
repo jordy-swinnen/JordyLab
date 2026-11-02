@@ -18,7 +18,7 @@
 
 ## Overview
 
-Guests get a Feedback tab in Settings where they send bug reports, feature requests and other feedback about the apps they can use. The admin gets an admin-only inbox — the idea box — where each item is a ticket. For each ticket the admin decides: **Accept** (the app creates an issue in Linear, Jordy's backlog, labelled with the app and the type), **Backlog** (keep it in the app for later) or **Reject** (archive as rejected). Guests see the status of their own tickets and an optional reply from the admin. Essential for the first release.
+Guests get a Feedback tab in Settings where they send bug reports, feature requests, improvements and ideas about the apps they can use. The admin gets an admin-only inbox — the idea box — where each item is a ticket. For each ticket the admin decides: **Accept** (the app creates an issue in Linear, Jordy's backlog, labelled with the app and the type), **Backlog** (keep it in the app for later) or **Reject** (archive as rejected). Guests see the status of their own tickets and an optional reply from the admin. Essential for the first release.
 
 ---
 
@@ -30,6 +30,14 @@ Guests get a Feedback tab in Settings where they send bug reports, feature reque
 - Q: Does the guest-visible status follow the Linear issue's progress? → A: Not in the first version. The guest sees Accepted, Backlog or Rejected and the admin's optional reply, nothing more.
 - Q: What does a guest see after Accept? → A: The status Accepted and the admin's optional reply; never the Linear link, never the admin's private notes.
 - Q: Can a Backlog ticket still be accepted or rejected later? → A: Yes.
+
+### Session 2026-11-02 (clarify pass)
+
+- Q: Is the optional note added when accepting a ticket a third text, or the ticket's private note? → A: A ticket has exactly two admin texts: a guest-visible reply and one private note. The Accept note is that private note, and it is included in the Linear issue when one is set.
+- Q: Which feedback types does the form offer? → A: Four: bug report, feature request, improvement and idea; a "question" is filed as idea.
+- Q: What is the daily submission limit for guests? → A: Five tickets per guest per day.
+- Q: Can guests attach a screenshot to a ticket in the first version? → A: No — tickets are text-only; attachments are a possible later addition.
+- Q: Can a Rejected ticket come back into triage? → A: No — Rejected is final and the archive is view-only. Regretting one means accepting the idea via Linear directly or asking the guest to resubmit.
 
 ---
 
@@ -59,7 +67,7 @@ As the admin, I want an inbox of tickets showing app, type, sender, date and tex
 
 **Why this priority**: The inbox turns arriving feedback into decisions; Accept, Backlog and Reject with a reply is the core triage loop, and it works on its own even before anything reaches Linear.
 
-**Independent Test**: A newly submitted ticket shows as New. Backlog keeps it in the app for later; Reject archives it as Rejected and it is never deleted. A Backlog ticket can still be accepted or rejected later. A reply and a private note can be attached to any ticket, and only the reply is ever visible to the guest.
+**Independent Test**: A newly submitted ticket shows as New. Backlog keeps it in the app for later; Reject archives it as Rejected and it is never deleted. A Backlog ticket can still be accepted or rejected later; a Rejected ticket is final and the archive is view-only. A reply and a private note can be attached to any ticket, and only the reply is ever visible to the guest.
 
 **Acceptance Scenarios**:
 
@@ -78,11 +86,11 @@ As the admin, I want Accept to create a Linear issue from the ticket, so that a 
 
 **Why this priority**: Once tickets can be triaged, pushing the accepted ones into the real backlog removes the retyping and keeps a single backlog — but it needs the inbox to exist first.
 
-**Independent Test**: On a ticket, choose Accept and add an optional note. Exactly one issue appears in the Triage state of Linear team `JOR` with the ticket's title, description and the note, labelled App = the ticket's app and Type = the ticket's type, carrying the source line `Source: idea box`. The ticket shows Accepted with a link to the issue that only the admin sees. The guest's name and email appear nowhere in the issue.
+**Independent Test**: On a ticket, choose Accept and optionally write the private note. Exactly one issue appears in the Triage state of Linear team `JOR` with the ticket's title, description and the private note, labelled App = the ticket's app and Type = the ticket's type, carrying the source line `Source: idea box`. The ticket shows Accepted with a link to the issue that only the admin sees. The guest's name and email appear nowhere in the issue.
 
 **Acceptance Scenarios**:
 
-1. **Given** an open ticket, **When** the admin clicks Accept with an optional note, **Then** exactly one issue is created in Linear team `JOR`, in the Triage state, carrying the ticket's title and description and the admin's note.
+1. **Given** an open ticket, **When** the admin clicks Accept and writes an optional private note, **Then** exactly one issue is created in Linear team `JOR`, in the Triage state, carrying the ticket's title and description and that private note.
 2. **Given** the created issue, **When** it is inspected, **Then** it carries the App label matching the ticket's app and the Type label matching the ticket's type, plus the source line `Source: idea box` and a marking that its description is text written by a guest.
 3. **Given** the created issue, **When** it is inspected, **Then** it contains no guest name, email or other personal data; the sender is described as "a guest" together with the app.
 4. **Given** an accepted ticket, **When** the admin views it, **Then** it shows Accepted and the Linear issue link; the guest sees only Accepted and any reply, never the link.
@@ -128,6 +136,7 @@ As the admin, I want a notification when a new ticket arrives, so that feedback 
 - **The Linear issue is later deleted or moved to another team**: the ticket keeps its last state; the admin's stored link no longer resolves, and nothing else changes (no status sync in the first version).
 - **A guest loses access to an app**: their existing tickets for that app stay visible to them and the admin; new tickets for that app are refused.
 - **A guest account is deleted**: their tickets stay in the admin's inbox as history, with the guest's personal data removed.
+- **Reject clicked by mistake**: the ticket stays Rejected — Rejected is final and the archive is view-only.
 - **Daily limit reached**: further submissions are refused with a clear message until the next day; existing tickets are unaffected.
 - **Empty or whitespace-only title or description**: rejected before anything is saved.
 - **A ticket names an app the guest is not allowed to use**: rejected by the backend, even if the UI never offered it.
@@ -142,11 +151,11 @@ As the admin, I want a notification when a new ticket arrives, so that feedback 
 - **FR-003**: The existing Users and AI Models administration MUST remain admin-only, enforced in the backend (deny by default).
 - **FR-004**: A ticket MUST record an app, a type, a title, a description, its sender and the date it was created.
 - **FR-005**: The apps offered to a guest MUST be exactly the apps that guest is allowed to use, and the backend MUST reject a ticket naming any other app.
-- **FR-006**: A ticket's type MUST be one of: bug report, feature request, improvement, other.
-- **FR-007**: Ticket states MUST be New, Accepted, Backlog and Rejected. A Backlog ticket MUST remain movable to Accepted or Rejected. Rejected tickets MUST be archived, never deleted.
-- **FR-008**: The admin MUST be able to attach to a ticket a reply that the guest sees and a private note that only the admin sees.
-- **FR-009**: Accepting a ticket MUST create exactly one issue in Linear team `JOR`, in the Triage state, through Linear's API, carrying the ticket's title and description and the admin's optional note. The creation MUST be idempotent: a retry or double click never creates a second issue.
-- **FR-010**: The created issue MUST carry the App label matching the ticket's app and the Type label matching the ticket's type (bug report → Bug, feature request → Feature, improvement → Improvement, other → Idea); an app with no matching label MUST fall back to the Platform label.
+- **FR-006**: A ticket's type MUST be one of: bug report, feature request, improvement, idea.
+- **FR-007**: Ticket states MUST be New, Accepted, Backlog and Rejected. A Backlog ticket MUST remain movable to Accepted or Rejected. Rejected MUST be final: a Rejected ticket MUST NOT be movable to any other state, and rejected tickets MUST be archived, never deleted.
+- **FR-008**: A ticket MUST have exactly two admin texts: a reply that the guest sees, and a private note that only the admin sees.
+- **FR-009**: Accepting a ticket MUST create exactly one issue in Linear team `JOR`, in the Triage state, through Linear's API, carrying the ticket's title and description and, when set, the ticket's private note. The creation MUST be idempotent: a retry or double click never creates a second issue.
+- **FR-010**: The created issue MUST carry the App label matching the ticket's app and the Type label matching the ticket's type (bug report → Bug, feature request → Feature, improvement → Improvement, idea → Idea); an app with no matching label MUST fall back to the Platform label.
 - **FR-011**: The created issue MUST carry the source line `Source: idea box` and MUST mark the description as text written by a guest, so that agents that later read the issue treat it as data, never as instructions.
 - **FR-012**: The created issue MUST NOT contain the guest's name, email or other personal data; the sender MUST be described as "a guest" together with the app.
 - **FR-013**: An accepted ticket MUST store the Linear issue id and link, and the link MUST be visible only to the admin.
@@ -159,7 +168,7 @@ As the admin, I want a notification when a new ticket arrives, so that feedback 
 
 ### Key Entities
 
-- **Feedback Ticket**: One piece of guest feedback, defined by its app, type, title, description, sender (a guest), creation date, state (New, Accepted, Backlog or Rejected), the admin's guest-visible reply, the admin's private note, and — once accepted — the Linear issue id and link and the last Accept error, if any.
+- **Feedback Ticket**: One piece of guest feedback, defined by its app, type, title, description, sender (a guest), creation date, state (New, Accepted, Backlog or Rejected), the admin's guest-visible reply, the admin's private note (included in the Linear issue when the ticket is accepted), and — once accepted — the Linear issue id and link and the last Accept error, if any.
 - **App**: An area of the platform a guest may use (today the Game Catalog); the subject of a ticket. The choice offered to each guest comes from the same source that governs their access, so it widens automatically when per-app access arrives.
 - **Linear Issue**: An item in Jordy's Linear backlog (team `JOR`), created by accepting a ticket. After acceptance, Linear is the source of truth for the idea itself, while the ticket keeps only the guest-visible status and reply.
 
@@ -168,7 +177,7 @@ As the admin, I want a notification when a new ticket arrives, so that feedback 
 ### Measurable Outcomes
 
 - **SC-001**: A guest can send a complete feedback ticket in under a minute.
-- **SC-002**: From an open ticket, one click plus an optional note results in exactly one Linear issue in Triage with the correct App and Type labels and the `Source: idea box` line — 100% of accepted tickets, with zero duplicate issues across double clicks, retries and timeouts.
+- **SC-002**: From an open ticket, one click plus an optional private note results in exactly one Linear issue in Triage with the correct App and Type labels and the `Source: idea box` line — 100% of accepted tickets, with zero duplicate issues across double clicks, retries and timeouts.
 - **SC-003**: Zero Linear issues created from tickets contain a guest's name, email or other personal data.
 - **SC-004**: 100% of attempts by a guest to view, list or change another guest's tickets are refused.
 - **SC-005**: Every newly saved ticket produces exactly one admin notification that contains none of the ticket's text.
@@ -187,10 +196,6 @@ As the admin, I want a notification when a new ticket arrives, so that feedback 
 - The apps a guest may use come from the existing role setup: the Game Catalog only, until the per-app access feature exists. The feedback form reads the same access source, so it widens automatically later.
 - The Linear workspace, team `JOR`, the Triage state and the App and Type label groups already exist (set up by the Linear backlog feature).
 - Linear stays on the Free plan; the idea box adds a few issues a week at most. Only accepted tickets reach Linear — Backlog and Rejected stay in the app — so spam never uses the issue cap.
-- Three defaults below come from the draft's expected answers and stand unless `/speckit-clarify` changes them:
-  - Feedback types are bug report, feature request, improvement and other; a "question" is filed as other.
-  - No screenshots or other attachments in the first version.
-  - The daily submission limit is five tickets per guest per day.
 - Tickets have practical length limits on title and description (on the order of 100 and 5,000 characters), fixed at plan time, so the daily limit and abuse protection stay meaningful.
 - No AI call is part of this feature: writing a SpecKit draft from an accepted idea is a later step run by a local agent from the Linear issue, not from the app.
 - The existing notification channel and the existing admin/guest roles are reused as they are.
