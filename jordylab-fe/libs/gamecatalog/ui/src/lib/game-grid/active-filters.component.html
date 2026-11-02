@@ -8,7 +8,7 @@
       <span class="truncate">{{ filter.value }}</span>
       <button
         type="button"
-        class="grid size-[26px] shrink-0 cursor-pointer place-items-center rounded-full text-secondary-foreground outline-none hover:bg-foreground/15 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        class="grid size-11 -my-1 -mr-2 shrink-0 cursor-pointer place-items-center rounded-full text-secondary-foreground outline-none hover:bg-foreground/15 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
         [attr.aria-label]="'Remove filter ' + filter.key + ': ' + filter.value"
         (click)="filter.remove()"
       >

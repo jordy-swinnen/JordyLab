@@ -39,6 +39,7 @@
     <div>
       <button
         hlmBtn
+      class="h-11"
         variant="default"
         [disabled]="downloading() !== null"
         (click)="downloadClient.emit('steam')"
@@ -86,6 +87,7 @@
     <div>
       <button
         hlmBtn
+      class="h-11"
         variant="default"
         [disabled]="downloading() !== null"
         (click)="downloadClient.emit('emudeck')"
@@ -109,6 +111,7 @@
   <div class="flex flex-wrap items-center gap-3">
     <button
       hlmBtn
+      class="h-11"
       variant="outline"
       [disabled]="
         librarySyncing() !== null || libraryStatus()?.ownedConfigured === false
@@ -192,13 +195,14 @@
         type="password"
         placeholder="Steam access token"
         aria-label="Steam family access token"
-        class="h-10 w-full max-w-sm"
+        class="h-11 w-full max-w-sm"
         #familyTokenInput
         (input)="onFamilyTokenInput($event)"
         [attr.aria-invalid]="tokenProblem() ? 'true' : null"
       />
       <button
         hlmBtn
+      class="h-11"
         variant="outline"
         [disabled]="librarySyncing() !== null"
         (click)="onSyncFamily(familyTokenInput)"
@@ -259,7 +263,7 @@
           @if (row.count(libraryHealth) > 0) {
             <button
               type="button"
-              class="w-fit text-sm font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-50"
+              class="inline-flex min-h-11 w-fit items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline disabled:opacity-50"
               [disabled]="loadingExceptions() !== null"
               [attr.data-testid]="'show-exceptions-' + row.kind"
               (click)="showExceptions.emit(row.kind)"

@@ -92,7 +92,7 @@ test.describe('Themes', () => {
     await guest.page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'App' }).click();
     await expect(guest.page.getByRole('heading', { level: 2, name: 'App' })).toBeVisible();
 
-    await guest.page.locator('label', { hasText: 'Paper' }).click();
+    await guest.page.locator('label', { hasText: /^Paper$/ }).click();
 
     await expect.poll(() => activeTheme(guest.page)).toBe('paper');
     await guest.context.close();
