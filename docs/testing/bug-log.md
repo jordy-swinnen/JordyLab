@@ -1118,7 +1118,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending (after the release)
 
 ### BUG-073: A fingerprint sign-in flashes a red "session could not be refreshed" message
-- Status: FIXED-LOCAL (spec 013); owner's 20 phone sign-ins pending (HANDOFF)
+- Status: VERIFIED-PROD (2026-11-02, owner report on the released APK)
 - Severity: S3
 - Area/spec: frontend shared auth / 013 US14
 - Env found: owner testing the Android app, 2026-10
@@ -1130,7 +1130,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: while the unlock was running a request asked `AuthService.getToken()`; there was no session yet, the refresh failed, and the service reported a dead session and navigated to `/login`. `BiometricUnlockService.unlock()` also kept the previous attempt's failure on screen.
 - Fix (PR / commit / tag): `getToken()` returns `null` quietly until a session has existed; `unlock()` clears stale failures first (`clearNativeFailure()`).
 - Regression test added: `auth.service.spec.ts` and `biometric-unlock.service.spec.ts` (failed first, then green).
-- Verified on prod: pending (owner, 20 sign-ins)
+- Verified on prod: 2026-11-02, owner: fingerprint sign-in works on the phone with the released APK (the 20-sign-in check was reported as passing; the count itself was not recorded).
 
 ### BUG-074: Two scenario test classes shared one stopped database container
 - Status: FIXED-LOCAL (spec 013)
