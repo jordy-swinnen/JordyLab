@@ -1,7 +1,7 @@
 /**
  * The six JordyLab themes: the only place colour values are authored. `tailwind.theme.js` turns each theme into a
  * `[data-theme]` block of CSS variables; the unit tests read this file to check contrast and the lists of theme ids.
- * The token meanings and the variable names are in specs/014-app-redesign-themes/contracts/theme-tokens.md.
+ * The token meanings and the variable names are in specs/016-app-redesign-themes/contracts/theme-tokens.md.
  */
 const defaultDarkThemeId = 'content';
 const defaultLightThemeId = 'paper';

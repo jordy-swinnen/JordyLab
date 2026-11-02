@@ -1,6 +1,6 @@
 # Feature Specification: App Redesign with Six Themes
 
-**Feature Branch**: `014-app-redesign-themes`
+**Feature Branch**: `016-app-redesign-themes`
 
 **Created**: 2026-11-02
 

@@ -58,7 +58,7 @@ class ScanSourceServiceTest {
         source.recordAttempt(SyncOutcome.APPLIED, ATTEMPT_AT);
         when(scanSourceRepository.findAll()).thenReturn(List.of(source));
         when(gameInstallationRepository.countInstalledBySourceId(source.getId())).thenReturn(412L);
-        LibraryHealthResponse health = new LibraryHealthResponse(230, 12, 30, 5);
+        LibraryHealthResponse health = new LibraryHealthResponse(230, 12, 30, 5, null);
         when(libraryHealthService.health()).thenReturn(health);
 
         SourcesResponse response = scanSourceService.listSources();

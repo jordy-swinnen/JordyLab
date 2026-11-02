@@ -67,7 +67,7 @@ Facts were read from the code on 2026-11-02 (file references in brackets). Each 
 **Decision**: update the launcher background, the launcher foreground vector, and `splash_background` (default dark `ground`); regenerate the icon PNGs from the new mark. Add the Capacitor status-bar plugin only if the status bar clashes with a light theme on a real device; the default plan is to add it (one small dependency) because the app can now be light while the status bar stays dark.
 **Why**: light themes on a phone need dark status-bar icons. JOR-38 may later remove the native shell; this work is kept to colours and one plugin so little is wasted.
 
-**Status (T081)**: the status-bar plugin is **not** added yet. Whether the status bar clashes with a light theme can only be judged on a real Android device (`quickstart.md` section 6), and none is available to the agent. Launcher, splash and icon colours are done. Left for the owner: HANDOFF-36 (`docs/testing/e2e-test-plan.md`).
+**Status (T081)**: the status-bar plugin is **not** added yet. Whether the status bar clashes with a light theme can only be judged on a real Android device (`quickstart.md` section 6), and none is available to the agent. Launcher, splash and icon colours are done. Left for the owner: HANDOFF-38 (`docs/testing/e2e-test-plan.md`).
 
 ### D11. Brand assets
 **Decision**: `favicon.svg` becomes the mark with bone tile and ink strokes, with an embedded light-scheme variant; `manifest.webmanifest` colours become the default dark `ground`; the PNG icons and the Keycloak `mark.svg` are regenerated from the same source mark. The wordmark component keeps its structure and takes its two colours from `--foreground` and `--accent-text`.

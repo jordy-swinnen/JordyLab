@@ -1,6 +1,6 @@
-# Visual review: 014 app redesign and themes
+# Visual review: 016 app redesign and themes
 
-**Status**: automated evidence recorded; the side-by-side comparison with the design system is **not done** and is left to the owner (HANDOFF-37 in `docs/testing/e2e-test-plan.md`).
+**Status**: automated evidence recorded; the side-by-side comparison with the design system is **not done** and is left to the owner (HANDOFF-39 in `docs/testing/e2e-test-plan.md`).
 
 ## What was checked, and how
 
@@ -18,11 +18,11 @@
 
 Contrast findings fixed on the way: text-3 and the mark colours were darkened or lightened in the light themes and text-3 in Content Led (see `themes.js`) after axe measured chips on the rail and line surfaces.
 
-## Not done (owner, HANDOFF-37)
+## Not done (owner, HANDOFF-39)
 
 - Compare each screen with the design system canvas on desktop and phone, and the Library in all six themes (SC-008). Record each difference and whether you agree with it below.
 - Count the steps to find a game and set a mark before and after on desktop and phone (SC-007).
-- Status bar on a light theme on a real Android device and the sign-in page following the device (HANDOFF-36).
+- Status bar on a light theme on a real Android device and the sign-in page following the device (HANDOFF-38).
 
 ## Differences agreed with the owner
 

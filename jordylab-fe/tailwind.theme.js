@@ -4,7 +4,7 @@
  *
  * Colours are authored once, as hex, in themes.js. This plugin turns each theme into a block of CSS variables selected by the
  * `data-theme` attribute (the default theme also answers to :root), written as HSL triplets so Tailwind's opacity utilities
- * keep working. Variable names and their meaning: specs/014-app-redesign-themes/contracts/theme-tokens.md.
+ * keep working. Variable names and their meaning: specs/016-app-redesign-themes/contracts/theme-tokens.md.
  */
 const plugin = require('tailwindcss/plugin');
 const { defaultDarkThemeId, themes } = require('./themes.js');

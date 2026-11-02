@@ -1,4 +1,4 @@
-> **Superseded in part (spec 014).** The colour, type and filter-bar direction in this file (Night Lab, Flare orange, Bricolage, Hanken and Martian Mono) is replaced by the six-theme system in `specs/014-app-redesign-themes/`. The behaviour it describes (what filters, chips and marks do) still stands.
+> **Superseded in part (spec 016).** The colour, type and filter-bar direction in this file (Night Lab, Flare orange, Bricolage, Hanken and Martian Mono) is replaced by the six-theme system in `specs/016-app-redesign-themes/`. The behaviour it describes (what filters, chips and marks do) still stands.
 
 # UI design: filters, chips, cards, LibBot (spec 013)
 

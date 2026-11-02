@@ -1,8 +1,8 @@
 # Implementation Plan: App Redesign with Six Themes
 
-**Branch**: `014-app-redesign-themes` | **Date**: 2026-11-02 | **Spec**: [spec.md](spec.md)
+**Branch**: `016-app-redesign-themes` | **Date**: 2026-11-02 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/014-app-redesign-themes/spec.md`
+**Input**: Feature specification from `/specs/016-app-redesign-themes/spec.md`
 
 ## Summary
 
@@ -50,7 +50,7 @@ Make the app re-themeable first, then restyle it screen by screen. The foundatio
 ### Documentation (this feature)
 
 ```text
-specs/014-app-redesign-themes/
+specs/016-app-redesign-themes/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output
 ├── data-model.md        # Phase 1 output

@@ -4,10 +4,14 @@ import dev.jordy.jordylab.gamecatalog.GameCatalogProperties;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
 import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountGap;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.IgdbClient;
 import dev.jordy.jordylab.gamecatalog.rest.client.SteamAppDetailsClient;
 import dev.jordy.jordylab.gamecatalog.rest.client.SteamRateLimitedException;
+import dev.jordy.jordylab.gamecatalog.rest.client.TheGamesDbClient;
+import dev.jordy.jordylab.gamecatalog.rest.client.TheGamesDbClient.PlayerCountLookup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +26,7 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,11 +46,18 @@ class MultiplayerServiceTest {
     @Mock
     private IgdbClient igdbClient;
 
+    @Mock
+    private TheGamesDbClient theGamesDbClient;
+
+    @Mock
+    private GamePlatformService platformService;
+
     private MultiplayerService multiplayerService;
 
     @BeforeEach
     void setUp() {
-        multiplayerService = new MultiplayerService(gameRepository, steamAppDetailsClient, igdbClient, properties());
+        multiplayerService = new MultiplayerService(gameRepository, steamAppDetailsClient, igdbClient, theGamesDbClient,
+                platformService, properties());
     }
 
     @Test
@@ -225,6 +237,213 @@ class MultiplayerServiceTest {
             softly.assertThat(game.getLocalMultiplayer()).isTrue();
         });
         verify(steamAppDetailsClient).fetch("620");
+    }
+
+    @Test
+    void aConsoleGameWithFlagsButNoCountGetsTheAgreedCountFromTheSecondSource() {
+        Game game = aFlaggedConsoleGame("Mario Party 6");
+        stubBacklog(game);
+        stubIgdbFlagsOnly("Mario Party 6");
+        stubSecondSource(game, List.of("GameCube"), PlayerCountLookup.found(4));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.THEGAMESDB);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+            softly.assertThat(game.getPlayerCountGap()).isNull();
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+        });
+    }
+
+    @Test
+    void theSecondSourceIsNeverAskedWhenIgdbAlreadyGaveTheCount() {
+        Game game = aFlaggedConsoleGame("Mario Party 6");
+        stubBacklog(game);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Mario Party 6"))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, true, false, 4)));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.IGDB);
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+        });
+        verify(theGamesDbClient, never()).lookup("Mario Party 6", game.getTitleKey(), "GameCube");
+    }
+
+    @Test
+    void aSteamGameIsNeverAskedInTheSecondSource() {
+        Game game = Game.builder().steamAppId("620").title("Portal 2").localMultiplayer(true)
+                .multiplayerSource(MultiplayerSource.STEAM).metadataStatus(MetadataStatus.OK).build();
+        stubBacklog(game);
+        stubIgdbFlagsOnly("Portal 2");
+
+        multiplayerService.derivePending(BATCH);
+
+        assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        verify(platformService, never()).platformsOf(game.getId());
+    }
+
+    @Test
+    void aConsoleGameWhoseLocalFlagIsUnknownIsNeverAskedInTheSecondSource() {
+        Game game = Game.builder().title("Mario Party 6").build();
+        stubBacklog(game);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Mario Party 6")).thenReturn(Optional.empty());
+
+        multiplayerService.derivePending(BATCH);
+
+        assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        verify(platformService, never()).platformsOf(game.getId());
+    }
+
+    @Test
+    void aGapIsStoredWithItsReasonAndCountsAnAttempt() {
+        Game game = aFlaggedConsoleGame("Mario Party 7");
+        stubBacklog(game);
+        stubIgdbFlagsOnly("Mario Party 7");
+        stubSecondSource(game, List.of("GameCube"), PlayerCountLookup.gap(PlayerCountGap.ENTRIES_DISAGREE));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isNull();
+            softly.assertThat(game.getMaxLocalPlayersSource()).isNull();
+            softly.assertThat(game.getPlayerCountGap()).isEqualTo(PlayerCountGap.ENTRIES_DISAGREE);
+            softly.assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void aPostponedLookupStoresNothingAndCountsNoAttempt() {
+        Game game = aFlaggedConsoleGame("Mario Party 6");
+        stubBacklog(game);
+        stubIgdbFlagsOnly("Mario Party 6");
+        stubSecondSource(game, List.of("GameCube"), PlayerCountLookup.deferred());
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isNull();
+            softly.assertThat(game.getPlayerCountGap()).isNull();
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+        });
+    }
+
+    @Test
+    void withoutAKeyAnEligibleGameCountsAnAttemptExactlyAsBeforeTheSourceExisted() {
+        Game game = aFlaggedConsoleGame("Mario Party 6");
+        stubBacklog(game);
+        stubIgdbFlagsOnly("Mario Party 6");
+        when(theGamesDbClient.isConfigured()).thenReturn(false);
+
+        multiplayerService.derivePending(BATCH);
+
+        assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+        verify(platformService, never()).platformsOf(game.getId());
+    }
+
+    @Test
+    void aGameOnTwoConsolesNeedsBothToAgree() {
+        Game agreeing = aFlaggedConsoleGame("Gauntlet - Dark Legacy");
+        Game disagreeing = aFlaggedConsoleGame("Mario Party 7");
+        stubBacklog(agreeing, disagreeing);
+        stubIgdbFlagsOnly("Gauntlet - Dark Legacy");
+        stubIgdbFlagsOnly("Mario Party 7");
+        when(theGamesDbClient.isConfigured()).thenReturn(true);
+        when(platformService.platformsOf(agreeing.getId())).thenReturn(List.of("GameCube", "PlayStation 2"));
+        when(platformService.platformsOf(disagreeing.getId())).thenReturn(List.of("GameCube", "PlayStation 2"));
+        when(theGamesDbClient.lookup("Gauntlet - Dark Legacy", agreeing.getTitleKey(), "GameCube"))
+                .thenReturn(PlayerCountLookup.found(4));
+        when(theGamesDbClient.lookup("Gauntlet - Dark Legacy", agreeing.getTitleKey(), "PlayStation 2"))
+                .thenReturn(PlayerCountLookup.found(4));
+        when(theGamesDbClient.lookup("Mario Party 7", disagreeing.getTitleKey(), "GameCube"))
+                .thenReturn(PlayerCountLookup.found(4));
+        when(theGamesDbClient.lookup("Mario Party 7", disagreeing.getTitleKey(), "PlayStation 2"))
+                .thenReturn(PlayerCountLookup.found(6));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(agreeing.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(disagreeing.getMaxLocalPlayers()).isNull();
+            softly.assertThat(disagreeing.getPlayerCountGap()).isEqualTo(PlayerCountGap.ENTRIES_DISAGREE);
+        });
+    }
+
+    @Test
+    void aTitleOnTheSameConsoleIsLookedUpOncePerBatch() {
+        Game first = aFlaggedConsoleGame("Mario Party 6");
+        Game second = aFlaggedConsoleGame("Mario Party 6");
+        stubBacklog(first, second);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode("Mario Party 6"))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, true, false, null)));
+        when(theGamesDbClient.isConfigured()).thenReturn(true);
+        when(platformService.platformsOf(first.getId())).thenReturn(List.of("GameCube"));
+        when(platformService.platformsOf(second.getId())).thenReturn(List.of("GameCube"));
+        when(theGamesDbClient.lookup("Mario Party 6", first.getTitleKey(), "GameCube"))
+                .thenReturn(PlayerCountLookup.found(4));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(first.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(second.getMaxLocalPlayers()).isEqualTo(4);
+        });
+        verify(theGamesDbClient, times(1)).lookup("Mario Party 6", first.getTitleKey(), "GameCube");
+    }
+
+    @Test
+    void aBulkRederiveResetsAttemptsAndAsksTheSecondSourceAgain() {
+        Game game = aFlaggedConsoleGame("Mario Party 6");
+        game.recordMultiplayerFailure();
+        game.recordMultiplayerFailure();
+        game.recordMultiplayerFailure();
+        when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+        stubIgdbFlagsOnly("Mario Party 6");
+        stubSecondSource(game, List.of("GameCube"), PlayerCountLookup.found(4));
+
+        multiplayerService.rederive(game.getId());
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+        });
+        verify(gameRepository).save(game);
+    }
+
+    @Test
+    void aManualRefreshUsesTheSameSources() {
+        Game game = aFlaggedConsoleGame("Mario Party 6");
+        stubIgdbFlagsOnly("Mario Party 6");
+        stubSecondSource(game, List.of("GameCube"), PlayerCountLookup.found(4));
+
+        multiplayerService.refresh(game);
+
+        assertThat(game.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.THEGAMESDB);
+    }
+
+    private Game aFlaggedConsoleGame(String title) {
+        return Game.builder().title(title).localMultiplayer(true).splitScreen(true)
+                .multiplayerSource(MultiplayerSource.IGDB).build();
+    }
+
+    private void stubIgdbFlagsOnly(String title) {
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.resolveMultiplayerMode(title))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, true, false, null)));
+    }
+
+    private void stubSecondSource(Game game, List<String> consoles, PlayerCountLookup lookup) {
+        when(theGamesDbClient.isConfigured()).thenReturn(true);
+        when(platformService.platformsOf(game.getId())).thenReturn(consoles);
+        for (String console : consoles) {
+            when(theGamesDbClient.lookup(game.getTitle(), game.getTitleKey(), console)).thenReturn(lookup);
+        }
     }
 
     private void stubBacklog(Game... games) {

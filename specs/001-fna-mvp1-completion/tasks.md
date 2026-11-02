@@ -118,8 +118,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T027 [P] [US4] Audit and remove unused test infrastructure in jordylab-fe/ — identify spec files/configs that test nothing and remove them so test config reflects actual usage (FR-017)
-- [ ] T028 [P] [US4] Document the pre-release dependency decision in jordylab-be/AGENTS.md or a DECISIONS.md — Spring AI 2.0.0-M2 is a milestone release; record explicit accepted risk with pinned version or a plan to move to stable (FR-018)
+- [X] T027 [P] [US4] Audit and remove unused test infrastructure in jordylab-fe/ — identify spec files/configs that test nothing and remove them so test config reflects actual usage (FR-017) — **Closed 2026-11-02 (JOR-migration review):** audit found nothing to remove: every project with a `test` target has spec files, every `test-setup.ts` and `tsconfig.spec.json` is referenced, and the only project with specs but no `test` target is the Playwright e2e project.
+- [X] T028 [P] [US4] Document the pre-release dependency decision in jordylab-be/AGENTS.md or a DECISIONS.md — Spring AI 2.0.0-M2 is a milestone release; record explicit accepted risk with pinned version or a plan to move to stable (FR-018) — **Closed 2026-11-02 (JOR-migration review):** already documented: `jordylab-be/AGENTS.md` records the move from the `2.0.0-M2` milestone to the `2.0.1` GA release (spec 011 BUG-010), and `build.gradle.kts` pins `springAiVersion = "2.0.1"`.
 - [x] T029 [US4] Final documentation reconciliation — verified AGENTS.md AI Routing section already matches the cloud-primary, per-module-config decision with no local-primary/fallback references for fna; fixed the Reference Docs table, which cited three docs (jordylab-infrastructure-guide.md, jordylab-project-setup.md, jordylab-project-overview.md) that do not exist in the repo — trimmed to only coding-master-prompt.md, which does (SC-005, see Phase 8)
 
 **Checkpoint**: Documentation matches implementation. No behaviour is described that the code does not implement.

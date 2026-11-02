@@ -48,4 +48,4 @@ For each data screen, force the three states: delay the API (loading), use a cat
 - `bun tools/app-boot-check.mjs` on the production build (CSP enforced): no start-up error, no policy violation.
 - `csp.spec.ts` passes: the boot script and the local font raise no violation.
 - Lint and unit tests of every touched project pass; the lint-ownership check passes.
-- Commit trailer on every commit: `Refs: 014`.
+- Commit trailer on every commit: `Refs: 016`.

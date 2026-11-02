@@ -6,6 +6,7 @@ import dev.jordy.jordylab.gamecatalog.domain.InstallStatus;
 import dev.jordy.jordylab.gamecatalog.domain.MarkType;
 import dev.jordy.jordylab.gamecatalog.domain.GameSource;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,6 +32,7 @@ public record GameDetailResponse(
         Integer releaseYear,
         String metadataSource,
         Integer maxLocalPlayers,
+        PlayerCountSource maxLocalPlayersSource,
         Boolean onlineMultiplayer,
         Boolean singlePlayer,
         DescriptionResponse description,

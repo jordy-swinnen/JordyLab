@@ -1,8 +1,10 @@
 package dev.jordy.jordylab.gamecatalog.rest.controller;
 
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.SyncOutcome;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformChip;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlayerCountReason;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanSourceResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.HealthExceptionsResponse;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,7 +56,7 @@ class ScanSourceControllerTest {
                 new ScanSourceResponse(SOURCE_ID, "snes", HOST_ID, "jordybox", "Living room PC", "Living room PC", SourceType.EMUDECK, "SNES", PlatformChip.of("SNES"),
                         true, Instant.parse("2026-08-02T10:20:00Z"), Instant.parse("2026-08-02T10:20:00Z"),
                         Instant.parse("2026-08-02T10:30:00Z"), SyncOutcome.APPLIED, 412L)),
-                new LibraryHealthResponse(230, 12, 30, 5)));
+                new LibraryHealthResponse(230, 12, 30, 5, null)));
 
         mockMvc.perform(get("/api/gamecatalog/sources"))
                 .andExpect(status().isOk())
@@ -76,15 +79,59 @@ class ScanSourceControllerTest {
 
     @Test
     void healthExceptionsListTheGamesBehindOneCount() throws Exception {
-        when(libraryHealthService.exceptions(LibraryHealthService.Kind.COVER)).thenReturn(
+        when(libraryHealthService.exceptions(LibraryHealthService.Kind.COVER, null)).thenReturn(
                 new HealthExceptionsResponse("COVER", 12, List.of(
-                        new HealthExceptionsResponse.HealthException(SOURCE_ID, "Obscure Game"))));
+                        new HealthExceptionsResponse.HealthException(SOURCE_ID, "Obscure Game", null))));
 
         mockMvc.perform(get("/api/gamecatalog/sources/health/exceptions").param("kind", "COVER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.kind").value("COVER"))
                 .andExpect(jsonPath("$.total").value(12))
-                .andExpect(jsonPath("$.games[0].title").value("Obscure Game"));
+                .andExpect(jsonPath("$.games[0].title").value("Obscure Game"))
+                .andExpect(jsonPath("$.games[0].reason").doesNotExist());
+    }
+
+    @Test
+    void thePlayerCountListCanBeNarrowedToOneReasonAndEachGameCarriesIt() throws Exception {
+        when(libraryHealthService.exceptions(LibraryHealthService.Kind.PLAYER_COUNT, PlayerCountReason.ENTRIES_DISAGREE))
+                .thenReturn(new HealthExceptionsResponse("PLAYER_COUNT", 2, List.of(
+                        new HealthExceptionsResponse.HealthException(SOURCE_ID, "Mario Party 7",
+                                PlayerCountReason.ENTRIES_DISAGREE))));
+
+        mockMvc.perform(get("/api/gamecatalog/sources/health/exceptions").param("kind", "PLAYER_COUNT")
+                        .param("reason", "ENTRIES_DISAGREE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.kind").value("PLAYER_COUNT"))
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.games[0].title").value("Mario Party 7"))
+                .andExpect(jsonPath("$.games[0].reason").value("ENTRIES_DISAGREE"));
+    }
+
+    @Test
+    void anUnknownPlayerCountReasonIsRejected() throws Exception {
+        mockMvc.perform(get("/api/gamecatalog/sources/health/exceptions").param("kind", "PLAYER_COUNT")
+                        .param("reason", "NOPE"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void theSourcesCarryThePlayerCountBlockWithTheStateOfTheSecondSource() throws Exception {
+        LibraryHealthResponse.PlayerCounts playerCounts = new LibraryHealthResponse.PlayerCounts(105,
+                Map.of(PlayerCountSource.IGDB, 61L, PlayerCountSource.THEGAMESDB, 13L), 31,
+                Map.of(PlayerCountReason.STEAM_NO_SOURCE, 29L, PlayerCountReason.ENTRIES_DISAGREE, 2L),
+                new LibraryHealthResponse.SourceState(true, Instant.parse("2026-11-02T08:00:00Z"), "ALLOWANCE_LOW", 18));
+        when(scanSourceService.listSources()).thenReturn(new SourcesResponse(List.of(),
+                new LibraryHealthResponse(509, 0, 3, 0, playerCounts)));
+
+        mockMvc.perform(get("/api/gamecatalog/sources"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.health.playerCounts.localMultiplayerGames").value(105))
+                .andExpect(jsonPath("$.health.playerCounts.filled.THEGAMESDB").value(13))
+                .andExpect(jsonPath("$.health.playerCounts.unknown").value(31))
+                .andExpect(jsonPath("$.health.playerCounts.unknownByReason.ENTRIES_DISAGREE").value(2))
+                .andExpect(jsonPath("$.health.playerCounts.theGamesDb.configured").value(true))
+                .andExpect(jsonPath("$.health.playerCounts.theGamesDb.pauseReason").value("ALLOWANCE_LOW"))
+                .andExpect(jsonPath("$.health.playerCounts.theGamesDb.remainingAllowance").value(18));
     }
 
     @Test

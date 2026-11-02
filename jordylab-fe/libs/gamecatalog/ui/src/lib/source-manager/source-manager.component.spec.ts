@@ -5,6 +5,7 @@ import {
   aLibraryHealthMock,
   aLibraryStatusMock,
   aLibrarySyncRunMock,
+  aPlayerCountsHealthMock,
   aScanSourceMock,
   HealthExceptions,
   HealthKind,
@@ -592,6 +593,65 @@ describe('SourceManagerComponent', () => {
 
       spectator.click('[data-testid="health-exceptions"] button');
       expect(hideHealthExceptions).toHaveBeenCalled();
+    });
+
+    it('shows where the player counts come from and how many are unknown', () => {
+      health.set(aLibraryHealthMock());
+      populate([]);
+
+      expect(spectator.query('[data-testid="player-counts-igdb"]')).toHaveText('61 from IGDB');
+      expect(spectator.query('[data-testid="player-counts-thegamesdb"]')).toHaveText('13 from TheGamesDB');
+      expect(spectator.query('[data-testid="player-counts-unknown"]')).toHaveText('31 unknown');
+      expect(spectator.query('[data-testid="player-count-reason-STEAM_NO_SOURCE"]')).toHaveText('29');
+      expect(spectator.query('[data-testid="player-count-reason-ENTRIES_DISAGREE"]')).toHaveText('2');
+      expect(spectator.query('[data-testid="player-count-reason-NO_MATCH"]')).toBeNull();
+      expect(spectator.query('[data-testid="player-counts-source-state"]')).toHaveText('938 lookups left this month');
+    });
+
+    it('says when the second source is not configured', () => {
+      health.set(aLibraryHealthMock({
+        playerCounts: aPlayerCountsHealthMock({
+          theGamesDb: { configured: false, pausedUntil: null, pauseReason: null, remainingAllowance: null },
+        }),
+      }));
+      populate([]);
+
+      expect(spectator.query('[data-testid="player-counts-source-state"]')).toHaveText('not configured');
+    });
+
+    it('says until when and why the second source is paused', () => {
+      health.set(aLibraryHealthMock({
+        playerCounts: aPlayerCountsHealthMock({
+          theGamesDb: {
+            configured: true,
+            pausedUntil: '2026-11-02T08:00:00Z',
+            pauseReason: 'ALLOWANCE_LOW',
+            remainingAllowance: 18,
+          },
+        }),
+      }));
+      populate([]);
+
+      expect(spectator.query('[data-testid="player-counts-source-state"]')).toHaveText('paused until');
+      expect(spectator.query('[data-testid="player-counts-source-state"]')).toHaveText('almost used up');
+    });
+
+    it('asks for the games behind one reason and names the reason next to each game', () => {
+      health.set(aLibraryHealthMock());
+      populate([]);
+
+      spectator.click('[data-testid="show-player-count-ENTRIES_DISAGREE"]');
+      expect(showHealthExceptions).toHaveBeenCalledWith('PLAYER_COUNT', 'ENTRIES_DISAGREE');
+
+      healthExceptions.set({
+        kind: 'PLAYER_COUNT',
+        total: 2,
+        games: [{ id: 'game-7', title: 'Mario Party 7', reason: 'ENTRIES_DISAGREE' }],
+      });
+      spectator.detectChanges();
+      const list = spectator.query('[data-testid="health-exceptions"]');
+      expect(list).toHaveText('Mario Party 7');
+      expect(list).toHaveText('Entries disagree');
     });
 
     it('shows no health panel until the numbers arrive', () => {

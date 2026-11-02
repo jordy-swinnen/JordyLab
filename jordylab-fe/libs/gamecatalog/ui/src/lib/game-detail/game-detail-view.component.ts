@@ -2,7 +2,16 @@ import { Component, input, output, ChangeDetectionStrategy } from '@angular/core
 import { RouterLink } from '@angular/router';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
 import { EmptyStateComponent, ErrorStateComponent } from '@jordylab-fe/shared/layout';
-import { bannerUrl, coverUrl, GameDetail, MarkType, Place, ROM_STATUS_LABELS, RomStatus } from '@jordylab-fe/gamecatalog/api';
+import {
+  bannerUrl,
+  coverUrl,
+  GameDetail,
+  MarkType,
+  PLAYER_COUNT_SOURCE_LABELS,
+  Place,
+  ROM_STATUS_LABELS,
+  RomStatus,
+} from '@jordylab-fe/gamecatalog/api';
 import { descriptionHeading, factSourcesLine } from './description-heading';
 import { MarkChipComponent } from '../chips/mark-chip.component';
 import { RomChipComponent } from '../chips/rom-chip.component';
@@ -82,6 +91,7 @@ export class GameDetailViewComponent {
 
   protected readonly descriptionHeading = descriptionHeading;
   protected readonly factSourcesLine = factSourcesLine;
+  protected readonly playerCountSourceLabels = PLAYER_COUNT_SOURCE_LABELS;
 
   protected isSteam(game: GameDetail): boolean {
     return game.platforms.some((platform) => platform.name === 'Steam');

@@ -28,7 +28,7 @@ Every source below was tried against the real 44 titles, or its own documentatio
 | Libretro "max users" lists | Dropped | Only the Nintendo 64 list exists among the five systems, and entries are keyed by ROM checksum, which the scanner does not send. |
 | Wikidata | Dropped | Has a maximum-players property, but a value for none of the 15 console games and for 2 of the 29 Steam games. |
 | Co-Optimus | Dropped | Refuses automated reads (HTTP 403). |
-| MobyGames | Not pursued | The API page refuses automated reads (HTTP 403), so its pricing, terms and fields could not be read. The owner chose to proceed without it. |
+| MobyGames | Dropped | The API page refuses automated reads (HTTP 403), so its pricing, terms and fields could not be read, and the owner will not pay for access. |
 | PCGamingWiki | Dropped earlier | Its API refused arbitrary queries. |
 
 ### TheGamesDB on the 15 console games
@@ -86,10 +86,13 @@ Priorities: High, Medium, Low.
 - Accessories such as a multitap: the library is emulated, so the game's own maximum applies and no accessory logic is needed.
 - Changing how flags (local, split screen, online) are derived, online or co-op player limits.
 
+## Terms of use
+
+The service publishes no terms page. The key was granted through its own access request, and the key page, read signed in, shows only the allowance (1,000 calls a month, 46 used after the probe, which matches the number of calls made, 0 extra allowance) and no usage terms. The use here is a handful of title lookups per bulk refresh, well inside that allowance. If the service later publishes terms that bar this use, the source is dropped.
+
 ## Open items
 
-- **Terms of use (check during planning, not blocking)**: the public pages of the service show no terms page, and the key was granted through its own access request. While signed in, the owner reads what the key page says about permitted use and the plan records it. If it does not allow this use, the source is dropped.
-- A second console source was searched for and none was found that is reliable and open; the Sources page numbers will show whether one is needed after the first run.
+- None blocking. A second console source was searched for and none was found that is reliable, open and free; the Sources page numbers will show whether one is needed after the first run.
 
 ## Verified in the repo
 

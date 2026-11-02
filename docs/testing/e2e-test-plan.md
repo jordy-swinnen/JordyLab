@@ -764,14 +764,14 @@ Smoke A re-run: A1 `57.129.163.110` · A2 valid to 2026-12-29 · A3 301 → http
 | ID | Goal | Machine | Env | Sent | Reported | Agent verification | Duration | Outcome |
 |----|------|---------|-----|------|----------|--------------------|----------|---------|
 | HANDOFF-01 | Sign in to prod as admin in the browser pane | browser pane | prod | 2026-09-30 20:15 | 20:40 done | agent loaded `/settings/users` as admin (found BUG-026) | ~2 min | ✅ verified |
-| HANDOFF-02 | Create + approve the guest test account | browser (2nd profile) | prod | 2026-09-30 20:15 | 20:40 blocked | Users page 503 → BUG-026 | | ⏸ blocked on PR #30 |
+| HANDOFF-02 | Create + approve the guest test account | browser (2nd profile) | prod | 2026-09-30 20:15 | 20:40 blocked | Users page 503 → BUG-026 | | ✅ confirmed done by the owner on 2026-11-02, no follow-up needed (was blocked on PR #30, later deployed) |
 | HANDOFF-03 | Scanner on the MacBook: local, then prod client check | MacBook | local + prod | 2026-09-30 20:15 | 20:37 partial | prod client header read by agent: BUG-020 confirmed | | prod part done; local: Jordy registered `jordy.swinnen@pm.me`; agent granted `admin` + `gamecatalog-scanner` via kcadm (BUG-027/028). 21:11 `scan` → `/ingest/check` authorised as scanner, "unchanged, nothing uploaded" ✅ (FR-008 server check confirmed in backend log) |
-| HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | |
+| HANDOFF-04 | Scanner on JordyBox (after BUG-020 is fixed) | JordyBox | prod | not sent — waits for PR #30 deploy | | | | ✅ confirmed done by the owner on 2026-11-02, no follow-up needed |
 | HANDOFF-05 | Yes/no: Steam + OpenRouter keys present in prod | — | prod | 2026-09-30 20:15 | 20:40 yes / yes | — (can't read secrets) | <1 min | ✅ answered |
-| HANDOFF-06 | Enable `UPDATE_EMAIL` in the prod realm (one kcadm command) | — | prod | 2026-10-01 | | the agent's prod realm write was blocked by its permission classifier | 1 min | ⏳ open |
-| HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ⏳ open |
-| HANDOFF-08 | Decide: buy OpenRouter credits (primary) or stay on Anthropic-direct | your browser | prod | 2026-10-01 | | after credits: backend log `AI call succeeded: … provider=openrouter` | 2 min | ⏳ open |
-| HANDOFF-09 | Change the `MEUD` portfolio ticker to `MEUD.PA` | your browser | prod | 2026-10-01 | | within 30 min the position shows a price; no more `Could not fetch price` warnings | 1 min | ⏳ open |
+| HANDOFF-06 | Enable `UPDATE_EMAIL` in the prod realm (one kcadm command) | — | prod | 2026-10-01 | | the agent's prod realm write was blocked by its permission classifier | 1 min | ✅ confirmed done by the owner on 2026-11-02, no follow-up needed |
+| HANDOFF-07 | Add `NTFY_TOPIC` to the prod secrets and subscribe to it in the ntfy app | your Mac + phone | prod | 2026-10-01 | | after the next deploy: backend log says `Ntfy notifications enabled`, ntfy `messages_published` > 0 | 5 min | ✅ confirmed done by the owner on 2026-11-02, no follow-up needed |
+| HANDOFF-08 | Decide: buy OpenRouter credits (primary) or stay on Anthropic-direct | your browser | prod | 2026-10-01 | | after credits: backend log `AI call succeeded: … provider=openrouter` | 2 min | ✅ confirmed done by the owner on 2026-11-02, no follow-up needed |
+| HANDOFF-09 | Change the `MEUD` portfolio ticker to `MEUD.PA` | your browser | prod | 2026-10-01 | | within 30 min the position shows a price; no more `Could not fetch price` warnings | 1 min | ✅ confirmed done by the owner on 2026-11-02, no follow-up needed |
 | HANDOFF-11 | Rerun the EmuDeck scan on JordyBox with the new client | JordyBox | prod | 2026-10-01 | | EmuDeck games appear; rescan is a no-op | 10 min | ✅ done 2026-10-02 (MRB-03) |
 | HANDOFF-12 | Signed-in pass on prod as admin (the agent never types your password) | browser | prod | 2026-10-01 | | the agent runs MRB-01 in the browser pane once signed in | 15 min | ✅ done 2026-10-02 (MRB-01); re-signed in via HANDOFF-13 |
 
@@ -1062,20 +1062,26 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 #### HANDOFF-34: TheGamesDB API key — done 2026-11-01
 - The owner registered, requested the key through TheGamesDB's own access request, and put `THEGAMESDB_API_KEY` in `jordylab-be/.env` (not in the repo). It was checked by behaviour: the platforms call answered 200 with a monthly allowance of 1000 calls.
 
-#### HANDOFF-35: Read the MobyGames API terms in your browser (second player-count source)
+#### HANDOFF-35: Read the MobyGames API terms in your browser (second player-count source) — cancelled 2026-11-01 (the owner will not pay for access)
 - Machine: your Mac, in a browser · Why you: MobyGames answers automated reads with 403, and the rule is that a refusing service is dropped, never worked around. Only you can read the page as a visitor.
 - Open https://www.mobygames.com/info/api/ and its pricing and terms pages. Tell me in chat: (1) whether a free tier exists for personal, self-hosted, non-commercial use, and the monthly price if not; (2) the request limit; (3) whether the terms allow looking up games by name from a personal app; (4) whether the API documentation lists game attributes such as "Number of Offline Players" or "Multiplayer Options".
 - Do not register or accept anything yet. I only need the answers to decide whether it is worth an account.
 
-#### HANDOFF-36: Look at the redesign on your Android phone and on the sign-in page (spec 014)
-- Machine: your Android phone with the debug APK, and your Mac · Why you: the status bar and the sign-in page's follow-the-device switch can only be judged on a real device and on the Keycloak you run.
-- Follow `specs/014-app-redesign-themes/quickstart.md` section 6: on the phone, choose Paper in Settings → App and check the status bar icons stay readable (if not, say so and I add the status-bar plugin). Then restart the local Keycloak (recreating the dev stack needs your yes; `jordylab-be/compose.yaml` mounts the theme) and open the sign-in page with the computer set to light, then to dark.
-- Tell me what you saw; I record it in `specs/014-app-redesign-themes/research.md` (D9, D10).
+#### HANDOFF-36: Local end-to-end of the console player counts (spec 014) — run by the agent
+- Owner decision 2026-11-01: the agent runs this itself against the running dev stack and the real library, with the keys in `jordylab-be/.env` (never printed), after backing up the dev database. Steps: `specs/014-console-player-counts/quickstart.md` §2, then `./gradlew goldenLive`. Results are recorded in `specs/014-console-player-counts/validation-results.md`.
 
-#### HANDOFF-37: Compare the redesign with the design system (spec 014)
+#### HANDOFF-37: Add `THEGAMESDB_API_KEY` to the prod secrets — done 2026-11-01
+- The owner added the key to `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_EDITOR="idea --wait" sops …`. Presence on the cluster is checked after the next deploy (`quickstart.md` §3, step 2), by behaviour and never by value.
+
+#### HANDOFF-38: Look at the redesign on your Android phone and on the sign-in page (spec 016)
+- Machine: your Android phone with the debug APK, and your Mac · Why you: the status bar and the sign-in page's follow-the-device switch can only be judged on a real device and on the Keycloak you run.
+- Follow `specs/016-app-redesign-themes/quickstart.md` section 6: on the phone, choose Paper in Settings → App and check the status bar icons stay readable (if not, say so and I add the status-bar plugin). Then restart the local Keycloak (recreating the dev stack needs your yes; `jordylab-be/compose.yaml` mounts the theme) and open the sign-in page with the computer set to light, then to dark.
+- Tell me what you saw; I record it in `specs/016-app-redesign-themes/research.md` (D9, D10).
+
+#### HANDOFF-39: Compare the redesign with the design system (spec 016)
 - Machine: your Mac, in a browser · Why you: judging whether the new look matches the design canvas is a call only you can make.
 - With the app running, open the Library, a game, LibBot, Sources, Consoles and Settings → App on desktop and in a phone-sized window, the Library in all six themes. Compare with the redesign canvas and the design system, and count the steps to find a game and set a mark (before and after, SC-007).
-- Tell me the differences you want changed; I record them in `specs/014-app-redesign-themes/checklists/visual-review.md`.
+- Tell me the differences you want changed; I record them in `specs/016-app-redesign-themes/checklists/visual-review.md`.
 
 ## 8. AI call tally
 

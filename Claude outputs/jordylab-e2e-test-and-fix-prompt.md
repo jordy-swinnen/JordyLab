@@ -73,7 +73,7 @@ For each handoff:
   The `local` and `prod` profiles are the only two environments.
 - Browser automation for UI testing (Claude in Chrome, the built-in browser, or `agent-browser` via the `browser-test`
   agent). Use it against both localhost and https://jordylab.be.
-- GitHub via the `github` MCP server in `.mcp.json` (uses `${GITHUB_PAT}`) and/or the `gh` CLI. Use it for branches,
+- GitHub via the `github` MCP server in `.mcp.json` (started by `scripts/mcp/github-mcp.sh`, which uses the `gh` login) and/or the `gh` CLI. Use it for branches,
   PRs, workflow runs and deploy approvals.
 - `kubectl` on the prod cluster **only if** the kubeconfig and Tailscale are already available on this machine (see the
   `jordylab-devops` agent). Use it read-only (`get`, `describe`, `logs` with secret filtering
