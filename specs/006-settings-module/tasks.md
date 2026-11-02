@@ -269,6 +269,7 @@ new details (quickstart scenario 6)
   spec 011 BUG-011 / HANDOFF-06), and the email-as-username username-sync caveat (keycloak
   #13988/#16679 — research §4.3); record the verified outcome (and any workaround) in
   `specs/006-settings-module/research.md` §4
+  - **Progress 2026-11-02:** `UPDATE_PROFILE` and `UPDATE_PASSWORD` verified live on local Keycloak 26.7.4; `UPDATE_EMAIL` is not enabled in the local dev realm (error status), enabled in production; the email change itself and the username-sync caveat are still to check (see `research.md` §4.1).
 
 **Checkpoint**: US5 done — routine account changes no longer need the admin.
 

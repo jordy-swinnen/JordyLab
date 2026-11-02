@@ -242,6 +242,23 @@ Each: Decision / Rationale / Alternatives considered.
 7. **Existing dev realm**: export changes apply on first import only — quickstart documents dropping/re-importing the
    `keycloak` schema in dev.
 
+### 4.1 Live check of the account actions (T033, 2026-11-02, local Keycloak 26.7.4)
+
+Driven the way the app's user menu does it: an authorization request to the local `jordylab` realm (client
+`jordylab-host`) with `kc_action=<ACTION>`, using a throwaway user registered through the realm's own registration page
+(email as username). Results:
+
+- **`UPDATE_PROFILE`**: registration continued straight into "Update Account Information"; changing the first name and
+  submitting redirected back with `kc_action=UPDATE_PROFILE&kc_action_status=success`.
+- **`UPDATE_PASSWORD`**: the "Update password" form (new password, confirmation, "Sign out from other devices") opened
+  directly; submitting redirected back with `kc_action=UPDATE_PASSWORD&kc_action_status=success`. No re-authentication
+  prompt appeared because the session had just been created; the re-authentication step belongs to older sessions.
+- **`UPDATE_EMAIL`**: the redirect came back with `kc_action_status=error` and no form, so the Update Email required
+  action is **not enabled in the local dev realm** (it is enabled in production, HANDOFF-06; BUG-011 verified there that
+  the menu reaches Keycloak and asks to re-authenticate).
+- **Not yet checked**: submitting an email change, and the email-as-username sync caveat (keycloak #13988/#16679), on a
+  realm where the action is enabled. T033 stays open for that.
+
 ## 5. Implementation findings (from T001–T009)
 
 Verified against the live dev stack on 2026-09-27 while implementing Setup + Foundational:
