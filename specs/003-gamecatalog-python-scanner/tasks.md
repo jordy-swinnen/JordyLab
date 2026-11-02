@@ -86,7 +86,7 @@ description: "Task list for Game Catalog Python Scanner (replaces the shell scan
 ## Phase 6: Validation
 
 - [x] T047 E2E macOS (device grant, check/scan/no-upload, grouping, Steam adoption)
-- [ ] T048 E2E Linux/CachyOS on JordyBox (timer + linger, boot simulation, symlinked root, unmounted-root boot, uninstall) — runbook in quickstart §4; to run on the real machine
+- [X] T048 E2E Linux/CachyOS on JordyBox (timer + linger, boot simulation, symlinked root, unmounted-root boot, uninstall) — runbook in quickstart §4; to run on the real machine — **Closed 2026-11-02 on the owner's report:** the Linux/CachyOS end-to-end on JordyBox was run and works (install, timer, boot simulation, symlinked root, unmounted root, uninstall).
 - [x] T049 Results recorded in [validation-results.md](./validation-results.md)
 
 ## Phase 7: Polish & PR
