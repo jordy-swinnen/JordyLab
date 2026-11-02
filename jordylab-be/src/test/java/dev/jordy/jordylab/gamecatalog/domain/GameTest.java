@@ -186,6 +186,109 @@ class GameTest {
     }
 
     @Test
+    void applyDeterministicMultiplayerRecordsIgdbAsTheCountSourceOnlyWhenItBringsACount() {
+        Game withCount = GameTestBuilder.aDefaultGame();
+        Game withoutCount = Game.builder().steamAppId("620").title("Portal 2").build();
+
+        withCount.applyDeterministicMultiplayer(true, true, 4, MultiplayerSource.IGDB);
+        withoutCount.applyDeterministicMultiplayer(true, true, null, MultiplayerSource.STEAM);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(withCount.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.IGDB);
+            softly.assertThat(withoutCount.getMaxLocalPlayers()).isNull();
+            softly.assertThat(withoutCount.getMaxLocalPlayersSource()).isNull();
+        });
+    }
+
+    @Test
+    void applyFillOnlyMultiplayerNamesIgdbAsTheCountSourceEvenOnASteamFlaggedGame() {
+        Game game = Game.builder().steamAppId("620").title("Portal 2").localMultiplayer(true)
+                .multiplayerSource(MultiplayerSource.STEAM).build();
+
+        game.applyFillOnlyMultiplayer(true, true, 4, MultiplayerSource.IGDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.STEAM);
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.IGDB);
+        });
+    }
+
+    @Test
+    void applyFillOnlyMultiplayerKeepsTheAttemptsWhenNothingWasFilled() {
+        Game game = Game.builder().title("Mario Party 7").localMultiplayer(true).splitScreen(true)
+                .multiplayerSource(MultiplayerSource.IGDB).build();
+        game.recordMultiplayerFailure();
+
+        game.applyFillOnlyMultiplayer(true, true, null, MultiplayerSource.IGDB);
+
+        assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    void applyPlayerCountFillsANullCountWithItsSourceAndClearsTheGapAndAttempts() {
+        Game game = Game.builder().title("Mario Party 6").localMultiplayer(true)
+                .multiplayerSource(MultiplayerSource.IGDB).build();
+        game.recordPlayerCountGap(PlayerCountGap.NO_MATCH);
+        game.recordMultiplayerFailure();
+
+        game.applyPlayerCount(4, PlayerCountSource.THEGAMESDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.THEGAMESDB);
+            softly.assertThat(game.getPlayerCountGap()).isNull();
+            softly.assertThat(game.getMultiplayerAttempts()).isZero();
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+        });
+    }
+
+    @Test
+    void applyPlayerCountNeverReplacesAnExistingCountOrItsSource() {
+        Game game = Game.builder().title("Wave Race").localMultiplayer(true).build();
+        game.applyDeterministicMultiplayer(true, true, 2, MultiplayerSource.IGDB);
+
+        game.applyPlayerCount(4, PlayerCountSource.THEGAMESDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(2);
+            softly.assertThat(game.getMaxLocalPlayersSource()).isEqualTo(PlayerCountSource.IGDB);
+        });
+    }
+
+    @Test
+    void recordPlayerCountGapIsStoredWithoutACountAndIgnoredOnceACountExists() {
+        Game withoutCount = Game.builder().title("Mario Party 7").localMultiplayer(true).build();
+        Game withCount = Game.builder().title("Mario Party 6").localMultiplayer(true).build();
+        withCount.applyPlayerCount(4, PlayerCountSource.THEGAMESDB);
+
+        withoutCount.recordPlayerCountGap(PlayerCountGap.ENTRIES_DISAGREE);
+        withCount.recordPlayerCountGap(PlayerCountGap.NO_MATCH);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(withoutCount.getPlayerCountGap()).isEqualTo(PlayerCountGap.ENTRIES_DISAGREE);
+            softly.assertThat(withCount.getPlayerCountGap()).isNull();
+        });
+    }
+
+    @Test
+    void aCountAlwaysNamesItsSource() {
+        Game viaIgdb = Game.builder().title("A").localMultiplayer(true).build();
+        Game viaSecondSource = Game.builder().title("B").localMultiplayer(true).build();
+        Game withoutCount = Game.builder().title("C").localMultiplayer(true).build();
+
+        viaIgdb.applyFillOnlyMultiplayer(true, null, 3, MultiplayerSource.IGDB);
+        viaSecondSource.applyPlayerCount(2, PlayerCountSource.THEGAMESDB);
+
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(viaIgdb.getMaxLocalPlayersSource()).isNotNull();
+            softly.assertThat(viaSecondSource.getMaxLocalPlayersSource()).isNotNull();
+            softly.assertThat(withoutCount.getMaxLocalPlayers()).isNull();
+            softly.assertThat(withoutCount.getMaxLocalPlayersSource()).isNull();
+        });
+    }
+
+    @Test
     void recordMultiplayerFailureIncrementsAndResetClears() {
         Game game = GameTestBuilder.aDefaultGame();
 

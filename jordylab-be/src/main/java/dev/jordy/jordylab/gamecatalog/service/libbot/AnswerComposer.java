@@ -53,11 +53,17 @@ public class AnswerComposer {
         return language == Language.NL ? "Dutch" : "English";
     }
 
+    /** The source of a known player count, so an answer can say where the number comes from. */
+    private static String sourceNote(Candidate candidate) {
+        return candidate.maxLocalPlayersSource() == null ? ""
+                : " (" + candidate.maxLocalPlayersSource().getDisplayName() + ")";
+    }
+
     /** One catalog row; facts that are not known are left out rather than guessed. */
     static String row(Candidate candidate) {
         List<String> facts = new ArrayList<>();
         if (candidate.maxLocalPlayers() != null) {
-            facts.add("up to " + candidate.maxLocalPlayers() + " local players");
+            facts.add("up to " + candidate.maxLocalPlayers() + " local players" + sourceNote(candidate));
         } else if (Boolean.TRUE.equals(candidate.localMultiplayer())) {
             facts.add("local multiplayer");
         }

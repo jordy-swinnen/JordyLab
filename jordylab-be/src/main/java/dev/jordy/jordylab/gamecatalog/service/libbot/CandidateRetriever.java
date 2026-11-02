@@ -227,7 +227,8 @@ public class CandidateRetriever implements CandidateSource {
                 .dislikedVotes(votes.disliked()).similarity(similarity)
                 .genres(StringUtils.hasText(game.getGenres()) ? game.getGenres() : game.getGenre())
                 .developer(game.getDeveloper()).releaseYear(game.getReleaseYear())
-                .maxLocalPlayers(game.getMaxLocalPlayers()).localMultiplayer(game.getLocalMultiplayer())
+                .maxLocalPlayers(game.getMaxLocalPlayers()).maxLocalPlayersSource(game.getMaxLocalPlayersSource())
+                .localMultiplayer(game.getLocalMultiplayer())
                 .singlePlayer(game.getSinglePlayer()).onlineMultiplayer(game.getOnlineMultiplayer())
                 .description(shortened(game.getDescription())).myMark(myMark).romCopies(romCopies).build();
     }

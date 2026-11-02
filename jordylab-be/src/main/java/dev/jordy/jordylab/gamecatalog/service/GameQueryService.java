@@ -175,6 +175,7 @@ public class GameQueryService {
                 game.getGenres(), game.getDeveloper(), game.getPublisher(), game.getReleaseYear(),
                 metadataSource(game),
                 game.getMaxLocalPlayers(),
+                game.getMaxLocalPlayersSource(),
                 hasCatalogData ? game.getOnlineMultiplayer() : null,
                 hasCatalogData ? game.getSinglePlayer() : null,
                 hasCatalogData ? descriptionOf(game) : null,
@@ -185,7 +186,8 @@ public class GameQueryService {
                 deriveOnlineOnly(game),
                 game.getMultiplayerSource(),
                 new FactSourcesResponse(metadataSource(game),
-                        game.getMultiplayerSource() == MultiplayerSource.UNKNOWN ? null : game.getMultiplayerSource()),
+                        game.getMultiplayerSource() == MultiplayerSource.UNKNOWN ? null : game.getMultiplayerSource(),
+                        game.getMaxLocalPlayersSource()),
                 votesOf(List.of(game.getId())).getOrDefault(game.getId(), VoteTotalsResponse.none()),
                 myMarksOf(List.of(game.getId()), userSubject).get(game.getId()));
     }

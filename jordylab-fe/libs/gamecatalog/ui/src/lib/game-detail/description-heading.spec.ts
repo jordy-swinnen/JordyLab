@@ -52,13 +52,20 @@ describe('descriptionHeading', () => {
 
 describe('factSourcesLine', () => {
   it('lists both sources in the Spec sheet style', () => {
-    expect(factSourcesLine({ facts: 'STEAM', multiplayer: 'IGDB' })).toBe('Source · facts from Steam · multiplayer from IGDB');
+    expect(factSourcesLine({ facts: 'STEAM', multiplayer: 'IGDB', playerCount: null })).toBe('Source · facts from Steam · multiplayer from IGDB');
   });
 
   it('lists what is known and nothing for the rest', () => {
-    expect(factSourcesLine({ facts: 'AI', multiplayer: null })).toBe('Source · facts from AI');
-    expect(factSourcesLine({ facts: null, multiplayer: 'STEAM' })).toBe('Source · multiplayer from Steam');
-    expect(factSourcesLine({ facts: null, multiplayer: null })).toBeNull();
+    expect(factSourcesLine({ facts: 'AI', multiplayer: null, playerCount: null })).toBe('Source · facts from AI');
+    expect(factSourcesLine({ facts: null, multiplayer: 'STEAM', playerCount: null })).toBe('Source · multiplayer from Steam');
+    expect(factSourcesLine({ facts: null, multiplayer: null, playerCount: null })).toBeNull();
+  });
+
+  it('names the player count source apart from the multiplayer source', () => {
+    expect(factSourcesLine({ facts: null, multiplayer: 'IGDB', playerCount: 'THEGAMESDB' })).toBe(
+      'Source · multiplayer from IGDB · player count from TheGamesDB',
+    );
+    expect(factSourcesLine({ facts: null, multiplayer: null, playerCount: 'IGDB' })).toBe('Source · player count from IGDB');
   });
 });
 

@@ -1036,7 +1036,7 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Expect: accessibility 100 with no failed audits (before: `label-content-name-mismatch` on the account menu) and *Cumulative Layout Shift* below 0.1 (before: 0.22).
 - Tell me the two numbers. (The axe check in CI now covers contrast and names on every page, so this is only the layout-shift number plus a final look.)
 
-#### HANDOFF-30: Bring up the local stack with your real data and run the live checks for spec 013 (T027, T072, T086, T100, T146, T148)
+#### HANDOFF-30: Bring up the local stack with your real data and run the live checks for spec 013 (T027, T072, T086, T100, T146, T148) — done 2026-11-01 (owner confirmed)
 - Machine: your Mac · Target env: local (dev stack) · Why you: the dev Postgres container is gone (the agent must not recreate the dev stack), the agent has no AI keys, and the real scans and the Linux box are yours.
 - 1. `cd jordylab-be && podman compose up -d` (Postgres with pgvector + Keycloak) and `./gradlew bootRun` on this branch with your own `.env` (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`, `STEAM_WEB_API_KEY`/`STEAM_ID`); `cd jordylab-fe && bunx nx serve jordylab`. If you have a database dump from before this branch, restore it first and let Flyway migrate it: that is the migration rehearsal (T027) and it also shows whether the Switch entries became a console.
 - 2. Sign in as admin, **Sources → download the Steam client**, run it on this Mac (device-code login). Then the same for EmuDeck on the Linux box (cachyos-htpc) and tell me the counts it printed.
@@ -1045,16 +1045,33 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - 5. Ask LibBot five questions of your own, for example "there are 6 people here, what can we play?", "wat kunnen we met vier spelen?", "something like what I liked" after marking a few games, and one off-topic question. Tell me if anything is wrong.
 - 6. Open ten games that have no Steam description and compare the AI text with a Steam blurb (SC-022): note which ones you would not accept.
 
-#### HANDOFF-31: Fingerprint sign-in and phone layout with a debug APK (T149, SC-018)
+#### HANDOFF-31: Fingerprint sign-in and phone layout with a debug APK (T149, SC-018) — done 2026-11-01 (owner confirmed)
 - Machine: your Android phone · Target env: local debug build · Why you: only a real finger and screen can judge this.
 - Build and install the debug APK (`jordylab-fe/apps/jordylab-mobile`, see its README), turn fingerprint unlock on, then do the 20 sign-ins of `docs/runbook.md` §21 ("Fingerprint sign-in: no error flash"). A red message at any moment is a failure: tell me which attempt.
 - Open the library, a game page and Sources at the phone's normal width: nothing should scroll sideways; the game page should show the cover overlapping the corner of the banner like on a computer.
 
-#### HANDOFF-32: Add the Langfuse keys to the prod secrets
+#### HANDOFF-32: Add the Langfuse keys to the prod secrets — done 2026-11-01 (owner confirmed)
 - Machine: your Mac · Target env: prod secrets in git · Why you: you edit SOPS secrets in IntelliJ and the agent never sees key values.
 - 1. `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`, then add `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `LANGFUSE_BASE_URL` under `stringData` (same values as in `jordylab-be/.env`). Save and close.
 - 2. Commit (`Refs: NO-CODE`) and let the normal deploy run. `LANGFUSE_ENVIRONMENT=production` is already in the `backend-config` ConfigMap (`deploy/k8s/overlays/prod/kustomization.yaml`).
 - 3. After the deploy, trigger one AI call (for example LibBot or "Regenerate description") and check Langfuse for a `run-<feature>` trace in environment `production`. Tell me if it is missing. Prompts and answers are captured in prod (`LANGFUSE_CAPTURE_CONTENT=true`, your decision of 2026-11-01).
+
+#### HANDOFF-33: ScreenScraper account and developer credentials — cancelled 2026-11-01
+- The owner dropped ScreenScraper: its terms only allow free, distributed apps or prior authorisation (a personal, non-distributed app is not covered) and developer credentials are handed out by hand on a forum. Nothing was registered and no credentials exist.
+
+#### HANDOFF-34: TheGamesDB API key — done 2026-11-01
+- The owner registered, requested the key through TheGamesDB's own access request, and put `THEGAMESDB_API_KEY` in `jordylab-be/.env` (not in the repo). It was checked by behaviour: the platforms call answered 200 with a monthly allowance of 1000 calls.
+
+#### HANDOFF-35: Read the MobyGames API terms in your browser (second player-count source) — cancelled 2026-11-01 (the owner will not pay for access)
+- Machine: your Mac, in a browser · Why you: MobyGames answers automated reads with 403, and the rule is that a refusing service is dropped, never worked around. Only you can read the page as a visitor.
+- Open https://www.mobygames.com/info/api/ and its pricing and terms pages. Tell me in chat: (1) whether a free tier exists for personal, self-hosted, non-commercial use, and the monthly price if not; (2) the request limit; (3) whether the terms allow looking up games by name from a personal app; (4) whether the API documentation lists game attributes such as "Number of Offline Players" or "Multiplayer Options".
+- Do not register or accept anything yet. I only need the answers to decide whether it is worth an account.
+
+#### HANDOFF-36: Local end-to-end of the console player counts (spec 014) — run by the agent
+- Owner decision 2026-11-01: the agent runs this itself against the running dev stack and the real library, with the keys in `jordylab-be/.env` (never printed), after backing up the dev database. Steps: `specs/014-console-player-counts/quickstart.md` §2, then `./gradlew goldenLive`. Results are recorded in `specs/014-console-player-counts/validation-results.md`.
+
+#### HANDOFF-37: Add `THEGAMESDB_API_KEY` to the prod secrets — done 2026-11-01
+- The owner added the key to `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_EDITOR="idea --wait" sops …`. Presence on the cluster is checked after the next deploy (`quickstart.md` §3, step 2), by behaviour and never by value.
 
 ## 8. AI call tally
 

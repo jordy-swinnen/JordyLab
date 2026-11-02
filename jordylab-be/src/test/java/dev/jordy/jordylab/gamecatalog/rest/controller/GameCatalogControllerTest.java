@@ -192,9 +192,9 @@ class GameCatalogControllerTest {
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                         ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                         EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
-                        2, false, true, new DescriptionResponse("A classic.", DescriptionSource.AI, "claude-haiku-4.5", "jev-router",
+                        2, null, false, true, new DescriptionResponse("A classic.", DescriptionSource.AI, "claude-haiku-4.5", "jev-router",
                         Instant.parse("2026-10-07T10:12:00Z")), FIRST_SEEN_AT, InstallStatus.INSTALLED, null, null, null,
-                MultiplayerSource.UNKNOWN, new FactSourcesResponse("STEAM", null), VoteTotalsResponse.none(), null)));
+                MultiplayerSource.UNKNOWN, new FactSourcesResponse("STEAM", null, null), VoteTotalsResponse.none(), null)));
 
         mockMvc.perform(get("/api/gamecatalog/games/{id}", GAME_ID))
                 .andExpect(status().isOk())
@@ -312,9 +312,9 @@ class GameCatalogControllerTest {
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/cover.png", null,
                 ArtworkStatus.EXTERNAL_URL, "https://example.com/banner.png", null,
                 EnrichmentStatus.ENRICHED, "Puzzle", "Puzzle, Adventure", "Valve", "Valve", 2011, "STEAM",
-                2, false, true, new DescriptionResponse("A classic.", DescriptionSource.AI, "claude-haiku-4.5", "jev-router",
+                2, null, false, true, new DescriptionResponse("A classic.", DescriptionSource.AI, "claude-haiku-4.5", "jev-router",
                         Instant.parse("2026-10-07T10:12:00Z")), FIRST_SEEN_AT, InstallStatus.INSTALLED, null, null, null,
-                MultiplayerSource.UNKNOWN, new FactSourcesResponse("STEAM", null), VoteTotalsResponse.none(), null);
+                MultiplayerSource.UNKNOWN, new FactSourcesResponse("STEAM", null, null), VoteTotalsResponse.none(), null);
     }
 
     private PlaceResponse aSteamPlace() {

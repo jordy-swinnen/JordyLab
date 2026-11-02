@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.gamecatalog.service.libbot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,26 @@ class AnswerComposerTest {
 
         assertThat(row).isEqualTo(ID + " | Jackbox Party Pack 9 | Steam | up to 8 local players; online multiplayer; "
                 + "Party; 2022 | want 2, liked 1, disliked 0 | Party games for everyone.");
+    }
+
+    @Test
+    void aKnownCountNamesItsSourceSoTheAnswerCanSayWhereTheNumberComesFrom() {
+        Candidate fromSecondSource = jackbox().toBuilder().maxLocalPlayers(4)
+                .maxLocalPlayersSource(PlayerCountSource.THEGAMESDB).build();
+        Candidate fromIgdb = jackbox().toBuilder().maxLocalPlayersSource(PlayerCountSource.IGDB).build();
+
+        assertSoftly(softly -> {
+            softly.assertThat(AnswerComposer.row(fromSecondSource)).contains("up to 4 local players (TheGamesDB);");
+            softly.assertThat(AnswerComposer.row(fromIgdb)).contains("up to 8 local players (IGDB);");
+        });
+    }
+
+    @Test
+    void anUnknownCountStatesNeitherANumberNorASource() {
+        Candidate unknownCount = jackbox().toBuilder().maxLocalPlayers(null).maxLocalPlayersSource(null).build();
+
+        assertThat(AnswerComposer.row(unknownCount)).contains("local multiplayer;").doesNotContain("up to")
+                .doesNotContain("TheGamesDB");
     }
 
     @Test

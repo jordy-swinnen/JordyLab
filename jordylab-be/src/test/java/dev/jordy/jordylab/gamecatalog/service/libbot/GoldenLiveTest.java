@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.service.libbot;
 
+import io.micrometer.observation.ObservationRegistry;
 import dev.jordy.jordylab.gamecatalog.service.libbot.GoldenFixtures.GoldenCase;
 import dev.jordy.jordylab.gamecatalog.service.libbot.GoldenFixtures.GoldenFile;
 import dev.jordy.jordylab.gamecatalog.service.DescriptionQualityValidator;
@@ -93,6 +94,7 @@ class GoldenLiveTest {
                         OpenAiChatAutoConfiguration.class, OpenAiEmbeddingAutoConfiguration.class,
                         AnthropicChatAutoConfiguration.class))
                 .withUserConfiguration(LiveConfiguration.class)
+                .withBean(ObservationRegistry.class, () -> ObservationRegistry.NOOP)
                 .withBean(TokenCounter.class, () -> new TokenCounter(inputTokens, outputTokens))
                 .run(context -> {
                     ResilientAiService aiService = context.getBean(ResilientAiService.class);
@@ -130,6 +132,7 @@ class GoldenLiveTest {
                         OpenAiChatAutoConfiguration.class, OpenAiEmbeddingAutoConfiguration.class,
                         AnthropicChatAutoConfiguration.class))
                 .withUserConfiguration(LiveConfiguration.class)
+                .withBean(ObservationRegistry.class, () -> ObservationRegistry.NOOP)
                 .run(context -> {
                     ResilientAiService aiService = context.getBean(ResilientAiService.class);
                     for (GoldenFixtures.DescriptionSample sample : samples) {

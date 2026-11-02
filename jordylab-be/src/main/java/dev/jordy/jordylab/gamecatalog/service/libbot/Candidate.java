@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.gamecatalog.service.libbot;
 
 import dev.jordy.jordylab.gamecatalog.domain.MarkType;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 import dev.jordy.jordylab.gamecatalog.domain.RomStatus;
 import lombok.Builder;
 
@@ -27,6 +28,7 @@ public record Candidate(
         String developer,
         Integer releaseYear,
         Integer maxLocalPlayers,
+        PlayerCountSource maxLocalPlayersSource,
         Boolean localMultiplayer,
         Boolean singlePlayer,
         Boolean onlineMultiplayer,

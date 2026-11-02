@@ -17,6 +17,7 @@ import {
   GamesPage,
   HealthExceptions,
   HealthKind,
+  PlayerCountReason,
   HideImpact,
   Host,
   InstallStatus,
@@ -123,9 +124,11 @@ export class GameCatalogApiService {
     return this.#http.get<SourcesOverview>('/api/gamecatalog/sources');
   }
 
-  getHealthExceptions(kind: HealthKind): Observable<HealthExceptions> {
+  getHealthExceptions(kind: HealthKind, reason?: PlayerCountReason): Observable<HealthExceptions> {
+    const params = new HttpParams().set('kind', kind);
+
     return this.#http.get<HealthExceptions>('/api/gamecatalog/sources/health/exceptions', {
-      params: new HttpParams().set('kind', kind),
+      params: reason ? params.set('reason', reason) : params,
     });
   }
 

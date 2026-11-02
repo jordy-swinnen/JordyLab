@@ -1,5 +1,7 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
+import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 import dev.jordy.jordylab.gamecatalog.domain.ArtworkStatus;
 import dev.jordy.jordylab.gamecatalog.domain.DescriptionSource;
 import dev.jordy.jordylab.gamecatalog.domain.EnrichmentStatus;
@@ -442,6 +444,42 @@ class GameQueryServiceTest {
             softly.assertThat(detail.publisher()).isEqualTo("Valve");
             softly.assertThat(detail.releaseYear()).isEqualTo(2011);
             softly.assertThat(detail.metadataSource()).isEqualTo("STEAM");
+        });
+    }
+
+    @Test
+    void detailNamesTheSourceOfThePlayerCountSeparatelyFromTheFlagsSource() {
+        Game game = Game.builder().title("Mario Party 6").localMultiplayer(true)
+                .multiplayerSource(MultiplayerSource.IGDB).build();
+        game.applyPlayerCount(4, PlayerCountSource.THEGAMESDB);
+        GameInstallation installation = anInstallation(game, aSource("jordybox", SourceType.STEAM));
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(installation));
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId(), null).orElseThrow();
+
+        assertSoftly(softly -> {
+            softly.assertThat(detail.maxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(detail.maxLocalPlayersSource()).isEqualTo(PlayerCountSource.THEGAMESDB);
+            softly.assertThat(detail.factSources().playerCount()).isEqualTo(PlayerCountSource.THEGAMESDB);
+            softly.assertThat(detail.multiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+            softly.assertThat(detail.factSources().multiplayer()).isEqualTo(MultiplayerSource.IGDB);
+        });
+    }
+
+    @Test
+    void detailHasNoPlayerCountSourceWhileTheCountIsUnknown() {
+        Game game = Game.builder().title("Mario Party 7").localMultiplayer(true).build();
+        GameInstallation installation = anInstallation(game, aSource("jordybox", SourceType.STEAM));
+        when(gameRepository.findVisibleById(game.getId())).thenReturn(Optional.of(game));
+        when(gameInstallationRepository.findAllByGameId(game.getId())).thenReturn(List.of(installation));
+
+        GameDetailResponse detail = gameQueryService.getGameDetail(game.getId(), null).orElseThrow();
+
+        assertSoftly(softly -> {
+            softly.assertThat(detail.maxLocalPlayers()).isNull();
+            softly.assertThat(detail.maxLocalPlayersSource()).isNull();
+            softly.assertThat(detail.factSources().playerCount()).isNull();
         });
     }
 

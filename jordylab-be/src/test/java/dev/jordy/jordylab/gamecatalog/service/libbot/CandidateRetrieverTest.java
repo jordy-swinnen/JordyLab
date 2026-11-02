@@ -9,6 +9,7 @@ import dev.jordy.jordylab.gamecatalog.domain.GameMark;
 import dev.jordy.jordylab.gamecatalog.domain.Host;
 import dev.jordy.jordylab.gamecatalog.domain.MarkType;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
+import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
 import dev.jordy.jordylab.gamecatalog.domain.RomStatus;
 import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
@@ -127,6 +128,10 @@ class CandidateRetrieverTest {
         return new Constraints(6, true, false, false, null, null, null, null, null, null, null, null, false, null);
     }
 
+    private static Constraints fourPlayers() {
+        return new Constraints(4, true, false, false, null, null, null, null, null, null, null, null, false, null);
+    }
+
     private Game steamGame(String title, Integer maxPlayers, Boolean local) {
         Game game = gameRepository.save(Game.builder().title(title).build());
         game.applyDeterministicMultiplayer(local, null, maxPlayers, MultiplayerSource.IGDB);
@@ -157,6 +162,26 @@ class CandidateRetrieverTest {
             softly.assertThat(titles(result.unknownSamples())).containsExactlyInAnyOrder("Local Without Count",
                     "Nothing Known");
             softly.assertThat(result.unknownSamples()).allMatch(candidate -> !candidate.confirmed());
+        });
+    }
+
+    @Test
+    void aCountFromTheSecondSourceMovesAGameOutOfTheUnknownGroupAndCarriesItsSource() {
+        steamGame("Mario Party 7", null, true);
+        Game filled = steamGame("Mario Party 6", null, true);
+        filled.applyPlayerCount(4, PlayerCountSource.THEGAMESDB);
+        gameRepository.save(filled);
+
+        RetrievalResult fits = retriever.retrieve(fourPlayers(), null);
+        RetrievalResult tooMany = retriever.retrieve(sixPlayers(), null);
+
+        assertSoftly(softly -> {
+            softly.assertThat(titles(fits.confirmed())).containsExactly("Mario Party 6");
+            softly.assertThat(fits.confirmed().get(0).maxLocalPlayersSource()).isEqualTo(PlayerCountSource.THEGAMESDB);
+            softly.assertThat(fits.unknownCount()).isEqualTo(1);
+            softly.assertThat(titles(fits.unknownSamples())).containsExactly("Mario Party 7");
+            softly.assertThat(titles(tooMany.confirmed())).isEmpty();
+            softly.assertThat(tooMany.unknownCount()).isEqualTo(1);
         });
     }
 
