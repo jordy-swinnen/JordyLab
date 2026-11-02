@@ -8,7 +8,7 @@ name: Release
 # 3. release — *draft* GitHub Release with generated notes (vX.Y.Z-rcN → prerelease)
 # 4. deploy  — deploy-prod.yml with the release tag, behind the `production` approval
 # 5. publish — the draft becomes public only after the deploy succeeded
-# (The Android APK job was removed with the native app, spec 017 US4.)
+# (The Android APK job was removed with the native app, spec 018 US4.)
 
 on:
   push:

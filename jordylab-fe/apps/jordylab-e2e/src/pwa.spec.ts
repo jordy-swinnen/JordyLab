@@ -3,7 +3,7 @@ import { signedInApprovedGuest } from './support/guest';
 import { pointAppAtKeycloak } from './support/session';
 
 /**
- * The installable-web-app shell (spec 017 US1, FR-001/FR-002). These journeys prove what the browser install criteria
+ * The installable-web-app shell (spec 018 US1, FR-001/FR-002). These journeys prove what the browser install criteria
  * depend on: a valid manifest served with its registered media type, and a registered service worker.
  */
 test.describe('Installable web app', () => {
@@ -46,7 +46,7 @@ test.describe('Installable web app', () => {
       expect(icon.purpose).toContain('maskable');
     }
 
-    // The Web Share Target an installed Android app appears in the share sheet with (spec 017 US2, FR-007).
+    // The Web Share Target an installed Android app appears in the share sheet with (spec 018 US2, FR-007).
     expect(manifest.share_target).toEqual({
       action: '/share',
       method: 'GET',
@@ -68,7 +68,7 @@ test.describe('Installable web app', () => {
 });
 
 /**
- * The Web Share Target landing screen (spec 017 US2, contracts/share-target-contract.md). The OS share sheet arrives as
+ * The Web Share Target landing screen (spec 018 US2, contracts/share-target-contract.md). The OS share sheet arrives as
  * a navigation with ?title&text&url, exactly as simulated here.
  */
 test.describe('Share target', () => {

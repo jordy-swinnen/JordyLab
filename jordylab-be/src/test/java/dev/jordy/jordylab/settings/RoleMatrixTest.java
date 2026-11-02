@@ -39,7 +39,7 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(get("/api/gamecatalog/games"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), admin))).isEqualTo(200);
-            // The APK release endpoints were removed with the native app (spec 017 US4): the deny-all
+            // The APK release endpoints were removed with the native app (spec 018 US4): the deny-all
             // refuses them even for an admin, so nothing can reach a deleted controller.
             softly.assertThat(status(as(get("/api/mobile/releases/latest"), admin))).isEqualTo(403);
             softly.assertThat(status(as(post("/api/mobile/releases"), admin))).isEqualTo(403);
@@ -83,7 +83,7 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), guest))).isEqualTo(403);
-            // The APK release endpoints are gone (spec 017 US4) — guests are refused like anyone else.
+            // The APK release endpoints are gone (spec 018 US4) — guests are refused like anyone else.
             softly.assertThat(status(as(get("/api/mobile/releases/latest"), guest))).isEqualTo(403);
             softly.assertThat(status(as(post("/api/mobile/releases"), guest))).isEqualTo(403);
             // "Save to FNA" is admin-only (spec 007 FR-017) — a guest only ever sees "Ask the catalog".
@@ -108,7 +108,7 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(markRequest(), withoutApps))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/fna/articles"), withoutApps))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/settings/users"), withoutApps))).isEqualTo(403);
-            // The APK release endpoints were removed with the native app (spec 017 US4): no app grant
+            // The APK release endpoints were removed with the native app (spec 018 US4): no app grant
             // can reach them any more, the deny-all refuses an authenticated caller with 403.
             softly.assertThat(status(as(get("/api/mobile/releases/latest"), withoutApps))).isEqualTo(403);
         });
@@ -138,7 +138,7 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
     @Test
     void removedMobileEndpointsAreDeniedToAnonymousCallers() {
         assertSoftly(softly -> {
-            // Both were public before spec 017 US4; with the native app gone the deny-all closes them
+            // Both were public before spec 018 US4; with the native app gone the deny-all closes them
             // like any other unlisted request, and an anonymous caller is asked to authenticate first.
             softly.assertThat(status(get("/api/mobile/download/not-a-real-token"))).isEqualTo(401);
             softly.assertThat(status(get("/.well-known/assetlinks.json"))).isEqualTo(401);

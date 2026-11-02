@@ -40,7 +40,7 @@ export class App {
   protected readonly showQrEntry = signal(false);
 
   constructor() {
-    // Captures the browser's install event once; the one-time sheet and Settings → App card both use it (spec 017).
+    // Captures the browser's install event once; the one-time sheet and Settings → App card both use it (spec 018).
     this.installPrompt.captureInstallPrompt();
   }
 

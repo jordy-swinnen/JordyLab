@@ -1,4 +1,4 @@
--- The native Android app is replaced by the installable web app (spec 017): its release-hosting module is gone, so
+-- The native Android app is replaced by the installable web app (spec 018): its release-hosting module is gone, so
 -- its schema (one table, created by V20260928004) and the two notification events it consumed are dropped with it.
 DROP TABLE IF EXISTS mobile.mobile_release;
 DROP SCHEMA IF EXISTS mobile CASCADE;

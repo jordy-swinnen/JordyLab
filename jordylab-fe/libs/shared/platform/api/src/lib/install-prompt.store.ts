@@ -6,7 +6,7 @@ export type InstallPromptKind = 'android' | 'ios' | null;
 
 /**
  * Chromium's install event (`beforeinstallprompt`) lets a page trigger the browser's own install flow. It is not part of
- * lib.dom, so the shape the app relies on is declared here (spec 017 FR-003, research D3).
+ * lib.dom, so the shape the app relies on is declared here (spec 018 FR-003, research D3).
  */
 export interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -42,7 +42,7 @@ export function isRunningStandalone(): boolean {
 }
 
 /**
- * The one-time install surface (spec 017 FR-003–FR-006, research D3): Android gets the browser's native install prompt
+ * The one-time install surface (spec 018 FR-003–FR-006, research D3): Android gets the browser's native install prompt
  * when the browser offered it (otherwise instructions), iOS gets the Add-to-Home-Screen sheet, desktop gets nothing here
  * (the sidebar QR entry is separate and always available). Never for a pending/logged-out visitor, never while already
  * running standalone, never within 30 days of "Not now".

@@ -82,7 +82,7 @@ public class BriefingGeneratorService {
                         .modelUsed(result.model())
                         .build()
         );
-        // spec 017 US3: the admin gets a push with a click-through to the briefing screen. A delivery failure is
+        // spec 018 US3: the admin gets a push with a click-through to the briefing screen. A delivery failure is
         // logged and swallowed by NtfyClient — it must never fail the generation that triggered it.
         ntfyClient.publish("Your monthly briefing is ready",
                 "The FNA monthly briefing generated at " + briefing.getGeneratedAt() + " is ready to read.",

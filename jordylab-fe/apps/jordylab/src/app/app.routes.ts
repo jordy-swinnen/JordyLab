@@ -21,7 +21,7 @@ export const appRoutes: Route[] = [
     component: NoAppsComponent,
   },
   {
-    // The Web Share Target destination (spec 017 US2): the OS share sheet of the installed app lands here with
+    // The Web Share Target destination (spec 018 US2): the OS share sheet of the installed app lands here with
     // ?title&text&url. authGuard (not roleGuard) so a signed-out share runs login first and returns here with the
     // payload intact; the landing screen itself role-filters its destinations.
     path: 'share',

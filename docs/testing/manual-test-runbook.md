@@ -95,10 +95,10 @@ password manager or from the app, never from this file.
 - Record result: 017-US1 rows → `PASS`.
 
 ### MRB-05: Retired — biometric unlock
-- The native app, and with it the in-app fingerprint unlock, was removed in favour of the installable web app (spec 017). The
+- The native app, and with it the in-app fingerprint unlock, was removed in favour of the installable web app (spec 018). The
   browser keeps the session and the device's own password manager / passkey unlock covers the sign-in step; nothing in
   JordyLab needs re-checking here.
-- **Result 2026-11-02:** retired with the native app (spec 017 US4).
+- **Result 2026-11-02:** retired with the native app (spec 018 US4).
 
 ### MRB-06: Phone web app — share target
 - Covers: 017-US2, 017-FR-007/FR-008 | Area/spec: E / 017

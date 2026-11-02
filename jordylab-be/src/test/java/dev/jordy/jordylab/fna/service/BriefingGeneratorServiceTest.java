@@ -105,7 +105,7 @@ class BriefingGeneratorServiceTest {
             softly.assertThat(result.getGeneratedAt()).isNotNull();
             softly.assertThat(userPromptCaptor.getValue()).contains(ArticleTestBuilder.DEFAULT_TITLE);
             softly.assertThat(briefingCaptor.getValue()).isSameAs(result);
-            // spec 017 US3: the admin push names the generation time and opens the briefing screen.
+            // spec 018 US3: the admin push names the generation time and opens the briefing screen.
             softly.assertThat(notificationBodyCaptor.getValue()).contains(result.getGeneratedAt().toString());
         });
     }

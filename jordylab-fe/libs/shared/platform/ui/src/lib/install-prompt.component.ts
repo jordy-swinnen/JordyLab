@@ -5,7 +5,7 @@ const BUTTON =
   'inline-flex h-12 min-w-0 flex-1 items-center justify-center rounded-xl text-[15px] font-semibold transition-colors';
 
 /**
- * The one-time install sheet (spec 017 US1, FR-003/FR-006): Android offers the browser's own install prompt when it is
+ * The one-time install sheet (spec 018 US1, FR-003/FR-006): Android offers the browser's own install prompt when it is
  * available (one tap), otherwise the browser-menu instructions; iOS keeps the Add-to-Home-Screen instructions because
  * Safari has no install event. The store owns prompting and dismissal, so this component only renders its state.
  */

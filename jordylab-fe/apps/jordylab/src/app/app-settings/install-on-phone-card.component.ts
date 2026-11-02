@@ -9,7 +9,7 @@ const BUTTON =
   'inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-[15px] font-semibold text-primary-foreground disabled:opacity-60';
 
 /**
- * Settings → App: the permanent install entry (spec 017 FR-005) that replaced the fingerprint section. On a phone
+ * Settings → App: the permanent install entry (spec 018 FR-005) that replaced the fingerprint section. On a phone
  * browser that is not already running the installed app it re-offers the browser's install prompt, or the browser-menu
  * instructions when the browser has none, plus the note about removing the old sideloaded Android app.
  */

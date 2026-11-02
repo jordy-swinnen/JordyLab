@@ -357,7 +357,7 @@ df -h /var/lib/rancher/k3s
 ## 20. Release a version (one tag → GitHub Release → deploy)
 
 **Status: implemented 2026-09-30** (spec 011 BUG-008). Releasing is one action on GitHub; it covers the web app
-only — the Android APK job was removed with the native app (spec 017 US4).
+only — the Android APK job was removed with the native app (spec 018 US4).
 
 ### The flow
 
@@ -386,7 +386,7 @@ only — the Android APK job was removed with the native app (spec 017 US4).
 See §11: *Deploy to Production* → *Run workflow* with the release tag. `deploy-prod.yml` accepts only
 `vX.Y.Z[-rcN]` and deploys that tag's images and manifests.
 
-### Removing the Android app stack (one-time cutover, after the first release with spec 017)
+### Removing the Android app stack (one-time cutover, after the first release with spec 018)
 
 Do these once, after the release that removed the `mobile` module is running in production. Each is verifiable and
 safe to skip temporarily; none of them changes the web app.

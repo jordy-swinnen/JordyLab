@@ -180,7 +180,7 @@ jordylab:
     model-catalog:
       cache-ttl-minutes: 60
   notifications:
-    # Admin push click-throughs are built from this origin (spec 017 US3) — prod: https://jordylab.be.
+    # Admin push click-throughs are built from this origin (spec 018 US3) — prod: https://jordylab.be.
     app-base-url: ${JORDYLAB_APP_BASE_URL:}
     ntfy:
       base-url: ${NTFY_BASE_URL:}

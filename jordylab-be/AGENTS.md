@@ -290,7 +290,7 @@ class SomeObjectTestBuilder {
   the client resolves it against the public origin, so a tap opens the web app (installed or in a tab).
 - Callers are **direct**: `settings`' `PendingSignupWatcherService` (new pending sign-up) and `fna`'s
   `BriefingGeneratorService` (briefing persisted). The old `UserSignUpPending`/`BriefingReady` events and the
-  `mobile` module were removed with the native app (spec 017 US4). A push failure is logged and swallowed by
+  `mobile` module were removed with the native app (spec 018 US4). A push failure is logged and swallowed by
   `NtfyClient` — it must never fail the sign-up or briefing flow that triggered it.
 - `shared/rest/client` is exposed as `@NamedInterface("notifications")`; `ModularityTests` enforces that
   other modules use it instead of internals.

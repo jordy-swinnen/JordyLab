@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Publishes admin push notifications to the self-hosted ntfy server (spec 017 US3, contracts/notifications-contract.md,
+ * Publishes admin push notifications to the self-hosted ntfy server (spec 018 US3, contracts/notifications-contract.md,
  * moved from the retired {@code mobile} module). Callers pass the in-app click-through <em>path</em> ({@code
  * /settings/users}, {@code /fna/briefing}); the public site origin comes from {@code jordylab.notifications.app-base-url},
  * so the tap opens the web app (installed or in the browser) directly instead of a native deep link.

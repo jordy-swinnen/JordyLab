@@ -3,7 +3,7 @@ import * as QRCode from 'qrcode';
 
 /**
  * Desktop-only "Get the phone app" entry in the sidebar: a QR code pointing at the website itself, so a phone camera
- * opens the same install flow a phone browser shows directly (spec 017 US1). Always available — never dismissed, unlike
+ * opens the same install flow a phone browser shows directly (spec 018 US1). Always available — never dismissed, unlike
  * the one-time install sheet.
  */
 @Component({

@@ -28,7 +28,7 @@ configMapGenerator:
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/auth
       - JORDYLAB_CORS_ALLOWED_ORIGINS=https://jordylab.be,https://localhost
       - NTFY_BASE_URL=https://jordylab.be/ntfy
-      # Admin push click-throughs open the web app on this origin (spec 017 US3).
+      # Admin push click-throughs open the web app on this origin (spec 018 US3).
       - JORDYLAB_APP_BASE_URL=https://jordylab.be
       # AI traces go to Langfuse Cloud (EU); keys and base URL are in jordylab-secrets.
       - LANGFUSE_ENVIRONMENT=production

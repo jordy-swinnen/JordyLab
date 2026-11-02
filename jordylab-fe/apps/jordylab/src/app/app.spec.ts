@@ -195,7 +195,7 @@ describe('App', () => {
   });
 
   describe('install prompt', () => {
-    it('captures the browser install event once, from the shell (spec 017 FR-003)', () => {
+    it('captures the browser install event once, from the shell (spec 018 FR-003)', () => {
       expect(captureInstallPrompt).toHaveBeenCalled();
     });
   });

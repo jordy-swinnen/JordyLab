@@ -3,7 +3,7 @@ package dev.jordy.jordylab.shared.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Admin push-notification settings (spec 017 US3, contracts/notifications-contract.md). Moved here from the retired
+ * Admin push-notification settings (spec 018 US3, contracts/notifications-contract.md). Moved here from the retired
  * {@code mobile} module: the ntfy server, topic and token are unchanged ({@code NTFY_*} environment variables), and
  * {@code app-base-url} is the public site origin the notification's tap-through link is built from.
  *

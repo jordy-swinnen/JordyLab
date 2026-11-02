@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Polls for newly-pending sign-ups and pushes one admin notification per new arrival (spec 017 US3,
+ * Polls for newly-pending sign-ups and pushes one admin notification per new arrival (spec 018 US3,
  * contracts/notifications-contract.md) through the shared {@link NtfyClient}, with a click-through to the Users
  * screen. Superseded design: this used to publish a {@code UserSignUpPending} event so the {@code mobile} module could
  * listen — that module is gone, so the sender lives here. The "last seen" set is in-memory, matching 006's decision

@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
 /**
- * `screen` → in-app route, mirroring the retired native `AppLinkService`'s table (spec 017 research D7). ntfy
+ * `screen` → in-app route, mirroring the retired native `AppLinkService`'s table (spec 018 research D7). ntfy
  * notifications delivered before the PWA cutover still carry `https://{domain}/mobile/open?screen=…` links and live on
  * the admin's phone for weeks, so they must land on the right screen instead of an empty outlet.
  */

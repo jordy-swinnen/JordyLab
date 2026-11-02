@@ -28,7 +28,7 @@ function detectPlatform(): AppPlatform {
 }
 
 /**
- * Tells the app shell and install surfaces which kind of browser they run in (spec 017 research D3): the install sheet
+ * Tells the app shell and install surfaces which kind of browser they run in (spec 018 research D3): the install sheet
  * and the Settings → App card differ between Android, iOS and desktop. The old native-platform branch was removed with
  * the native wrapper. Computed once — the platform cannot change during a session.
  */

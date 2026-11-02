@@ -155,7 +155,7 @@ describe('AuthService', () => {
     });
   });
 
-  it('returns to the requested in-app path after login so a signed-out share keeps its payload (spec 017 FR-008)', async () => {
+  it('returns to the requested in-app path after login so a signed-out share keeps its payload (spec 018 FR-008)', async () => {
     keycloakInit.mockResolvedValueOnce(true);
 
     await spectator.service.login('/share?text=remember%20me');

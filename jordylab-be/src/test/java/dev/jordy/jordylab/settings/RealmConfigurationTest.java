@@ -109,7 +109,7 @@ class RealmConfigurationTest {
     }
 
     /**
-     * The native app's identity entries were removed with it (spec 017 US4): no realm file may
+     * The native app's identity entries were removed with it (spec 018 US4): no realm file may
      * reintroduce the App Link client, the release-publishing client or its CI-only role.
      */
     @ParameterizedTest

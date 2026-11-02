@@ -33,7 +33,7 @@ import java.util.List;
  * grant is refused); Game Catalog writes, sources, library sync and the client download
  * require {@code admin}; the scan client keeps its {@code gamecatalog-scanner} device
  * role. Anything not listed is refused. The APK release-hosting endpoints and
- * {@code /.well-known/assetlinks.json} were removed with the native app (spec 017 US4), so
+ * {@code /.well-known/assetlinks.json} were removed with the native app (spec 018 US4), so
  * {@code /api/mobile/**} now falls through to the deny-all like any unknown API path.
  */
 @Configuration

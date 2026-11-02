@@ -39,7 +39,7 @@ export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL
  * session.
  *
  * <p>Everything runs in the page itself — the standard browser redirect flow. The native app's system-browser login and
- * manual token exchange were removed with the native wrapper (spec 017 US4).
+ * manual token exchange were removed with the native wrapper (spec 018 US4).
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -83,7 +83,7 @@ export class AuthService {
     if (!this.#keycloak) {
       await this.init();
     }
-    // A share that arrived while signed out must return to the share screen (spec 017 FR-008): the login page forwards
+    // A share that arrived while signed out must return to the share screen (spec 018 FR-008): the login page forwards
     // its sanitised returnUrl here, so Keycloak's redirect lands back on that in-app path instead of the bare origin.
     const redirectUri = redirectPath
       ? new URL(redirectPath, window.location.origin).toString()

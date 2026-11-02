@@ -1,5 +1,5 @@
 # Persistent storage for game artwork — survives pod restarts and VPS reboots (not a VPS loss;
-# see docs/runbook.md §16). The APK volume was removed with the native app (spec 017 US4).
+# see docs/runbook.md §16). The APK volume was removed with the native app (spec 018 US4).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

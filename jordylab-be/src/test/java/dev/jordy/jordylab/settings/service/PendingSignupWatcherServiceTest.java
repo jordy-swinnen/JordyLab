@@ -22,7 +22,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * One admin push per newly-seen pending sign-up, with the Users-screen click-through (spec 017 US3,
+ * One admin push per newly-seen pending sign-up, with the Users-screen click-through (spec 018 US3,
  * contracts/notifications-contract.md) — a duplicate-push regression here would mean two notifications for one sign-up.
  */
 @ExtendWith(MockitoExtension.class)

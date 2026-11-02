@@ -18,7 +18,7 @@ import java.util.UUID;
  * <p>Offline sessions are the ones opened for {@code gamecatalog-script} by the game-library scanner (device-code login
  * with {@code offline_access}); a normal logout does not end them. Which list a session came from decides how it is
  * ended, so the service looks the session up rather than trusting the panel. The phone app's own offline token was
- * removed with the native app (spec 017).
+ * removed with the native app (spec 018).
  */
 @Service
 @RequiredArgsConstructor

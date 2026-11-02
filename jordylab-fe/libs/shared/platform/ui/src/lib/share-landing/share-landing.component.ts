@@ -9,7 +9,7 @@ const BUTTON =
   'inline-flex h-11 items-center justify-center rounded-xl px-5 text-[15px] font-semibold transition-colors';
 
 /**
- * The Web Share Target landing screen (spec 017 US2, contracts/share-target-contract.md): an installed Android PWA is
+ * The Web Share Target landing screen (spec 018 US2, contracts/share-target-contract.md): an installed Android PWA is
  * opened here by the OS share sheet with `?title&text&url`. The payload lives only in the URL — no service and no
  * storage — so a share that needs sign-in survives the Keycloak round trip through the login page's `returnUrl`, and a
  * killed tab drops the share exactly like the OS would.
@@ -124,7 +124,7 @@ export class ShareLandingComponent {
 
 /**
  * The link to save: the `url` parameter when it is one, else the first `http(s)` address inside `text` — Android apps
- * commonly put the shared URL at the end of the text (spec 017 edge cases). Trailing sentence punctuation is trimmed.
+ * commonly put the shared URL at the end of the text (spec 018 edge cases). Trailing sentence punctuation is trimmed.
  */
 export function targetUrlFrom(urlParameter: string | null, textParameter: string | null): string | null {
   const direct = urlParameter?.trim();

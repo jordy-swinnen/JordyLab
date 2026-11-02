@@ -181,7 +181,7 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
 - **PWA layer** (`apps/jordylab-e2e/src/pwa.spec.ts`) for what only the installed web app does: the installability
   manifest + service worker, and the Web Share Target journeys (guest, admin, signed-out return, empty state,
   URL-in-text). A real phone install, the OS share sheet and the ntfy tap stay manual owner checks
-  (`docs/testing/manual-test-runbook.md`); there is no emulator or Appium suite any more (spec 017).
+  (`docs/testing/manual-test-runbook.md`); there is no emulator or Appium suite any more (spec 018).
 
 # Themes and colours (spec 016)
 

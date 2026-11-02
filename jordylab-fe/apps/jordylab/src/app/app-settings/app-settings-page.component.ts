@@ -5,7 +5,7 @@ import { ThemePickerComponent } from './theme-picker.component';
 
 /**
  * Settings → App: options for this device. Open to every signed-in person on the web and on the phone: the theme choice
- * and the install entry, which replaced the native app's fingerprint section (spec 017 US4).
+ * and the install entry, which replaced the native app's fingerprint section (spec 018 US4).
  */
 @Component({
   selector: 'app-app-settings-page',
