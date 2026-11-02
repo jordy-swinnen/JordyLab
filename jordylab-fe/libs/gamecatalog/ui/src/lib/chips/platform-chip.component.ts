@@ -11,7 +11,7 @@ import { PlatformChip } from '@jordylab-fe/gamecatalog/api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'inline-flex items-center rounded-[7px] px-2 py-[5px] font-mono text-[10.5px] font-medium uppercase tracking-[0.08em] leading-none whitespace-nowrap',
+      'inline-flex items-center rounded-md px-2 py-[5px] text-xs font-medium leading-none whitespace-nowrap',
     '[style.background]': 'chip().background',
     '[style.color]': 'chip().foreground',
     '[style.border]': 'border()',

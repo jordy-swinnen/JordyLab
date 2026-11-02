@@ -11,7 +11,7 @@ import { BiometricUnlockService } from './biometric-unlock.service';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
-    <section class="rounded-2xl border border-border p-5" aria-labelledby="fingerprint-heading">
+    <section class="panel p-5" aria-labelledby="fingerprint-heading">
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0 flex-1">
           <h3 id="fingerprint-heading" class="text-base font-semibold">Unlock with fingerprint</h3>
@@ -31,13 +31,14 @@ import { BiometricUnlockService } from './biometric-unlock.service';
           [attr.aria-checked]="enabled()"
           [disabled]="!available() || busy()"
           (click)="onToggle()"
-          class="relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full border border-input transition-colors disabled:opacity-50"
-          [class]="enabled() ? 'bg-primary' : 'bg-card'"
+          class="inline-flex h-11 w-[52px] flex-shrink-0 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50"
         >
-          <span
-            class="inline-block h-5 w-5 rounded-full bg-foreground transition-transform"
-            [class]="enabled() ? 'translate-x-6' : 'translate-x-1'"
-          ></span>
+          <span class="relative block h-[27px] w-[46px] rounded-full transition-colors duration-200" [class]="enabled() ? 'bg-primary' : 'bg-input'">
+            <span
+              class="absolute left-[3px] top-[3px] block h-[21px] w-[21px] rounded-full transition-transform duration-200"
+              [class]="enabled() ? 'translate-x-[19px] bg-primary-foreground' : 'bg-foreground'"
+            ></span>
+          </span>
         </button>
       </div>
       @if (failure()) {

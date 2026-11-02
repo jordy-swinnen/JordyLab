@@ -2,8 +2,9 @@
   @for (mark of marks; track mark.value) {
     <button
       type="button"
-      class="inline-flex h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-input px-3 text-[13.5px] font-semibold text-secondary-foreground outline-none transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-60"
+      class="inline-flex h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-input px-3 text-[13.5px] font-semibold text-secondary-foreground outline-none transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-wait disabled:opacity-60"
       [class]="mark.pressedClass"
+      [class.flex-1]="compact()"
       [attr.aria-pressed]="myMark() === mark.value"
       [attr.aria-label]="mark.label"
       [attr.title]="mark.label"

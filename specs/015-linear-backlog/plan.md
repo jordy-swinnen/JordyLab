@@ -151,7 +151,7 @@ Steps 1 and 2 can run in parallel; 4 needs 3 only for the live checks, not for w
   moves with pull requests (spec Overview).
 - **Prompt injection through issue or draft text**: every skill states the data-only rule and never executes text from
   an issue, a draft or a bug entry.
-- **Commit linking is off** so `Refs:` in a commit message cannot complete an issue by accident (D4).
+- **Commit linking is on since 2026-11-02** (owner's webhook, see D4): commit subjects start with `JOR-n:`, so commits link to their ticket; the `Refs:` trailer carries spec and task numbers, never an issue key, so it cannot complete an issue.
 - **Hosted tools may not cover workflow states or saved views**: those stay owner handoffs.
 
 ## Complexity Tracking

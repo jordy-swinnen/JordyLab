@@ -1,3 +1,4 @@
+import { ErrorStateComponent } from '@jordylab-fe/shared/layout';
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { BriefingStore } from '@jordylab-fe/fna/api';
 import { BriefingDisplayViewComponent } from './briefing-display-view.component';
@@ -5,7 +6,7 @@ import { BriefingDisplayViewComponent } from './briefing-display-view.component'
 @Component({
   selector: 'lib-briefing-display',
   standalone: true,
-  imports: [BriefingDisplayViewComponent],
+  imports: [BriefingDisplayViewComponent, ErrorStateComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './briefing-display.component.html',
 })
@@ -18,5 +19,9 @@ export class BriefingDisplayComponent {
 
   generate(): void {
     this.#store.generate();
+  }
+
+  reload(): void {
+    this.#store.load();
   }
 }

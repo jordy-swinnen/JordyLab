@@ -99,4 +99,4 @@ Screenshots: `/tmp/jordylab-e2e/003-sources.png`, `/tmp/jordylab-e2e/003-grid.pn
 
 ## 6. Deferred
 
-Linux/CachyOS E2E on JordyBox (systemd user timer + linger probe/fallback, symlinked EmuDeck root, unmounted-root boot scenario, `uninstall`) — runbook in quickstart §4; to be executed on the real machine.
+Linux/CachyOS E2E on JordyBox (systemd user timer + linger probe/fallback, symlinked EmuDeck root, unmounted-root boot scenario, `uninstall`) — runbook in quickstart §4; to be executed on the real machine. **Done 2026-11-02: the owner ran it on JordyBox and reports that it works.**

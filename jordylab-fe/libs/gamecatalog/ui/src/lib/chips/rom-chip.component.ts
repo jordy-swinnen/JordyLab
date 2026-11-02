@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RomSummaryState } from '@jordylab-fe/gamecatalog/api';
 
 const BASE =
-  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-[4px] px-2 py-[5px] font-mono text-[10.5px] font-medium uppercase leading-none tracking-[0.08em]';
+  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-[4px] px-2 py-[5px] text-xs font-semibold leading-none';
 
 interface RomLook {
   label: string;
@@ -10,14 +10,14 @@ interface RomLook {
 }
 
 const LOOKS: Record<RomSummaryState, RomLook> = {
-  VALIDATED: { label: 'Validated', classes: `${BASE} bg-[#9BE564] text-[#0B1A05]` },
-  BROKEN: { label: 'Broken ROM', classes: `${BASE} bg-[#FF6B6B] text-[#2A0707]` },
-  UNKNOWN: { label: 'Unknown', classes: `${BASE} border border-[#9A93AB] text-[#9A93AB]` },
-  MIXED: { label: 'Mixed', classes: `${BASE} border border-[#F5B84A] text-[#F5B84A]` },
+  VALIDATED: { label: 'Validated', classes: `${BASE} bg-rom-validated text-rom-validated-ink` },
+  BROKEN: { label: 'Broken ROM', classes: `${BASE} border border-destructive text-destructive` },
+  UNKNOWN: { label: 'Unknown', classes: `${BASE} border border-muted-foreground text-muted-foreground` },
+  MIXED: { label: 'Mixed', classes: `${BASE} border border-secondary-foreground text-secondary-foreground` },
 };
 
 /**
- * Whether the ROM launches on a machine: Validated (lime, shield), Broken ROM (red, crossed circle), Unknown (grey outline,
+ * Whether the ROM launches on a machine: Validated (filled, shield), Broken ROM (outlined, crossed circle), Unknown (grey outline,
  * question mark) or Mixed when machines disagree. Squared and icon-led so it is told apart from platform and status chips
  * without colour (spec 013 ui-design §3).
  */

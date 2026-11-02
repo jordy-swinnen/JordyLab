@@ -1,14 +1,6 @@
-<div class="flex flex-wrap items-end justify-between gap-4">
-  <div class="flex flex-col gap-3.5">
-    <div class="eyebrow">
-      Game Catalog · {{ totalElements() }}
-      {{ totalElements() === 1 ? 'title' : 'titles' }}
-    </div>
-    <h2 class="page-title">Library</h2>
-  </div>
-</div>
+<lib-page-header title="Library" [subtitle]="totalElements() + (totalElements() === 1 ? ' game' : ' games')" />
 
-<div class="mt-10">
+<div class="mt-8">
   <lib-filter-bar
     [searchTerm]="searchTerm()"
     [activeCount]="activeFilters().length"
@@ -62,7 +54,7 @@
 @if (markError(); as problem) {
   <div
     role="alert"
-    class="mt-6 flex items-center justify-between gap-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+    class="mt-6 flex items-center justify-between gap-4 rounded-xl border border-destructive px-4 py-3 text-sm text-destructive"
     data-testid="mark-error"
   >
     {{ problem }}
@@ -72,72 +64,58 @@
   </div>
 }
 
-<div class="mt-9">
+<div class="mt-8">
   @if (loading()) {
-    <div
-      class="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
-      aria-label="Loading games"
-    >
+    <div class="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-[22px] md:gap-y-[30px] lg:grid-cols-4" aria-label="Loading games">
       @for (card of skeletonCards; track card) {
         <div>
-          <hlm-skeleton class="aspect-[2/3] w-full rounded-2xl" />
-          <div class="space-y-2.5 pt-3.5">
-            <hlm-skeleton class="h-4 w-3/4" />
-            <hlm-skeleton class="h-5 w-1/3" />
+          <hlm-skeleton class="aspect-[2/3] w-full rounded-xl" />
+          <div class="space-y-2.5 pt-3">
+            <hlm-skeleton class="h-4 w-4/5" />
+            <hlm-skeleton class="h-5 w-[45%]" />
+            <div class="flex gap-1.5">
+              <hlm-skeleton class="h-11 flex-1 rounded-[10px]" />
+              <hlm-skeleton class="h-11 flex-1 rounded-[10px]" />
+              <hlm-skeleton class="h-11 flex-1 rounded-[10px]" />
+            </div>
           </div>
         </div>
       }
     </div>
   } @else if (error()) {
-    <div
-      class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
-    >
-      {{ error() }}
-    </div>
+    <lib-error-state [message]="error() + ' Try again in a moment.'" (retry)="reload.emit()" />
   } @else if (games().length === 0) {
-    <div
-      class="rounded-2xl border border-dashed border-input px-4 py-20 text-center text-muted-foreground"
-      data-testid="empty-library"
-    >
+    <div data-testid="empty-library">
       @if (activeFilters().length > 0 || searchTerm()) {
-        <p class="text-sm">No games match these filters.</p>
-        <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
-          @if (filterToRelax(); as relax) {
+        <lib-empty-state
+          title="No games match these filters."
+          hint="Try removing a filter or clear them all."
+          [actionLabel]="activeFilters().length > 0 ? 'Clear filters' : ''"
+          (actionClicked)="clearAll.emit()"
+        />
+        @if (filterToRelax(); as relax) {
+          <div class="mt-4 flex justify-center">
             <button
               type="button"
-              class="h-10 cursor-pointer rounded-full border border-input px-4 text-sm font-semibold text-foreground"
+              class="h-11 cursor-pointer rounded-full border border-input px-4 text-sm font-semibold text-foreground"
               (click)="relax.remove()"
             >
               Try removing {{ relax.key }}: {{ relax.value }}
             </button>
-          }
-          @if (activeFilters().length > 1) {
-            <button
-              type="button"
-              class="cursor-pointer px-2 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-primary underline underline-offset-4"
-              (click)="clearAll.emit()"
-            >
-              Clear all
-            </button>
-          }
-        </div>
+          </div>
+        }
       } @else {
-        <p class="text-sm">No games discovered yet.</p>
-        <p class="mt-1 text-xs">
-          Once JordyBox syncs your libraries, installed games will appear here.
-        </p>
+        <lib-empty-state
+          title="No games discovered yet."
+          hint="Once JordyBox syncs your libraries, installed games will appear here."
+        />
       }
     </div>
   } @else {
-    <div
-      class="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
-    >
-      @for (game of games(); track game.id; let i = $index) {
-        <article class="flex flex-col gap-3" data-testid="game-card">
-          <a
-            [routerLink]="['/games', game.id]"
-            class="card-link group flex flex-col gap-3.5 outline-none"
-          >
+    <div class="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-[22px] md:gap-y-[30px] lg:grid-cols-4">
+      @for (game of games(); track game.id) {
+        <article class="flex min-w-0 flex-col gap-3" data-testid="game-card">
+          <a [routerLink]="['/games', game.id]" class="card-link group flex flex-col gap-3 outline-none">
             <div class="cover-frame relative">
               @if (coverUrl(game); as artworkSrc) {
                 <img
@@ -148,18 +126,11 @@
                 />
               } @else {
                 <div
-                  class="plate"
-                  [style.background]="palette(game.title).background"
-                  [style.color]="palette(game.title).color"
+                  class="plate justify-end"
+                  [class]="plateClass(game.title)"
                   [attr.aria-label]="'No artwork for ' + game.title"
                   role="img"
                 >
-                  <div
-                    class="flex justify-between font-mono text-[10.5px] tracking-[0.12em]"
-                  >
-                    <span>№ {{ catalogNumber(i) }}</span>
-                    <span aria-hidden="true">◦ ◦ ◦</span>
-                  </div>
                   <div class="plate-initials">{{ initials(game.title) }}</div>
                 </div>
               }
@@ -167,22 +138,22 @@
                 <lib-vote-rail [votes]="game.votes" [myMark]="game.myMark" />
               </div>
             </div>
-            <div class="flex flex-col gap-2.5">
+            <div class="flex flex-col gap-2">
               <h3
-                class="line-clamp-2 font-display text-[17px] font-semibold leading-tight tracking-[-0.01em] text-foreground [overflow-wrap:anywhere]"
+                class="line-clamp-2 min-h-[2.5em] text-base font-semibold leading-tight tracking-[-0.01em] text-foreground [overflow-wrap:anywhere]"
               >
                 {{ game.title }}
               </h3>
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                @for (source of game.sources; track source) {
+                  <lib-source-label [source]="source" />
+                }
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5">
                 @for (platform of game.platforms; track platform.name) {
                   <lib-platform-chip [chip]="platform" />
                 }
                 <lib-status-chip [status]="game.installStatus === 'INSTALLED' ? 'INSTALLED' : 'NOT_INSTALLED'" />
-              </div>
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                @for (source of game.sources; track source) {
-                  <lib-source-label [source]="source" />
-                }
                 @if (game.romSummary; as rom) {
                   <lib-rom-chip [state]="rom.state" [detail]="romDetail(rom)" />
                 }
@@ -211,9 +182,7 @@
         >
           Previous
         </button>
-        <span class="mono-label"
-          >Page {{ page() + 1 }} of {{ totalPages() }}</span
-        >
+        <span class="label">Page {{ page() + 1 }} of {{ totalPages() }}</span>
         <button
           type="button"
           hlmBadge

@@ -1,26 +1,32 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { BiometricUnlockToggleComponent } from '@jordylab-fe/shared/auth';
+import { PageHeaderComponent } from '@jordylab-fe/shared/layout';
+import { PlatformService } from '@jordylab-fe/shared/platform/api';
+import { ThemePickerComponent } from './theme-picker.component';
 
 /**
- * Settings → App: options that only make sense inside the native Android app. Reachable by admins and guests alike
- * (it holds nothing but the signed-in user's own device setting); the nav item is shown on native only.
+ * Settings → App: options for this device. Open to every signed-in person on the web and in the Android app: the theme choice is
+ * for everyone, while fingerprint unlock only exists inside the Android app.
  */
 @Component({
   selector: 'app-app-settings-page',
   standalone: true,
-  imports: [BiometricUnlockToggleComponent],
+  imports: [BiometricUnlockToggleComponent, PageHeaderComponent, ThemePickerComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
-    <div class="flex flex-col gap-3.5">
-      <div class="eyebrow">Settings · App</div>
-      <h2 class="page-title">App</h2>
-      <p class="max-w-2xl text-sm text-muted-foreground">
-        Options for the JordyLab Android app on this phone.
-      </p>
-    </div>
-    <div class="mt-10 max-w-2xl">
-      <lib-biometric-unlock-toggle />
-    </div>
+    <lib-page-header title="App" subtitle="Settings for this device." />
+    <section class="mt-10 flex max-w-2xl flex-col gap-4">
+      <h3 class="section-title">Appearance</h3>
+      <app-theme-picker />
+    </section>
+    @if (platform.isNative()) {
+      <section class="mt-10 flex max-w-2xl flex-col gap-4">
+        <h3 class="section-title">Sign-in</h3>
+        <lib-biometric-unlock-toggle />
+      </section>
+    }
   `,
 })
-export class AppSettingsPageComponent {}
+export class AppSettingsPageComponent {
+  protected readonly platform = inject(PlatformService);
+}

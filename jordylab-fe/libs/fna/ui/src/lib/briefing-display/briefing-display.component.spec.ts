@@ -42,10 +42,7 @@ describe('BriefingDisplayComponent', () => {
     briefing.set(aBriefingMock());
     spectator.detectChanges();
 
-    const model = spectator
-      .queryAll('span.uppercase')
-      .find((element) => element.textContent?.includes('claude-sonnet-5'));
-    expect(model).toHaveText('claude-sonnet-5');
+    expect(spectator.query('aside')).toHaveText('claude-sonnet-5');
     expect(spectator.query('button')).toHaveText('Regenerate');
   });
 
@@ -59,8 +56,8 @@ describe('BriefingDisplayComponent', () => {
   it('displays an empty state when no briefing exists', () => {
     spectator.detectChanges();
 
-    expect(spectator.query('p.text-xl')).toHaveText('No briefing generated yet');
-    expect(spectator.query('button')).toHaveText('Generate Briefing');
+    expect(spectator.element).toHaveText('No briefing yet.');
+    expect(spectator.query('lib-empty-state button')).toHaveText('Generate briefing');
   });
 
   it('surfaces an error state when the store reports an error', () => {
@@ -76,5 +73,15 @@ describe('BriefingDisplayComponent', () => {
     spectator.click('button');
 
     expect(generate).toHaveBeenCalled();
+  });
+
+  it('loads the briefing again when the error state is retried', () => {
+    storeMock.load.mockClear();
+    error.set('Failed to load briefing.');
+    spectator.detectChanges();
+
+    spectator.click('lib-error-state button');
+
+    expect(storeMock.load).toHaveBeenCalledOnce();
   });
 });

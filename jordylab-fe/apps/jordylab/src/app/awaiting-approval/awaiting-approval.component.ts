@@ -14,14 +14,14 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="flex min-h-[80vh] items-center justify-center">
-      <div class="panel w-full max-w-md p-9">
-        <p class="eyebrow">Awaiting approval</p>
+      <div class="panel w-full max-w-[400px] p-8">
+        <p class="label">Awaiting approval</p>
         <h1 class="page-title mt-3">You're almost in</h1>
         <p class="mt-4 text-[15px] leading-relaxed text-secondary-foreground">
           Your account has been created, but an administrator still has to
           approve it before you can open the Game Catalog. Check back soon.
         </p>
-        <p class="mono-label mt-4 text-[12px]">
+        <p class="label mt-4">
           Signed in as {{ username() ?? 'unknown' }}
         </p>
         <button

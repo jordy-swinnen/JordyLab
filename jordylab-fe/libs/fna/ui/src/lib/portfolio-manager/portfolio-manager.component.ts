@@ -1,3 +1,4 @@
+import { ErrorStateComponent } from '@jordylab-fe/shared/layout';
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { PortfolioStore } from '@jordylab-fe/fna/api';
 import { PortfolioManagerViewComponent } from './portfolio-manager-view.component';
@@ -5,7 +6,7 @@ import { PortfolioManagerViewComponent } from './portfolio-manager-view.componen
 @Component({
   selector: 'lib-portfolio-manager',
   standalone: true,
-  imports: [PortfolioManagerViewComponent],
+  imports: [PortfolioManagerViewComponent, ErrorStateComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager.component.html',
 })
@@ -33,5 +34,9 @@ export class PortfolioManagerComponent {
 
   deleteWishlistItem(id: string): void {
     this.#store.removeWishlistItem(id);
+  }
+
+  reload(): void {
+    this.#store.load();
   }
 }

@@ -1,38 +1,44 @@
-<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-  <div class="flex flex-col gap-3.5">
-    <div class="eyebrow">Game Catalog · grounded in your library</div>
-    <h2 class="page-title flex items-center gap-4">
-      <lib-sparkle-icon [size]="44" class="text-primary" />
-      LibBot
-    </h2>
-  </div>
+<lib-page-header title="LibBot" subtitle="Answers come only from your library.">
   <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
     @if (quotaLine(); as line) {
-      <span class="mono-label" data-testid="libbot-quota">{{ line }}</span>
+      <span class="label" data-testid="libbot-quota">{{ line }}</span>
     }
     <button
       type="button"
-      class="inline-flex h-10 items-center gap-2 rounded-full border border-input px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:border-primary hover:text-foreground disabled:opacity-40"
+      class="inline-flex h-11 items-center gap-2 rounded-full border border-input px-4 text-sm font-semibold text-secondary-foreground transition-colors hover:border-primary hover:text-foreground disabled:opacity-40"
       data-testid="libbot-new-conversation"
       (click)="newConversation.emit()"
     >
       <span aria-hidden="true">+</span> New conversation
     </button>
   </div>
-</div>
+</lib-page-header>
 
 <div
-  class="mt-11 flex min-h-[40vh] flex-col gap-8"
+  class="mt-8 flex min-h-[40vh] flex-col gap-8"
   role="log"
   aria-label="Conversation with LibBot"
   [attr.aria-busy]="busy()"
 >
-  @if (messages().length === 0 && !busy()) {
-    <div class="rounded-2xl border border-dashed border-input px-5 py-16 text-center text-muted-foreground">
-      <p class="text-sm">Ask about the games in your library, in English or Nederlands.</p>
-      <p class="mt-1 text-xs">
-        For example: “There are 6 people here tonight, what should we play?” — answers come only from your library.
-      </p>
+  @if (state() === 'firstRun') {
+    <div class="flex flex-col items-center gap-5 rounded-[14px] border border-dashed border-input px-5 py-12 text-center" data-testid="libbot-first-run">
+      <lib-sparkle-icon [size]="32" class="text-accent-text" />
+      <div>
+        <p class="text-base font-semibold text-foreground">Ask about the games in your library, in English or Nederlands.</p>
+        <p class="mt-1 text-sm text-muted-foreground">Answers come only from your library.</p>
+      </div>
+      <div class="flex w-full max-w-xl flex-col gap-2">
+        @for (example of exampleQuestions; track example) {
+          <button
+            type="button"
+            class="min-h-11 cursor-pointer rounded-xl border border-input px-4 py-2.5 text-left text-sm text-secondary-foreground transition-colors hover:border-primary hover:text-foreground"
+            data-testid="libbot-example"
+            (click)="ask.emit(example)"
+          >
+            {{ example }}
+          </button>
+        }
+      </div>
     </div>
   }
 
@@ -40,7 +46,7 @@
     @if (message.role === 'user') {
       <div class="flex justify-end">
         <div
-          class="max-w-[85%] break-words rounded-[20px] rounded-br-[5px] bg-primary px-[22px] py-[15px] text-base font-semibold leading-snug text-primary-foreground sm:max-w-[34rem]"
+          class="max-w-[85%] break-words rounded-[18px] rounded-br-[5px] bg-primary px-5 py-3.5 text-base font-semibold leading-snug text-primary-foreground sm:max-w-[34rem]"
           data-testid="libbot-user-message"
         >
           {{ message.text }}
@@ -49,7 +55,7 @@
     } @else {
       <div class="flex max-w-[51rem] items-start gap-4" data-testid="libbot-answer">
         <span
-          class="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-secondary text-primary"
+          class="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-secondary text-accent-text"
         >
           <lib-sparkle-icon [size]="18" />
         </span>
@@ -58,7 +64,7 @@
 
           @if (message.answer?.unknown; as unknown) {
             <p
-              class="mt-4 border-l-2 border-amber-400 bg-amber-400/10 px-4 py-2.5 text-[14.5px] leading-snug text-amber-100"
+              class="mt-4 border-l-2 border-accent-text bg-accent-text/10 px-4 py-2.5 text-[14.5px] leading-snug text-foreground"
               data-testid="libbot-unknown-note"
             >
               {{ unknown.note }}
@@ -67,10 +73,10 @@
 
           @if (message.answer?.applied?.length) {
             <div class="mt-4 flex flex-wrap items-center gap-2" data-testid="libbot-applied">
-              <span class="mono-label mr-1">Applied</span>
+              <span class="label mr-1">Applied</span>
               @for (applied of message.answer!.applied; track applied) {
                 <span
-                  class="rounded-full border border-dashed border-primary px-3 py-1 text-[13px] font-medium text-primary"
+                  class="rounded-full border border-dashed border-accent-text px-3 py-1 text-[13px] font-medium text-accent-text"
                   >{{ applied }}</span
                 >
               }
@@ -79,7 +85,7 @@
 
           @if (message.answer?.references?.length) {
             <div class="mt-4 flex flex-wrap items-center gap-2" data-testid="libbot-references">
-              <span class="mono-label mr-1">Games</span>
+              <span class="label mr-1">Games</span>
               @for (reference of message.answer!.references; track reference.gameId) {
                 <a
                   [routerLink]="['/games', reference.gameId]"
@@ -90,7 +96,7 @@
                   } @else {
                     <span
                       class="h-[22px] w-[22px] shrink-0 rounded-full"
-                      [style.background]="palette(reference.title).background"
+                      [class]="plateClass(reference.title)"
                       aria-hidden="true"
                     ></span>
                   }
@@ -106,7 +112,7 @@
 
   @if (busy()) {
     <div class="flex items-start gap-4" role="status" aria-live="polite" data-testid="libbot-stages">
-      <span class="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-secondary text-primary">
+      <span class="mt-0.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-secondary text-accent-text">
         <lib-sparkle-icon [size]="18" class="motion-safe:animate-pulse" />
       </span>
       <ol class="flex flex-wrap gap-x-6 gap-y-1.5 pt-1 text-sm">
@@ -136,7 +142,7 @@
   @if (failure(); as problem) {
     @if (problem.kind === 'unavailable') {
       <div
-        class="flex flex-wrap items-center gap-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm"
+        class="flex flex-wrap items-center gap-4 rounded-xl border border-destructive p-4 text-sm text-destructive"
         role="alert"
         data-testid="libbot-error"
       >
@@ -146,7 +152,7 @@
         @if (problem.retryable) {
           <button
             type="button"
-            class="h-10 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground"
+            class="h-11 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground"
             data-testid="libbot-retry"
             (click)="retry.emit()"
           >
@@ -155,7 +161,7 @@
         }
       </div>
     } @else if (problem.kind === 'rejected') {
-      <div class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm" role="alert" data-testid="libbot-error">
+      <div class="rounded-xl border border-destructive p-4 text-sm text-destructive" role="alert" data-testid="libbot-error">
         That question could not be sent. Please check it and try again.
       </div>
     }
@@ -175,7 +181,7 @@
         } @else {
           <span
             class="h-[22px] w-[22px] shrink-0 rounded-full"
-            [style.background]="palette(attached.title).background"
+            [class]="plateClass(attached.title)"
             aria-hidden="true"
           ></span>
         }
@@ -195,7 +201,7 @@
 
   @if (limitReached()) {
     <p
-      class="rounded-2xl border border-input bg-card px-[22px] py-4 text-center text-base text-secondary-foreground"
+      class="rounded-xl border border-input bg-card px-5 py-4 text-center text-base text-secondary-foreground"
       role="status"
       data-testid="libbot-limit"
     >
@@ -209,13 +215,13 @@
         maxlength="1000"
         placeholder="Ask about your games… (English or Nederlands)"
         aria-label="Ask LibBot a question about your games"
-        class="h-14 min-w-0 flex-1 rounded-2xl border border-input bg-card px-[22px] text-base outline-none focus-visible:border-primary"
+        class="h-12 min-w-0 flex-1 rounded-xl border border-input bg-card px-4 text-base outline-none focus-visible:border-primary"
         [disabled]="busy()"
         (keydown.enter)="onSubmit(questionInput)"
       />
       <button
         type="button"
-        class="inline-flex h-14 shrink-0 items-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40 sm:px-6"
+        class="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40 sm:px-6"
         [disabled]="busy()"
         (click)="onSubmit(questionInput)"
       >

@@ -58,6 +58,7 @@ describe('GameGridComponent', () => {
   const clearAll = vi.fn<GameLibraryStore['clearAll']>();
   const applyQuery = vi.fn<GameLibraryStore['applyQuery']>();
   const goToPage = vi.fn<GameLibraryStore['goToPage']>();
+  const reload = vi.fn<GameLibraryStore['reload']>();
 
   const storeMock = {
     games: games.asReadonly(),
@@ -94,6 +95,7 @@ describe('GameGridComponent', () => {
     clearAll,
     applyQuery,
     goToPage,
+    reload,
   };
 
   const toggleGameMark = vi.fn<MarkStore['toggle']>();
@@ -165,6 +167,7 @@ describe('GameGridComponent', () => {
       clearAll,
       applyQuery,
       goToPage,
+      reload,
     ].forEach((mock) => mock.mockReset());
     spectator = createComponent();
   });
@@ -268,6 +271,16 @@ describe('GameGridComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('.text-destructive')).toHaveText('Failed to load games.');
+  });
+
+  it('asks the store to reload when the person taps Try again after a failure', () => {
+    loading.set(false);
+    error.set('Failed to load games.');
+    spectator.detectChanges();
+
+    spectator.click(spectator.query('lib-error-state button') as HTMLButtonElement);
+
+    expect(reload).toHaveBeenCalled();
   });
 
   it('forwards search input to the store', () => {

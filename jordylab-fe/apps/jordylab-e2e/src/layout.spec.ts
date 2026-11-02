@@ -46,6 +46,38 @@ test.describe('No sideways scrolling on a phone', () => {
         });
       }
 
+      test.describe('touch targets', () => {
+        for (const target of PAGES) {
+          test(`${target.name} has no control smaller than 44 px`, async ({ page }) => {
+            await page.goto(target.path);
+            await expect(page.getByRole('heading', { name: target.heading }).first()).toBeVisible();
+            await page.waitForLoadState('networkidle');
+
+            const tooSmall = await page.evaluate(() => {
+              const selector = 'button, a[href], [role=switch], [role=radio], input:not([type=hidden]), select';
+              const describe = (element: Element) => {
+                const label = (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 30);
+
+                return `${element.tagName.toLowerCase()}${element.getAttribute('data-testid') ? `[data-testid=${element.getAttribute('data-testid')}]` : ''} "${label}"`;
+              };
+              const insideRunningText = (element: Element) => element.tagName === 'A' && element.closest('p, li, dd, article > div') !== null && getComputedStyle(element).display === 'inline';
+
+              return Array.from(document.body.querySelectorAll(selector))
+                .filter((element) => {
+                  const box = element.getBoundingClientRect();
+                  const visible = box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden';
+
+                  return visible && !insideRunningText(element) && !element.classList.contains('sr-only') && (box.height < 43.5 || box.width < 43.5);
+                })
+                .slice(0, 12)
+                .map((element) => `${describe(element)} is ${Math.round(element.getBoundingClientRect().width)}x${Math.round(element.getBoundingClientRect().height)}`);
+            });
+
+            expect(tooSmall).toEqual([]);
+          });
+        }
+      });
+
       test('the library with the Filters panel open fits the screen', async ({ page }) => {
         await page.goto('/games/grid');
         await page.getByRole('button', { name: /^Filters/ }).click();

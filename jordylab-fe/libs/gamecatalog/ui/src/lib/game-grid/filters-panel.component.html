@@ -2,7 +2,7 @@
   role="dialog"
   aria-label="Filters"
   data-testid="filters-panel"
-  class="fixed inset-x-0 bottom-0 z-30 flex max-h-[82vh] flex-col overflow-y-auto rounded-t-[22px] border border-b-0 border-input bg-card px-5 pt-3 shadow-[0_30px_80px_-20px_#000] min-[641px]:absolute min-[641px]:inset-x-auto min-[641px]:bottom-auto min-[641px]:right-0 min-[641px]:top-[58px] min-[641px]:max-h-[70vh] min-[641px]:w-[min(680px,100%)] min-[641px]:rounded-[18px] min-[641px]:border-b min-[641px]:px-[22px] min-[641px]:pt-5"
+  class="fixed inset-x-0 bottom-0 z-30 flex max-h-[82vh] flex-col overflow-y-auto rounded-t-[22px] border border-b-0 border-input bg-card px-5 pt-3 shadow-modal min-[641px]:absolute min-[641px]:inset-x-auto min-[641px]:bottom-auto min-[641px]:right-0 min-[641px]:top-[58px] min-[641px]:max-h-[70vh] min-[641px]:w-[min(680px,100%)] min-[641px]:rounded-[18px] min-[641px]:border-b min-[641px]:px-[22px] min-[641px]:pt-5"
 >
   <div class="mx-auto mb-3.5 h-1 w-11 rounded-sm bg-input min-[641px]:hidden" aria-hidden="true"></div>
 
@@ -96,7 +96,7 @@
         >
           −
         </button>
-        <output class="min-w-14 text-center font-mono text-[13px] font-medium" aria-live="polite">{{ playersLabel() }}</output>
+        <output class="min-w-14 text-center text-[13px] font-semibold tabular-nums" aria-live="polite">{{ playersLabel() }}</output>
         <button
           type="button"
           class="h-10 w-11 text-lg disabled:opacity-40"
@@ -185,7 +185,7 @@
   >
     <button
       type="button"
-      class="cursor-pointer px-2 py-2.5 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-primary underline underline-offset-4 disabled:cursor-default disabled:no-underline disabled:opacity-40"
+      class="cursor-pointer min-h-11 px-2 py-2.5 text-[13px] font-semibold text-accent-text underline underline-offset-4 disabled:cursor-default disabled:no-underline disabled:opacity-40"
       [disabled]="!hasFilters()"
       (click)="clearAll.emit()"
     >

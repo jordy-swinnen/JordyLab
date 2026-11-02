@@ -5,7 +5,7 @@ const BASE =
   'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] px-2.5 py-1 text-xs font-semibold leading-none';
 
 /**
- * Installed (teal, check) and Not installed (amber, dashed ring and dashed border). The colour is never the only signal:
+ * Installed (check, solid border) and Not installed (dashed ring, dashed border). The colour is never the only signal:
  * the icon and the border style differ too (spec 013 FR-041, ui-design §3.2).
  */
 @Component({
@@ -33,7 +33,7 @@ export class StatusChipComponent {
   protected readonly installed = computed(() => this.status() === 'INSTALLED');
   protected readonly chipClass = computed(() =>
     this.installed()
-      ? `${BASE} border-solid border-[#2DD4BF] text-[#2DD4BF]`
-      : `${BASE} border-dashed border-[#F5B84A] text-[#F5B84A]`,
+      ? `${BASE} border-solid border-installed text-installed`
+      : `${BASE} border-dashed border-muted-foreground text-muted-foreground`,
   );
 }

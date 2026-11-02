@@ -1,13 +1,7 @@
-<div class="flex flex-wrap items-end justify-between gap-6">
-  <div class="flex flex-col gap-3.5">
-    <div class="eyebrow">
-      FNA
-      @if (briefing(); as briefing) {
-        · generated {{ briefing.generatedAt | date: 'MMM d, yyyy · h:mm a' }}
-      }
-    </div>
-    <h2 class="page-title">Investment briefing</h2>
-  </div>
+<lib-page-header
+  title="Investment briefing"
+  [subtitle]="briefing() ? 'Generated ' + (briefing()!.generatedAt | date: 'MMM d, yyyy · h:mm a') : ''"
+>
   @if (briefing(); as briefing) {
     <button
       hlmBtn
@@ -33,13 +27,13 @@
       Regenerate
     </button>
   }
-</div>
+</lib-page-header>
 
-<div class="mt-11">
+<div class="mt-8">
   @if (loading()) {
-    <div class="panel flex flex-col items-center justify-center gap-4 py-24">
+    <div class="panel flex flex-col items-center justify-center gap-4 py-24" role="status">
       <span
-        class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+        class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary motion-reduce:animate-none"
       ></span>
       <div class="text-center">
         <p class="text-sm font-medium text-foreground/80">
@@ -60,20 +54,20 @@
       <aside
         class="panel w-full flex-shrink-0 px-6 pb-3 pt-1 xl:sticky xl:top-8 xl:w-[300px]"
       >
-        <h3 class="eyebrow pb-1 pt-[18px]">Built from</h3>
+        <h3 class="label pb-1 pt-[18px]">Built from</h3>
         <dl class="text-sm">
           <div
             class="flex items-baseline justify-between gap-3 border-b border-border py-3.5"
           >
-            <dt class="mono-label">Generated</dt>
+            <dt class="label">Generated</dt>
             <dd class="font-medium">
               {{ briefing.generatedAt | date: 'MMM d, h:mm a' }}
             </dd>
           </div>
           <div class="flex items-baseline justify-between gap-3 py-3.5">
-            <dt class="mono-label">Model</dt>
+            <dt class="label">Model</dt>
             <dd>
-              <span class="font-mono text-[13px] font-medium uppercase">{{
+              <span class="text-[13px] font-medium">{{
                 briefing.modelUsed
               }}</span>
             </dd>
@@ -89,25 +83,12 @@
       financial advice.
     </p>
   } @else {
-    <div
-      class="flex flex-col items-center justify-center gap-6 rounded-2xl border border-dashed border-input py-24"
-    >
-      <div class="text-center">
-        <p class="font-display text-xl font-semibold text-foreground/70">
-          No briefing generated yet
-        </p>
-        <p class="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
-          Generate an AI-powered analysis of your portfolio against the latest
-          financial news
-        </p>
-      </div>
-      <button
-        hlmBtn
-        class="h-11 px-6 text-[15px] font-semibold"
-        (click)="generate.emit()"
-      >
-        Generate Briefing
-      </button>
-    </div>
+    <lib-empty-state
+      title="No briefing yet."
+      hint="Generate an AI-powered analysis of your portfolio against the latest financial news."
+      actionLabel="Generate briefing"
+      actionKind="primary"
+      (actionClicked)="generate.emit()"
+    />
   }
 </div>

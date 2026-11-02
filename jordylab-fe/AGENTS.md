@@ -179,6 +179,13 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
   `E2E Android` workflow (on demand, after a Release, and when Android files change; not a required check); locally `e2e/run.sh android` needs the Android SDK and an emulator. Emulator and WebView pins: `apps/jordylab-mobile-e2e/PINS.md`.
   Biometric unlock stays a manual checklist (README of that project).
 
+# Themes and colours (spec 016)
+
+- Six themes (Content Led is the default dark, Paper the default light) live in `themes.js`: hex values under shared token names. `tailwind.theme.js` turns each into a `[data-theme="<id>"]` block of CSS variables (HSL triplets, so opacity utilities work); a screen only uses variables and the Tailwind colour utilities built from them (`bg-card`, `text-accent-text`, `bg-mark-liked`, `plate-3`, `bg-series-1`). Never write a hex colour in a template or component: `bun tools/check-theme-tokens.mjs` fails on it (and on the sign-in stylesheet drifting from `themes.js`).
+- `ThemeStore` (`libs/shared/theme/api`) holds the per-device choice (`jordylab.theme` in local storage, `system` follows the device); `apps/jordylab/public/theme-boot.js` is a blocking external script that sets `data-theme` before first paint. The id lists in `themes.js`, the store and the boot script must stay equal (a spec checks it).
+- Shared screen pieces live in `libs/shared/layout` (`PageHeader`, `EmptyState`, `ErrorState`, `SkeletonRows`, `Switch`, `SpecRow`, `TabBar`). A new data screen shows all three of loading, empty and error with them. One font family (Archivo, bundled; no external font requests), sentence-case labels via `.label`.
+- Adding a theme: one entry in `themes.js` (every token), its id in the store and the boot script; the contrast spec (`theme-contrast.spec.ts`) then checks it automatically.
+
 # Auth via Keycloak
 
 - Keycloak integration (the `keycloak-js` SDK, token plumbing, route guard, login page) lives in

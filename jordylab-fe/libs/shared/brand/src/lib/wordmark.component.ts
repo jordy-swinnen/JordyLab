@@ -6,10 +6,9 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `<span
-    class="font-display leading-none tracking-[-0.03em]"
-    style="font-variation-settings: 'wdth' 88"
+    class="leading-none tracking-[-0.03em]"
     ><span class="font-normal text-foreground">Jordy</span
-    ><span class="font-extrabold text-primary">Lab</span></span
+    ><span class="font-extrabold text-accent-text">Lab</span></span
   >`,
 })
 export class WordmarkComponent {}

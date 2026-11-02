@@ -2,14 +2,15 @@ import { Component, computed, input, output, signal, ChangeDetectionStrategy } f
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { PortfolioPositionRow, WishlistItem } from '@jordylab-fe/fna/api';
+import { EmptyStateComponent, PageHeaderComponent } from '@jordylab-fe/shared/layout';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 /** Swatch colours, assigned by row position so the allocation bar and the table agree. */
 const SWATCHES = [
-  'bg-primary',
-  'bg-iris',
-  'bg-foreground',
-  'bg-deep',
+  'bg-series-1',
+  'bg-series-2',
+  'bg-series-3',
+  'bg-series-4',
   'bg-muted-foreground',
 ];
 
@@ -22,7 +23,7 @@ interface AllocationSegment {
 @Component({
   selector: 'lib-portfolio-manager-view',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, HlmButtonDirective],
+  imports: [FormsModule, DatePipe, DecimalPipe, HlmButtonDirective, EmptyStateComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager-view.component.html',
 })

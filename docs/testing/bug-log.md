@@ -1197,7 +1197,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Source probe (2026-11-01): of the 44 games without a count, 15 are console games and 29 are Steam games. TheGamesDB matched all 15 console games with a count (13 where its entries agree, 2 where they disagree, so those stay unknown) and is unreliable for Steam games (nine matched games say 1 player). ScreenScraper (terms do not cover a personal app), LaunchBox, the libretro max-users lists, Wikidata and Co-Optimus were dropped; MobyGames refuses automated reads. The multiplayer-player-counts draft now holds the measured table; the Steam games and source errors move to the curated-player-counts draft. Still open.
 
 ### BUG-078: Two extra TCP ports (31460, 32531) are public on the VPS besides 22, 80 and 443
-- Status: OPEN
+- Status: OPEN (deferred 2026-11-02: the owner does not want time spent on it now; whether it needs a fix is decided under the Linear ticket for moving production from k3s to Docker Compose, JOR-31)
 - Severity: S3 (a hardening gap, no secret or application reachable through the ports; both answer with a plain 404)
 - Area/spec: prod network / 008 (FR-019, SC-008, T074)
 - Env found: prod, 2026-11-02, owner-approved TCP connect scan from the agent's Mac

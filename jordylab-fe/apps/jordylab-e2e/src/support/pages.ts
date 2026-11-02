@@ -21,4 +21,6 @@ export const PAGES: readonly {
     path: '/settings/ai-models',
     heading: 'AI models',
   },
+  { name: 'Settings App', path: '/settings/app', heading: 'App' },
+  { name: 'More', path: '/more', heading: 'More' },
 ];

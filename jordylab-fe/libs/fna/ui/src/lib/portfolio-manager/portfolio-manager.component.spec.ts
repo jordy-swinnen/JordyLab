@@ -98,7 +98,8 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('h2')).toHaveText('Portfolio');
-    expect(spectator.query('span.uppercase')).toHaveText('0 positions');
+    expect(spectator.element).toHaveText('0 positions');
+    expect(spectator.element).toHaveText('No holdings yet.');
   });
 
   it('surfaces an error state when the store reports an error', () => {
@@ -152,6 +153,12 @@ describe('PortfolioManagerComponent', () => {
     expect(spectator.query('input[aria-label="Shares"]')?.getAttribute('step')).toBe('any');
   });
 
+  it('shows the wishlist empty state when nothing is on the wishlist', () => {
+    spectator.detectChanges();
+
+    expect(spectator.element).toHaveText('No wishlist stocks yet.');
+  });
+
   it('renders a wishlist row per wishlist item', () => {
     wishlist.set([aWishlistItemMock(), aWishlistItemMock({ id: 'w2', ticker: 'SAP' })]);
     spectator.detectChanges();
@@ -182,7 +189,7 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
-    expect(spectator.query('span.uppercase')).toHaveText('1 position');
+    expect(spectator.element).toHaveText('1 position');
     expect(spectator.queryAll('ul li')).toHaveLength(1);
   });
 
@@ -247,4 +254,13 @@ describe('PortfolioManagerComponent', () => {
 
     spectator.click(button);
   }
+  it('loads the portfolio again when the error state is retried', () => {
+    storeMock.load.mockClear();
+    error.set('Failed to load portfolio.');
+    spectator.detectChanges();
+
+    spectator.click('lib-error-state button');
+
+    expect(storeMock.load).toHaveBeenCalledOnce();
+  });
 });

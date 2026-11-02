@@ -1,3 +1,4 @@
+import { ErrorStateComponent } from '@jordylab-fe/shared/layout';
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ArticleStore } from '@jordylab-fe/fna/api';
 import { ArticleListViewComponent } from './article-list-view.component';
@@ -5,7 +6,7 @@ import { ArticleListViewComponent } from './article-list-view.component';
 @Component({
   selector: 'lib-article-list',
   standalone: true,
-  imports: [ArticleListViewComponent],
+  imports: [ArticleListViewComponent, ErrorStateComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './article-list.component.html',
 })
@@ -15,4 +16,8 @@ export class ArticleListComponent {
   articles = this.#store.articles;
   loading = this.#store.loading;
   error = this.#store.error;
+
+  reload(): void {
+    this.#store.load();
+  }
 }

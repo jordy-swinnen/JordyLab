@@ -10,6 +10,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
+import { EmptyStateComponent, ErrorStateComponent, PageHeaderComponent } from '@jordylab-fe/shared/layout';
 import {
   ActiveFilter,
   coverUrl,
@@ -31,7 +32,7 @@ import { VoteRailComponent } from '../marks/vote-rail.component';
 import { RomChipComponent } from '../chips/rom-chip.component';
 import { SourceLabelComponent } from '../chips/source-label.component';
 import { StatusChipComponent } from '../chips/status-chip.component';
-import { coverInitials, coverPalette } from '../cover';
+import { coverInitials, coverPlateClass } from '../cover';
 import { ActiveFiltersComponent } from './active-filters.component';
 import { FilterBarComponent } from './filter-bar.component';
 import { FiltersPanelComponent } from './filters-panel.component';
@@ -45,6 +46,9 @@ const SKELETON_CARD_COUNT = 10;
     RouterLink,
     HlmBadgeDirective,
     HlmSkeletonComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    PageHeaderComponent,
     PlatformChipComponent,
     RomChipComponent,
     MarkButtonsComponent,
@@ -98,6 +102,7 @@ export class GameGridViewComponent {
   pageChange = output<number>();
   gameMarkChange = output<{ game: GameSummary; mark: MarkType }>();
   markErrorDismiss = output<void>();
+  reload = output<void>();
 
   protected readonly panelOpen = signal(false);
 
@@ -107,7 +112,7 @@ export class GameGridViewComponent {
   );
   protected readonly coverUrl = coverUrl;
   protected readonly initials = coverInitials;
-  protected readonly palette = coverPalette;
+  protected readonly plateClass = coverPlateClass;
 
   /** The filter to offer for removal when nothing matches: the status first, since it is the one most often forgotten. */
   protected readonly filterToRelax = computed(

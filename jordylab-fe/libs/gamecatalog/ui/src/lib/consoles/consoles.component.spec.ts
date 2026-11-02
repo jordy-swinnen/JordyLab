@@ -234,6 +234,12 @@ describe('ConsolesComponent', () => {
   });
 
   it('asks before removing a console and says what it would do', () => {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+      this.setAttribute('open', '');
+    };
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      this.removeAttribute('open');
+    };
     withADock();
     spectator.click('[data-testid="remove-console-Switch dock"]');
     expect(requestRemoval).toHaveBeenCalledWith(dock);
@@ -244,7 +250,7 @@ describe('ConsolesComponent', () => {
     const dialog = spectator.query('[data-testid="removal-dialog"]') as HTMLElement;
     expect(dialog).toHaveText('41 games');
     expect(dialog).toHaveText('29 games are removed');
-    spectator.click('[data-testid="confirm-removal"]');
+    spectator.click('[data-testid="confirm-dialog-confirm"]');
     expect(confirmRemoval).toHaveBeenCalled();
   });
 });

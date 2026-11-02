@@ -1,6 +1,7 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
+import { EmptyStateComponent, ErrorStateComponent } from '@jordylab-fe/shared/layout';
 import {
   bannerUrl,
   coverUrl,
@@ -18,7 +19,7 @@ import { MarkButtonsComponent } from '../marks/mark-buttons.component';
 import { PlatformChipComponent } from '../chips/platform-chip.component';
 import { SourceLabelComponent } from '../chips/source-label.component';
 import { StatusChipComponent } from '../chips/status-chip.component';
-import { coverInitials, coverPalette } from '../cover';
+import { coverInitials, coverPlateClass } from '../cover';
 
 @Component({
   selector: 'lib-game-detail-view',
@@ -26,6 +27,8 @@ import { coverInitials, coverPalette } from '../cover';
   imports: [
     RouterLink,
     HlmSkeletonComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
     MarkButtonsComponent,
     MarkChipComponent,
     PlatformChipComponent,
@@ -49,6 +52,7 @@ export class GameDetailViewComponent {
   markPending = input(false);
   markError = input<string | null>(null);
 
+  reload = output<void>();
   refreshMetadata = output<void>();
   refreshEnrichment = output<void>();
   markToggle = output<MarkType>();
@@ -58,7 +62,7 @@ export class GameDetailViewComponent {
   protected readonly coverUrl = coverUrl;
   protected readonly bannerUrl = bannerUrl;
   protected readonly initials = coverInitials;
-  protected readonly palette = coverPalette;
+  protected readonly plateClass = coverPlateClass;
 
   /** Labels of the hosts holding an installed copy: the display name an admin chose, else the hostname. */
   protected hostLabels(game: GameDetail): string[] {
