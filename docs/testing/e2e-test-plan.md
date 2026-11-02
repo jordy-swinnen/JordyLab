@@ -1078,7 +1078,7 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Follow `specs/016-app-redesign-themes/quickstart.md` section 6: on the phone, choose Paper in Settings → App and check the status bar icons stay readable (if not, say so and I add the status-bar plugin). Then restart the local Keycloak (recreating the dev stack needs your yes; `jordylab-be/compose.yaml` mounts the theme) and open the sign-in page with the computer set to light, then to dark.
 - Tell me what you saw; I record it in `specs/016-app-redesign-themes/research.md` (D9, D10).
 
-#### HANDOFF-39: Compare the redesign with the design system (spec 016)
+#### HANDOFF-39: Compare the redesign with the design system (spec 016) — done 2026-11-02 (the owner approved the design; step counts not recorded)
 - Machine: your Mac, in a browser · Why you: judging whether the new look matches the design canvas is a call only you can make.
 - With the app running, open the Library, a game, LibBot, Sources, Consoles and Settings → App on desktop and in a phone-sized window, the Library in all six themes. Compare with the redesign canvas and the design system, and count the steps to find a game and set a mark (before and after, SC-007).
 - Tell me the differences you want changed; I record them in `specs/016-app-redesign-themes/checklists/visual-review.md`.
