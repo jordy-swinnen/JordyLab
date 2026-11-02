@@ -137,7 +137,9 @@ export class App {
     { initialValue: this.#router.url },
   );
 
-  protected readonly visibleGroups = computed(() => visibleNavigationGroups(this.isAdmin()));
+  protected readonly visibleGroups = computed(() =>
+    visibleNavigationGroups(this.isAdmin(), this.#auth.hasGameCatalogAccess()),
+  );
 
   protected readonly tabs = computed<TabBarItem[]>(() => {
     const url = this.#url();

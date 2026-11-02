@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jordy.jordylab.settings.SettingsProperties;
 import dev.jordy.jordylab.settings.domain.GuestChatUsage;
 import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
+import dev.jordy.jordylab.settings.service.GuestChatLimitService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,6 +36,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -50,6 +52,9 @@ class GuestChatLimitFilterTest {
 
     @Mock
     private GuestChatUsageRepository guestChatUsageRepository;
+
+    @Mock
+    private GuestChatLimitService guestChatLimitService;
 
     @Mock
     private HttpServletRequest request;
@@ -69,7 +74,11 @@ class GuestChatLimitFilterTest {
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        filter = new GuestChatLimitFilter(guestChatUsageRepository, properties, objectMapper, CLOCK);
+        lenient().when(guestChatLimitService.effectiveFor(GUEST_SUBJECT))
+                .thenReturn(new GuestChatLimitService.EffectiveGuestChatLimit(3,
+                        GuestChatLimitService.LimitSource.ENVIRONMENT));
+        filter = new GuestChatLimitFilter(guestChatUsageRepository, guestChatLimitService, properties, objectMapper,
+                CLOCK);
 
         when(request.getMethod()).thenReturn("POST");
         when(request.getRequestURI()).thenReturn("/api/gamecatalog/libbot/ask");

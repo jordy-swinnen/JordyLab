@@ -13,6 +13,7 @@ describe('App', () => {
   // Real signals back the mock's reactive state so tests can drive shell visibility.
   const hasAppRole = signal(true);
   const isAdmin = signal(false);
+  const hasGameCatalogAccess = signal(false);
   const pendingCount = signal(0);
   const resolveLatestDownloadUrl = vi.fn();
   const authInit = vi.fn();
@@ -31,6 +32,7 @@ describe('App', () => {
           logout,
           hasAppRole: hasAppRole.asReadonly(),
           isAdmin: isAdmin.asReadonly(),
+          hasGameCatalogAccess: hasGameCatalogAccess.asReadonly(),
         },
       },
       {
@@ -60,6 +62,7 @@ describe('App', () => {
   beforeEach(() => {
     hasAppRole.set(true);
     isAdmin.set(false);
+    hasGameCatalogAccess.set(false);
     pendingCount.set(0);
     resolveLatestDownloadUrl.mockReset();
     authInit.mockReset().mockResolvedValue(false);
@@ -70,6 +73,7 @@ describe('App', () => {
 
   it('lists every section grouped by module in the sidebar for an admin', () => {
     isAdmin.set(true);
+    hasGameCatalogAccess.set(true);
     spectator.detectChanges();
 
     const links = spectator
@@ -92,6 +96,7 @@ describe('App', () => {
 
   it('links each section to its domain route for an admin', () => {
     isAdmin.set(true);
+    hasGameCatalogAccess.set(true);
     spectator.detectChanges();
 
     const hrefs = spectator
@@ -112,12 +117,23 @@ describe('App', () => {
     ]);
   });
 
-  it('shows a guest the Game Catalog library and LibBot and App settings, with Sources, Consoles, FNA and the admin settings hidden', () => {
+  it('shows a guest with the app grant the Game Catalog library and LibBot and App settings, with Sources, Consoles, FNA and the admin settings hidden', () => {
+    hasGameCatalogAccess.set(true);
+    spectator.detectChanges();
+
     const links = spectator
       .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.textContent?.trim());
 
     expect(links).toEqual(['Library', 'LibBot', 'App']);
+  });
+
+  it('hides the Game Catalog from an approved guest without the app grant', () => {
+    const links = spectator
+      .queryAll('nav[aria-label="Primary"] a')
+      .map((link) => link.textContent?.trim());
+
+    expect(links).toEqual(['App']);
   });
 
   it('renders a router outlet for the domain routes', () => {
@@ -162,6 +178,7 @@ describe('App', () => {
 
     it('is shown to an admin, linked to /settings/users', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       const links = spectator.queryAll('nav[aria-label="Primary"] a');
@@ -174,6 +191,7 @@ describe('App', () => {
 
     it('shows the pending-count badge only once there are pending sign-ups', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       expect(
@@ -224,12 +242,20 @@ describe('App', () => {
   describe('phone tab bar', () => {
     const tabLabels = () => spectator.queryAll('lib-tab-bar nav > *').map((tab) => tab.textContent?.trim());
 
-    it('shows Games and Settings to a guest', () => {
+    it('shows Games and Settings to a guest with the app grant', () => {
+      hasGameCatalogAccess.set(true);
+      spectator.detectChanges();
+
       expect(tabLabels()).toEqual(['Games', 'Settings']);
+    });
+
+    it('shows only Settings to an approved guest without the app grant', () => {
+      expect(tabLabels()).toEqual(['Settings']);
     });
 
     it('adds Finance for an administrator', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       expect(tabLabels()).toEqual(['Games', 'Finance', 'Settings']);
@@ -237,6 +263,7 @@ describe('App', () => {
 
     it('lifts the pages of a module out of its tab', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       spectator.click(spectator.queryAll('lib-tab-bar nav > button')[0]);
@@ -250,6 +277,8 @@ describe('App', () => {
     });
 
     it('goes straight to the only page of a module', () => {
+      hasGameCatalogAccess.set(true);
+      spectator.detectChanges();
       const settingsTab = spectator.queryAll('lib-tab-bar nav > *')[1];
 
       expect(settingsTab.tagName).toBe('A');

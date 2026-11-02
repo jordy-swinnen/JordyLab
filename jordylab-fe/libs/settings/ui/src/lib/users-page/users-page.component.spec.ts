@@ -1,6 +1,15 @@
 import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { AppUser, anAppUserMock, UsersStore } from '@jordylab-fe/settings/api';
+import {
+  aGuestChatLimitMock,
+  AppUser,
+  anAppUserMock,
+  GuestChatLimit,
+  GuestChatLimitStore,
+  UserSession,
+  UserSessionsStore,
+  UsersStore,
+} from '@jordylab-fe/settings/api';
 import { UsersPageComponent } from './users-page.component';
 
 describe('UsersPageComponent', () => {
@@ -17,6 +26,7 @@ describe('UsersPageComponent', () => {
   const revoke = vi.fn<UsersStore['revoke']>();
   const resetPassword = vi.fn<UsersStore['resetPassword']>();
   const clearTemporaryPassword = vi.fn<UsersStore['clearTemporaryPassword']>();
+  const deletePerson = vi.fn<UsersStore['deletePerson']>();
 
   const storeMock = {
     pendingUsers: pendingUsers.asReadonly(),
@@ -31,13 +41,49 @@ describe('UsersPageComponent', () => {
     revoke,
     resetPassword,
     clearTemporaryPassword,
+    deletePerson,
+  };
+
+  const guestLimit = signal<GuestChatLimit | null>(aGuestChatLimitMock());
+  const guestLimitLoading = signal(false);
+  const guestLimitSaving = signal(false);
+  const guestLimitError = signal<string | null>(null);
+  const saveDefault = vi.fn<GuestChatLimitStore['saveDefault']>();
+
+  const guestLimitMock = {
+    limit: guestLimit.asReadonly(),
+    loading: guestLimitLoading.asReadonly(),
+    saving: guestLimitSaving.asReadonly(),
+    error: guestLimitError.asReadonly(),
+    saveDefault,
+  };
+
+  const sessionsUserId = signal<string | null>(null);
+  const sessions = signal<UserSession[]>([]);
+  const sessionsLoading = signal(false);
+  const sessionsActioning = signal(false);
+  const sessionsError = signal<string | null>(null);
+  const sessionsStoreMock = {
+    userId: sessionsUserId.asReadonly(),
+    sessions: sessions.asReadonly(),
+    loading: sessionsLoading.asReadonly(),
+    actioning: sessionsActioning.asReadonly(),
+    error: sessionsError.asReadonly(),
+    loadFor: vi.fn<UserSessionsStore['loadFor']>(),
+    close: vi.fn<UserSessionsStore['close']>(),
+    endOne: vi.fn<UserSessionsStore['endOne']>(),
+    endAll: vi.fn<UserSessionsStore['endAll']>(),
   };
 
   let spectator: Spectator<UsersPageComponent>;
 
   const createComponent = createComponentFactory({
     component: UsersPageComponent,
-    providers: [{ provide: UsersStore, useValue: storeMock }],
+    providers: [
+      { provide: UsersStore, useValue: storeMock },
+      { provide: GuestChatLimitStore, useValue: guestLimitMock },
+      { provide: UserSessionsStore, useValue: sessionsStoreMock },
+    ],
   });
 
   beforeEach(() => {
@@ -53,6 +99,21 @@ describe('UsersPageComponent', () => {
     revoke.mockReset();
     resetPassword.mockReset();
     clearTemporaryPassword.mockReset();
+    deletePerson.mockReset();
+    guestLimit.set(aGuestChatLimitMock());
+    guestLimitLoading.set(false);
+    guestLimitSaving.set(false);
+    guestLimitError.set(null);
+    saveDefault.mockReset();
+    sessionsUserId.set(null);
+    sessions.set([]);
+    sessionsLoading.set(false);
+    sessionsActioning.set(false);
+    sessionsError.set(null);
+    sessionsStoreMock.loadFor.mockReset();
+    sessionsStoreMock.close.mockReset();
+    sessionsStoreMock.endOne.mockReset();
+    sessionsStoreMock.endAll.mockReset();
     spectator = createComponent();
   });
 
@@ -73,6 +134,16 @@ describe('UsersPageComponent', () => {
     expect(spectator.element).toHaveText('friend@example.org');
     expect(spectator.element).toHaveText('No approved guests yet.');
     expect(spectator.element).toHaveText('No rejected accounts.');
+  });
+
+  it('never offers the admin forbidden actions on their own row', () => {
+    approvedUsers.set([anAppUserMock({ id: 'admin-1', isAdmin: true, chatLimit: null })]);
+    populate();
+
+    expect(spectator.query('[data-testid="revoke-user"]')).toBeNull();
+    expect(spectator.query('[data-testid="delete-user-admin-1"]')).toBeNull();
+    expect(spectator.query('[data-testid="toggle-sessions-admin-1"]')).toBeNull();
+    expect(spectator.query('[data-testid="reset-password"]')).toBeTruthy();
   });
 
   it('approves a pending user', () => {

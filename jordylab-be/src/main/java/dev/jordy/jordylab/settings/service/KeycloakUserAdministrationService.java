@@ -33,6 +33,7 @@ public class KeycloakUserAdministrationService {
     private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
 
     private final KeycloakAdminClient keycloakAdminClient;
+    private final GuestChatLimitService guestChatLimitService;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionOperations transactions;
 
@@ -48,6 +49,10 @@ public class KeycloakUserAdministrationService {
         return listUsers(UserStatus.PENDING).size();
     }
 
+    /**
+     * Approves a person and gives them the default grants (spec 014 FR-008). A person approved again after a revoke
+     * starts from the same default set: earlier grants are never restored.
+     */
     public void approve(UUID userId) {
         KeycloakAdminClient.KeycloakUser user = requireUser(userId);
         if (!user.enabled()) {
@@ -55,6 +60,12 @@ public class KeycloakUserAdministrationService {
         }
         if (!user.realmRoles().contains(GUEST_ROLE)) {
             keycloakAdminClient.grantRealmRole(user.id(), GUEST_ROLE);
+        }
+        for (ManagedApp app : ManagedApp.defaultGrants()) {
+            String roleName = app.grantRole().orElseThrow(() -> new AppNotGrantableException(app.key()));
+            if (!user.realmRoles().contains(roleName)) {
+                keycloakAdminClient.grantRealmRole(user.id(), roleName);
+            }
         }
     }
 
@@ -71,9 +82,12 @@ public class KeycloakUserAdministrationService {
             throw new UserNotApprovedException(userId);
         }
         guardLastAdmin(user);
+        revokeEveryAppRole(user);
         keycloakAdminClient.revokeRealmRole(user.id(), GUEST_ROLE);
         keycloakAdminClient.endSessions(user.id());
         revokeMobileOfflineConsent(user.id());
+        // Spec 014 FR-010: a revoke clears the personal limit, so a later approval starts from the default.
+        guestChatLimitService.clearPersonal(user.id());
         publishAccessRemoved(user.id());
     }
 
@@ -84,6 +98,15 @@ public class KeycloakUserAdministrationService {
         keycloakAdminClient.resetPassword(user.id(), temporaryPassword);
 
         return temporaryPassword;
+    }
+
+    /** A revoke removes every app grant too, so a later approval starts again from the default set (FR-008). */
+    private void revokeEveryAppRole(KeycloakAdminClient.KeycloakUser user) {
+        for (ManagedApp app : ManagedApp.values()) {
+            app.grantRole()
+                    .filter(user.realmRoles()::contains)
+                    .ifPresent(roleName -> keycloakAdminClient.revokeRealmRole(user.id(), roleName));
+        }
     }
 
     /** Inside a transaction, because module listeners only run once the publishing transaction commits. */

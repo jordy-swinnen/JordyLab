@@ -74,6 +74,26 @@ export class UsersStore {
     this.#runAction(id, () => this.#api.revoke(id), 'Failed to revoke user.');
   }
 
+  grantApp(id: string, appKey: string): void {
+    this.#runAction(id, () => this.#api.grantApp(id, appKey), 'Failed to grant the app.');
+  }
+
+  removeApp(id: string, appKey: string): void {
+    this.#runAction(id, () => this.#api.removeApp(id, appKey), 'Failed to remove the app.');
+  }
+
+  setPersonalLimit(id: string, dailyLimit: number): void {
+    this.#runAction(id, () => this.#api.setPersonalLimit(id, dailyLimit), 'Failed to save the limit.');
+  }
+
+  clearPersonalLimit(id: string): void {
+    this.#runAction(id, () => this.#api.clearPersonalLimit(id), 'Failed to clear the limit.');
+  }
+
+  deletePerson(id: string): void {
+    this.#runAction(id, () => this.#api.deletePerson(id), 'Failed to delete the person.');
+  }
+
   resetPassword(id: string): void {
     if (this.#actioningId()) {
       return;
@@ -135,12 +155,31 @@ export class UsersStore {
     switch (reason) {
       case 'LAST_ADMIN_PROTECTED':
         return 'The last admin cannot be rejected or revoked.';
+      case 'CANNOT_CHANGE_OWN_ACCOUNT':
+        return 'You cannot change your own account from here.';
+      case 'ADMIN_PROTECTED':
+        return 'The admin account is protected.';
+      case 'APP_NOT_GRANTABLE':
+        return 'That app cannot be granted.';
+      case 'APP_NOT_FOUND':
+        return 'That app no longer exists.';
+      case 'INVALID_LIMIT':
+        return 'The limit must be a whole number of 0 or more.';
       case 'USER_NOT_APPROVED':
         return 'This user is not currently approved.';
       case 'USER_NOT_FOUND':
         return 'This user no longer exists.';
-      case 'KEYCLOAK_UNAVAILABLE':
-        return 'Keycloak is unavailable right now — try again shortly.';
+      case 'KEYCLOAK_UNAVAILABLE': {
+        const stage = (error.error as { stage?: string } | null)?.stage;
+        if (stage === 'DISABLE') {
+          // The very first step failed, so the person is not blocked: nothing changed.
+          return 'Deletion could not start; nothing changed. Try again shortly.';
+        }
+
+        return stage
+          ? `Deletion stopped at ${stage}. The person is blocked and you can retry.`
+          : 'Keycloak is unavailable right now — try again shortly.';
+      }
       default:
         return fallback;
     }

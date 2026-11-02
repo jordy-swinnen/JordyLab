@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.service;
 
+import dev.jordy.jordylab.gamecatalog.GameCatalogAccess;
 import dev.jordy.jordylab.gamecatalog.domain.Console;
 import dev.jordy.jordylab.gamecatalog.domain.ConsoleGameEntry;
 import dev.jordy.jordylab.gamecatalog.domain.Game;
@@ -9,6 +10,7 @@ import dev.jordy.jordylab.gamecatalog.domain.repository.ConsoleRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameMarkRepository;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.shared.config.JpaConfiguration;
+import dev.jordy.jordylab.shared.event.AppAccessRemoved;
 import dev.jordy.jordylab.shared.event.UserAccessRemoved;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +91,31 @@ class MarkCleanupListenerTest {
         listener.on(new UserAccessRemoved(REMOVED));
 
         assertSoftly(softly -> softly.assertThat(gameMarkRepository.findAll()).isEmpty());
+    }
+
+    /** Spec 014 clarification: losing only the Game Catalog removes the votes, exactly like losing the whole account. */
+    @Test
+    void removingTheGameCatalogFromAnAccountRemovesItsMarksAndKeepsTheOthers() {
+        Game game = visibleGame("Hades");
+        markService.setMark(game.getId(), REMOVED, MarkType.WANT_TO_PLAY);
+        markService.setMark(game.getId(), STAYING, MarkType.WANT_TO_PLAY);
+
+        listener.on(new AppAccessRemoved(REMOVED, GameCatalogAccess.APP_KEY));
+
+        assertSoftly(softly -> {
+            softly.assertThat(gameMarkRepository.findAll()).hasSize(1);
+            softly.assertThat(markService.totalsOf(game.getId()).wantToPlay()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void removingAnotherAppLeavesTheVotesAlone() {
+        Game game = visibleGame("Hades");
+        markService.setMark(game.getId(), REMOVED, MarkType.WANT_TO_PLAY);
+
+        listener.on(new AppAccessRemoved(REMOVED, "fna"));
+
+        assertSoftly(softly -> softly.assertThat(gameMarkRepository.findAll()).hasSize(1));
     }
 
     private Game visibleGame(String title) {

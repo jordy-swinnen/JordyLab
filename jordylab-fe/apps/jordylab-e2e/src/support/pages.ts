@@ -15,6 +15,11 @@ export const PAGES: readonly {
   { name: 'LibBot', path: '/games/libbot', heading: 'LibBot' },
   { name: 'Game sources', path: '/games/sources', heading: 'Sources' },
   { name: 'Consoles', path: '/games/consoles', heading: 'Consoles' },
+  {
+    name: 'No apps yet',
+    path: '/no-apps',
+    heading: 'Nothing shared with you',
+  },
   { name: 'Settings users', path: '/settings/users', heading: 'Users' },
   {
     name: 'Settings AI models',

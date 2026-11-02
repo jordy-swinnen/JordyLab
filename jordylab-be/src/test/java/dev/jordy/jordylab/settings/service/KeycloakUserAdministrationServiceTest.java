@@ -41,13 +41,16 @@ class KeycloakUserAdministrationServiceTest {
     private KeycloakAdminClient keycloakAdminClient;
 
     @Mock
+    private GuestChatLimitService guestChatLimitService;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     private KeycloakUserAdministrationService service;
 
     @BeforeEach
     void setUp() {
-        service = new KeycloakUserAdministrationService(keycloakAdminClient, eventPublisher,
+        service = new KeycloakUserAdministrationService(keycloakAdminClient, guestChatLimitService, eventPublisher,
                 TransactionOperations.withoutTransaction());
     }
 
@@ -129,12 +132,24 @@ class KeycloakUserAdministrationServiceTest {
     @Test
     void approvingAnAlreadyApprovedUserIsANoOp() {
         when(keycloakAdminClient.findUser(GUEST_ID.toString()))
-                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest", "app-gamecatalog"))));
 
         service.approve(GUEST_ID);
 
         verify(keycloakAdminClient, never()).setEnabled(GUEST_ID.toString(), true);
         verify(keycloakAdminClient, never()).grantRealmRole(GUEST_ID.toString(), "guest");
+        verify(keycloakAdminClient, never()).grantRealmRole(GUEST_ID.toString(), "app-gamecatalog");
+    }
+
+    /** Spec 014 FR-008: a first approval, and an approval after a revoke, start from the default grant set. */
+    @Test
+    void approvingAGuestAlsoGrantsTheDefaultApps() {
+        when(keycloakAdminClient.findUser(GUEST_ID.toString()))
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+
+        service.approve(GUEST_ID);
+
+        verify(keycloakAdminClient).grantRealmRole(GUEST_ID.toString(), "app-gamecatalog");
     }
 
     @Test
@@ -174,15 +189,19 @@ class KeycloakUserAdministrationServiceTest {
     @Test
     void revokingAGuestRemovesTheRoleEndsSessionsAndRevokesMobileOfflineConsent() {
         when(keycloakAdminClient.findUser(GUEST_ID.toString()))
-                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest", "app-gamecatalog"))));
 
         service.revoke(GUEST_ID);
 
+        // Spec 014 FR-008: every app grant goes too, so a later approval starts from the default set.
+        verify(keycloakAdminClient).revokeRealmRole(GUEST_ID.toString(), "app-gamecatalog");
         verify(keycloakAdminClient).revokeRealmRole(GUEST_ID.toString(), "guest");
         verify(keycloakAdminClient).endSessions(GUEST_ID.toString());
         // spec 007 FR-013 / research D12: a plain session logout does not revoke offline_access
         // grants, so revoke() must separately kill the mobile app's biometric-unlock consent.
         verify(keycloakAdminClient).revokeConsent(GUEST_ID.toString(), "jordylab-mobile");
+        // Spec 014 FR-010: a revoke clears the personal limit.
+        verify(guestChatLimitService).clearPersonal(GUEST_ID.toString());
         // Their marks stop counting once the other modules hear that the access is gone (spec 013 FR-046).
         verify(eventPublisher).publishEvent(new UserAccessRemoved(GUEST_ID.toString()));
     }

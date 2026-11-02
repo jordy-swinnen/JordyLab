@@ -26,6 +26,12 @@ const KEYCLOAK_INIT_TIMEOUT_MS = 8000;
 /** The two application roles the realm grants. Self-registered users hold neither until approved. */
 export type AppRole = 'admin' | 'guest';
 
+/**
+ * Per-app grant roles (spec 014). Holding one is not approval: the person also needs `guest`.
+ * The Game Catalog is the first app that can be granted per person.
+ */
+export type AccessRole = 'app-gamecatalog';
+
 const APP_ROLES: readonly AppRole[] = ['admin', 'guest'];
 
 function realmRolesFrom(tokenParsed: KeycloakTokenParsed | undefined): string[] {
@@ -73,6 +79,10 @@ export class AuthService {
   readonly isGuest = computed(() => this.#roles().includes('guest'));
   readonly hasAppRole = computed(() =>
     APP_ROLES.some((role) => this.#roles().includes(role)),
+  );
+  /** Admin, or an approved person the admin granted the Game Catalog to (spec 014). */
+  readonly hasGameCatalogAccess = computed(
+    () => this.isAdmin() || this.#roles().includes('app-gamecatalog'),
   );
 
   /**

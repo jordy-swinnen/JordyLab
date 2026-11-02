@@ -1,7 +1,12 @@
 export * from './lib/settings.models';
 export * from './lib/settings-users-api.service';
 export * from './lib/users.store';
+export * from './lib/settings-guest-chat-limit-api.service';
+export * from './lib/guest-chat-limit.store';
+export * from './lib/user-sessions.store';
 export { anAppUserMock } from './lib/mocks/app-user.model.mock';
+export { aGuestChatLimitMock } from './lib/mocks/guest-chat-limit.model.mock';
+export { aUserSessionMock } from './lib/mocks/user-session.model.mock';
 export * from './lib/ai-models.models';
 export * from './lib/settings-ai-models-api.service';
 export * from './lib/ai-models.store';

@@ -32,6 +32,7 @@ describe('App on a native cold start', () => {
           logout: vi.fn(),
           hasAppRole: signal(true).asReadonly(),
           isAdmin: signal(false).asReadonly(),
+          hasGameCatalogAccess: signal(false).asReadonly(),
         },
       },
       { provide: UsersStore, useValue: { pendingCount: signal(0).asReadonly() } },

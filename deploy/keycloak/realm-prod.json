@@ -10,7 +10,7 @@
   "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
-  "accessTokenLifespan": 1800,
+  "accessTokenLifespan": 60,
   "ssoSessionIdleTimeout": 2592000,
   "ssoSessionMaxLifespan": 7776000,
   "defaultDefaultClientScopes": [
@@ -37,12 +37,16 @@
         "description": "Full access to JordyLab: FNA, Settings and Game Catalog administration. Includes every JordyLab role except the CI-only mobile-release-publisher",
         "composite": true,
         "composites": {
-          "realm": ["guest", "gamecatalog-scanner"]
+          "realm": ["guest", "app-gamecatalog", "gamecatalog-scanner"]
         }
       },
       {
         "name": "guest",
-        "description": "Game Catalog read and chat access only"
+        "description": "Approved person (spec 014). App access is granted per app, for example app-gamecatalog"
+      },
+      {
+        "name": "app-gamecatalog",
+        "description": "Granted per person by the admin: Game Catalog read, chat, marks and ROM status (spec 014)"
       },
       {
         "name": "gamecatalog-scanner",
@@ -78,7 +82,7 @@
     "realm-management": [
       {
         "client": "jordylab-backend",
-        "roles": ["view-users", "manage-users", "view-realm"]
+        "roles": ["view-users", "manage-users", "view-realm", "view-clients"]
       }
     ]
   },
@@ -146,7 +150,7 @@
       "enabled": true,
       "serviceAccountClientId": "jordylab-backend",
       "clientRoles": {
-        "realm-management": ["view-users", "manage-users", "view-realm"]
+        "realm-management": ["view-users", "manage-users", "view-realm", "view-clients"]
       }
     },
     {

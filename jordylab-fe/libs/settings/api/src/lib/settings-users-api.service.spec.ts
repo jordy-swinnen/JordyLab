@@ -50,6 +50,50 @@ describe('SettingsUsersApiService', () => {
     spectator.expectOne('/api/settings/users/user-1/revoke', HttpMethod.POST).flush(null);
   });
 
+  it('puts a grant for one app', () => {
+    spectator.service.grantApp('user-1', 'gamecatalog').subscribe();
+
+    spectator.expectOne('/api/settings/users/user-1/apps/gamecatalog', HttpMethod.PUT).flush(null);
+  });
+
+  it('deletes the access to one app', () => {
+    spectator.service.removeApp('user-1', 'gamecatalog').subscribe();
+
+    spectator.expectOne('/api/settings/users/user-1/apps/gamecatalog', HttpMethod.DELETE).flush(null);
+  });
+
+  it('deletes a person', () => {
+    spectator.service.deletePerson('user-1').subscribe();
+
+    spectator.expectOne('/api/settings/users/user-1', HttpMethod.DELETE).flush(null);
+  });
+
+  it('unwraps the sessions', () => {
+    spectator.service.getSessions('user-1').subscribe((sessions) => {
+      expect(sessions).toHaveLength(1);
+    });
+
+    spectator
+      .expectOne('/api/settings/users/user-1/sessions', HttpMethod.GET)
+      .flush({ sessions: [{ id: 's1', kind: 'WEB', offline: false }] });
+  });
+
+  it('ends one session and passes the kind', () => {
+    spectator.service.endSession('user-1', 's1', 'PHONE').subscribe();
+
+    spectator
+      .expectOne('/api/settings/users/user-1/sessions/s1?kind=PHONE', HttpMethod.DELETE)
+      .flush(null);
+  });
+
+  it('ends every session', () => {
+    spectator.service.endAllSessions('user-1').subscribe();
+
+    spectator
+      .expectOne('/api/settings/users/user-1/sessions/end-all', HttpMethod.POST)
+      .flush(null);
+  });
+
   it('unwraps the temporary password from reset-password', () => {
     spectator.service.resetPassword('user-1').subscribe((password) => {
       expect(password).toBe('temp-pass-123');

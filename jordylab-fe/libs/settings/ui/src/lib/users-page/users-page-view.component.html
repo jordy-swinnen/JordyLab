@@ -1,5 +1,13 @@
 <lib-page-header title="Users" subtitle="Approve sign-ups and manage who can use the app." />
 
+<lib-guest-chat-limit-card
+  [limit]="guestLimit()"
+  [loading]="guestLimitLoading()"
+  [saving]="guestLimitSaving()"
+  [error]="guestLimitError()"
+  (saveDefault)="saveGuestLimit.emit($event)"
+/>
+
 @if (temporaryPassword(); as reveal) {
   <div
     class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-accent-text p-4"
@@ -90,31 +98,71 @@
       } @else {
         <div class="space-y-3">
           @for (user of approvedUsers(); track user.id) {
-            <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
-              <div class="min-w-0">
-                <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
+            <div class="panel px-6 py-5">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-base text-foreground">{{ displayName(user) }}</p>
+                  <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
+                    [disabled]="actioningId() === user.id"
+                    (click)="resetPassword.emit(user.id)"
+                    data-testid="reset-password"
+                  >
+                    Reset password
+                  </button>
+                  @if (!user.isAdmin) {
+                    <button
+                      hlmBtn class="h-11"
+                      variant="outline"
+                      [disabled]="actioningId() === user.id"
+                      (click)="revoke.emit(user.id)"
+                      data-testid="revoke-user"
+                    >
+                      Revoke
+                    </button>
+                    <button
+                      hlmBtn class="h-11"
+                      variant="outline"
+                      [disabled]="actioningId() === user.id"
+                      (click)="toggleSessions.emit(user.id)"
+                      [attr.data-testid]="'toggle-sessions-' + user.id"
+                    >
+                      Sessions
+                    </button>
+                    <lib-delete-person-dialog
+                      [user]="user"
+                      [busy]="actioningId() === user.id"
+                      (confirm)="deletePerson.emit(user.id)"
+                    />
+                  }
+                </div>
               </div>
-              <div class="flex flex-wrap items-center gap-3">
-                <button
-                  hlmBtn class="h-11"
-                  variant="outline"
-                  [disabled]="actioningId() === user.id"
-                  (click)="resetPassword.emit(user.id)"
-                  data-testid="reset-password"
-                >
-                  Reset password
-                </button>
-                <button
-                  hlmBtn class="h-11"
-                  variant="outline"
-                  [disabled]="actioningId() === user.id"
-                  (click)="revoke.emit(user.id)"
-                  data-testid="revoke-user"
-                >
-                  Revoke
-                </button>
-              </div>
+              <lib-person-access
+                [user]="user"
+                [busy]="actioningId() === user.id"
+                (grant)="grantApp.emit({ userId: user.id, appKey: $event })"
+                (remove)="removeApp.emit({ userId: user.id, appKey: $event })"
+              />
+              <lib-person-chat-limit
+                [user]="user"
+                [busy]="actioningId() === user.id"
+                (setPersonal)="setPersonalLimit.emit({ userId: user.id, dailyLimit: $event })"
+                (clearPersonal)="clearPersonalLimit.emit(user.id)"
+              />
+              @if (openSessionsUserId() === user.id) {
+                <lib-person-sessions
+                  [sessions]="sessions()"
+                  [loading]="sessionsLoading()"
+                  [actioning]="sessionsActioning()"
+                  [error]="sessionsError()"
+                  (endOne)="endSession.emit($event)"
+                  (endAll)="endAllSessions.emit(user.id)"
+                />
+              }
             </div>
           }
         </div>

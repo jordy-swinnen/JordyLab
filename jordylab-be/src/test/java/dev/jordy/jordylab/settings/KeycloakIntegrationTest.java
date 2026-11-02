@@ -43,7 +43,7 @@ import java.time.Duration;
 @Testcontainers
 @TestPropertySource(properties = "spring.profiles.active=local")
 @Import(KeycloakIntegrationTest.PostgresConfiguration.class)
-abstract class KeycloakIntegrationTest {
+public abstract class KeycloakIntegrationTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -114,9 +114,14 @@ abstract class KeycloakIntegrationTest {
         String serviceAccountId = findUserId(adminToken, "service-account-jordylab-backend");
         String realmManagementClientId = findClientId(adminToken, "realm-management");
 
+        // Mirrors production (deploy README, 2026-09-30): manage and view users, and view-realm so reading a realm role
+        // (needed before granting one) is allowed (spec 011 BUG-033).
         List<Map<String, String>> roles = List.of(
                 realmManagementRole(adminToken, realmManagementClientId, "manage-users"),
-                realmManagementRole(adminToken, realmManagementClientId, "view-users"));
+                realmManagementRole(adminToken, realmManagementClientId, "view-users"),
+                realmManagementRole(adminToken, realmManagementClientId, "view-realm"),
+                // Spec 014: the session list resolves the phone app's client UUID, which needs view-clients.
+                realmManagementRole(adminToken, realmManagementClientId, "view-clients"));
 
         RestClient.create()
                 .post()
@@ -209,7 +214,8 @@ abstract class KeycloakIntegrationTest {
         return authServerUrl() + "/admin/realms/jordylab-test";
     }
 
-    private static String authServerUrl() {
+    /** Protected since spec 014: the gate test drives the Admin REST API directly to prove session behaviour. */
+    protected static String authServerUrl() {
         return "http://" + keycloak.getHost() + ":" + keycloak.getMappedPort(8080);
     }
 }

@@ -1,3 +1,6 @@
+/** Spec 014: an app the admin grants per person. Admins always have every app. */
+export type GrantRole = 'app-gamecatalog';
+
 export interface NavItem {
   label: string;
   path: string;
@@ -6,6 +9,8 @@ export interface NavItem {
   isActive: (url: string) => boolean;
   /** Omit for admin-or-guest; 'admin' hides the item from guests (mirrors the backend access matrix). */
   requiredRole?: 'admin';
+  /** Spec 014: only shown to admins or people granted this app. */
+  requiredAppRole?: GrantRole;
 }
 
 export interface NavGroup {
@@ -14,6 +19,8 @@ export interface NavGroup {
   tab: { label: string; icon: string };
   items: NavItem[];
   requiredRole?: 'admin';
+  /** Spec 014: the whole module is hidden without this app grant. */
+  requiredAppRole?: GrantRole;
 }
 
 export const ICONS = {
@@ -36,6 +43,7 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
   {
     label: 'Game Catalog',
     tab: { label: 'Games', icon: ICONS.gamepad },
+    requiredAppRole: 'app-gamecatalog',
     items: [
       {
         label: 'Library',
@@ -124,8 +132,14 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
 ];
 
 /** The groups and items this person may see. */
-export function visibleNavigationGroups(isAdmin: boolean): NavGroup[] {
-  return NAVIGATION_GROUPS.filter((group) => !group.requiredRole || isAdmin)
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.requiredRole || isAdmin) }))
+export function visibleNavigationGroups(isAdmin: boolean, hasGameCatalog: boolean): NavGroup[] {
+  const showsApp = (role?: GrantRole): boolean => !role || (role === 'app-gamecatalog' && hasGameCatalog);
+
+  return NAVIGATION_GROUPS
+    .filter((group) => (!group.requiredRole || isAdmin) && showsApp(group.requiredAppRole))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => (!item.requiredRole || isAdmin) && showsApp(item.requiredAppRole)),
+    }))
     .filter((group) => group.items.length > 0);
 }

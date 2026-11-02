@@ -60,7 +60,7 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
     }
 
     @Test
-    void guestReachesGameCatalogReadsAndLibBotOnly() {
+    void approvedGuestWithTheGameCatalogGrantReachesGameCatalogReadsAndLibBotOnly() {
         String guest = accessTokenFor("guest-user", "guest-password");
 
         assertSoftly(softly -> {
@@ -89,6 +89,28 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(post("/api/mobile/releases"), guest))).isEqualTo(403);
             // "Save to FNA" is admin-only (spec 007 FR-017) — a guest only ever sees "Ask the catalog".
             softly.assertThat(status(as(manualArticleRequest(), guest))).isEqualTo(403);
+        });
+    }
+
+    /**
+     * Spec 014 FR-003: approval alone no longer grants the Game Catalog. Only the per-app grant does, and a person
+     * without it is refused by the server even when they bypass the navigation.
+     */
+    @Test
+    void approvedGuestWithoutTheAppGrantIsDeniedOnTheGameCatalog() {
+        String withoutApps = accessTokenFor("guest-no-apps", "guest-no-apps-password");
+
+        assertSoftly(softly -> {
+            softly.assertThat(status(as(get("/api/gamecatalog/games"), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/gamecatalog/platforms"), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/gamecatalog/places"), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(chatRequest(), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/gamecatalog/libbot/quota"), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(markRequest(), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/fna/articles"), withoutApps))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/settings/users"), withoutApps))).isEqualTo(403);
+            // Mobile downloads are not an app grant, so the approved person keeps them.
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), withoutApps))).isEqualTo(404);
         });
     }
 
