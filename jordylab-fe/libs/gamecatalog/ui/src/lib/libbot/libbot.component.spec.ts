@@ -95,6 +95,49 @@ describe('LibBotComponent', () => {
     expect(spectator.element).toHaveText('English or Nederlands');
   });
 
+  describe('page state', () => {
+    const state = () => spectator.query('lib-libbot-view')?.getAttribute('data-state');
+
+    it('is firstRun with no conversation and offers three example questions', () => {
+      expect(state()).toBe('firstRun');
+      expect(spectator.queryAll('[data-testid="libbot-example"]')).toHaveLength(3);
+    });
+
+    it('asks the example question when it is tapped', () => {
+      spectator.click(spectator.queryAll('[data-testid="libbot-example"]')[0]);
+
+      expect(ask).toHaveBeenCalledWith('There are 6 people here tonight, what should we play?');
+    });
+
+    it('is answering while a question is in flight', () => {
+      busy.set(true);
+      spectator.detectChanges();
+
+      expect(state()).toBe('answering');
+    });
+
+    it('is limit when the daily allowance is used', () => {
+      failure.set({ kind: 'limitReached', resetsAt: '2026-10-08T00:00:00Z' });
+      spectator.detectChanges();
+
+      expect(state()).toBe('limit');
+    });
+
+    it('is error after a failed question', () => {
+      failure.set({ kind: 'unavailable', retryable: true });
+      spectator.detectChanges();
+
+      expect(state()).toBe('error');
+    });
+
+    it('is loaded once the conversation has messages', () => {
+      messages.set([{ role: 'user', text: 'hello' }]);
+      spectator.detectChanges();
+
+      expect(state()).toBe('loaded');
+    });
+  });
+
   it('pre-fills the question box from the prefill query param', () => {
     queryParamMap.next(convertToParamMap({ prefill: 'https://example.com/shared-article' }));
     spectator.detectChanges();

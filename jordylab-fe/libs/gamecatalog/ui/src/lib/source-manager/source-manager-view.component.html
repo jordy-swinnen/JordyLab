@@ -1,13 +1,10 @@
-<div class="flex flex-col gap-3.5">
-  <div class="eyebrow">Game Catalog · scan clients</div>
-  <h2 class="page-title">Sources</h2>
-</div>
+<lib-page-header title="Sources" subtitle="Scan clients report each machine's libraries here." />
 
 <div class="mt-10 grid gap-5 md:grid-cols-2">
   <div class="panel flex flex-col gap-4 p-6">
     <div class="flex items-center gap-3.5">
       <div
-        class="flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-secondary text-primary"
+        class="flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-secondary text-accent-text"
       >
         <svg
           width="24"
@@ -26,17 +23,16 @@
         </svg>
       </div>
       <h3
-        class="display-md text-3xl"
-        style="font-variation-settings: 'wdth' 88"
+        class="display-md text-2xl"
       >
         Steam
       </h3>
     </div>
     <p class="text-[15px] leading-relaxed text-secondary-foreground">
       Scans the Steam library on this PC. Walks
-      <code class="font-mono text-[13px] text-foreground">steamapps/</code> and
+      <code class="text-[13px] text-foreground">steamapps/</code> and
       reads each
-      <code class="font-mono text-[13px] text-foreground"
+      <code class="text-[13px] text-foreground"
         >appmanifest_&lt;appid&gt;.acf</code
       >.
     </p>
@@ -60,7 +56,7 @@
   <div class="panel flex flex-col gap-4 p-6">
     <div class="flex items-center gap-3.5">
       <div
-        class="flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-secondary text-primary"
+        class="flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-secondary text-accent-text"
       >
         <svg
           width="24"
@@ -78,8 +74,7 @@
         </svg>
       </div>
       <h3
-        class="display-md text-3xl"
-        style="font-variation-settings: 'wdth' 88"
+        class="display-md text-2xl"
       >
         EmuDeck
       </h3>
@@ -124,7 +119,7 @@
       {{ librarySyncing() === 'OWNED' ? 'Syncing…' : 'Sync owned library' }}
     </button>
     @if (libraryStatus()?.owned; as owned) {
-      <span class="mono-label">
+      <span class="label">
         {{ owned.entriesActive }} owned
         @if (owned.lastSuccessAt) {
           · last sync {{ owned.lastSuccessAt | date: 'short' }}
@@ -133,14 +128,14 @@
     }
   </div>
   @if (libraryStatus()?.ownedConfigured === false) {
-    <p class="mono-label text-muted-foreground">
+    <p class="label text-muted-foreground">
       Steam account not configured — set STEAM_WEB_API_KEY and STEAM_ID to sync
       the owned library.
     </p>
   }
 
   <div class="flex flex-col gap-3 border-t border-border pt-5">
-    <div class="mono-label">Family library</div>
+    <div class="label">Family library</div>
     <p class="text-sm text-muted-foreground">
       Paste a short-lived Steam access token (about 24 hours). It is used for
       one sync and never stored.
@@ -170,7 +165,7 @@
             class="underline"
             >Steam Points Summary config page</a
           >. It shows a line of text with a long
-          <code class="font-mono">webapi_token</code> value.
+          <code>webapi_token</code> value.
         </li>
         <li>
           Select all of that text, copy it and paste it above — the whole page
@@ -178,7 +173,7 @@
         </li>
       </ol>
       <p class="mt-2">
-        If the page only shows <code class="font-mono">"data":[]</code>, this
+        If the page only shows <code>"data":[]</code>, this
         browser is not signed in to the Steam store: sign in, then reload the
         page. The token expires roughly every 24 hours — paste a fresh one to
         sync again. This uses Steam's undocumented family API; see the
@@ -218,7 +213,7 @@
       </p>
     }
     @if (libraryStatus()?.family; as family) {
-      <span class="mono-label">
+      <span class="label">
         {{ family.entriesActive }} shared
         @if (family.lastSuccessAt) {
           · last sync {{ family.lastSuccessAt | date: 'short' }}
@@ -233,7 +228,7 @@
   @if (lastLibraryRun(); as run) {
     <div class="border-t border-border pt-5" data-testid="library-run-summary">
       <p class="text-sm text-foreground">{{ runSummary(run) }}</p>
-      <p class="mono-label mt-1">
+      <p class="label mt-1">
         {{ run.librarySource }} · {{ run.outcome }} · {{ run.entriesAdded }}
         added · {{ run.metadataCalls }} metadata calls · {{ run.aiCalls }} AI
         calls · {{ run.finishedAt | date: 'mediumTime' }}
@@ -246,7 +241,7 @@
   <section class="mb-5 mt-12" aria-labelledby="library-health-title" data-testid="library-health">
     <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
       <h2 id="library-health-title" class="section-title">Library health</h2>
-      <span class="mono-label">{{ libraryHealth.totalGames }} games in the library</span>
+      <span class="label">{{ libraryHealth.totalGames }} games in the library</span>
     </div>
     <p class="mb-4 text-[15px] leading-relaxed text-secondary-foreground">
       Covers, facts, descriptions and the search index fill in by themselves. What is still missing is listed here.
@@ -254,8 +249,8 @@
     <ul class="grid gap-3 sm:grid-cols-3">
       @for (row of healthRows; track row.kind) {
         <li class="panel flex flex-col gap-2 px-5 py-4">
-          <span class="mono-label">{{ row.label }}</span>
-          <span class="font-display text-3xl font-bold" [attr.data-testid]="'health-count-' + row.kind">
+          <span class="label">{{ row.label }}</span>
+          <span class="text-3xl font-bold tabular-nums" [attr.data-testid]="'health-count-' + row.kind">
             {{ row.count(libraryHealth) }}
             <span class="text-base font-normal text-muted-foreground">
               · {{ percentOf(row.count(libraryHealth), libraryHealth) }}
@@ -278,7 +273,7 @@
     @if (healthExceptions(); as exceptions) {
       <div class="panel mt-4 px-5 py-4" data-testid="health-exceptions">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <span class="mono-label">
+          <span class="label">
             {{ exceptions.total }} games · showing {{ exceptions.games.length }}
           </span>
           <button type="button" class="text-sm font-semibold text-primary" (click)="hideExceptions.emit()">
@@ -306,34 +301,21 @@
 <div class="mb-5 mt-12 flex flex-wrap items-center justify-between gap-4">
   <h2 class="section-title">Scan sources</h2>
   <div class="flex items-center gap-4">
-    <span class="mono-label">{{ sources().length }} sources</span>
+    <span class="label">{{ sources().length }} sources</span>
   </div>
 </div>
 
 @if (error()) {
-  <div
-    class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
-  >
-    {{ error() }}
-  </div>
+  <lib-error-state class="mb-4 block" [message]="error() ?? ''" (retry)="reload.emit()" />
 }
 
 @if (loading()) {
-  <div class="space-y-3" aria-label="Loading sources">
-    @for (row of [1, 2, 3]; track row) {
-      <hlm-skeleton class="h-24 w-full rounded-2xl" />
-    }
-  </div>
+  <lib-skeleton-rows [count]="3" [height]="96" />
 } @else if (sources().length === 0) {
-  <div
-    class="rounded-2xl border border-dashed border-input py-14 text-center text-muted-foreground"
-  >
-    <p class="text-sm">No scan sources announced yet.</p>
-    <p class="mt-1 text-xs">
-      Download the client above, run it once on a host, and the source appears
-      after its first scan.
-    </p>
-  </div>
+  <lib-empty-state
+    title="No sources yet."
+    hint="Download the client above, run it once on a host, and the source appears after its first scan."
+  />
 } @else {
   <div class="space-y-3">
     @for (source of sources(); track source.id) {
@@ -342,7 +324,7 @@
       >
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2.5">
-            <span class="font-display text-lg font-semibold text-foreground" data-testid="source-label">{{
+            <span class="text-lg font-semibold text-foreground" data-testid="source-label">{{
               source.label
             }}</span>
             <lib-platform-chip [chip]="source.platformChip" />
@@ -351,7 +333,7 @@
             </span>
           </div>
           <p
-            class="mt-2.5 flex flex-wrap items-center gap-x-3 truncate font-mono text-[13px] text-muted-foreground"
+            class="mt-2.5 flex flex-wrap items-center gap-x-3 truncate text-[13px] text-muted-foreground"
             [title]="source.hostname"
           >
             <span>hostname: {{ source.hostname }}</span>
@@ -399,25 +381,12 @@
               {{ source.lastOutcome }}
             </span>
           }
-          <button
-            type="button"
-            role="switch"
-            [attr.aria-checked]="source.enabled"
-            [attr.aria-label]="'Toggle ' + source.sourceKey"
+          <lib-switch
+            [checked]="source.enabled"
+            [label]="'Toggle ' + source.sourceKey"
             [disabled]="togglingId() === source.id"
-            (click)="toggleSource.emit(source)"
-            class="relative inline-flex h-[27px] w-[46px] flex-shrink-0 items-center rounded-full transition-colors duration-200"
-            [class]="source.enabled ? 'bg-primary' : 'bg-input'"
-          >
-            <span
-              class="inline-block h-[21px] w-[21px] transform rounded-full shadow transition-transform duration-200"
-              [class]="
-                source.enabled
-                  ? 'translate-x-[22px] bg-primary-foreground'
-                  : 'translate-x-[3px] bg-foreground'
-              "
-            ></span>
-          </button>
+            (checkedChange)="toggleSource.emit(source)"
+          />
         </div>
       </div>
     }

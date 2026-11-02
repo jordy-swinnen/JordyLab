@@ -4,7 +4,13 @@ import { Component, input, output, signal, ChangeDetectionStrategy } from '@angu
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { HlmInputDirective } from '@spartan-ng/ui-input-helm';
-import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
+import {
+  EmptyStateComponent,
+  ErrorStateComponent,
+  PageHeaderComponent,
+  SkeletonRowsComponent,
+  SwitchComponent,
+} from '@jordylab-fe/shared/layout';
 import {
   HealthExceptions,
   HealthKind,
@@ -31,7 +37,11 @@ export type ScanClientType = 'steam' | 'emudeck';
     HlmBadgeDirective,
     HlmButtonDirective,
     HlmInputDirective,
-    HlmSkeletonComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    PageHeaderComponent,
+    SkeletonRowsComponent,
+    SwitchComponent,
     HostNameEditorComponent,
     ConfirmDialogComponent,
     PlatformChipComponent,
@@ -65,6 +75,7 @@ export class SourceManagerViewComponent {
   showExceptions = output<HealthKind>();
   hideExceptions = output<void>();
   downloadClient = output<ScanClientType>();
+  reload = output<void>();
   syncOwnedLibrary = output<void>();
   syncFamilyLibrary = output<string>();
 
@@ -72,7 +83,7 @@ export class SourceManagerViewComponent {
   protected readonly tokenProblem = signal<string | null>(null);
 
   protected readonly neutralTag =
-    'rounded-[7px] border-transparent px-2 py-[5px] font-mono text-[10.5px] font-medium uppercase tracking-[0.08em]';
+    'rounded-md border-transparent px-2 py-[5px] text-xs font-medium';
 
   protected readonly healthRows: { kind: HealthKind; label: string; count: (health: LibraryHealth) => number }[] = [
     { kind: 'COVER', label: 'Without a cover', count: (health) => health.gamesWithoutCover },
@@ -131,9 +142,9 @@ export class SourceManagerViewComponent {
 
   outcomeClass(outcome: ScanSource['lastOutcome']): string {
     const pill =
-      'gap-[7px] rounded-full border-transparent px-[11px] py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.08em]';
+      'gap-[7px] rounded-full border-transparent px-[11px] py-1.5 text-xs font-medium';
     if (outcome === 'APPLIED' || outcome === 'NO_CHANGE') {
-      return `${pill} bg-primary/15 text-primary`;
+      return `${pill} bg-primary/15 text-accent-text`;
     }
     if (outcome === 'SCAN_FAILED' || outcome === 'REJECTED') {
       return `${pill} bg-destructive/15 text-destructive`;

@@ -14,6 +14,7 @@
   [libraryStatus]="libraryStatus()"
   [librarySyncing]="librarySyncing()"
   [lastLibraryRun]="lastLibraryRun()"
+  (reload)="onReload()"
   (toggleSource)="onToggle($event)"
   (confirmDisable)="onConfirmDisable()"
   (cancelDisable)="onCancelDisable()"

@@ -10,7 +10,7 @@ import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
   template: `
     <div class="flex flex-col gap-2.5" aria-hidden="true">
       @for (row of rows(); track row) {
-        <hlm-skeleton class="w-full rounded-xl" [style.height.px]="height()" />
+        <hlm-skeleton class="w-full rounded-xl motion-reduce:animate-none" [style.height.px]="height()" />
       }
     </div>
   `,

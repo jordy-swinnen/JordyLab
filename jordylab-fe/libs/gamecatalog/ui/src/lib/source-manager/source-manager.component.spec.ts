@@ -360,7 +360,7 @@ describe('SourceManagerComponent', () => {
   it('shows an empty state when no sources exist', () => {
     populate([]);
 
-    expect(spectator.element).toHaveText('No scan sources announced yet.');
+    expect(spectator.element).toHaveText('No sources yet.');
   });
 
   it('shows an error state when loading fails', () => {

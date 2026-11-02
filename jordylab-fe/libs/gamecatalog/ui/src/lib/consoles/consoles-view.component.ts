@@ -1,3 +1,5 @@
+import { EmptyStateComponent, ErrorStateComponent, PageHeaderComponent, SkeletonRowsComponent } from '@jordylab-fe/shared/layout';
+import { ConfirmDialogComponent } from '../dialogs/confirm-dialog.component';
 import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -18,7 +20,15 @@ export interface ConsoleRemoval {
 @Component({
   selector: 'lib-consoles-view',
   standalone: true,
-  imports: [RouterLink, PlatformChipComponent],
+  imports: [
+    RouterLink,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    PageHeaderComponent,
+    SkeletonRowsComponent,
+    ConfirmDialogComponent,
+    PlatformChipComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './consoles-view.component.html',
 })
@@ -37,6 +47,7 @@ export class ConsolesViewComponent {
   removal = input.required<ConsoleRemoval | null>();
   lastAdded = input.required<string | null>();
 
+  reload = output<void>();
   suggest = output<string>();
   addConsole = output<{ platform: string; name: string }>();
   renameConsole = output<{ id: string; name: string }>();

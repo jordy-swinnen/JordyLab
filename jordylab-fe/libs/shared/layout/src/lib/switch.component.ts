@@ -9,9 +9,10 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
     <button
       type="button"
       role="switch"
-      class="inline-flex h-11 w-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      class="inline-flex h-11 w-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50"
       [attr.aria-checked]="checked()"
       [attr.aria-label]="label()"
+      [disabled]="disabled()"
       (click)="checkedChange.emit(!checked())"
     >
       <span class="relative block h-[27px] w-[46px] rounded-full transition-colors duration-200" [class]="trackClass()">
@@ -23,6 +24,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 export class SwitchComponent {
   checked = input.required<boolean>();
   label = input.required<string>();
+  disabled = input(false);
 
   checkedChange = output<boolean>();
 

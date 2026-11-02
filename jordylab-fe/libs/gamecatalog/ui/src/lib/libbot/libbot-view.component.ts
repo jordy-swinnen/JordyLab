@@ -9,6 +9,7 @@ import {
   LibBotReference,
   LibBotStage,
 } from '@jordylab-fe/gamecatalog/api';
+import { PageHeaderComponent } from '@jordylab-fe/shared/layout';
 import { coverPlateClass } from '../cover';
 import { SparkleIconComponent } from '../chips/sparkle-icon.component';
 
@@ -24,10 +25,19 @@ const STAGES: { stage: LibBotStage; label: string }[] = [
   { stage: 'WRITING', label: 'Writing the answer' },
 ];
 
+export type LibBotState = 'firstRun' | 'answering' | 'limit' | 'error' | 'loaded';
+
+const EXAMPLE_QUESTIONS = [
+  'There are 6 people here tonight, what should we play?',
+  'Which co-op games can I play on the Switch?',
+  'What is a short game I have not played yet?',
+];
+
 @Component({
   selector: 'lib-libbot-view',
   standalone: true,
-  imports: [RouterLink, SparkleIconComponent],
+  imports: [RouterLink, PageHeaderComponent, SparkleIconComponent],
+  host: { '[attr.data-state]': 'state()' },
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './libbot-view.component.html',
 })
@@ -61,6 +71,21 @@ export class LibBotViewComponent {
   });
 
   protected readonly limitReached = computed(() => this.failure()?.kind === 'limitReached');
+  protected readonly exampleQuestions = EXAMPLE_QUESTIONS;
+
+  protected readonly state = computed<LibBotState>(() => {
+    if (this.busy()) {
+      return 'answering';
+    }
+    if (this.limitReached()) {
+      return 'limit';
+    }
+    if (this.failure()) {
+      return 'error';
+    }
+
+    return this.messages().length === 0 ? 'firstRun' : 'loaded';
+  });
 
   protected readonly quotaLine = computed(() => {
     const quota = this.quota();
