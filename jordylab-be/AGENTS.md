@@ -280,33 +280,20 @@ class SomeObjectTestBuilder {
 - `finance` → jordylab-be
 - `gamecatalog` → jordylab-be
 - `garmin` → jordylab-be (NOT garmin-sync-service)
-- `mobile` → jordylab-be
 - `recipe` → jordylab-be
 
-# Mobile module (feature 007)
+# Admin push notifications (feature 017, formerly the `mobile` module)
 
-- Owns `MobileRelease` (release metadata + APK signing-cert verification), signed download-link
-  issuance (HMAC-SHA256, short-lived, no DB row per link — see `specs/007-mobile-app/research.md`
-  D8), the `/.well-known/assetlinks.json` endpoint, and `NtfyClient` (the app's sole push-notification
-  sender — `jordylab.mobile.notifications.ntfy.*` config, moved here from `settings` since no
-  working code read those keys yet).
-- Signed APKs live on a filesystem volume (`jordylab.mobile.release.storage-dir`), mirroring
-  `gamecatalog`'s `artwork.dir` pattern — no object storage or DB blob.
-- **Cross-module wiring is event-only, never a direct call** (Spring Modulith application events —
-  the first real use of that infrastructure in this codebase): `settings`' `PendingSignupWatcherService`
-  publishes `UserSignUpPending`; `fna`'s `BriefingGeneratorService` publishes `BriefingReady` on
-  completion. `mobile.service.MobileNotificationListener` has one `@ApplicationModuleListener` per
-  event, building an Android App Link click-through URL
-  (`https://{PRODUCTION_DOMAIN}/mobile/open?screen=...`) and calling `NtfyClient`. A push failure is
-  logged and swallowed — it must never fail the sign-up or briefing flow that triggered it.
-- `settings.KeycloakUserAdministrationService.revoke()` also revokes the `jordylab-mobile` client's
-  offline consent (`DELETE .../consents/jordylab-mobile`) — a normal Keycloak logout does **not**
-  revoke `offline_access` grants, so without this a revoked user's biometric-unlock token on the
-  mobile app would keep refreshing indefinitely.
-- STOP-AND-REPORT gates (never apply without explicit sign-off, per the user's own instruction):
-  the `jordylab-mobile`/`mobile-release-ci` Keycloak clients and `mobile-release-publisher` realm
-  role (blocked on feature 008's production domain), the Android application id, and the release
-  signing keystore. See `specs/007-mobile-app/tasks.md` T007/T052.
+- `shared/rest/client/NtfyClient` publishes admin pushes to the self-hosted ntfy server, configured by
+  `shared/config/NotificationProperties` (`jordylab.notifications.ntfy.*` plus `app-base-url` ←
+  `JORDYLAB_APP_BASE_URL`). Callers pass the in-app click-through path (`/settings/users`, `/fna/briefing`);
+  the client resolves it against the public origin, so a tap opens the web app (installed or in a tab).
+- Callers are **direct**: `settings`' `PendingSignupWatcherService` (new pending sign-up) and `fna`'s
+  `BriefingGeneratorService` (briefing persisted). The old `UserSignUpPending`/`BriefingReady` events and the
+  `mobile` module were removed with the native app (spec 017 US4). A push failure is logged and swallowed by
+  `NtfyClient` — it must never fail the sign-up or briefing flow that triggered it.
+- `shared/rest/client` is exposed as `@NamedInterface("notifications")`; `ModularityTests` enforces that
+  other modules use it instead of internals.
 
 # pgvector
 

@@ -33,10 +33,11 @@ kubectl -n jordylab exec deploy/keycloak -- sh -c '/opt/keycloak/bin/kcadm.sh co
 
 | Date | Change | Why |
 |---|---|---|
-| 2026-09-30 | `admin` becomes a composite of `guest` + `gamecatalog-scanner` | The owner holds every JordyLab role and can run the scanner without a hand-assigned role (spec 011 BUG-028). `mobile-release-publisher` stays CI-only (007 FR-004). |
+| 2026-09-30 | `admin` becomes a composite of `guest` + `gamecatalog-scanner` | The owner holds every JordyLab role and can run the scanner without a hand-assigned role (spec 011 BUG-028). |
 | 2026-09-30 | `jordylab-backend` gets a client scope mapping for `realm-management` → `view-users`, `manage-users`, `view-realm` | The client has `fullScopeAllowed=false`, so without the mapping its service-account token carried none of these roles and the Admin REST API answered 403 (Settings → Users, spec 011 BUG-031). |
 | 2026-09-30 | `jordylab-backend` service account + scope mapping: `view-realm` instead of `view-roles` | `view-roles` is not a built-in `realm-management` role — the import created an empty custom role. Reading a realm role (`GET /roles/guest`, needed to approve a user) requires `view-realm`; without it approve/revoke answered 403 (spec 011 BUG-033). Remove the stray `view-roles` client role afterwards. |
 | 2026-09-30 | New role `mobile-release-publisher`; clients `jordylab-mobile` and `mobile-release-ci`; the CI service account gets the role (scope-mapped) | Android release pipeline and native login (spec 007 D13). Needs the `MOBILE_RELEASE_CI_CLIENT_SECRET` env var in the Keycloak pod (from `jordylab-secrets`), so run it after the deploy that wires it. |
+| 2026-11-02 | Both native clients and the CI role removed | The Android app and its release pipeline were replaced by the installable web app (spec 017). One-time live deletion: `docs/runbook.md` §20. |
 | 2026-10-01 | Required action `UPDATE_EMAIL` enabled | Users change their own email from the account menu (006 US5 / FR-008, spec 011 BUG-011). With email as username, Keycloak 26.4+ only lets users change email through this action (supported feature since 26.4). **Not in the realm files**: listing any `requiredActions` in an import replaces Keycloak's defaults, so re-run this after a fresh import too. Command below. |
 | 2026-10-04 | Realm `ssoSessionIdleTimeout` 30 min → 30 days, `ssoSessionMaxLifespan` → 90 days (access token stays 30 min, refreshed silently) | The owner was signed out far too often: the web app restores its session from the SSO cookie, which expired after 30 idle minutes. Applied live 2026-10-04 (owner-run, HANDOFF-16) with `kcadm.sh update realms/jordylab -s ssoSessionIdleTimeout=2592000 -s ssoSessionMaxLifespan=7776000` and mirrored in both realm files. |
 | 2026-11-02 | New realm role `app-gamecatalog`; `accessTokenLifespan` 1800 → **60**; `jordylab-backend` gets `view-clients` | Spec 014: per-app access is a realm role (Game Catalog only), and the 60-second token lifetime is what makes a revoked person, a removed app or a deleted account stop working within a minute. `view-clients` lets the panel resolve the phone app's client UUID for its offline sessions. **Roll-out order**: create the role and assign it to every approved guest first, then change the lifespan, then deploy the backend (tasks T113–T119). **Applied live 2026-11-02:** `view-clients` added to `service-account-jordylab-backend`; role `app-gamecatalog` created (non-composite) and granted to the three approved guests at the time (bastiaandejong@live.be, brianthys@hotmail.com, jordylab.frown533@passmail.net); `accessTokenLifespan` set to 60. All verified with `kcadm`. The backend/frontend deploy is still to come (tasks T118–T120). Fresh imports carry `view-clients` from the service-account `clientRoles` list (verified on a fresh realm). |
@@ -59,18 +60,6 @@ ROLES=$(for r in view-users manage-users view-realm; do kcadm.sh get clients/$RM
 kcadm.sh create clients/$ID/scope-mappings/clients/$RM -r jordylab -b "[$ROLES]" --config /tmp/kc.cfg
 ```
 
-The `jordylab-mobile` (public, PKCE, App Link callback) and `mobile-release-ci` (CI publisher,
-`${MOBILE_RELEASE_CI_CLIENT_SECRET}`) clients and the `mobile-release-publisher` role were added on
-2026-09-30 after Jordy signed off on the Android application id `be.jordylab.app` (spec 007 D13/D14,
-spec 011 Q-06).
-
-The mobile clients (same session; `$MOBILE_RELEASE_CI_CLIENT_SECRET` is already in the pod's environment):
-
-```bash
-kcadm.sh create roles -r jordylab -s name=mobile-release-publisher -s 'description=Publish Android releases — CI identity only' --config /tmp/kc.cfg
-kcadm.sh create clients -r jordylab --config /tmp/kc.cfg -s clientId=jordylab-mobile -s publicClient=true -s standardFlowEnabled=true -s directAccessGrantsEnabled=false -s 'redirectUris=["https://jordylab.be/mobile/callback"]' -s 'webOrigins=["https://localhost"]' -s 'attributes."pkce.code.challenge.method"=S256' -s 'attributes."post.logout.redirect.uris"=https://jordylab.be/mobile/*'
-kcadm.sh create clients -r jordylab --config /tmp/kc.cfg -s clientId=mobile-release-ci -s publicClient=false -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=false -s fullScopeAllowed=false -s "secret=$MOBILE_RELEASE_CI_CLIENT_SECRET"
-kcadm.sh add-roles -r jordylab --uusername service-account-mobile-release-ci --rolename mobile-release-publisher --config /tmp/kc.cfg
-CI=$(kcadm.sh get clients -r jordylab -q clientId=mobile-release-ci --fields id --config /tmp/kc.cfg | sed -n 's/.*"id" : "\(.*\)".*/\1/p')
-kcadm.sh create clients/$CI/scope-mappings/realm -r jordylab -b "[$(kcadm.sh get roles/mobile-release-publisher -r jordylab --fields id,name --config /tmp/kc.cfg)]" --config /tmp/kc.cfg
-```
+The native app's `jordylab-mobile` and `mobile-release-ci` clients and the `mobile-release-publisher` role were
+removed on 2026-11-02 with the move to the installable web app (spec 017); see `docs/runbook.md` §20 for the one-time
+deletion from the live realm.

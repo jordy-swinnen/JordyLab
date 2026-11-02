@@ -69,7 +69,7 @@ export class UserMenuComponent {
   readonly #auth = inject(AuthService);
 
   readonly compact = input(false);
-  /** The shell owns sign-out (it also wipes biometric unlock first). */
+  /** The shell owns sign-out. */
   readonly signOut = output<void>();
 
   protected readonly username = this.#auth.username;

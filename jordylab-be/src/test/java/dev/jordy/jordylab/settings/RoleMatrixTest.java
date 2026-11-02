@@ -39,10 +39,9 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(get("/api/gamecatalog/games"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), admin))).isEqualTo(200);
-            // No release has been published in this test fixture — an authorized admin falls
-            // through to 404 (NO_RELEASES_PUBLISHED), never 403 (spec 007 FR-002).
-            softly.assertThat(status(as(get("/api/mobile/releases/latest"), admin))).isEqualTo(404);
-            // Admin does not hold mobile-release-publisher — publishing is CI-only (FR-004).
+            // The APK release endpoints were removed with the native app (spec 017 US4): the deny-all
+            // refuses them even for an admin, so nothing can reach a deleted controller.
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), admin))).isEqualTo(403);
             softly.assertThat(status(as(post("/api/mobile/releases"), admin))).isEqualTo(403);
             // "Save to FNA" (spec 007 FR-017) reuses the existing /api/fna/** admin-only matcher.
             softly.assertThat(status(as(manualArticleRequest(), admin))).isEqualTo(201);
@@ -84,8 +83,8 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), guest))).isEqualTo(403);
-            // Guests may check for updates and request a download link (spec 007 FR-002).
-            softly.assertThat(status(as(get("/api/mobile/releases/latest"), guest))).isEqualTo(404);
+            // The APK release endpoints are gone (spec 017 US4) — guests are refused like anyone else.
+            softly.assertThat(status(as(get("/api/mobile/releases/latest"), guest))).isEqualTo(403);
             softly.assertThat(status(as(post("/api/mobile/releases"), guest))).isEqualTo(403);
             // "Save to FNA" is admin-only (spec 007 FR-017) — a guest only ever sees "Ask the catalog".
             softly.assertThat(status(as(manualArticleRequest(), guest))).isEqualTo(403);
@@ -128,7 +127,7 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(markRequest(), pending))).isEqualTo(403);
             softly.assertThat(status(as(romStatusRequest(), pending))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), pending))).isEqualTo(403);
-            // spec 007 scenario 4: a pending user gets no dialog and a denied download-link request.
+            // The removed release endpoints stay closed to a pending account too.
             softly.assertThat(status(as(get("/api/mobile/releases/latest"), pending))).isEqualTo(403);
             softly.assertThat(status(as(post("/api/mobile/releases/" + UUID.randomUUID() + "/download-link"), pending)))
                     .isEqualTo(403);
@@ -136,13 +135,12 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
     }
 
     @Test
-    void downloadAndAssetLinksEndpointsArePublic() {
+    void removedMobileEndpointsAreDeniedToAnonymousCallers() {
         assertSoftly(softly -> {
-            // No release published in this fixture, so an unauthenticated caller reaches the
-            // controller (proving permitAll) and gets refused by token validation, never 401/403
-            // from Spring Security itself (spec 007 research D8).
-            softly.assertThat(status(get("/api/mobile/download/not-a-real-token"))).isEqualTo(403);
-            softly.assertThat(status(get("/.well-known/assetlinks.json"))).isEqualTo(200);
+            // Both were public before spec 017 US4; with the native app gone the deny-all closes them
+            // like any other unlisted request, and an anonymous caller is asked to authenticate first.
+            softly.assertThat(status(get("/api/mobile/download/not-a-real-token"))).isEqualTo(401);
+            softly.assertThat(status(get("/.well-known/assetlinks.json"))).isEqualTo(401);
         });
     }
 

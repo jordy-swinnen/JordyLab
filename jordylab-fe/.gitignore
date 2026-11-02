@@ -59,5 +59,3 @@ apps/jordylab-e2e/playwright-report/
 apps/jordylab-e2e/test-results/
 
 # Appium: drivers installed by `bun run setup`, failure screenshots and page sources
-apps/jordylab-mobile-e2e/.appium/
-apps/jordylab-mobile-e2e/logs/

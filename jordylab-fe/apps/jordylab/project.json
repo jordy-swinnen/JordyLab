@@ -4,11 +4,16 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/jordylab/src",
-  "tags": ["scope:shared", "type:app"],
+  "tags": [
+    "scope:shared",
+    "type:app"
+  ],
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/jordylab",
         "baseHref": "/",
@@ -20,7 +25,10 @@
             "input": "apps/jordylab/public"
           }
         ],
-        "styles": ["node_modules/@angular/cdk/overlay-prebuilt.css", "apps/jordylab/src/styles.css"]
+        "styles": [
+          "node_modules/@angular/cdk/overlay-prebuilt.css",
+          "apps/jordylab/src/styles.css"
+        ]
       },
       "configurations": {
         "production": {
@@ -49,17 +57,6 @@
           "extractLicenses": false,
           "sourceMap": true
         },
-        "mobile-e2e": {
-          "optimization": false,
-          "extractLicenses": false,
-          "sourceMap": false,
-          "fileReplacements": [
-            {
-              "replace": "apps/jordylab/src/environments/environment.ts",
-              "with": "apps/jordylab/src/environments/environment.mobile-e2e.ts"
-            }
-          ]
-        },
         "e2e": {
           "optimization": false,
           "extractLicenses": false,
@@ -70,27 +67,6 @@
               "with": "apps/jordylab/src/environments/environment.e2e.ts"
             }
           ]
-        },
-        "mobile": {
-          "budgets": [
-            {
-              "type": "initial",
-              "maximumWarning": "500kb",
-              "maximumError": "1mb"
-            },
-            {
-              "type": "anyComponentStyle",
-              "maximumWarning": "4kb",
-              "maximumError": "8kb"
-            }
-          ],
-          "fileReplacements": [
-            {
-              "replace": "apps/jordylab/src/environments/environment.ts",
-              "with": "apps/jordylab/src/environments/environment.mobile.ts"
-            }
-          ],
-          "outputHashing": "all"
         }
       },
       "defaultConfiguration": "production"
@@ -122,7 +98,9 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "options": {
         "buildTarget": "jordylab:build:development",
         "staticFilePath": "dist/apps/jordylab/browser",

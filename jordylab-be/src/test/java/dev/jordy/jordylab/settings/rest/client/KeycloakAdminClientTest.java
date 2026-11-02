@@ -150,27 +150,6 @@ class KeycloakAdminClientTest {
     }
 
     @Test
-    void revokesConsentWithADeleteToTheConsentsEndpoint() {
-        stubToken();
-        stubFor(delete(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile"))
-                .willReturn(aResponse().withStatus(204)));
-
-        client.revokeConsent("u1", "jordylab-mobile");
-
-        verify(deleteRequestedFor(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile")));
-    }
-
-    @Test
-    void revokingAnUnknownConsentPropagatesNotFoundUnwrapped() {
-        stubToken();
-        stubFor(delete(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile"))
-                .willReturn(aResponse().withStatus(404)));
-
-        assertThatThrownBy(() -> client.revokeConsent("u1", "jordylab-mobile"))
-                .isInstanceOf(HttpClientErrorException.NotFound.class);
-    }
-
-    @Test
     void aTokenRejectedMidFlightIsRefreshedOnceAndTheCallRetried() {
         stubToken();
         stubFor(get(urlPathEqualTo("/admin/realms/jordylab-test/users/u1"))

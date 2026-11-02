@@ -30,12 +30,11 @@ class RealmConfigurationTest {
 
     /**
      * The admin holds every JordyLab role (Jordy, spec 011 Q-07) so the owner can also scan without a
-     * hand-assigned role (BUG-028) and always has every app (spec 014 FR-005). {@code mobile-release-publisher}
-     * is deliberately excluded: only the CI identity may publish Android releases (spec 007 FR-004).
+     * hand-assigned role (BUG-028) and always has every app (spec 014 FR-005).
      */
     @ParameterizedTest
     @ValueSource(strings = {DEV_REALM, PROD_REALM})
-    void adminIsACompositeOfEveryJordyLabRoleExceptTheCiPublisher(String realmFile) throws IOException {
+    void adminIsACompositeOfEveryJordyLabRole(String realmFile) throws IOException {
         JsonNode adminRole = realmRole(realmFile, "admin");
         List<String> composedRealmRoles = new ArrayList<>();
         adminRole.path("composites").path("realm").forEach(role -> composedRealmRoles.add(role.asText()));
@@ -44,7 +43,6 @@ class RealmConfigurationTest {
             softly.assertThat(adminRole.path("composite").asBoolean()).isTrue();
             softly.assertThat(composedRealmRoles)
                     .containsExactlyInAnyOrder("guest", "app-gamecatalog", "gamecatalog-scanner");
-            softly.assertThat(composedRealmRoles).doesNotContain("mobile-release-publisher");
         });
     }
 
@@ -111,43 +109,21 @@ class RealmConfigurationTest {
     }
 
     /**
-     * The native app logs in through the system browser with PKCE and returns via the App Link
-     * callback (spec 007 D2/D13); it never gets the password grant.
+     * The native app's identity entries were removed with it (spec 017 US4): no realm file may
+     * reintroduce the App Link client, the release-publishing client or its CI-only role.
      */
     @ParameterizedTest
     @ValueSource(strings = {DEV_REALM, PROD_REALM})
-    void mobileClientIsAPublicPkceClientReturningToTheMobileCallback(String realmFile) throws IOException {
-        JsonNode mobileClient = client(objectMapper.readTree(Path.of(realmFile).toFile()), "jordylab-mobile");
-        List<String> redirectUris = new ArrayList<>();
-        mobileClient.path("redirectUris").forEach(uri -> redirectUris.add(uri.asText()));
-
-        assertSoftly(softly -> {
-            softly.assertThat(mobileClient.path("publicClient").asBoolean()).isTrue();
-            softly.assertThat(mobileClient.path("directAccessGrantsEnabled").asBoolean(true)).isFalse();
-            softly.assertThat(mobileClient.path("attributes").path("pkce.code.challenge.method").asText()).isEqualTo("S256");
-            softly.assertThat(redirectUris).singleElement().asString().endsWith("/mobile/callback");
-        });
-    }
-
-    /** Only the CI service account may publish Android releases (spec 007 FR-004). */
-    @ParameterizedTest
-    @ValueSource(strings = {DEV_REALM, PROD_REALM})
-    void onlyTheCiServiceAccountHoldsTheReleasePublisherRole(String realmFile) throws IOException {
+    void nativeAppClientsAndRoleAreGone(String realmFile) throws IOException {
         JsonNode realm = objectMapper.readTree(Path.of(realmFile).toFile());
-        List<String> holders = new ArrayList<>();
-        for (JsonNode user : realm.path("users")) {
-            user.path("realmRoles").forEach(role -> {
-                if ("mobile-release-publisher".equals(role.asText())) {
-                    holders.add(user.path("username").asText());
-                }
-            });
-        }
-        JsonNode ciClient = client(realm, "mobile-release-ci");
+        List<String> clientIds = new ArrayList<>();
+        realm.path("clients").forEach(client -> clientIds.add(client.path("clientId").asText()));
+        List<String> roleNames = new ArrayList<>();
+        realm.path("roles").path("realm").forEach(role -> roleNames.add(role.path("name").asText()));
 
         assertSoftly(softly -> {
-            softly.assertThat(holders).containsExactly("service-account-mobile-release-ci");
-            softly.assertThat(ciClient.path("serviceAccountsEnabled").asBoolean()).isTrue();
-            softly.assertThat(ciClient.path("publicClient").asBoolean(true)).isFalse();
+            softly.assertThat(clientIds).doesNotContain("jordylab-mobile", "mobile-release-ci");
+            softly.assertThat(roleNames).doesNotContain("mobile-release-publisher");
         });
     }
 

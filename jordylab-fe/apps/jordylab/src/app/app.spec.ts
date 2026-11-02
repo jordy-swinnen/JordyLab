@@ -2,23 +2,20 @@ import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
+import { AuthService } from '@jordylab-fe/shared/auth';
 import { UsersStore } from '@jordylab-fe/settings/api';
-import { ApkDownloadService } from '@jordylab-fe/shared/platform/api';
+import { InstallPromptStore } from '@jordylab-fe/shared/platform/api';
 import { App } from './app';
 
 describe('App', () => {
   const logout = vi.fn(() => Promise.resolve());
-  const disableBiometricUnlock = vi.fn(() => Promise.resolve());
   // Real signals back the mock's reactive state so tests can drive shell visibility.
   const hasAppRole = signal(true);
   const isAdmin = signal(false);
   const hasGameCatalogAccess = signal(false);
   const pendingCount = signal(0);
-  const resolveLatestDownloadUrl = vi.fn();
+  const captureInstallPrompt = vi.fn();
   const authInit = vi.fn();
-  const biometricIsEnabled = vi.fn();
-  const biometricUnlock = vi.fn();
   const createComponent = createComponentFactory({
     component: App,
     imports: [RouterModule.forRoot([])],
@@ -40,18 +37,13 @@ describe('App', () => {
         useValue: { pendingCount: pendingCount.asReadonly() },
       },
       {
-        provide: ApkDownloadService,
-        useValue: { resolveLatestDownloadUrl },
-      },
-      {
-        provide: BiometricUnlockService,
+        provide: InstallPromptStore,
         useValue: {
-          disable: disableBiometricUnlock,
-          isEnabled: biometricIsEnabled,
-          unlock: biometricUnlock,
-          available: signal(false).asReadonly(),
-          enabled: signal(false).asReadonly(),
-          refresh: () => Promise.resolve(),
+          captureInstallPrompt,
+          promptKind: signal(null).asReadonly(),
+          canPromptInstall: signal(false).asReadonly(),
+          dismiss: vi.fn(),
+          promptInstall: vi.fn(),
         },
       },
     ],
@@ -64,10 +56,7 @@ describe('App', () => {
     isAdmin.set(false);
     hasGameCatalogAccess.set(false);
     pendingCount.set(0);
-    resolveLatestDownloadUrl.mockReset();
     authInit.mockReset().mockResolvedValue(false);
-    biometricIsEnabled.mockReset().mockResolvedValue(false);
-    biometricUnlock.mockReset().mockResolvedValue(true);
     spectator = createComponent();
   });
 
@@ -150,10 +139,8 @@ describe('App', () => {
     const signOut = document.querySelector<HTMLElement>('[data-testid="user-menu-sign-out"]');
     expect(signOut).not.toBeNull();
     signOut?.click();
-    // onLogout() awaits the (mocked) biometric-unlock wipe before auth.logout() — one microtask hop.
     await Promise.resolve();
 
-    expect(disableBiometricUnlock).toHaveBeenCalled();
     expect(logout).toHaveBeenCalled();
   });
 
@@ -207,29 +194,9 @@ describe('App', () => {
     });
   });
 
-  describe('install download', () => {
-    it('reports "started" once the signed download link has been resolved', async () => {
-      resolveLatestDownloadUrl.mockResolvedValue('#apk-download');
-
-      await spectator.component.onInstallDownload();
-
-      expect(spectator.component['installStatus']()).toBe('started');
-    });
-
-    it('reports "failed" when the signed download link cannot be requested', async () => {
-      resolveLatestDownloadUrl.mockRejectedValue(new Error('403'));
-
-      await spectator.component.onInstallDownload();
-
-      expect(spectator.component['installStatus']()).toBe('failed');
-    });
-
-    it('reports "preparing" while the link is being requested', () => {
-      resolveLatestDownloadUrl.mockReturnValue(new Promise<string>(() => undefined));
-
-      void spectator.component.onInstallDownload();
-
-      expect(spectator.component['installStatus']()).toBe('preparing');
+  describe('install prompt', () => {
+    it('captures the browser install event once, from the shell (spec 017 FR-003)', () => {
+      expect(captureInstallPrompt).toHaveBeenCalled();
     });
   });
 

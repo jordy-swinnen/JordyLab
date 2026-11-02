@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
+import { AuthService } from '@jordylab-fe/shared/auth';
 import { appConfig } from './app.config';
 import { createPreBootstrapAuth } from './pre-bootstrap-auth';
 import { environment } from '../environments/environment';
@@ -21,9 +21,5 @@ describe('application providers', () => {
 
   it('can create the auth service', () => {
     expect(() => TestBed.inject(AuthService)).not.toThrow();
-  });
-
-  it('can create the biometric unlock service', () => {
-    expect(() => TestBed.inject(BiometricUnlockService)).not.toThrow();
   });
 });

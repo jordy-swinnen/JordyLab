@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">JordyLab</string>
-    <string name="title_activity_main">JordyLab</string>
-    <string name="package_name">be.jordylab.app</string>
-    <string name="custom_url_scheme">be.jordylab.app</string>
-</resources>
