@@ -77,6 +77,12 @@ Which Linear operations each tool can do is recorded under "Tool coverage" once 
 
 ### Claude Code
 
+**If `github` shows "Authorization header is badly formatted":** the session was started from a checkout that is older than
+`main`, so it reads the old `.mcp.json` (a direct URL with a `GITHUB_PAT` header) instead of the launcher. `claude mcp list`
+names the file it read ("Location: …/.mcp.json") and warns "Missing environment variables: GITHUB_PAT". Fix: update that
+checkout to `main` (found 2026-11-02: the main checkout sat on a branch 108 commits behind). The launcher itself was
+probed with a minimal desktop-like environment (`env -i`, no Homebrew on `PATH`) and connected.
+
 The project file `.mcp.json` declares `github` and `linear`. In a fresh session approve the project servers when asked,
 then run `/mcp` with **no argument**, pick `linear` in the list and choose Authenticate (the browser opens; `/mcp linear`
 is not a valid form). If your Claude account already has the Linear connector,
@@ -234,3 +240,8 @@ Done by hand: states, label groups' first creation by the owner or an agent thro
 GitHub integration settings, the sign-ins. Done by an agent through the connector: labels, issues, projects, comments,
 and everything the `linear-capture` and `linear-sync-drafts` skills do. Estimated time on a fresh workspace: well under
 an hour, most of it the sign-ins and the views.
+- 2026-11-02, OpenCode (headless `opencode run`): without a Linear sign-in the capture skill loaded, said Linear was
+  unavailable, named `opencode mcp auth linear` and repeated the full ticket text (the outage message passes). The
+  commit rules held in a throwaway worktree: no key invented, asked once; with a key given it committed in the right
+  shape. The live capture is still open: `opencode mcp list` shows `linear` as needing authentication and
+  `~/.local/share/opencode/mcp-auth.json` holds no token for it (the sign-in was started but not finished).
