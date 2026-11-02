@@ -6,11 +6,13 @@
       "args": ["nx", "mcp"]
     },
     "github": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["scripts/mcp/github-mcp.sh"]
+    },
+    "linear": {
       "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorization": "Bearer ${GITHUB_PAT}"
-      }
+      "url": "https://mcp.linear.app/mcp"
     }
   }
 }
