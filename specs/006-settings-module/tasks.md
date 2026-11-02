@@ -233,7 +233,7 @@ the fallback with `fallbackUsed` recorded; both providers down → explicit fail
   `AnthropicChatOptions` per provider, tries primary then falls back on the mapped reasons, keeps the executor timeout +
   multi-generation `extractText`, publishes `AiCallCompleted` (`ApplicationEventPublisher`) + Micrometer counters (
   `jordylab.ai.calls`: feature/provider/outcome/fallback tags — expose `metrics` actuator endpoint for `admin`)
-- [ ] T029 [P] [US4] Update the four AI call sites to `AiFeature`:
+- [X] T029 [P] [US4] Update the four AI call sites to `AiFeature`: — **Closed 2026-11-02 (JOR-migration review):** done: the four call sites use `AiFeature` (`BriefingGeneratorService`, `EnrichmentService`, `QuestionInterpreter`, `AnswerComposer`).
   `jordylab-be/src/main/java/dev/jordy/jordylab/fna/service/BriefingGeneratorService.java` (`FNA_BRIEFING`),
   `gamecatalog/service/EnrichmentService.java` (`GAMECATALOG_ENRICHMENT`), `gamecatalog/service/ChatService.java` (
   translate → `GAMECATALOG_CHAT_QUERY`, compose → `GAMECATALOG_CHAT_ANSWER`); keep prompts + parsing unchanged; module
@@ -335,21 +335,21 @@ email (quickstart scenario 11)
 ## Phase 10: Polish & Cross-Cutting Concerns
 
 **Purpose**: Docs, generated artifacts, and full validation across all stories~~
-- [ ] T043 [P] Update docs: root `AGENTS.md` (remove Ollama/WireGuard guidance, rewrite the AI-routing table —
+- [X] T043 [P] Update docs: root `AGENTS.md` (remove Ollama/WireGuard guidance, rewrite the AI-routing table — — **Closed 2026-11-02 (JOR-migration review):** done: `AGENTS.md` has the OpenRouter/Anthropic routing table and its only Ollama mention is the "removed, do not reintroduce" note.
   OpenRouter primary per feature + Anthropic `claude-sonnet-5` fallback, MVP1 status; flag/update "Hetzner VPS" →
   OVHcloud), `jordylab-be/AGENTS.md` (new "Settings model (feature 006 — settings module)" section — note the label
   collision with the historical local-multiplayer 006 section per research §4.6, add `settings` to schema ownership,
   update the endpoint gates incl. `ingest/client` → `admin`, remove the Spring AI M2 accepted-risk note in favor of the
   GA bump), `jordylab-fe/AGENTS.md` (settings domain entry + `scope:settings` eslint/tsconfig gotchas + role-aware
   guards)
-- [ ] T044 [P] Regenerate the scan client template (`python tools/build_client.py` →
+- [X] T044 [P] Regenerate the scan client template (`python tools/build_client.py` → — **Closed 2026-11-02 (JOR-migration review):** done: `python tools/build_client.py --check` reports the frozen client is up to date.
   `jordylab-be/src/main/resources/scripts/jordylab-scan-template.py`) so the client-download gate/error text says
   `admin` instead of `jordylab-user`; verify `GET /api/gamecatalog/ingest/client` as admin still serves it
 - [x] T045 Verify SC-005: `grep -ri ollama jordylab-be/ jordylab-fe/` returns nothing (code, build files, compose and
   configuration); only docs/specs keep history notes
-- [ ] T046 Run the full [quickstart.md](quickstart.md) validation (13 scenarios, live stack incl. realm re-import, one
+- [X] T046 Run the full [quickstart.md](quickstart.md) validation (13 scenarios, live stack incl. realm re-import, one — **Closed 2026-11-02 (JOR-migration review):** superseded by the production end-to-end campaign of spec 011 (every scenario walked on production and logged), see `docs/testing/final-report.md`.
   real scanner run, fallback via dead-gateway override, guest limit with a lowered env limit); record outcomes
-- [ ] T047 Final green run: `./gradlew build` (full backend suite, `ModularityTests`, JaCoCo ≥ 0.80) +
+- [X] T047 Final green run: `./gradlew build` (full backend suite, `ModularityTests`, JaCoCo ≥ 0.80) + — **Closed 2026-11-02 (JOR-migration review):** superseded: the full backend suite, `ModularityTests` and the JaCoCo gate run on every pull request (`test-backend`), green on `main`.
   `bunx nx run-many -t test lint` (all affected FE projects: settings libs, shared/auth, app shell, gamecatalog
   chat/route updates); run `/modularity-check` once more
 
