@@ -46,7 +46,7 @@ Legend: `[P]` = can run in parallel with adjacent `[P]` tasks; `[USn]` = user st
 
 ## Phase 6 — US4/US5: family (P2)
 
-- [ ] T026 **Deferred**: freeze a real, sanitised `GetSharedLibraryApps` capture as the WireMock fixture. The client is implemented against the provisional shape and fails safe (`UNKNOWN_RESPONSE`/`TOKEN_EXPIRED`) until a real token confirms field names.
+- [X] T026 **Deferred**: freeze a real, sanitised `GetSharedLibraryApps` capture as the WireMock fixture. The client is implemented against the provisional shape and fails safe (`UNKNOWN_RESPONSE`/`TOKEN_EXPIRED`) until a real token confirms field names. — **Dropped 2026-11-02 by the owner's decision:** the provisional response shape is confirmed by real use (the family sync works with a real token), so a frozen real capture is no longer needed; the existing WireMock fixture stays as the provisional shape.
 - [X] T027 `SteamFamilyClient` + `SteamFamilySyncService` (in-memory token, omit excluded, owner ids) [US4/US5]
 - [X] T028 `LibraryController`: `/library/steam/sync`, `/library/steam-family/sync`, `/library/status`; error codes [US4/US5]
 - [X] T029 FE source-manager library section: sync buttons, last-run (metadata/AI call counts), family token field, stale hint [US5]
@@ -61,7 +61,7 @@ Legend: `[P]` = can run in parallel with adjacent `[P]` tasks; `[USn]` = user st
 ## Phase 8 — Validation
 
 - [X] T034 Backend full suite (367 tests) + `ModularityTests`; frontend affected lint + test (135) + host build
-- [ ] T035 **Deferred to manual run**: quickstart end-to-end with the real scanner + a real owned/family sync (requires `STEAM_WEB_API_KEY`/`STEAM_ID` and a live family token). Automated coverage stands in for SC-001/002/004/009.
+- [X] T035 **Deferred to manual run**: quickstart end-to-end with the real scanner + a real owned/family sync (requires `STEAM_WEB_API_KEY`/`STEAM_ID` and a live family token). Automated coverage stands in for SC-001/002/004/009. — **Closed 2026-11-02 on the owner's report:** the real family sync works with a live token.
 
 ## Notes
 
