@@ -3,6 +3,7 @@ import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
+import { legacyCallbackRedirect, legacyScreenRedirect } from './legacy-mobile-redirect';
 import { NoAppsComponent } from './no-apps/no-apps.component';
 
 export const appRoutes: Route[] = [
@@ -20,13 +21,16 @@ export const appRoutes: Route[] = [
     component: NoAppsComponent,
   },
   {
-    // Spec US5 — ShareTargetService navigates here on a native shareReceived event.
-    // authGuard (not roleGuard) so a pending/logged-out share still runs login first (US5-4);
-    // the landing screen itself role-filters its destinations.
-    path: 'mobile/share',
+    // The Web Share Target destination (spec 017 US2): the OS share sheet of the installed app lands here with
+    // ?title&text&url. authGuard (not roleGuard) so a signed-out share runs login first and returns here with the
+    // payload intact; the landing screen itself role-filters its destinations.
+    path: 'share',
     canActivate: [authGuard],
     component: ShareLandingComponent,
   },
+  // Legacy links from the retired native app (research D7): old notification taps and the native login callback.
+  { path: 'mobile/open', canActivate: [legacyScreenRedirect], children: [] },
+  { path: 'mobile/callback', canActivate: [legacyCallbackRedirect], children: [] },
   {
     path: 'fna',
     canActivate: [authGuard, roleGuard('admin')],

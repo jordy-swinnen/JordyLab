@@ -4,7 +4,21 @@ import { App } from './app/app';
 import { createPreBootstrapAuth } from './app/pre-bootstrap-auth';
 import { environment } from './environments/environment';
 
+/**
+ * Registers the installability-only service worker (spec 017 FR-002). Chrome's automatic install prompt still requires a
+ * registered fetch handler, even though a menu install no longer needs one. Failure is logged and never blocks the app.
+ */
+function registerServiceWorker(): void {
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+  navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
+    console.error('Service worker registration failed', error);
+  });
+}
+
 createPreBootstrapAuth(environment)
   .init()
   .then(() => bootstrapApplication(App, appConfig))
+  .then(registerServiceWorker)
   .catch((err) => console.error(err));

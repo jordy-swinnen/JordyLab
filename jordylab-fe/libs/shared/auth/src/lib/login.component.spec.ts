@@ -2,17 +2,12 @@ import { signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { AuthService } from './auth.service';
-import { BiometricUnlockService } from './biometric-unlock.service';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
   let spectator: Spectator<LoginComponent>;
   let login: ReturnType<typeof vi.fn>;
-  let unlock: ReturnType<typeof vi.fn>;
   const isAuthenticated = signal(false);
-  const biometricEnabled = signal(false);
-  const biometricFailure = signal<string | null>(null);
-  const nativeFailure = signal<string | null>(null);
 
   const createComponent = createComponentFactory({
     component: LoginComponent,
@@ -23,16 +18,6 @@ describe('LoginComponent', () => {
         useValue: {
           login: (...args: unknown[]) => login(...args),
           isAuthenticated: isAuthenticated.asReadonly(),
-          nativeFailure: nativeFailure.asReadonly(),
-        },
-      },
-      {
-        provide: BiometricUnlockService,
-        useValue: {
-          enabled: biometricEnabled.asReadonly(),
-          failure: biometricFailure.asReadonly(),
-          refresh: () => Promise.resolve(),
-          unlock: (...args: unknown[]) => unlock(...args),
         },
       },
     ],
@@ -40,11 +25,7 @@ describe('LoginComponent', () => {
 
   beforeEach(() => {
     login = vi.fn().mockResolvedValue(undefined);
-    unlock = vi.fn().mockResolvedValue(true);
     isAuthenticated.set(false);
-    biometricEnabled.set(false);
-    biometricFailure.set(null);
-    nativeFailure.set(null);
     spectator = createComponent();
   });
 
@@ -55,21 +36,10 @@ describe('LoginComponent', () => {
   it('calls AuthService.login() when the button is clicked', () => {
     spectator.click('button');
 
-    expect(login).toHaveBeenCalled();
+    expect(login).toHaveBeenCalledWith('/');
   });
 
-  it('offers fingerprint unlock only when the user opted in', () => {
-    expect(spectator.queryAll('button')).toHaveLength(1);
-
-    biometricEnabled.set(true);
-    spectator.detectChanges();
-
-    expect(spectator.queryAll('button')).toHaveLength(2);
-    spectator.click(spectator.queryAll('button')[1]);
-    expect(unlock).toHaveBeenCalled();
-  });
-
-  it('leaves the login page as soon as the session becomes authenticated (native callback)', () => {
+  it('leaves the login page as soon as the session becomes authenticated (silent SSO)', () => {
     const navigateByUrl = vi
       .spyOn(spectator.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
@@ -79,28 +49,12 @@ describe('LoginComponent', () => {
 
     expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
-
-  it('tells the user why a fingerprint unlock or a session refresh failed', () => {
-    biometricFailure.set('The fingerprint check was cancelled.');
-    spectator.detectChanges();
-
-    expect(spectator.query('[role="alert"]')?.textContent).toContain(
-      'cancelled',
-    );
-
-    biometricFailure.set(null);
-    nativeFailure.set('Your session could not be refreshed. Sign in again.');
-    spectator.detectChanges();
-
-    expect(spectator.query('[role="alert"]')?.textContent).toContain(
-      'could not be refreshed',
-    );
-  });
 });
 
 describe('LoginComponent return address', () => {
   const isAuthenticated = signal(false);
   let returnUrl: string | null;
+  const login = vi.fn(() => Promise.resolve());
 
   const createComponent = createComponentFactory({
     component: LoginComponent,
@@ -113,14 +67,15 @@ describe('LoginComponent return address', () => {
       },
       {
         provide: AuthService,
-        useValue: { login: vi.fn(), isAuthenticated: isAuthenticated.asReadonly(), nativeFailure: signal(null).asReadonly() },
-      },
-      {
-        provide: BiometricUnlockService,
-        useValue: { enabled: signal(false).asReadonly(), failure: signal(null).asReadonly(), refresh: () => Promise.resolve() },
+        useValue: {
+          login: (...args: unknown[]) => login(...args),
+          isAuthenticated: isAuthenticated.asReadonly(),
+        },
       },
     ],
   });
+
+  beforeEach(() => login.mockClear());
 
   const signInReturningTo = (candidate: string | null) => {
     returnUrl = candidate;
@@ -134,7 +89,7 @@ describe('LoginComponent return address', () => {
   };
 
   it('goes back to the share screen a signed-out share was heading for', () => {
-    expect(signInReturningTo('/mobile/share')).toHaveBeenCalledWith('/mobile/share');
+    expect(signInReturningTo('/share?text=remember%20me')).toHaveBeenCalledWith('/share?text=remember%20me');
   });
 
   it('goes to the start page when nothing was remembered', () => {
@@ -145,5 +100,15 @@ describe('LoginComponent return address', () => {
     expect(signInReturningTo('//evil.example/x')).toHaveBeenCalledWith('/');
     expect(signInReturningTo('https://evil.example/')).toHaveBeenCalledWith('/');
     expect(signInReturningTo('/login?returnUrl=/fna')).toHaveBeenCalledWith('/');
+  });
+
+  it('passes the remembered address to Keycloak so the redirect lands back on it', () => {
+    returnUrl = '/share?text=remember%20me';
+    isAuthenticated.set(false);
+    const spectator = createComponent();
+
+    void spectator.component.onLogin();
+
+    expect(login).toHaveBeenCalledWith('/share?text=remember%20me');
   });
 });
