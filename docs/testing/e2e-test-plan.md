@@ -1067,6 +1067,11 @@ SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
 - Open https://www.mobygames.com/info/api/ and its pricing and terms pages. Tell me in chat: (1) whether a free tier exists for personal, self-hosted, non-commercial use, and the monthly price if not; (2) the request limit; (3) whether the terms allow looking up games by name from a personal app; (4) whether the API documentation lists game attributes such as "Number of Offline Players" or "Multiplayer Options".
 - Do not register or accept anything yet. I only need the answers to decide whether it is worth an account.
 
+#### HANDOFF-36: Look at the redesign on your Android phone and on the sign-in page (spec 014)
+- Machine: your Android phone with the debug APK, and your Mac · Why you: the status bar and the sign-in page's follow-the-device switch can only be judged on a real device and on the Keycloak you run.
+- Follow `specs/014-app-redesign-themes/quickstart.md` section 6: on the phone, choose Paper in Settings → App and check the status bar icons stay readable (if not, say so and I add the status-bar plugin). Then restart the local Keycloak (recreating the dev stack needs your yes; `jordylab-be/compose.yaml` mounts the theme) and open the sign-in page with the computer set to light, then to dark.
+- Tell me what you saw; I record it in `specs/014-app-redesign-themes/research.md` (D9, D10).
+
 ## 8. AI call tally
 
 Budget: ≤ 30 per full pass. Allocation: FNA briefing 3 · enrichment ≤ 5 (observed from scans) · chat 10 · fallback/error 4 · reserve 8.

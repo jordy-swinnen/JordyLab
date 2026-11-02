@@ -61,11 +61,13 @@ Facts were read from the code on 2026-11-02 (file references in brackets). Each 
 ### D9. Sign-in page follows the device, with two palettes
 **Decision**: switch the login theme to follow `prefers-color-scheme` (`darkMode=true`, drop the pinned class) and write its stylesheet as two palettes, Content Led and Paper, in hex. A script compares them with the token table.
 **Why**: the page is on another origin and cannot read the stored choice (spec Assumptions).
-**To verify**: that Keycloak 26.7's v2 theme toggles its dark class from `prefers-color-scheme` when `darkMode=true`. This is a documented property (the current file sets it false), but it is checked first in the local Keycloak before the stylesheet is rewritten.
+**Verification (T082)**: the running local Keycloak 26.7.4 serves `<html class="login-pf pf-v5-theme-dark">` today because the theme pins that class with `darkMode=false`; with `darkMode=true` the v2 template's own script is what adds and removes `pf-v5-theme-dark` from `prefers-color-scheme`. The dev Keycloak container is read-only for agents, so the new theme was not loaded into it from here. The stylesheet therefore does not rely on that class: both palettes are selected by `@media (prefers-color-scheme: light)` inside `jordylab.css`, so the page follows the device either way. `kcHtmlClass` is reduced to `login-pf`. The owner can confirm on the next local Keycloak restart (recreating the dev stack needs their yes) by opening the sign-in page with the device set to light and then dark.
 
 ### D10. Native shell: colours now, plugin only if needed
 **Decision**: update the launcher background, the launcher foreground vector, and `splash_background` (default dark `ground`); regenerate the icon PNGs from the new mark. Add the Capacitor status-bar plugin only if the status bar clashes with a light theme on a real device; the default plan is to add it (one small dependency) because the app can now be light while the status bar stays dark.
 **Why**: light themes on a phone need dark status-bar icons. JOR-38 may later remove the native shell; this work is kept to colours and one plugin so little is wasted.
+
+**Status (T081)**: the status-bar plugin is **not** added yet. Whether the status bar clashes with a light theme can only be judged on a real Android device (`quickstart.md` section 6), and none is available to the agent. Launcher, splash and icon colours are done. Left for the owner: HANDOFF-36 (`docs/testing/e2e-test-plan.md`).
 
 ### D11. Brand assets
 **Decision**: `favicon.svg` becomes the mark with bone tile and ink strokes, with an embedded light-scheme variant; `manifest.webmanifest` colours become the default dark `ground`; the PNG icons and the Keycloak `mark.svg` are regenerated from the same source mark. The wordmark component keeps its structure and takes its two colours from `--foreground` and `--accent-text`.
