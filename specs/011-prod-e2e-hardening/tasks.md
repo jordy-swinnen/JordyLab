@@ -256,7 +256,7 @@ address comments → merge → T050 deploy + verify. One batch in flight at a ti
 
 **Independent Test**: every HANDOFF in plan §7 is `verified` or `failed` with a reason, and each took ≈ ≤ 10 min.
 
-- [ ] T053 [US5] Track HANDOFF batch 1 (sent in T016) while continuing other areas: keep plan §7 statuses
+- [X] T053 [US5] Track HANDOFF batch 1 (sent in T016) while continuing other areas: keep plan §7 statuses — **Closed 2026-11-02:** the owner confirmed HANDOFF-02, 04, 06, 07, 08 and 09 as done with no follow-up; plan §7 now says so.
   current (`sent → reported`), record how long each handoff took Jordy, and adjust/resend a block if a step fails
 - [X] T054 [US5] (no separate batch 2 was needed — every later handoff was sent as it arose, see plan §7) Write HANDOFF batch 2 when needed: GitHub rulesets for `v*` tags and `main` (T040), first release
   tag (T041), APK install on the Android phone after any mobile fix, any pod-restart persistence test Jordy approves
