@@ -44,7 +44,7 @@
       type="text"
       class="{{ inputClass }}"
       data-testid="feedback-title"
-      [maxlength]="titleMaxLength"
+      [attr.maxlength]="titleMaxLength"
       [value]="title()"
       (input)="onTitleInput($any($event.target).value)"
     />
@@ -56,7 +56,7 @@
       rows="5"
       class="mt-1 w-full rounded-xl border border-input bg-background px-3 py-3 text-foreground"
       data-testid="feedback-description"
-      [maxlength]="descriptionMaxLength"
+      [attr.maxlength]="descriptionMaxLength"
       [value]="description()"
       (input)="onDescriptionInput($any($event.target).value)"
     ></textarea>
