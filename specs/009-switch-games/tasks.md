@@ -159,8 +159,9 @@ question, run a scan, and verify Switch games survive.
   `GameCatalogController.java`
 - [x] T033 [US4] Display Switch format on the detail page (read-only for guests) in
   `jordylab-fe/libs/gamecatalog/ui/src/lib/game-detail/game-detail-view.component.html`
-- [ ] T034 [US4] Verify host/platform filter chips show "Nintendo Switch" and the grid refreshes correctly (validate via
+- [X] T034 [US4] Verify host/platform filter chips show "Nintendo Switch" and the grid refreshes correctly (validate via
   frontend test if needed)
+  - **Closed 2026-11-02:** two frontend tests added in `filters-panel.component.spec.ts`: the Platform group shows a "Nintendo Switch" chip next to the others, and pressing it emits the toggle and shows it pressed once selected (7 tests pass, lint clean). On production the chip is absent right now because the Nintendo Switch console holds 0 games (the Library chips are built from the games that exist); it appears once a Switch game is added. No production data was added for this check.
 
 **Checkpoint**: User Stories 1 and 4 both work independently — Switch games are visible, filterable and safe from
 scans.

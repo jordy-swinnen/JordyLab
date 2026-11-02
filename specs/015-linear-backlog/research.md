@@ -93,10 +93,13 @@ plan needed and the facts verified for them. Text read from web pages is treated
   automations. Commit linking is a separate toggle plus a webhook, and covers one GitHub organization.
 - **Decision**: the instructions teach `Fixes JOR-n` only when the pull request completes the issue, `Refs JOR-n` /
   `Part of JOR-n` otherwise. The `Refs:` commit trailer is a different thing (the project's own reference) and is only
-  format-checked; commit linking in Linear is left off, because pull-request linking is enough and commit linking
-  needs a webhook.
-- **Rationale**: the project's `Refs:` trailer starts with the word "Refs", which Linear also treats as a magic word
-  in commit messages; with commit linking off there is no accidental completion.
+  format-checked; commit linking in Linear was first left off, because pull-request linking is enough and commit
+  linking needs a webhook. **Changed 2026-11-02 (owner):** the commit webhook was added, so commit linking is on. That
+  is consistent with the new commit rule (every subject starts with `JOR-n:`, so every commit links to its ticket).
+- **Rationale**: the project's `Refs:` trailer starts with the word "Refs", which Linear also treats as a magic word;
+  it does not complete anything by accident because the trailer carries a spec or task number (`Refs: 015/T036`), never
+  an issue key, and completion on merge is decided by the pull request's words and title (see `docs/linear.md`). The
+  webhook's behaviour is not yet observed (T035).
 
 ### D5. How the migration runs
 

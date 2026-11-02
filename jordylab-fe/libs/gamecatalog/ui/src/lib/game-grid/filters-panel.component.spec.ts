@@ -34,6 +34,25 @@ describe('FiltersPanelComponent', () => {
     expect(spectator.query('[data-testid="filter-group-where"]')).toBeNull();
   });
 
+  it('shows a chip for every platform in the library, Nintendo Switch included', () => {
+    spectator.setInput('platforms', [aPlatformChipMock({ name: 'SNES' }), aPlatformChipMock({ name: 'Nintendo Switch' })]);
+
+    const chips = spectator.queryAll('[data-testid="filter-group-platform"] button').map((chip) => chip.textContent?.trim());
+    expect(chips).toEqual(['SNES', 'Nintendo Switch']);
+  });
+
+  it('toggles the Nintendo Switch platform when its chip is pressed and shows it pressed once selected', () => {
+    spectator.setInput('platforms', [aPlatformChipMock({ name: 'Nintendo Switch' })]);
+    const toggled = vi.fn();
+    spectator.output<string>('platformToggle').subscribe(toggled);
+
+    spectator.click('[data-testid="filter-group-platform"] button');
+    expect(toggled).toHaveBeenCalledWith('Nintendo Switch');
+
+    spectator.setInput('selectedPlatforms', ['Nintendo Switch']);
+    expect(spectator.query('[data-testid="filter-group-platform"] button')).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('lets screen readers tell the groups apart', () => {
     const groups = spectator.queryAll('[role="group"]').map((group) => group.getAttribute('aria-label'));
 
