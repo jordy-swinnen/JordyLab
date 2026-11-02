@@ -21,5 +21,10 @@ export const PAGES: readonly {
     path: '/settings/ai-models',
     heading: 'AI models',
   },
+  {
+    name: 'Settings feedback inbox',
+    path: '/settings/inbox',
+    heading: 'Feedback inbox',
+  },
   { name: 'Settings App', path: '/settings/app', heading: 'App' },
 ];

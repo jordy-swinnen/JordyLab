@@ -15,6 +15,7 @@ const MOBILE_OPEN_PATH = '/mobile/open';
 const SCREEN_ROUTES: Readonly<Record<string, string>> = {
   'settings-users': '/settings/users',
   'fna-briefing': '/fna/briefing',
+  'feedback-inbox': '/settings/inbox',
 };
 
 /**

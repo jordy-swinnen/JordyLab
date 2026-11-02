@@ -78,6 +78,17 @@ describe('AppLinkService', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/fna/briefing');
   });
 
+  it('routes a feedback-inbox screen tap to /settings/inbox', async () => {
+    create(true);
+    spectator.service.listen();
+    const handler = addListener.mock.calls[0][1] as (event: { url: string }) => void;
+
+    handler({ url: 'https://app.jordylab.test/mobile/open?screen=feedback-inbox' });
+    await Promise.resolve();
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/settings/inbox');
+  });
+
   it('does nothing for an unknown screen value', async () => {
     create(true);
     spectator.service.listen();

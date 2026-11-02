@@ -68,6 +68,7 @@ export class App {
   username = this.#auth.username;
   hasAppRole = this.#auth.hasAppRole;
   isAdmin = this.#auth.isAdmin;
+  isGuest = this.#auth.isGuest;
 
   protected readonly showQrEntry = signal(false);
   protected readonly installStatus = signal<InstallDownloadStatus>('idle');
@@ -137,7 +138,9 @@ export class App {
     { initialValue: this.#router.url },
   );
 
-  protected readonly visibleGroups = computed(() => visibleNavigationGroups(this.isAdmin()));
+  protected readonly visibleGroups = computed(() =>
+    visibleNavigationGroups(this.isAdmin(), this.isGuest())
+  );
 
   protected readonly tabs = computed<TabBarItem[]>(() => {
     const url = this.#url();

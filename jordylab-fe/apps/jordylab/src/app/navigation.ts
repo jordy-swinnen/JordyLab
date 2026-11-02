@@ -4,8 +4,11 @@ export interface NavItem {
   icon: string;
   /** Extra route prefixes that should keep this item highlighted (e.g. game detail under Library). */
   isActive: (url: string) => boolean;
-  /** Omit for admin-or-guest; 'admin' hides the item from guests (mirrors the backend access matrix). */
-  requiredRole?: 'admin';
+  /**
+   * Omit for admin-or-guest; 'admin' hides the item from guests, 'guest' hides it from admins
+   * (mirrors the backend access matrix).
+   */
+  requiredRole?: 'admin' | 'guest';
 }
 
 export interface NavGroup {
@@ -13,7 +16,7 @@ export interface NavGroup {
   /** The module's name and icon on the phone's bottom bar. */
   tab: { label: string; icon: string };
   items: NavItem[];
-  requiredRole?: 'admin';
+  requiredRole?: 'admin' | 'guest';
 }
 
 export const ICONS = {
@@ -119,13 +122,43 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         icon: ICONS.phone,
         isActive: startsWith('/settings/app'),
       },
+      {
+        // One "Feedback" entry per persona: the guest submits and tracks their own tickets (spec 017 US1/US4)…
+        label: 'Feedback',
+        path: '/settings/feedback',
+        icon: ICONS.sparkle,
+        isActive: startsWith('/settings/feedback'),
+        requiredRole: 'guest',
+      },
+      {
+        // …the admin triages every ticket in the idea box (spec 017 US2/US3).
+        label: 'Feedback',
+        path: '/settings/inbox',
+        icon: ICONS.sparkle,
+        isActive: startsWith('/settings/inbox'),
+        requiredRole: 'admin',
+      },
     ],
   },
 ];
 
+function isVisible(requiredRole: 'admin' | 'guest' | undefined, isAdmin: boolean, isGuest: boolean): boolean {
+  switch (requiredRole) {
+    case 'admin':
+      return isAdmin;
+    case 'guest':
+      return isGuest;
+    default:
+      return isAdmin || isGuest;
+  }
+}
+
 /** The groups and items this person may see. */
-export function visibleNavigationGroups(isAdmin: boolean): NavGroup[] {
-  return NAVIGATION_GROUPS.filter((group) => !group.requiredRole || isAdmin)
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.requiredRole || isAdmin) }))
+export function visibleNavigationGroups(isAdmin: boolean, isGuest: boolean): NavGroup[] {
+  return NAVIGATION_GROUPS.filter((group) => isVisible(group.requiredRole, isAdmin, isGuest))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => isVisible(item.requiredRole, isAdmin, isGuest)),
+    }))
     .filter((group) => group.items.length > 0);
 }

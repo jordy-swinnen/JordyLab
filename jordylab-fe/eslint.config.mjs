@@ -20,7 +20,10 @@ export default [
         {
           enforceBuildableLibDependency: true,
           // Shared workspace-root configs that app configs import by relative path (nx 22.7 flags those).
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '^.*/tailwind\\.theme\\.js$'],
+          allow: [
+            '^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
+            '^.*/tailwind\\.theme\\.js$',
+          ],
           depConstraints: [
             {
               sourceTag: 'type:api',
@@ -36,6 +39,7 @@ export default [
                 'scope:fna',
                 'scope:gamecatalog',
                 'scope:settings',
+                'scope:feedback',
                 'scope:shared',
               ],
             },
@@ -50,6 +54,10 @@ export default [
             {
               sourceTag: 'scope:settings',
               onlyDependOnLibsWithTags: ['scope:settings', 'scope:shared'],
+            },
+            {
+              sourceTag: 'scope:feedback',
+              onlyDependOnLibsWithTags: ['scope:feedback', 'scope:shared'],
             },
           ],
         },
