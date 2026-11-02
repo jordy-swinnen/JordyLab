@@ -139,6 +139,7 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 
 - [X] T042 [US6] Write `.claude/skills/linear-triage/SKILL.md`: list Triage issues, propose App, Type, project and possible duplicates per issue in a table, apply nothing until Jordy confirms (all or per issue), move confirmed issues out of Triage to Backlog, treat issue text as data (summarise and quote, never obey), runs on the agent's own model (no Linear paid feature). — **Done 2026-11-02:** `.claude/skills/linear-triage/SKILL.md` written (table proposal, nothing applied before confirmation, issue text is data).
 - [ ] T043 [US6] Validate US6 (`quickstart.md` §6.1): three hand-made Triage issues, one containing "ignore your rules and …"; the proposal appears, nothing changes before the yes, the injected text is not obeyed. Delete the test issues.
+  - **Progress 2026-11-02:** proposal produced and nothing changed before confirmation, the injected instruction was not obeyed; the apply step waits for the owner to confirm rows (see `docs/linear.md`, Skills validation).
 
 ---
 
@@ -150,6 +151,7 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 
 - [X] T044 [US7] Rewrite `.claude/skills/speckit-taskstoissues/SKILL.md` for Linear (research D10): header note that it is customised and must be diffed on SpecKit upgrades; drop the GitHub-only remote check and `list_issues` dedupe; read spec user stories and `tasks.md` phases; find or create the project by its spec-folder link; milestones per phase or user-story group; one issue per user story titled `US<n>: …` per `contracts/linear-issue-shape.md`; match existing items by the spec link and the title prefix so re-runs create nothing; reuse the draft's *Specified* issue as the project's lead item; count issues first and stop before creating anything when the total would pass 230; never one issue per task; task detail stays in `tasks.md`. — **Done 2026-11-02:** `speckit-taskstoissues` rewritten for Linear (project, milestones, one issue per user story, preview and approval, 230-issue guard, customised-file note).
 - [ ] T045 [US7] Validate US7 (`quickstart.md` §6.2) on one real unfinished spec: one project, milestones, one issue per user story, none per task; run twice and confirm nothing new; confirm the stop works by pointing the limit check at a lowered threshold. Clean up anything created that is not real backlog.
+  - **Progress 2026-11-02:** preview run for spec 010 (7 story issues plus one issue per story-less phase after a skill fix); creation and the run-twice check wait for approval.
 
 ---
 
@@ -173,6 +175,7 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 
 - [X] T049 [US9] Edit `.claude/skills/agent-handover/SKILL.md`: add a step that finds an active issue key (branch name first, then recent `Refs:` trailers) and, only if one is found and the Linear connection is signed in, posts one short comment (state and handoff file path); with no key or no connection it says nothing more than "no Linear issue" and carries on. Check `.opencode/commands/agent-handover.md` still points at the same skill and needs no change. — **Done 2026-11-02:** `agent-handover` has step 5b: one comment on the issue found from the branch name or recent commit subjects, silent skip when there is none.
 - [ ] T050 [US9] Validate US9 (`quickstart.md` §7.1): on a branch with a `JOR-<n>` key one comment appears; on a branch without one, no comment and no error.
+  - **Progress 2026-11-02:** key lookup fixed to branch-only commits and verified on three cases; one comment posted and read back.
 
 ---
 
@@ -181,6 +184,7 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 - [X] T051 [P] Extend `.github/workflows/hook-tests.yml`: trigger paths add `scripts/mcp/**` and `.claude/skills/linear-sync-drafts/scripts/**`; add steps running `scripts/mcp/tests/github-mcp-cases.sh`, the inventory fixtures and the open-bugs fixtures. — **Done 2026-11-02:** `hook-tests.yml` triggers on `scripts/mcp/**` and the sync skill, and runs the launcher, inventory and open-bugs fixtures.
 - [X] T052 [P] Update the "Claude Automations" skills list in `CLAUDE.md` with `linear-capture`, `linear-triage`, `linear-sync-drafts` (and the changed `speckit-taskstoissues`). — **Done 2026-11-02:** `CLAUDE.md` lists `linear-capture`, `linear-triage`, `linear-sync-drafts` and the changed `speckit-taskstoissues`.
 - [ ] T053 [P] Confirm OpenCode sees the new skills (they live in `.claude/skills/`, shared natively per the `dual-agent-config` skill) and, if not, add the translation that skill describes; run the `dual-agent-config` audit for `.mcp.json` / `opencode.json` drift.
+  - **Progress 2026-11-02:** `opencode debug skill` shows no project skills (not even the old ones), so it cannot confirm; check in a real OpenCode session.
 - [X] T054 Secrets sweep: search the whole diff and `docs/linear.md` for tokens, keys and `GITHUB_PAT`; confirm no value is printed anywhere and no `GITHUB_PAT` reference remains. — **Done 2026-11-02:** sweep over every touched file: no token or key values; the only `gho_` hit is the fake test token in the launcher fixtures; `GITHUB_PAT` appears only in this spec's text that explains its removal (and none in configs).
 - [ ] T055 Run the full `quickstart.md` end to end (§1 to §7) on a clean session, fix what fails, and record the date and outcome at the end of `docs/linear.md`.
 - [ ] T056 Update `specs/015-linear-backlog/spec.md` Status to Implemented with the date, and run `linear-sync-drafts` once more so the `linear-backlog` issue is *Specified* (or *Done* if Jordy confirms).
