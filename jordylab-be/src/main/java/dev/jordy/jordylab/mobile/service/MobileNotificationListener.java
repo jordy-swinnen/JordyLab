@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.mobile.service;
 
+import dev.jordy.jordylab.feedback.FeedbackTicketCreated;
 import dev.jordy.jordylab.fna.BriefingReady;
 import dev.jordy.jordylab.mobile.MobileProperties;
 import dev.jordy.jordylab.mobile.rest.client.NtfyClient;
@@ -37,6 +38,19 @@ public class MobileNotificationListener {
                 "Your monthly briefing is ready",
                 "The FNA monthly briefing generated at " + event.generatedAt() + " is ready to read.",
                 appLinkUrl("fna-briefing"));
+    }
+
+    /**
+     * One push per new feedback ticket, never carrying the ticket's text (spec 017 FR-017): the
+     * notification body is built from the event's metadata only, and a delivery failure is
+     * swallowed by {@link NtfyClient} so it can never fail the guest's submission.
+     */
+    @ApplicationModuleListener
+    void on(FeedbackTicketCreated event) {
+        ntfyClient.publish(
+                "New feedback ticket",
+                event.senderName() + " sent a " + event.typeName() + " for the " + event.appName() + " app.",
+                appLinkUrl("feedback-inbox"));
     }
 
     private String appLinkUrl(String screen) {

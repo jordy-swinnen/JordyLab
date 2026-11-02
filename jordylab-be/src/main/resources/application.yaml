@@ -201,5 +201,16 @@ jordylab:
         base-url: ${NTFY_BASE_URL:}
         topic: ${NTFY_TOPIC:}
         token: ${NTFY_TOKEN:}
+  feedback:
+    # 017: the idea box. Five tickets per guest per day, reset at midnight in this zone.
+    daily-ticket-limit: ${JORDYLAB_FEEDBACK_DAILY_LIMIT:5}
+    daily-limit-zone: Europe/Brussels
+    linear:
+      base-url: https://api.linear.app/graphql
+      # Jordy's personal API key (SOPS secret in prod). Unset means Accept fails fast with LINEAR_UNAVAILABLE.
+      api-key: ${LINEAR_API_KEY:}
+      team-key: JOR
+      connect-timeout-ms: 5000
+      read-timeout-ms: 15000
   cors:
     allowed-origins: ${JORDYLAB_CORS_ALLOWED_ORIGINS}

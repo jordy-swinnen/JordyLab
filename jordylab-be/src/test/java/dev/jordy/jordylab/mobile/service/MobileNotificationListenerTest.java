@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.mobile.service;
 
 import dev.jordy.jordylab.fna.BriefingReady;
+import dev.jordy.jordylab.feedback.FeedbackTicketCreated;
 import dev.jordy.jordylab.mobile.MobileProperties;
 import dev.jordy.jordylab.mobile.rest.client.NtfyClient;
 import dev.jordy.jordylab.settings.UserSignUpPending;
@@ -18,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
  * Proves one Ntfy call per event with the correct App-Link click URL (spec 007 D9) — a
@@ -62,5 +64,18 @@ class MobileNotificationListenerTest {
         verify(ntfyClient).publish(eq("Your monthly briefing is ready"), contains(generatedAt.toString()),
                 clickUrlCaptor.capture());
         assertThat(clickUrlCaptor.getValue()).isEqualTo("https://jordylab.example/mobile/open?screen=fna-briefing");
+    }
+
+    @Test
+    void feedbackTicketCreatedProducesExactlyOnePushWithTheFeedbackInboxScreenAndNoTicketText() {
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> clickUrlCaptor = ArgumentCaptor.forClass(String.class);
+
+        listener.on(new FeedbackTicketCreated("Ada Palmer", "Game Catalog", "Bug report"));
+
+        verify(ntfyClient).publish(eq("New feedback ticket"), bodyCaptor.capture(), clickUrlCaptor.capture());
+        assertThat(bodyCaptor.getValue()).isEqualTo("Ada Palmer sent a Bug report for the Game Catalog app.");
+        assertThat(clickUrlCaptor.getValue()).isEqualTo("https://jordylab.example/mobile/open?screen=feedback-inbox");
+        verifyNoMoreInteractions(ntfyClient);
     }
 }
