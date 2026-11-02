@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, input, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -28,10 +28,10 @@ export interface TabBarItem {
   standalone: true,
   imports: [NgTemplateOutlet, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:keydown.escape)': 'close()' },
+  host: { '(document:keydown.escape)': 'close(true)' },
   template: `
     @if (openItem(); as module) {
-      <button type="button" class="fixed inset-0 cursor-default bg-black/55" aria-label="Close menu" tabindex="-1" (click)="close()"></button>
+      <button type="button" class="fixed inset-0 cursor-default bg-black/55" aria-label="Close menu" tabindex="-1" (click)="close(true)"></button>
       <ul
         id="tab-bar-options"
         [attr.aria-label]="module.label"
@@ -75,7 +75,7 @@ export interface TabBarItem {
             aria-controls="tab-bar-options"
             [attr.aria-expanded]="openLabel() === item.label"
             [attr.aria-current]="item.active ? 'page' : null"
-            (click)="toggle(item.label)"
+            (click)="toggle(item.label, $event)"
           >
             <ng-container *ngTemplateOutlet="tabContent; context: { $implicit: item }" />
           </button>
@@ -94,6 +94,10 @@ export interface TabBarItem {
 export class TabBarComponent {
   readonly items = input.required<readonly TabBarItem[]>();
 
+  readonly #host = inject<ElementRef<HTMLElement>>(ElementRef);
+  readonly #injector = inject(Injector);
+  #trigger: HTMLElement | null = null;
+
   protected readonly openLabel = signal<string | null>(null);
   protected readonly openItem = computed(() => this.items().find((item) => item.label === this.openLabel()) ?? null);
 
@@ -106,11 +110,26 @@ export class TabBarComponent {
       : `${shape} font-medium text-secondary-foreground`;
   }
 
-  protected toggle(label: string): void {
-    this.openLabel.set(this.openLabel() === label ? null : label);
+  protected toggle(label: string, event: Event): void {
+    if (this.openLabel() === label) {
+      this.close(true);
+
+      return;
+    }
+    this.#trigger = event.currentTarget as HTMLElement;
+    this.openLabel.set(label);
+    afterNextRender(() => this.#host.nativeElement.querySelector<HTMLElement>('#tab-bar-options a')?.focus(), { injector: this.#injector });
   }
 
-  protected close(): void {
+  /** Focus goes back to the tab that opened the sheet when the sheet is dismissed; choosing a page moves on, so it keeps no focus. */
+  protected close(restoreFocus = false): void {
+    if (this.openLabel() === null) {
+      return;
+    }
     this.openLabel.set(null);
+    if (restoreFocus) {
+      this.#trigger?.focus();
+    }
+    this.#trigger = null;
   }
 }

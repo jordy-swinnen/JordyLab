@@ -17,8 +17,10 @@ export async function setLauncherIcon(theme: ThemeId): Promise<void> {
   }
   try {
     await LauncherIcon.set({ theme });
-  } catch {
-    // An older installed build has no such plugin: the icon then simply stays as it is.
-    return;
+  } catch (error) {
+    // An older installed build has no such plugin: the icon then simply stays as it is. Any other failure is logged.
+    if ((error as { code?: string }).code !== 'UNIMPLEMENTED') {
+      console.warn('Could not switch the launcher icon', error);
+    }
   }
 }

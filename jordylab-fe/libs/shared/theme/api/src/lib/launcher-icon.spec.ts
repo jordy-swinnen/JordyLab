@@ -38,8 +38,19 @@ describe('setLauncherIcon', () => {
 
   it('keeps going when an older build has no such plugin', async () => {
     vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
-    setOnPlugin.mockRejectedValue(new Error('not implemented'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    setOnPlugin.mockRejectedValue({ code: 'UNIMPLEMENTED' });
 
     await expect(setLauncherIcon('flare')).resolves.toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('logs any other failure and carries on', async () => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    setOnPlugin.mockRejectedValue(new Error('Unknown theme'));
+
+    await expect(setLauncherIcon('flare')).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalled();
   });
 });

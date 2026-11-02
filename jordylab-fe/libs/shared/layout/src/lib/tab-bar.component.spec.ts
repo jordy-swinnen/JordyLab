@@ -83,6 +83,25 @@ describe('TabBarComponent', () => {
     expect(optionLabels()).toEqual([]);
   });
 
+  it('moves focus into the sheet when it opens', async () => {
+    spectator = createComponent({ props: { items: [gamesTab, settingsTab] } });
+
+    spectator.click('nav button');
+    await spectator.fixture.whenStable();
+
+    expect(document.activeElement).toBe(spectator.query('[data-testid="tab-bar-options"] a'));
+  });
+
+  it('returns focus to the tab when the sheet is dismissed with Escape', async () => {
+    spectator = createComponent({ props: { items: [gamesTab, settingsTab] } });
+    spectator.click('nav button');
+    await spectator.fixture.whenStable();
+
+    spectator.dispatchKeyboardEvent(document, 'keydown', 'Escape');
+
+    expect(document.activeElement).toBe(spectator.query('nav button'));
+  });
+
   it('links a module with a single page straight to it', () => {
     spectator = createComponent({ props: { items: [gamesTab, settingsTab] } });
     const settings = spectator.queryAll('nav > *')[1];
