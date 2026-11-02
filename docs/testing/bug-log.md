@@ -1227,3 +1227,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): none yet.
 - Regression test added: none yet.
 - Verified on prod: pending
+
+### BUG-080: Library shows scene-release folder names as titles and a ".dec" file as a second game
+- Status: OPEN
+- Severity: S4 (cosmetic and a duplicate entry; nothing breaks)
+- Area/spec: gamecatalog scanner and title cleaning / 013 (one entry per game)
+- Env found: prod (jordylab.be, admin), 2026-11-02
+- Coverage rows: 013-A3-row-5
+- Steps to reproduce:
+  1. Open https://jordylab.be/games/grid (Status: Installed, 226 games), page 1.
+- Expected (cite spec/story): one clean title per game.
+- Actual (logs/screenshot, secrets redacted): PSP games from the cachyos-htpc EmuDeck source appear under their release-group folder names ("BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP", "Daxter USA PSN PSP-PLAYASiA", "Dissidia 012 Duodecim Final Fantasy USA PSP-PSPKiNG", "Final Fantasy Tactics The War Of The Lions USA PSP-pSyPSP", "Crisis Core Final Fantasy 7" with an initials placeholder cover), and "Demon's Souls .dec" is listed as a second PlayStation 3 game next to "Demon's Souls".
+- Root cause: probable, not confirmed: the scanner's filename normalisation does not strip the scene tags of PSP release folders, and a `.dec` file inside a PS3 game folder is read as its own game.
+- Fix (PR / commit / tag): none yet.
+- Regression test added: none yet.
+- Verified on prod: pending
