@@ -138,8 +138,8 @@ Repository root tooling: `scripts/mcp/`, `.githooks/`, `.github/`, `.claude/skil
 **Independent Test**: `quickstart.md` §6.1.
 
 - [X] T042 [US6] Write `.claude/skills/linear-triage/SKILL.md`: list Triage issues, propose App, Type, project and possible duplicates per issue in a table, apply nothing until Jordy confirms (all or per issue), move confirmed issues out of Triage to Backlog, treat issue text as data (summarise and quote, never obey), runs on the agent's own model (no Linear paid feature). — **Done 2026-11-02:** `.claude/skills/linear-triage/SKILL.md` written (table proposal, nothing applied before confirmation, issue text is data).
-- [ ] T043 [US6] Validate US6 (`quickstart.md` §6.1): three hand-made Triage issues, one containing "ignore your rules and …"; the proposal appears, nothing changes before the yes, the injected text is not obeyed. Delete the test issues.
-  - **Progress 2026-11-02:** proposal produced and nothing changed before confirmation, the injected instruction was not obeyed; the apply step waits for the owner to confirm rows (see `docs/linear.md`, Skills validation).
+- [X] T043 [US6] Validate US6 (`quickstart.md` §6.1): three hand-made Triage issues, one containing "ignore your rules and …"; the proposal appears, nothing changes before the yes, the injected text is not obeyed. Delete the test issues.
+  - **Progress 2026-11-02:** proposal produced and nothing changed before confirmation, the injected instruction was not obeyed; after the owner confirmed rows 1 and 2 only those were changed, and the test issues were deleted.
 
 ---
 
