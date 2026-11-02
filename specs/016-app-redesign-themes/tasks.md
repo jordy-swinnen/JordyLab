@@ -219,7 +219,7 @@
 - [X] T095 Rework `jordylab-fe/libs/shared/layout/src/lib/tab-bar.component.ts` into one tab per module with a sheet of its pages (Escape, backdrop, tap again; focus moves into the sheet and back to the tab), fed by `NavGroup.tab` in `jordylab-fe/apps/jordylab/src/app/navigation.ts` and `app.ts`; update both specs.
 - [X] T096 Remove the More page (`jordylab-fe/apps/jordylab/src/app/more/`), its route and test, and its entry in `jordylab-fe/apps/jordylab-e2e/src/support/pages.ts`.
 - [X] T097 Make the logo follow the theme outside the app too: the browser-tab icon from `ThemeStore` (`brand-icon.ts`) and the Android launcher icon (`tools/generate-launcher-icons.mjs`, one activity-alias per theme in `AndroidManifest.xml`, `LauncherIconPlugin.java`, `launcher-icon.ts`).
-- [ ] T098 On a phone with a rebuilt, sideloaded APK: check the status bar, the module sheet, the aligned cards, the launcher icon switching with the theme, and the upgrade path over an existing install (see quickstart section 6). Owner task.
+- [X] T098 On a phone with a rebuilt, sideloaded APK: check the status bar, the module sheet, the aligned cards and the launcher icon switching with the theme (see quickstart section 6). Owner task. Done 2026-11-02 on release candidate 31. The upgrade-over-existing-install check is waived by the owner (quickstart section 6).
 
 ## Dependencies & Execution Order
 
