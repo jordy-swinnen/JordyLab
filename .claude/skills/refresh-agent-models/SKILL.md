@@ -168,6 +168,7 @@ model_pick = the model of the final row
 
 4. Apply Step 5 against the incumbent.
 5. **Effort ladder for the final model:** list its efforts in order (low, medium, high, xhigh, max), start at the lowest, and step up while `(cost_next - cost_cur) / (metric_next - metric_cur) <= LAMBDA[role, metric]`. Never use `inherit`.
+6. **Response time.** Claude rows have no response-time cap. Go's `MAX_RESPONSE_S` does not apply to them, so a Claude pick can be slow (Haiku max: 372 s end to end on AA) and still pass these rules. Whether to add a Claude cap is an open decision; see Last run.
 
 ### Worked example, Claude (2026-11-03, Intelligence Index v5.0)
 
