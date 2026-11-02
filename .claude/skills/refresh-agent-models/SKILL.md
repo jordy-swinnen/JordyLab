@@ -71,7 +71,7 @@ If a fetch fails twice, stop and report which source failed. Do not fill gaps fr
 
 - Match AA to Go by model family and version. AA names carry revision suffixes (for example "DeepSeek V4.1 Flash 1017 (max)"). If several revisions could match, take the newest and say so in the PR.
 - No AA Intelligence Index or Cost per Task means not eligible for any role.
-- Exclude: free or limited-time entries, "Contributor" models (they train on your prompts), models needing a privacy opt-in that the current config does not already rely on, and models AA marks `deprecated: true` in its data. Every excluded candidate gets a reason (for example `glm-5.2: deprecated on AA`, `kimi-k3: no AA row`, `minimax-m3: T 47 < 50`, `glm-5.3: Q_base 1,080 < 15,000`). List them in the summary and in the PR (Step 8).
+- Exclude: free or limited-time entries, "Contributor" models (they train on your prompts), models needing a privacy opt-in that the current config does not already rely on, and models AA marks `deprecated: true` in its data. Every excluded candidate gets a reason (for example `glm-5.2: deprecated on AA, no index`, `kimi-k3: deprecated on AA, no index`, `hy4-preview: not on AA`, `minimax-m3: T 47 < 50`, `glm-5.3: Q_base 1,080 < 15,000`). List them in the summary and in the PR (Step 8).
 - **Effort variants (Go).** Exclude `non-reasoning` / `none` rows. Never assign a high-effort AA score to a bare model ID when the model has effort variants.
   - **Multiple AA reasoning effort rows for one model** (for example `Claude Haiku 5.5` with `low`, `medium`, `high`, `xhigh`, `max`; `GLM-5.3` with `low`, `max`; `Grok 4.7` with `low`, `high`, `xhigh`; `GPT-6 Luna` with `low`, `medium`, `high`, `xhigh`, `max`): keep every reasoning row whose effort exists in the model's OpenCode `variants` as its own `(model, variant)` candidate.
   - **Single AA reasoning row for a model**:
@@ -139,9 +139,11 @@ Excluded, with the reason:
 - `step-5-preview`: `Q_base` 2,130 < 15,000; `T` 6.4 < 50.
 - `minimax-m3.1-flash`: `T` 40.7 < 50 (`Q_base` 19,380 passes).
 - `minimax-m3`: `T` 46.7 < 50.
-- `glm-5.2`: deprecated on AA, so no current row; `Q_base` 4,300 < 15,000 even with data.
-- `kimi-k3`, `gpt-5.6-luna`, `hy4-preview`: no AA row.
-- `qwen3.8-flash`, `qwen3.7-plus`, `hy3`, `kimi-k2.7-code`, `longcat-2.0`: AA lists no Intelligence Index.
+- `glm-5.2`: deprecated on AA, and its model page shows no index; `Q_base` 4,300 < 15,000 even with data.
+- `kimi-k3`: deprecated on AA, with no index; `Q_base` 490 < 15,000 even with data.
+- `gpt-5.6-luna`: deprecated on AA, with no index; `Q_base` 10,250 < 15,000 even with data.
+- `hy4-preview`: not on AA (no leaderboard row; its model page returns 404).
+- `qwen3.8-flash`, `qwen3.7-plus`, `hy3`, `kimi-k2.7-code`, `longcat-2.0`: AA lists no Intelligence Index. `longcat-2.0` clears the Worker's 50,000 request floor, so an index would make it a candidate at $0.60 or less per AA task.
 - `deepseek-v4.1-flash` high: AA lists no cost for this row.
 - `muse-spark-1.2-contributor`, `muse-spark-1.3-contributor`: Contributor. `beam-free`, `iceman-contributor-free`: free, limited time.
 
