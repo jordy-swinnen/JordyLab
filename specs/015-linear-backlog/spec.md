@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-01
 
-**Status**: Draft
+**Status**: Implemented (2026-11-02)
 
 **Module**: repository tooling (agent skills and connectors, commit and pull-request conventions, SpecKit skills),
 Linear workspace setup, docs. The idea-box app feature (guest feedback) is a separate feature that builds on this one;
