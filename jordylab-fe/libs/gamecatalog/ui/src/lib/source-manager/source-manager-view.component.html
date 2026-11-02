@@ -344,7 +344,7 @@
             @if (editingSourceId() !== source.id) {
               <button
                 type="button"
-                class="cursor-pointer font-sans text-[13px] font-semibold text-primary underline underline-offset-4"
+                class="inline-flex min-h-11 cursor-pointer items-center font-sans text-[13px] font-semibold text-accent-text underline underline-offset-4"
                 [attr.aria-label]="'Rename ' + source.label"
                 (click)="editHostName.emit(source.id)"
               >
