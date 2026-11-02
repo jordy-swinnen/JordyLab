@@ -1,6 +1,6 @@
 # Feature Draft: Production on Docker Compose instead of k3s
 
-**Status**: Draft, direction agreed in principle, low urgency (k3s was chosen mainly to try it; Docker would suffice). Four decisions recorded 2026-11-02 (see open questions).
+**Status**: Draft, direction agreed in principle, low urgency (k3s was chosen mainly to try it; Docker would suffice). Eight decisions recorded 2026-11-02 (see open questions).
 **Target path**: `specs/_drafts/compose-deployment/spec.md`
 **Supersedes parts of**: the OVH k3s deployment spec, `deploy/k8s/`, `docs/runbooks/vps-k3s-deployment/`, `docs/runbook.md`
 **Interacts with**: `continuous-deploy`, `public-private-exposure`, `auth-without-keycloak`
@@ -21,7 +21,7 @@ Docker Engine and the Compose plugin on the same kind of VPS (Ubuntu LTS, `ufw` 
 
 - Reverse proxy with automatic TLS: Caddy (decided 2026-11-02, see open questions).
 - `frontend` (nginx), `backend`, `ntfy`, PostgreSQL 16 with pgvector, and Keycloak until `auth-without-keycloak` removes it.
-- Postgres backups with WAL archiving plus daily and weekly base backups to OVH Object Storage (Gravelines), using pgBackRest or WAL-G. Parity with today's point-in-time restore is a hard requirement.
+- Postgres backups with WAL archiving plus daily and weekly base backups to OVH Object Storage (Gravelines), using pgBackRest. Parity with today's point-in-time restore is a hard requirement.
 - Secrets stay SOPS + age in git, decrypted only by the deploy workflow.
 - Deploy: GitHub Actions joins Tailscale as `tag:ci`, connects to the host, runs `docker compose pull && docker compose up -d --wait` with images pinned to the release tag (`vX.Y.Z`), as the k3s deploy already does. Rollback is running the deploy workflow with an older tag, as today.
 
@@ -53,15 +53,15 @@ High availability, multiple nodes, changing hosting provider, Kubernetes for oth
 
 ## Open questions
 
-Each question has a recommendation from the repository check. The owner decides.
+The owner decided each question on 2026-11-02. The recorded answer is marked "Decided".
 
 1. **Caddy or Traefik?** Decided 2026-11-02: Caddy. It issues and renews TLS on its own with a short config, and a second tailnet-only site (`public-private-exposure`) is simple to add. The current Gateway API routes do not carry over, because Compose has no Gateway, so keeping Traefik buys less than it seems.
 2. **Restart gap per deploy.** Decided 2026-11-02: accept a few seconds of downtime per release. The backend already runs with `strategy: Recreate`, so a restart per release is today's behaviour. Frontend currently rolls without a gap, so Compose adds a few seconds there. Deploys run on release tags only (a push to `main` does not deploy), so "deploy-on-merge" is no longer the trigger.
-3. **Docker or Podman on the server?** Recommendation: Docker Engine. The workflow above uses `up -d --wait`, and Docker is the usual path for production. Podman Compose stays for local development.
-4. **Postgres major upgrades** lose the operator's help. Recommendation: pin the image to the major version, and write a `pg_upgrade` or dump/restore procedure before the next major bump. This does not block the move.
-5. **Public SSH on port 22.** Recommendation: close it once Tailscale SSH works for Jordy and for the CI runner (`tag:ci`). This is a host firewall change, so it needs Jordy's approval at cutover.
+3. **Docker or Podman on the server?** Decided 2026-11-02: Docker Engine. Local development is also moving from Podman to Docker; that is a separate change, not part of this draft.
+4. **Postgres major upgrades** lose the operator's help. Decided 2026-11-02: pin the image to the major version, and write a `pg_upgrade` or dump/restore procedure before the next major bump. This does not block the move.
+5. **Public SSH on port 22.** Decided 2026-11-02: close it once Tailscale SSH works for Jordy and for the CI runner (`tag:ci`). This is a host firewall change, so it needs Jordy's approval at cutover.
 6. **Open port finding.** Decided 2026-11-02: leave it to the move and do not patch k3s for it. Compose has no NodePorts, so the move removes the cause. Run the same port scan on the new host before cutover. If the move slips past the next k3s upgrade, apply the k3s fix instead. Also check whether `ufw` filters the NodePort path at all, because if it does not, the new host needs its own firewall rules.
-7. **Postgres backup tool.** Recommendation: pgBackRest, the most established option for point-in-time restore to an S3-compatible endpoint. The 30-day retention must be reproduced exactly; check the option names in its docs when planning.
+7. **Postgres backup tool.** Decided 2026-11-02: pgBackRest, the most established option for point-in-time restore to an S3-compatible endpoint. The 30-day retention must be reproduced exactly; check the option names in its docs when planning.
 8. **Rebuild success criterion.** Decided 2026-11-02: dropped, so it is no longer a success criterion. The rebuild check was already dropped from the manual test runbook on 2026-10-05.
 
 ## Facts checked in the repo
