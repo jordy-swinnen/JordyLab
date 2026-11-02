@@ -55,7 +55,7 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
   The keys come from `PGBACKREST_REPO1_S3_KEY` and `PGBACKREST_REPO1_S3_KEY_SECRET`, which pgBackRest reads from the environment, so no key is written into the file. The `repo1-path=/pgbackrest` prefix keeps the new repository apart from the old Barman prefix (`cnpg-backups`), so the two never mix.
 - **No repository encryption added.** The old Barman setup did not encrypt the bucket either (its only transform is gzip for WAL), so adding it here would be a new unrecoverable-key risk with no parity gain. It is recorded as an assumption in plan.md and can be added later with its own key handling.
 - **Retention parity (FR-005)**: **verified** (web search, pgBackRest docs and the operator docs that reuse them): `repo1-retention-full-type=time` with `repo1-retention-full=30` keeps full backups for 30 days. A full backup older than 30 days is required before expiry, so the restorable window is at least 30 days. The window matches the current `retentionPolicy: 30d`.
-- **Schedule (FR-004)**: a weekly full backup and a daily differential backup together satisfy "daily and weekly base backups". Both run from host systemd timers (R13).
+- **Schedule (FR-004)**: a weekly full backup and differential backups Monday to Saturday together satisfy "daily and weekly base backups". Both run from host systemd timers (R13).
 - **Restore**: point-in-time restore uses `pgbackrest --stanza=jordylab --type=time --target=<UTC time> restore` against an empty data directory.
 - **Alternatives considered**: WAL-G (rejected by the owner's decision, pgBackRest); keeping the Barman plugin outside Kubernetes (rejected: the plugin needs the CNPG operator).
 - **To confirm during the build** (not decided here): that the `pgbackrest` package exists for Debian trixie at the version the build pulls. The restore test in quickstart covers the result either way.
@@ -102,7 +102,7 @@ The sequence is in `plan.md`, phase by phase. The key constraints are: k3s holds
 
 ## R11. Host backups and maintenance commands
 
-- **Decision**: systemd timers on the host run `docker compose exec postgres pgbackrest --stanza=jordylab --type=diff backup` daily and `--type=full backup` weekly, and their output goes to journald.
+- **Decision**: systemd timers on the host run `docker compose exec postgres pgbackrest --stanza=jordylab --type=diff backup` Monday to Saturday and `--type=full backup` on Sunday, and their output goes to journald.
 - **Rationale**: the timers are visible on the host and need no extra container.
 - **Alternatives considered**: a cron container (rejected: one more moving part to watch).
 

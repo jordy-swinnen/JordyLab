@@ -20,9 +20,11 @@ The configuration file is `deploy/compose/pgbackrest/pgbackrest.conf` (its full 
 
 ## Schedules (host systemd timers)
 
+The differential timer skips Sunday, so the weekly full at 04:00 never runs back to back with a differential at 03:00.
+
 | Timer | When (UTC) | Command |
 |-------|-----------|---------|
-| `jordylab-backup-diff.timer` | daily 03:00 | `docker compose exec -T postgres pgbackrest --stanza=jordylab --type=diff backup` |
+| `jordylab-backup-diff.timer` | Monday to Saturday 03:00 | `docker compose exec -T postgres pgbackrest --stanza=jordylab --type=diff backup` |
 | `jordylab-backup-full.timer` | Sunday 04:00 | `docker compose exec -T postgres pgbackrest --stanza=jordylab --type=full backup` |
 
 Each service writes to the journal. A failed run is visible with `systemctl status` and `journalctl -u`. A run that fails is not retried silently.

@@ -116,7 +116,7 @@ The runbook, the operations skill and the devops agent describe the Compose stac
 - What happens when the cutover restore fails halfway? The way back is a rebuild from the encrypted Mac backup, because there is no old node. The maintenance window must allow for that rebuild.
 - What happens to point-in-time restores to a time before cutover? They need the old backup chain in object storage, which pgBackRest cannot read. That chain is kept until its 30-day retention ends, and restoring to a time before cutover uses the old tooling.
 - What happens when the host reboots during a deploy? The stack must come back on its own, and the deploy must report the failure instead of stopping silently.
-- What happens to the Keycloak and Postgres roles after restore? The dump is made without owners and privileges, so the roles and schema ownership must be recreated before Keycloak starts.
+- What happens to the Keycloak and Postgres roles after restore? The cutover dump is made with owners and privileges, and the roles are created before the restore. The encrypted copy taken on 2026-11-02 has no owners, so if it is used, the roles and schema ownership must be recreated before Keycloak starts.
 - What happens when the artwork or mobile release volume is empty or missing at restore? The restore reports it, because an empty volume is a valid state but a missing one is not.
 - What happens if the Postgres container restarts often before cutover? The cause must be understood before the maintenance window, because the final dump depends on a stable database.
 

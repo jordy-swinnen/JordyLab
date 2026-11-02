@@ -52,7 +52,7 @@ Done in [research.md](research.md). Summary of decisions:
 
 - R1: production Compose files in `deploy/compose/`, separate from local development.
 - R2: Caddy routes the same paths as the Gateway, and obtains its own certificate at cutover.
-- R3: pgBackRest on the pinned Postgres 16 image; time-based retention of 30 days (verified); weekly full and daily differential backups.
+- R3: pgBackRest on the pinned Postgres 16 image; time-based retention of 30 days (verified); weekly full backups and differential backups Monday to Saturday.
 - R4: final dump with owners; roles created before restore.
 - R5: deploy over the tailnet with a dedicated key; `tcp:22` grant for `tag:ci` needs owner approval.
 - R6: SOPS decrypt on the runner, environment file written with mode 600.
@@ -84,9 +84,13 @@ The cutover is a sequence of phases. Each phase has an exit check, and a failed 
 5. Owner approves the Tailscale policy change for `tag:ci` (`tcp:22`) and the deploy key for the runner.
 6. Add the Compose deploy workflow as a separate file. The current release path keeps deploying to k3s until cutover.
 
+6a. Run the kept CloudNativePG restore drill to a point in time inside the 30-day window, while k3s still runs. This is the only way to prove that the old backup chain restores (backup contract, "The old chain"). It creates a drill cluster, so it needs the owner's yes, and the drill cluster and its volume are deleted afterwards.
+
 *Exit check*: the local restore matches, the Compose config validates, Docker is up, the staging copy matches the source, and the tailnet SSH path works from a test job.
 
 **Phase B: maintenance window** (the owner starts it):
+
+**Release freeze**: from the start of this phase until step 22, no release tag is pushed. `release.yml` still targets k3s, so a tag pushed in that time would fail. Phase C tests run the Compose workflow by hand.
 
 7. Scale the write paths down (backend, Keycloak, ntfy) so no new data arrives. This is a cluster change, so it needs the owner's yes.
 8. Take the final dump with owners, encrypt it to the Mac, and check the header and the row counts against production.
@@ -102,7 +106,7 @@ The cutover is a sequence of phases. Each phase has an exit check, and a failed 
 
 **Phase C: after the window**:
 
-16. Confirm the first pgBackRest full backup and the daily differential timer (`pgbackrest info`).
+16. Confirm the first pgBackRest full backup and the differential timer, Monday to Saturday (`pgbackrest info`).
 17. Forced certificate renewal test on Caddy.
 18. Reboot test (every service returns unaided).
 19. Point-in-time restore to a time inside the window onto a throwaway Postgres container with no published ports, then remove it.
@@ -163,7 +167,7 @@ deploy/compose/
 ├── host/
 │   ├── jordylab-backup-full.timer   # weekly full backup (systemd)
 │   ├── jordylab-backup-full.service
-│   ├── jordylab-backup-diff.timer   # daily differential backup (systemd)
+│   ├── jordylab-backup-diff.timer   # differential backup, Monday to Saturday (systemd)
 │   └── jordylab-backup-diff.service
 └── scripts/
     ├── render-env.sh                # runner: decrypt SOPS, write prod.env to stdout

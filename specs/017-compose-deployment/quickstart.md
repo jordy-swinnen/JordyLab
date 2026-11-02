@@ -13,6 +13,13 @@ Proves: the backup is restorable and matches production (SC-002, FR-006).
 - Pass: exit code 0, no error lines in the log, and identical per-table row counts with production.
 - Remove the container by its name.
 
+## 1a. Old-chain point-in-time restore (before the window)
+
+Proves: the backups taken before the move restore through the kept CloudNativePG manifests (backup contract, "The old chain"; plan step 6a).
+
+- With k3s still running and the owner's yes, run the kept restore drill to a time inside the 30-day window.
+- Pass: the drill cluster becomes Ready, its row counts are no greater than production's, and the drill cluster and its volume are deleted afterwards.
+
 ## 2. Validate the Compose files
 
 Proves: the stack definition parses with the names in the environment template (contracts/env-contract.md).
@@ -36,6 +43,7 @@ Proves: the public addresses match the contract (contracts/public-routes.md, FR-
 - `curl -s https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration` → JSON containing the issuer `https://jordylab.be/auth/realms/jordylab`.
 - `curl -s https://jordylab.be/.well-known/assetlinks.json` → the same body as before the move.
 - `curl -sI https://jordylab.be/ntfy/` → the ntfy response (the prefix is removed before forwarding).
+- `curl -sI https://jordylab.be/apis` → the frontend's response, not the backend's (whole-segment matching).
 - Pass: each path reaches its target; `http://jordylab.be/` → 301 to HTTPS.
 
 ## 5. Sign-in and data (smoke)
@@ -98,7 +106,7 @@ Proves: backups run on schedule (FR-004).
 
 - `systemctl list-timers 'jordylab-backup-*'` shows both timers with a next run.
 - `pgbackrest --stanza=jordylab info` lists the full backup and the differential backups.
-- Pass: the newest diff backup is within 24 hours and the newest full is within 7 days.
+- Pass: the newest backup of either kind is within 24 hours, and the newest full backup is within 7 days.
 
 ## 13. Memory
 
