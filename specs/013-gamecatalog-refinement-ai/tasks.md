@@ -417,9 +417,12 @@ Backend `jordylab-be/src/main/java/dev/jordy/jordylab/…` (tests `jordylab-be/s
 **Purpose**: Re-test the same scenarios on production and measure the production-only targets.
 
 - [X] T154 Run the real scan client against **jordylab.be** on this Mac; the Linux box scan is the owner's HANDOFF (same block pattern as Phase 19); never seed production data — **Done 2026-11-02:** scan APPLIED on jordylab.be (5 submitted, nothing new); see `validation-results.md`.
-- [X] T155 Walk quickstart B2 (rows 1 to 15) on https://jordylab.be as admin and as the guest account in the browser pane; measure SC-001 from the Sources health counts, SC-007 after a scan, SC-006 with 20 questions, SC-017 and SC-020/SC-021; record everything with the release tag in `specs/013-gamecatalog-refinement-ai/validation-results.md` — **Done 2026-11-02 with limits:** admin pass only (no guest login), SC-006 measured over 10 questions and failed (BUG-079), SC-007 not measurable; the rest of the rows were passed in the rc20 to rc28 production passes.
+- [X] T155 Walk quickstart B2 (rows 1 to 15) on https://jordylab.be as admin and as the guest account in the browser pane; measure SC-001 from the Sources health counts, SC-007 after a scan, SC-006 with 20 questions, SC-017 and SC-020/SC-021; record everything with the release tag in `specs/013-gamecatalog-refinement-ai/validation-results.md` — **Done for the admin pass 2026-11-02; the rest is split out:** guest pass and the Linux box scan are T158, SC-006 (measured over 10 questions and failed, BUG-079) is re-measured in T159, SC-007 (not measurable, nothing new scanned) is T160. The other rows were passed in the rc20 to rc28 production passes.
 - [X] T156 **HANDOFF (owner):** 20 fingerprint sign-ins on the phone with the released APK (SC-018) and a quick look at the game page on the phone; the agent prepares the HANDOFF block and records the owner's result — **Closed 2026-11-02 on the owner's report:** fingerprint sign-in works on the phone with the released APK (this is also the BUG-073 check).
-- [X] T157 Close out: log findings in `docs/testing/bug-log.md`, update `docs/testing/final-report.md` with the 013 results, and mark this feature's tasks complete — **Done 2026-11-02:** BUG-079 and BUG-080 logged, final report updated.
+- [X] T157 Close out: log findings in `docs/testing/bug-log.md`, update `docs/testing/final-report.md` with the 013 results, and mark this feature's tasks complete — **Done 2026-11-02:** BUG-079 and BUG-080 logged, final report updated. T158 to T160 stay open.
+- [ ] T158 **HANDOFF (owner):** guest pass of quickstart B2 on https://jordylab.be (sign in as the guest account: Library, filters, marks, LibBot, no Sources or Settings access) and the scan from the Linux box; the agent never types the guest's or the owner's password. Split out of T155 on 2026-11-02.
+- [ ] T159 Re-measure SC-006 on production with 20 LibBot questions after BUG-079 (JOR-72) is fixed; target 95 % complete within 10 s. The 2026-11-02 run (10 questions, 3 within 10 s) failed; record the new run in `validation-results.md`. Split out of T155.
+- [ ] T160 Measure SC-007 on production: after the next real scan that adds new games, wait ten minutes without clicking and record how many of the new games are complete (target at least 90 %). The 2026-11-02 scan added nothing. Split out of T155.
 
 **Checkpoint**: Quickstart B2 all green on jordylab.be; results recorded; findings logged.
 
@@ -481,7 +484,7 @@ Tests first (red), then records/entities, services, controllers, frontend models
   - Phase 18: Polish, documentation and cross-cutting concerns: 5 (T141 to T145)
   - Phase 19: Local acceptance (everything works locally, the entire spec): 5 (T146 to T150)
   - Phase 20: Release: 3 (T151 to T153)
-  - Phase 21: Production acceptance (jordylab.be): 4 (T154 to T157)
+  - Phase 21: Production acceptance (jordylab.be): 7 (T154 to T160; T158 to T160 are open follow-ups)
 
 - **Per user story**: US1 22, US2 7, US3 5, US4 9, US5 5, US6 9, US7 5, US8 4, US9 3, US10 7, US11 3, US12 2, US13 4, US14 5, US15 7
 
