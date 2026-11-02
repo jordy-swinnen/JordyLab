@@ -49,7 +49,7 @@ Ideas and new bugs are logged in Linear (team `JOR`), not in files: use the `lin
 a ticket for …", "turn this plan into tickets"; it previews, checks duplicates and creates in Triage with one App and
 one Type label). `docs/testing/bug-log.md` stays as history and the campaign's log-first rule; `BUG-###` references stay
 valid. Specs, plans and tasks stay in git. Setup, labels, states and the connector steps for the Claude apps are in
-`docs/linear.md` (spec `specs/014-linear-backlog/`).
+`docs/linear.md` (spec `specs/015-linear-backlog/`).
 
 ## Commits
 

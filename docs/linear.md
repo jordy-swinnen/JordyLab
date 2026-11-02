@@ -1,7 +1,7 @@
 # Linear: backlog and tickets
 
 Linear holds the backlog: ideas, bugs, improvements and the status of every draft. Git keeps the work itself (specs,
-plans, tasks, code). Spec: `specs/014-linear-backlog/`. This page records what cannot be read from the repo: workspace
+plans, tasks, code). Spec: `specs/015-linear-backlog/`. This page records what cannot be read from the repo: workspace
 facts, the settings changed by hand, and the steps to connect each tool.
 
 ## Workspace and team
@@ -40,18 +40,18 @@ nothing was duplicated.
 
 Priority uses Linear's own field (Urgent, High, Medium, Low).
 
-## First import (spec 014, 2026-11-02)
+## First import (spec 015, 2026-11-02)
 
 The repository was mirrored into Linear with the `linear-sync-drafts` skill: 14 numbered specs (JOR-10 to JOR-23, from
 `tasks.md`), 16 drafts without a spec (JOR-24 to JOR-39, *Drafted*) and 15 open bugs (JOR-40 to JOR-54: FIXING →
 *In Progress*, FIXED-LOCAL → *In Review*). Done: specs 004 and 012 (owner's decision). *Todo*: spec 010 (no task
-checked). *In Progress* with open tasks: 001, 002, 003, 005, 006, 007, 008, 009, 011, 013 and 014, each carrying the
+checked). *In Progress* with open tasks: 001, 002, 003, 005, 006, 007, 008, 009, 011, 013 and 015, each carrying the
 temporary label **Migration** and its open tasks in the description. The owner resolves these by hand and removes the
-label. Projects per spec and saved views come with spec 014 US3.
+label. Projects per spec and saved views come with spec 015 US3.
 
 ## Saved views
 
-None yet. Views for Triage, "ready to build" (*Specified*) and open bugs are added with the triage work (spec 014, US3).
+None yet. Views for Triage, "ready to build" (*Specified*) and open bugs are added with the triage work (spec 015, US3).
 
 ## Connectors
 
@@ -91,7 +91,7 @@ The apps cannot read `.mcp.json`, so they use the Linear connector:
 
 ### Ticket conventions for the Claude apps
 
-Keep this block in sync with `.claude/skills/linear-capture/SKILL.md` (spec 014 FR-006b).
+Keep this block in sync with `.claude/skills/linear-capture/SKILL.md` (spec 015 FR-006b).
 
 ```text
 When I ask you to log an idea, bug, improvement, feature or chore, or to turn a conversation or plan into tickets,
@@ -126,12 +126,12 @@ still appeared as public GitHub issue #158 with its full text, so the direction 
 publishes every ticket. To keep tickets private the sync has to be off, or run GitHub → Linear only.
 
 Team `JOR` pull-request automation already has the intended defaults (checked 2026-11-01: PR open → In Progress, review
-activity → In Review, merge → Done, draft and ready-for-merge → no action). Not otherwise set up yet; added with spec 014 US4 (branch names containing the issue key link a pull request, a closing word on
+activity → In Review, merge → Done, draft and ready-for-merge → no action). Not otherwise set up yet; added with spec 015 US4 (branch names containing the issue key link a pull request, a closing word on
 merge sets *Done*, commit linking stays off).
 
 ## Free-plan limit record
 
-Checked 2026-11-02 (spec 014 T021): the team holds 5 active issues (Linear's 4 welcome issues and JOR-8) plus 3 deleted
+Checked 2026-11-02 (spec 015 T021): the team holds 5 active issues (Linear's 4 welcome issues and JOR-8) plus 3 deleted
 test issues that Linear keeps for 30 days. Linear's billing documentation says that above 250 issues no new issue can
 be created; it does not say whether archived issues count. The sync skill therefore counts archived issues too and
 stops at 230. The first full sync adds about 45 issues (14 specs, 16 drafts, 15 open bugs), so the total stays near 55.
@@ -158,10 +158,10 @@ Seen on 2026-11-01 through the Linear connector of the Claude account (the proje
 | Labels | list, create, update, move into a group, retire | |
 | Comments, documents, templates, releases | list, get, create/update comments and documents | |
 | Workflow states | list and get only | creating or editing states (Settings → Issue statuses) |
-| Saved views | list only | creating the views (spec 014 US3) |
+| Saved views | list only | creating the views (spec 015 US3) |
 | Settings (Triage, GitHub integration, workflows) | | all of it, in Linear's settings pages |
 
-## Validation record (spec 014, T014)
+## Validation record (spec 015, T014)
 
 - 2026-11-01, Claude Code (connector): Idea, Feature and Chore tickets were created in Triage with one App and one
   Type label each; a repeated search found the existing ticket. The three test tickets (JOR-5 to JOR-7) were deleted

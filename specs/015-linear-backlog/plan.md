@@ -1,8 +1,8 @@
 # Implementation Plan: Linear as Ticketing and Backlog
 
-**Branch**: `014-linear-backlog` | **Date**: 2026-11-01 | **Spec**: [spec.md](spec.md)
+**Branch**: `015-linear-backlog` | **Date**: 2026-11-01 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/014-linear-backlog/spec.md`
+**Input**: Feature specification from `/specs/015-linear-backlog/spec.md`
 
 ## Summary
 
@@ -73,7 +73,7 @@ No violations, so the Complexity Tracking table is empty.
 ### Documentation (this feature)
 
 ```text
-specs/014-linear-backlog/
+specs/015-linear-backlog/
 ├── plan.md              # This file
 ├── research.md          # Phase 0: decisions D1–D10, verified facts, sources
 ├── data-model.md        # Phase 1: taxonomy, draft inventory record, issue shape, tokens

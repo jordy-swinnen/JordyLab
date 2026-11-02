@@ -59,7 +59,7 @@ Expected: every script ends with `… 0 failed`.
 1. Create a branch named after a test issue (`jor-1-linear-test` style from Linear's copy action) and open a draft pull
    request. The issue links the PR and moves to In Progress. (The description skeleton from the pull-request template is
    checked in §5.4.)
-2. Commit with `Refs: NO-CODE`, `Refs: 014 JOR-<n>` and `Refs: JOR-x`: first two pass locally and in the Commit
+2. Commit with `Refs: NO-CODE`, `Refs: 015 JOR-<n>` and `Refs: JOR-x`: first two pass locally and in the Commit
    References check, the last is blocked with the accepted-token list.
 3. Merge a test PR that says `Fixes JOR-<n>`: the issue is Done. A PR that says `Refs JOR-<n>` leaves it open.
 4. Ask an agent to commit and open a pull request on a trivial docs change without reminding it: the message and

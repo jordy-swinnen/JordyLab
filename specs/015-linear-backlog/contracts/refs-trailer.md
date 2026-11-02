@@ -20,7 +20,7 @@ Rules:
 - The `Refs:` line is in the message's trailer block (last paragraph, next to the attribution line).
 - `NO-CODE` must stand alone.
 - Merge, `fixup!`, `squash!`, `amend!` and `Revert "` commits are exempt.
-- Tokens combine freely: `Refs: 014 JOR-12 BUG-020`.
+- Tokens combine freely: `Refs: 015 JOR-12 BUG-020`.
 - A Linear key is optional; the line must still contain at least one valid token.
 
 ## Cases (added to `.githooks/tests/commit-msg-cases.sh`)
@@ -28,7 +28,7 @@ Rules:
 | Message trailer | Verdict |
 |---|---|
 | `Refs: JOR-12` | pass |
-| `Refs: 014 JOR-12` | pass |
+| `Refs: 015 JOR-12` | pass |
 | `Refs: JOR-12, JOR-340 BUG-001` | pass |
 | `Refs: NO-CODE JOR-12` | block (NO-CODE alone) |
 | `Refs: JOR-` | block |

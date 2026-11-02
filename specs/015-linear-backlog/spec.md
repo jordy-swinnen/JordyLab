@@ -1,6 +1,6 @@
 # Feature Specification: Linear as Ticketing and Backlog
 
-**Feature Branch**: `014-linear-backlog`
+**Feature Branch**: `015-linear-backlog`
 
 **Created**: 2026-11-01
 

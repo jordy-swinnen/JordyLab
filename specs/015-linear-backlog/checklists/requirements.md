@@ -39,6 +39,6 @@
   optional on feature commits; open bugs migrated, closed ones stay in git.
 - Draft-to-spec matches the migration should find: deployment → 008, mobile-app → 007, switch-games → 009,
   eufy-presence → 010, settings → 006, oxlint-fast-lint, e2e-testing and ai-integration-conventions → 012,
-  linear-backlog → this spec (014). Anything else (for example the AI drafts partly absorbed by 013, or the
+  linear-backlog → this spec (015). Anything else (for example the AI drafts partly absorbed by 013, or the
   multiplayer-player-counts draft) is listed for Jordy's decision (FR-015).
 - Open check carried to planning: whether archived issues count towards the Free-plan limit.

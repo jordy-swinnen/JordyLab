@@ -6,7 +6,7 @@ description: Create Linear tickets from a Claude Code or OpenCode session. Logs 
 # Linear capture
 
 Ideas and bugs are logged in Linear so nothing is lost between sessions. Specs, plans and tasks stay in git. The shape
-of every issue is fixed by `specs/014-linear-backlog/contracts/linear-issue-shape.md`; setup and the label names are in
+of every issue is fixed by `specs/015-linear-backlog/contracts/linear-issue-shape.md`; setup and the label names are in
 `docs/linear.md`. Keep `docs/linear.md` → "Ticket conventions for the Claude apps" in step with this file.
 
 ## Before anything

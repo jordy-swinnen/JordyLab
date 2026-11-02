@@ -1,7 +1,7 @@
 #!/bin/sh
 # Read-only list of the open entries in docs/testing/bug-log.md (status OPEN, FIXING, FIXED-LOCAL or BLOCKED).
 # Prints one JSON array on stdout; exit 0, or 2 when the log is missing. Never writes, never calls Linear.
-# Contract: specs/014-linear-backlog/contracts/draft-inventory.md (open_bugs.sh). Run from the repository root.
+# Contract: specs/015-linear-backlog/contracts/draft-inventory.md (open_bugs.sh). Run from the repository root.
 set -eu
 
 LOG=${BUG_LOG:-docs/testing/bug-log.md}

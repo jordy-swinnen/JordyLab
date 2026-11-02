@@ -2,10 +2,10 @@
 # Starts the GitHub MCP connection for Claude Code and OpenCode (both run this as a stdio server).
 # The token comes from the `gh` login, so no personal access token is created, stored or exported by hand.
 # stdout carries the MCP protocol: nothing but the bridge may write to it. Contract:
-# specs/014-linear-backlog/contracts/github-mcp-launcher.md
+# specs/015-linear-backlog/contracts/github-mcp-launcher.md
 set +x
 
-# Exact pin, reviewed in specs/014-linear-backlog/research.md (D1). Raise it deliberately, never use a tag.
+# Exact pin, reviewed in specs/015-linear-backlog/research.md (D1). Raise it deliberately, never use a tag.
 BRIDGE="mcp-remote@0.15.1"
 ENDPOINT="https://api.githubcopilot.com/mcp/"
 

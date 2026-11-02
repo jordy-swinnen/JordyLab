@@ -113,7 +113,7 @@ plan needed and the facts verified for them. Text read from web pages is treated
   override list kept in the skill). Unclear cases are never guessed; they are listed.
 - **Proposed matches found by reading the specs** (to confirm during the run): deployment → 008, mobile-app → 007,
   switch-games → 009, eufy-presence → 010, settings → 006, oxlint-fast-lint, e2e-testing and
-  ai-integration-conventions → 012, linear-backlog → 014. The other AI drafts are partly absorbed by 013 and stay
+  ai-integration-conventions → 012, linear-backlog → 015. The other AI drafts are partly absorbed by 013 and stay
   *Drafted* unless Jordy says otherwise.
 - **Proposed App and Type per draft** (first guess, confirmed in the run): every `ai-*` draft, `auth-without-keycloak`,
   `compose-deployment`, `continuous-deploy`, `deployment`, `e2e-testing`, `guest-feedback`, `langfuse-prompt-management`,
@@ -180,6 +180,6 @@ plan needed and the facts verified for them. Text read from web pages is treated
 `repo_inventory.sh` on this repository: 30 items, 14 numbered specs and 16 drafts without a spec (the nine drafts that
 belong to specs share their spec's issue: switch-games, eufy-presence and linear-backlog by slug; deployment,
 mobile-app, settings, oxlint-fast-lint, e2e-testing and ai-integration-conventions by the override list). States from
-`tasks.md`: Done 004 and 012; In Progress 001, 002, 003, 005, 006, 007, 008, 009, 011, 013, 014; Specified 010. Done
+`tasks.md`: Done 004 and 012; In Progress 001, 002, 003, 005, 006, 007, 008, 009, 011, 013, 015; Specified 010. Done
 candidates (In Progress with at most 3 open tasks): 001, 002, 003, 005, 007, 008, 009, 011. Needs decision: the draft
-`guest-feedback` (only mentioned by spec 014). `open_bugs.sh`: 15 open bugs (11 FIXED-LOCAL, 4 FIXING).
+`guest-feedback` (only mentioned by spec 015). `open_bugs.sh`: 15 open bugs (11 FIXED-LOCAL, 4 FIXING).

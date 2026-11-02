@@ -12,7 +12,7 @@
 011-prod-e2e-hardening	Platform	Improvement
 012-technical-improvements	Platform	Improvement
 013-gamecatalog-refinement-ai	Game Catalog	Improvement
-014-linear-backlog	Platform	Feature
+015-linear-backlog	Platform	Feature
 ai-calls-outside-transactions	Platform	Improvement
 ai-evals-golden-set	Platform	Feature
 ai-ingestion-pipeline	Platform	Improvement
@@ -38,3 +38,5 @@ mobile-app	Mobile	Feature
 pwa-replaces-capacitor	Mobile	Improvement
 switch-games	Game Catalog	Feature
 multiplayer-player-counts	Game Catalog	Improvement
+014-console-player-counts	Game Catalog	Improvement
+curated-player-counts	Game Catalog	Improvement
