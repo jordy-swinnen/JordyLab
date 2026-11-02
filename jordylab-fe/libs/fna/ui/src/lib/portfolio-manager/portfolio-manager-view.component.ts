@@ -6,10 +6,10 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 /** Swatch colours, assigned by row position so the allocation bar and the table agree. */
 const SWATCHES = [
-  'bg-primary',
-  'bg-iris',
-  'bg-foreground',
-  'bg-deep',
+  'bg-series-1',
+  'bg-series-2',
+  'bg-series-3',
+  'bg-series-4',
   'bg-muted-foreground',
 ];
 

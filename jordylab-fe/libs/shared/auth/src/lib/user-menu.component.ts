@@ -27,7 +27,7 @@ import { AuthService } from './auth.service';
       "
     >
       <span
-        class="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-iris font-display text-[15px] font-bold text-primary-foreground"
+        class="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-series-2 text-[15px] font-bold text-background"
         aria-hidden="true"
         >{{ initial() }}</span
       >

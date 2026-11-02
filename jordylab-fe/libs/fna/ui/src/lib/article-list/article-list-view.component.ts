@@ -36,13 +36,13 @@ export class ArticleListViewComponent {
     return days;
   });
 
-  /** Feed accent: ECB in flare, Politico in iris, everything else neutral. */
+  /** Feed accent: ECB in the theme's accent colour, Politico in the second series colour, everything else neutral. */
   protected feedColor(feedName: string): string {
     if (feedName === 'ECB Press Releases') {
-      return 'text-primary';
+      return 'text-accent-text';
     }
     if (feedName === 'Politico Europe') {
-      return 'text-iris';
+      return 'text-series-2';
     }
 
     return 'text-foreground';

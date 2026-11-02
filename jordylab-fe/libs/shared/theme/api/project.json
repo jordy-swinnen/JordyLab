@@ -1,0 +1,20 @@
+{
+  "name": "theme-api",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/theme/api/src",
+  "prefix": "lib",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:api"],
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "coverage/libs/shared/theme/api"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}
