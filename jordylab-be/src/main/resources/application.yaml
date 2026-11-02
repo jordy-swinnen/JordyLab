@@ -4,11 +4,6 @@ spring:
     # Nothing uses a VectorStore yet (no RAG/semantic search), so it stays off until a feature needs it: then remove
     # this exclusion and configure an embedding model (spec 011 BUG-009; see AGENTS.md → Shared Gotchas).
     exclude: org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
-  servlet:
-    multipart:
-      # Signed release APKs are uploaded by CI (POST /api/mobile/releases); Spring's 1 MB default rejects them.
-      max-file-size: 200MB
-      max-request-size: 210MB
   application:
     name: jordylab-be
   datasource:
@@ -184,22 +179,12 @@ jordylab:
       zone: Europe/Brussels
     model-catalog:
       cache-ttl-minutes: 60
-  mobile:
-    release:
-      storage-dir: ${MOBILE_RELEASE_STORAGE_DIR:/var/jordylab/mobile-releases}
-      # Release certificate SHA-256 as plain hex (prod: backend-config MOBILE_RELEASE_SIGNING_CERT_SHA256).
-      signing-cert-sha256: ${MOBILE_RELEASE_SIGNING_CERT_SHA256:}
-    download-link:
-      secret: ${MOBILE_DOWNLOAD_LINK_SECRET:}
-      ttl-minutes: 5
-    app:
-      # Prod: backend-config (MOBILE_APPLICATION_ID=be.jordylab.app, MOBILE_PRODUCTION_DOMAIN=jordylab.be).
-      package-name: ${MOBILE_APPLICATION_ID:}
-      production-domain: ${MOBILE_PRODUCTION_DOMAIN:}
-    notifications:
-      ntfy:
-        base-url: ${NTFY_BASE_URL:}
-        topic: ${NTFY_TOPIC:}
-        token: ${NTFY_TOKEN:}
+  notifications:
+    # Admin push click-throughs are built from this origin (spec 017 US3) — prod: https://jordylab.be.
+    app-base-url: ${JORDYLAB_APP_BASE_URL:}
+    ntfy:
+      base-url: ${NTFY_BASE_URL:}
+      topic: ${NTFY_TOPIC:}
+      token: ${NTFY_TOKEN:}
   cors:
     allowed-origins: ${JORDYLAB_CORS_ALLOWED_ORIGINS}

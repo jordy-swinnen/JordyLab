@@ -1,6 +1,6 @@
-package dev.jordy.jordylab.mobile.rest.client;
+package dev.jordy.jordylab.shared.rest.client;
 
-import dev.jordy.jordylab.mobile.MobileProperties;
+import dev.jordy.jordylab.shared.config.NotificationProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,25 +16,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Publishes admin push notifications to the existing Ntfy server (spec FR-016, research D9/D10)
- * — the first real Ntfy sender in this codebase; 006 only ever scaffolded the config keys. A
- * push failure is logged and swallowed by the caller ({@link dev.jordy.jordylab.mobile.service.MobileNotificationListener})
- * — it must never fail the sign-up or briefing flow that triggered it. Stays a no-op while
- * {@code base-url} or {@code topic} is blank, matching 006's original "optional" framing — but never silently: the
- * startup log says which key is missing, and every sent push is logged (spec 011 BUG-013: prod never had a topic,
- * so no sign-up push was ever sent and nothing said so).
+ * Publishes admin push notifications to the self-hosted ntfy server (spec 017 US3, contracts/notifications-contract.md,
+ * moved from the retired {@code mobile} module). Callers pass the in-app click-through <em>path</em> ({@code
+ * /settings/users}, {@code /fna/briefing}); the public site origin comes from {@code jordylab.notifications.app-base-url},
+ * so the tap opens the web app (installed or in the browser) directly instead of a native deep link.
  *
- * <p><strong>Implementation note:</strong> the exact header Ntfy expects for a tap-through URL
- * is assumed to be {@code X-Click} (a plain HTTP header, Ntfy also accepts the shorthand
- * {@code Click}) per Ntfy's publish-by-HTTP-header convention — verify against the specific
- * Ntfy server version in use (research §4 item 4).
+ * <p>A push failure is logged and swallowed — it must never fail the sign-up or briefing flow that triggered it. Stays a
+ * no-op while {@code base-url}, {@code topic} or {@code app-base-url} is blank, but never silently: the startup log says
+ * which key is missing (spec 011 BUG-013), and every sent push is logged.
  */
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class NtfyClient {
 
-    private final MobileProperties properties;
+    private final NotificationProperties properties;
     private final RestClient restClient;
 
     @EventListener(ApplicationReadyEvent.class)
@@ -48,9 +44,10 @@ public class NtfyClient {
         }
     }
 
-    public void publish(String title, String body, String clickUrl) {
-        MobileProperties.Ntfy ntfy = properties.notifications().ntfy();
-        if (!StringUtils.hasText(ntfy.baseUrl()) || !StringUtils.hasText(ntfy.topic())) {
+    public void publish(String title, String body, String clickPath) {
+        NotificationProperties.Ntfy ntfy = properties.ntfy();
+        if (!StringUtils.hasText(ntfy.baseUrl()) || !StringUtils.hasText(ntfy.topic())
+                || !StringUtils.hasText(properties.appBaseUrl())) {
             log.debug("Ntfy not configured — skipping notification '{}'", title);
 
             return;
@@ -60,7 +57,7 @@ public class NtfyClient {
                     .uri(ntfy.baseUrl() + "/" + ntfy.topic())
                     .contentType(MediaType.TEXT_PLAIN)
                     .header("X-Title", title)
-                    .header("X-Click", clickUrl);
+                    .header("X-Click", stripTrailingSlash(properties.appBaseUrl()) + clickPath);
             if (StringUtils.hasText(ntfy.token())) {
                 request = request.header(HttpHeaders.AUTHORIZATION, "Bearer " + ntfy.token());
             }
@@ -72,14 +69,21 @@ public class NtfyClient {
         }
     }
 
+    private static String stripTrailingSlash(String url) {
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
     private List<String> missingKeys() {
-        MobileProperties.Ntfy ntfy = properties.notifications().ntfy();
+        NotificationProperties.Ntfy ntfy = properties.ntfy();
         List<String> missing = new ArrayList<>();
         if (!StringUtils.hasText(ntfy.baseUrl())) {
             missing.add("NTFY_BASE_URL");
         }
         if (!StringUtils.hasText(ntfy.topic())) {
             missing.add("NTFY_TOPIC");
+        }
+        if (!StringUtils.hasText(properties.appBaseUrl())) {
+            missing.add("JORDYLAB_APP_BASE_URL");
         }
 
         return missing;

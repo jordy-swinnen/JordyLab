@@ -1,6 +1,5 @@
 package dev.jordy.jordylab.fna.service;
 
-import dev.jordy.jordylab.fna.BriefingReady;
 import dev.jordy.jordylab.fna.domain.ArticleTestBuilder;
 import dev.jordy.jordylab.fna.domain.Briefing;
 import dev.jordy.jordylab.fna.domain.PortfolioPositionTestBuilder;
@@ -11,6 +10,7 @@ import dev.jordy.jordylab.shared.ai.AiCallResultTestBuilder;
 import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
+import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
@@ -60,7 +59,7 @@ class BriefingGeneratorServiceTest {
     private BriefingRepository briefingRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private NtfyClient ntfyClient;
 
     private BriefingGeneratorService briefingGeneratorService;
 
@@ -71,7 +70,7 @@ class BriefingGeneratorServiceTest {
                 articleRepository,
                 positionRepository,
                 briefingRepository,
-                eventPublisher
+                ntfyClient
         );
         briefingGeneratorService.systemPromptResource = new ClassPathResource(SYSTEM_PROMPT_RESOURCE_PATH);
         briefingGeneratorService.init();
@@ -94,20 +93,20 @@ class BriefingGeneratorServiceTest {
         ArgumentCaptor<Briefing> briefingCaptor = ArgumentCaptor.forClass(Briefing.class);
         when(briefingRepository.save(briefingCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ArgumentCaptor<BriefingReady> eventCaptor = ArgumentCaptor.forClass(BriefingReady.class);
+        ArgumentCaptor<String> notificationBodyCaptor = ArgumentCaptor.forClass(String.class);
 
         Briefing result = briefingGeneratorService.generateBriefing();
 
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        verify(ntfyClient).publish(eq("Your monthly briefing is ready"), notificationBodyCaptor.capture(),
+                eq("/fna/briefing"));
         assertSoftly(softly -> {
             softly.assertThat(result.getContent()).isEqualTo(AiCallResultTestBuilder.DEFAULT_CONTENT);
             softly.assertThat(result.getModelUsed()).isEqualTo(AiCallResultTestBuilder.DEFAULT_MODEL);
             softly.assertThat(result.getGeneratedAt()).isNotNull();
             softly.assertThat(userPromptCaptor.getValue()).contains(ArticleTestBuilder.DEFAULT_TITLE);
             softly.assertThat(briefingCaptor.getValue()).isSameAs(result);
-            // spec 007 FR-016 / research D9: mobile's notification listener depends on this event.
-            softly.assertThat(eventCaptor.getValue().briefingId()).isEqualTo(result.getId());
-            softly.assertThat(eventCaptor.getValue().generatedAt()).isEqualTo(result.getGeneratedAt());
+            // spec 017 US3: the admin push names the generation time and opens the briefing screen.
+            softly.assertThat(notificationBodyCaptor.getValue()).contains(result.getGeneratedAt().toString());
         });
     }
 
@@ -252,7 +251,7 @@ class BriefingGeneratorServiceTest {
 
         assertThat(userPromptCaptor.getValue()).contains(NO_ARTICLES_FALLBACK);
         verifyNoInteractions(briefingRepository);
-        verifyNoInteractions(eventPublisher);
+        verifyNoInteractions(ntfyClient);
     }
 
     @Test
