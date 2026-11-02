@@ -1,5 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { brandIconDataUri } from './brand-icon';
+import { setLauncherIcon } from './launcher-icon';
 import {
   DEFAULT_DARK_THEME_ID,
   DEFAULT_LIGHT_THEME_ID,
@@ -21,6 +22,7 @@ export class ThemeStore {
   readonly #deviceLightQuery = window.matchMedia(LIGHT_DEVICE_QUERY);
   readonly #preference = signal<ThemePreference>(this.#readStoredPreference());
   readonly #deviceIsLight = signal(this.#deviceLightQuery.matches);
+  #launcherIconTheme: ThemeId | null = null;
 
   readonly preference = this.#preference.asReadonly();
   readonly themes = THEME_DEFINITIONS;
@@ -70,6 +72,7 @@ export class ThemeStore {
   #apply(): void {
     const root = document.documentElement;
     root.setAttribute('data-theme', this.activeTheme());
+    this.#applyLauncherIcon(this.activeTheme());
     const styles = getComputedStyle(root);
     const ground = styles.getPropertyValue('--background').trim();
     if (!ground) {
@@ -86,5 +89,14 @@ export class ThemeStore {
       return;
     }
     link.setAttribute('href', brandIconDataUri(`hsl(${accent})`, `hsl(${accentInk})`));
+  }
+
+  /** The phone's home-screen icon follows the theme too; it is asked only when the theme changed since the last call. */
+  #applyLauncherIcon(theme: ThemeId): void {
+    if (theme === this.#launcherIconTheme) {
+      return;
+    }
+    this.#launcherIconTheme = theme;
+    void setLauncherIcon(theme);
   }
 }
