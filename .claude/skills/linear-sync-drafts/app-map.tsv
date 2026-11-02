@@ -1,0 +1,40 @@
+# name<TAB>App<TAB>Type. First guess for spec folders and draft folders; confirmed by Jordy in each run (research D5).
+001-fna-mvp1-completion	Finance News	Feature
+002-game-catalog	Game Catalog	Feature
+003-gamecatalog-python-scanner	Game Catalog	Feature
+004-gamecatalog-refinements	Game Catalog	Improvement
+005-steam-library-sync	Game Catalog	Feature
+006-settings-module	Platform	Feature
+007-mobile-app	Mobile	Feature
+008-ovh-k8s-deployment	Platform	Feature
+009-switch-games	Game Catalog	Feature
+010-eufy-presence	Platform	Feature
+011-prod-e2e-hardening	Platform	Improvement
+012-technical-improvements	Platform	Improvement
+013-gamecatalog-refinement-ai	Game Catalog	Improvement
+014-linear-backlog	Platform	Feature
+ai-calls-outside-transactions	Platform	Improvement
+ai-evals-golden-set	Platform	Feature
+ai-ingestion-pipeline	Platform	Improvement
+ai-integration-conventions	Platform	Chore
+ai-prompts-as-resources	Platform	Improvement
+ai-token-usage-and-budget	Platform	Feature
+angular-onpush-adoption	Platform	Improvement
+auth-without-keycloak	Platform	Feature
+compose-deployment	Platform	Chore
+continuous-deploy	Platform	Improvement
+deployment	Platform	Feature
+e2e-testing	Platform	Feature
+eufy-presence	Platform	Feature
+guest-feedback	Platform	Feature
+langfuse-prompt-management	Platform	Feature
+linear-backlog	Platform	Feature
+oxlint-fast-lint	Platform	Chore
+presence-ha-prototype	Platform	Idea
+public-private-exposure	Platform	Improvement
+settings	Platform	Feature
+user-management	Platform	Feature
+mobile-app	Mobile	Feature
+pwa-replaces-capacitor	Mobile	Improvement
+switch-games	Game Catalog	Feature
+multiplayer-player-counts	Game Catalog	Improvement
