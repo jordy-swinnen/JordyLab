@@ -30,6 +30,8 @@ export const config: WebdriverIO.Config = {
       'appium:automationName': 'UiAutomator2',
       'appium:app': environment.apkFirst,
       'appium:appPackage': environment.androidPackage,
+      // The manifest has one launcher entry per theme (activity-aliases), so Appium cannot pick the launch activity itself.
+      'appium:appActivity': '.MainActivity',
       'appium:autoGrantPermissions': true,
       'appium:noReset': false,
       'appium:newCommandTimeout': 300,

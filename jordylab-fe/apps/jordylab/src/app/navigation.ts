@@ -6,12 +6,12 @@ export interface NavItem {
   isActive: (url: string) => boolean;
   /** Omit for admin-or-guest; 'admin' hides the item from guests (mirrors the backend access matrix). */
   requiredRole?: 'admin';
-  /** Listed on the phone's More page, which holds what does not fit the tab bar. */
-  inMore?: boolean;
 }
 
 export interface NavGroup {
   label: string;
+  /** The module's name and icon on the phone's bottom bar. */
+  tab: { label: string; icon: string };
   items: NavItem[];
   requiredRole?: 'admin';
 }
@@ -26,7 +26,6 @@ export const ICONS = {
   spark: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
   phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.65a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.04z',
-  more: 'M5 12h.01M12 12h.01M19 12h.01',
 } as const;
 
 const startsWith = (prefix: string) => (url: string) => url.startsWith(prefix);
@@ -36,6 +35,7 @@ export const SETTINGS_GROUP_LABEL = 'Settings';
 export const NAVIGATION_GROUPS: NavGroup[] = [
   {
     label: 'Game Catalog',
+    tab: { label: 'Games', icon: ICONS.gamepad },
     items: [
       {
         label: 'Library',
@@ -60,7 +60,6 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         icon: ICONS.plug,
         isActive: startsWith('/games/sources'),
         requiredRole: 'admin',
-        inMore: true,
       },
       {
         label: 'Consoles',
@@ -68,12 +67,12 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         icon: ICONS.gamepad,
         isActive: startsWith('/games/consoles'),
         requiredRole: 'admin',
-        inMore: true,
       },
     ],
   },
   {
     label: 'FNA · Finance',
+    tab: { label: 'Finance', icon: ICONS.news },
     requiredRole: 'admin',
     items: [
       {
@@ -98,6 +97,7 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
   },
   {
     label: SETTINGS_GROUP_LABEL,
+    tab: { label: 'Settings', icon: ICONS.gear },
     items: [
       {
         label: 'Users',
@@ -105,7 +105,6 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         icon: ICONS.gear,
         isActive: startsWith('/settings/users'),
         requiredRole: 'admin',
-        inMore: true,
       },
       {
         label: 'AI Models',
@@ -113,14 +112,12 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         icon: ICONS.spark,
         isActive: startsWith('/settings/ai-models'),
         requiredRole: 'admin',
-        inMore: true,
       },
       {
         label: 'App',
         path: '/settings/app',
         icon: ICONS.phone,
         isActive: startsWith('/settings/app'),
-        inMore: true,
       },
     ],
   },

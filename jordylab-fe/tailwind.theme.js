@@ -131,7 +131,8 @@ const extend = {
 
 const themeBase = plugin(({ addBase, addComponents }) => {
   addBase({
-    ':root': { '--radius': '0.75rem' },
+    // The phone's status bar is drawn over the page (viewport-fit=cover); Capacitor on older WebViews reports its height through the second variable.
+    ':root': { '--radius': '0.75rem', '--inset-top': 'max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px))' },
     ...themeBlocks(),
     '*': { borderColor: 'hsl(var(--border))' },
     // The 8px scrollbar appears once a page grows past the screen (a list that finishes loading) and would push the

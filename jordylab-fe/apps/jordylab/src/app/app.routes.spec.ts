@@ -12,8 +12,4 @@ describe('Settings → App route', () => {
   it('asks only for a signed-in person with a role, so the web opens it too', () => {
     expect(route?.canActivate).toHaveLength(2);
   });
-
-  it('has a More page beside it for the phone', () => {
-    expect(appRoutes.some((candidate) => candidate.path === 'more')).toBe(true);
-  });
 });

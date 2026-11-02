@@ -18,7 +18,7 @@ import {
 } from '@jordylab-fe/shared/brand';
 import { TabBarComponent, TabBarItem } from '@jordylab-fe/shared/layout';
 import { PendingCountBadgeComponent } from '@jordylab-fe/settings/nav';
-import { ICONS, NAVIGATION_GROUPS, SETTINGS_GROUP_LABEL, NavGroup, visibleNavigationGroups } from './navigation';
+import { NAVIGATION_GROUPS, SETTINGS_GROUP_LABEL, NavGroup, visibleNavigationGroups } from './navigation';
 import {
   ApkDownloadService,
   AppLinkService,
@@ -141,18 +141,17 @@ export class App {
 
   protected readonly tabs = computed<TabBarItem[]>(() => {
     const url = this.#url();
-    const libraryItem = NAVIGATION_GROUPS[0].items[0];
-    const moreActive = ['/more', '/games/sources', '/games/consoles', '/settings'].some((prefix) => url.startsWith(prefix));
-    const financeTab: TabBarItem[] = this.isAdmin()
-      ? [{ label: 'Finance', icon: ICONS.news, route: '/fna/articles', active: url.startsWith('/fna') }]
-      : [];
 
-    return [
-      { label: 'Library', icon: ICONS.grid, route: libraryItem.path, active: libraryItem.isActive(url) },
-      { label: 'LibBot', icon: ICONS.sparkle, route: '/games/libbot', active: url.startsWith('/games/libbot') },
-      ...financeTab,
-      { label: 'More', icon: ICONS.more, route: '/more', active: moreActive },
-    ];
+    return this.visibleGroups().map((group) => {
+      const options = group.items.map((item) => ({
+        label: item.label,
+        icon: item.icon,
+        route: item.path,
+        active: item.isActive(url),
+      }));
+
+      return { label: group.tab.label, icon: group.tab.icon, options, active: options.some((option) => option.active) };
+    });
   });
 
   protected readonly activePath = computed(() => {

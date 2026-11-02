@@ -15,7 +15,8 @@ const KEYCODE_ENTER = 66;
 export async function signInNatively(): Promise<void> {
   // A retry starts where the failed attempt stopped, possibly in Chrome on a Keycloak error page: bring the app back to the front first.
   await switchToNative();
-  await driver.activateApp(environment.androidPackage);
+  // Not activateApp: it resolves the launcher entry, and the manifest has one per theme.
+  await driver.execute('mobile: startActivity', { component: `${environment.androidPackage}/.MainActivity` });
   await switchToWebView(environment.androidPackage);
   const signInButton = await $('//button[contains(., "Sign in with Keycloak")]');
   await signInButton.waitForDisplayed({ timeout: STEP_TIMEOUT_MS });

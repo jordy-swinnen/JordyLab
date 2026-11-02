@@ -40,7 +40,7 @@ Both are private to the owner and are referenced from Linear JOR-55. Where this 
 
 ### Screens in scope
 
-Twelve screens, each on desktop and on a phone: Library, game detail, LibBot, Sources, Consoles, Articles, Portfolio, Briefing, Users, AI models, App settings and sign-in. The desktop layout keeps a sidebar; the phone layout has a top bar and a bottom tab bar (Library, LibBot, Finance, More). Finance is shown to administrators only, so other people see three items. Sources, Consoles, Users and AI models (administrators only) and App settings (everyone) sit under More on a phone.
+Twelve screens, each on desktop and on a phone: Library, game detail, LibBot, Sources, Consoles, Articles, Portfolio, Briefing, Users, AI models, App settings and sign-in. The desktop layout keeps a sidebar; the phone layout has a top bar and a bottom tab bar with one tab per module (Games, Finance for administrators only, Settings). A tab with several pages opens them as a sheet: Games lists Library, LibBot, Sources and Consoles; Settings lists App settings for everyone plus Users and AI models for administrators. A tab with a single page opens it directly. There is no More page.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -157,14 +157,14 @@ The app's mark, wordmark and icons use the active default theme's colours instea
 - **FR-007**: Meaning MUST NOT depend on colour alone: install status, ROM status and the three marks MUST each have a shape or icon as well.
 - **FR-008**: The app MUST use one type family for all text, bundled so that first paint does not wait for a download, and MUST write labels in sentence case with no capital-letter label style and no small label above page titles.
 - **FR-009**: The phone layout MUST fit 390 by 844 pixels and MUST NOT scroll sideways at 360, 390 and 430 pixels wide; all touch targets MUST be at least 44 pixels.
-- **FR-010**: The phone MUST show a top bar and a bottom bar with Library, LibBot, Finance (administrators only) and More; Sources, Consoles, Users, AI models and App settings MUST be reachable under More, each shown to the same roles as today, except App settings, which MUST be reachable by every signed-in person on the web and on the phone.
+- **FR-010**: The phone MUST show a top bar and a bottom bar with one tab per module (Games, Finance for administrators only, Settings). Tapping a tab with several pages MUST open them as a sheet that closes on choosing a page, on tapping the tab again, on the backdrop and on Escape, and moves focus into the sheet and back to the tab; a tab with one page MUST open it directly. Library, LibBot, Sources, Consoles, Users, AI models and App settings MUST each be reachable, shown to the same roles as today, except App settings, which MUST be reachable by every signed-in person on the web and on the phone. The top bar MUST sit below the system status bar, not under it.
 - **FR-011**: The twelve screens in scope MUST be restyled for desktop and phone and MUST keep all information and actions they have today.
 - **FR-012**: The Library MUST show covers in a grid, four across on desktop and two on a phone, each with cover, title clipped to two lines, source, platform chip, install-status chip and the three mark buttons, plus the vote counts on the cover where marks exist.
 - **FR-013**: A game with no artwork MUST show a flat coloured cover with its initials, using one of six cover colour pairs of the active theme chosen from its title, so the same game always gets the same pair.
 - **FR-014**: Filters MUST open as a popover on desktop and a bottom sheet on a phone, with a clearly labelled apply action showing the number of results.
 - **FR-015**: Each data screen MUST have loading, empty and error states as designed; LibBot MUST also have first-run, answering, daily-limit and error states.
 - **FR-016**: Placeholder animation MUST stop when the device asks for reduced motion.
-- **FR-017**: The brand mark and icons (browser tab, install icons, launcher icon, splash screen, sidebar, top bar, prompts, sign-in) MUST use the default theme's colours and MUST NOT use the old orange.
+- **FR-017**: The brand mark and icons (browser tab, install icons, launcher icon, splash screen, sidebar, top bar, prompts, sign-in) MUST use the default theme's colours and MUST NOT use the old orange. The mark in the app, the browser-tab icon and the Android launcher icon MUST also follow the theme the person has chosen; the install icons of the web app and the sign-in page stay on the default theme.
 - **FR-018**: The sign-in page MUST match the new look and follow the device's light or dark setting.
 - **FR-019**: Existing journeys, roles and data MUST behave as before; this feature MUST NOT add, remove or change any data or any server behaviour.
 - **FR-020**: Colours used for status, marks, platforms, charts and cover plates MUST be defined once per theme and reused everywhere, so that adding or changing a theme is a change in one place.
@@ -196,7 +196,7 @@ The app's mark, wordmark and icons use the active default theme's colours instea
 - The sign-in page belongs to the identity provider and cannot read the in-app choice, so it follows the device's light or dark setting with the default theme of each kind.
 - Settings → App is open to every signed-in person on the web and in the Android app (today its navigation item is shown in the Android app only). It holds the theme choice for everyone; the fingerprint unlock row stays Android-only.
 - The phone layout is the same web build at a narrow width; there is no separate phone design. Tablet-specific layouts are out of scope and use the desktop or phone layout by width.
-- The designs show the loaded state of every screen and the other states for nine of them. The phone "More" menu, the empty-library case before any filter, and row-level save errors are not drawn yet and are to be designed during planning, following the state rules in the design system.
+- The designs show the loaded state of every screen and the other states for nine of them. The phone module sheet, the empty-library case before any filter, and row-level save errors are not drawn yet and are to be designed during planning, following the state rules in the design system.
 - No new features, data or server behaviour are added; language and wording stay as they are except where the design system changes the style (sentence case, no label above titles).
 - The amount of native icon and splash work depends on whether JOR-38 goes ahead; this spec covers the icons and splash colour of the app as it exists now.
 - Placeholder content in the designs (example titles, holdings, articles, users) is illustrative and is not copied into the product.

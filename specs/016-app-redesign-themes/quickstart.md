@@ -42,6 +42,8 @@ For each data screen, force the three states: delay the API (loading), use a cat
 - Open the app in a browser tab, from the installed icon, and the sign-in page; none shows orange. Check the tab icon on a dark and a light browser.
 - Sign in page: emulate dark and light; it must show Content Led and Paper. (First confirm in the local Keycloak that it follows the scheme, research D9.)
 - Android: build the app, install on a device or emulator, check the launcher icon, the splash screen, and the status bar in a light theme.
+- Android launcher icon follows the theme: change the theme in Settings → App and check the home-screen icon takes that theme's accent (a launcher may take a few seconds). Check it on a fresh install and as an upgrade over an existing install.
+- Upgrade path: the launcher entry moved from `MainActivity` to one alias per theme, so a shortcut pinned to the home screen from an older version may stop working after the update and has to be pinned again from the app drawer; the app drawer entry itself stays. Say so in the release notes.
 
 ## 7. Whole-app gates
 

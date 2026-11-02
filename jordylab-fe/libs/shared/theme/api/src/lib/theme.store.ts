@@ -1,4 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
+import { brandIconDataUri } from './brand-icon';
+import { setLauncherIcon } from './launcher-icon';
 import {
   DEFAULT_DARK_THEME_ID,
   DEFAULT_LIGHT_THEME_ID,
@@ -20,6 +22,7 @@ export class ThemeStore {
   readonly #deviceLightQuery = window.matchMedia(LIGHT_DEVICE_QUERY);
   readonly #preference = signal<ThemePreference>(this.#readStoredPreference());
   readonly #deviceIsLight = signal(this.#deviceLightQuery.matches);
+  #launcherIconTheme: ThemeId | null = null;
 
   readonly preference = this.#preference.asReadonly();
   readonly themes = THEME_DEFINITIONS;
@@ -69,10 +72,31 @@ export class ThemeStore {
   #apply(): void {
     const root = document.documentElement;
     root.setAttribute('data-theme', this.activeTheme());
-    const ground = getComputedStyle(root).getPropertyValue('--background').trim();
+    this.#applyLauncherIcon(this.activeTheme());
+    const styles = getComputedStyle(root);
+    const ground = styles.getPropertyValue('--background').trim();
     if (!ground) {
       return;
     }
     document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.setAttribute('content', `hsl(${ground})`));
+    this.#applyBrandIcon(styles.getPropertyValue('--primary').trim(), styles.getPropertyValue('--primary-foreground').trim());
+  }
+
+  /** The browser tab's icon takes the theme's accent, like the mark inside the app. */
+  #applyBrandIcon(accent: string, accentInk: string): void {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link || !accent || !accentInk) {
+      return;
+    }
+    link.setAttribute('href', brandIconDataUri(`hsl(${accent})`, `hsl(${accentInk})`));
+  }
+
+  /** The phone's home-screen icon follows the theme too; it is asked only when the theme changed since the last call. */
+  #applyLauncherIcon(theme: ThemeId): void {
+    if (theme === this.#launcherIconTheme) {
+      return;
+    }
+    this.#launcherIconTheme = theme;
+    void setLauncherIcon(theme);
   }
 }

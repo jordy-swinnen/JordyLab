@@ -4,8 +4,11 @@ import { TestBed } from '@angular/core/testing';
 // The colour file is a workspace-root file, not a library, so it has no alias to import through.
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { themes as themeFile } from '../../../../../../themes.js';
+import { setLauncherIcon } from './launcher-icon';
 import { THEME_DEFINITIONS, THEME_STORAGE_KEY } from './theme-preference.model';
 import { ThemeStore } from './theme.store';
+
+vi.mock('./launcher-icon', () => ({ setLauncherIcon: vi.fn() }));
 
 type ChangeListener = (event: { matches: boolean }) => void;
 
@@ -16,7 +19,7 @@ describe('ThemeStore', () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
-    document.head.innerHTML = '<meta name="theme-color" content="#000000">';
+    document.head.innerHTML = '<meta name="theme-color" content="#000000"><link rel="icon" href="favicon.svg">';
     deviceIsLight = false;
     changeListener = undefined;
     vi.stubGlobal(
@@ -126,6 +129,57 @@ describe('ThemeStore', () => {
 
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('hsl(240 3% 8%)');
   });
+
+  describe('launcher icon', () => {
+    it('asks for the icon of the active theme once at start', () => {
+      vi.mocked(setLauncherIcon).mockClear();
+
+      createStore();
+
+      expect(setLauncherIcon).toHaveBeenCalledExactlyOnceWith('content');
+    });
+
+    it('asks again only when the theme changes', () => {
+      const store = createStore();
+      vi.mocked(setLauncherIcon).mockClear();
+
+      store.choose('content');
+      store.choose('flare');
+
+      expect(setLauncherIcon).toHaveBeenCalledExactlyOnceWith('flare');
+    });
+  });
+});
+
+describe('ThemeStore browser tab icon', () => {
+  beforeEach(() => {
+    document.head.innerHTML = '<meta name="theme-color" content="#000000"><link rel="icon" href="favicon.svg">';
+    document.documentElement.style.setProperty('--background', '240 3% 8%');
+    document.documentElement.style.setProperty('--primary', '350 82% 62%');
+    document.documentElement.style.setProperty('--primary-foreground', '353 80% 9%');
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener: vi.fn() })) as unknown as typeof window.matchMedia;
+  });
+
+  afterEach(() => {
+    document.documentElement.removeAttribute('style');
+  });
+
+  it('draws the mark in the accent colours of the active theme', () => {
+    TestBed.resetTestingModule();
+    TestBed.inject(ThemeStore);
+
+    const icon = decodeURIComponent(document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? '');
+
+    expect(icon).toContain('fill="hsl(350 82% 62%)"');
+    expect(icon).toContain('stroke="hsl(353 80% 9%)"');
+  });
+
+  it('leaves the icon alone when the page has none', () => {
+    document.head.innerHTML = '';
+    TestBed.resetTestingModule();
+
+    expect(() => TestBed.inject(ThemeStore)).not.toThrow();
+  });
 });
 
 describe('theme lists', () => {
@@ -142,5 +196,18 @@ describe('theme lists', () => {
     const idsInScript = [...(/const themeIds = \[([^\]]*)\]/.exec(bootScript)?.[1] ?? '').matchAll(/'([a-z]+)'/g)].map((match) => match[1]);
 
     expect(idsInScript).toEqual(themeIds);
+  });
+
+  it('each have a launcher icon alias in the Android manifest and the native plugin', () => {
+    const androidSources = resolve(import.meta.dirname, '../../../../../../apps/jordylab-mobile/android/app/src/main');
+    const manifest = readFileSync(resolve(androidSources, 'AndroidManifest.xml'), 'utf8');
+    const plugin = readFileSync(resolve(androidSources, 'java/be/jordylab/app/LauncherIconPlugin.java'), 'utf8');
+
+    const aliasName = (id: string) => `.LauncherIcon${id.charAt(0).toUpperCase()}${id.slice(1)}`;
+    for (const id of themeIds) {
+      expect(manifest).toContain(`android:name="${aliasName(id)}"`);
+      expect(manifest).toContain(`@mipmap/ic_launcher_${id}"`);
+      expect(plugin).toContain(`"${id}", "${aliasName(id)}"`);
+    }
   });
 });
