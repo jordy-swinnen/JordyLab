@@ -18,6 +18,9 @@ tickets and an optional reply. Jordy considers this essential for the first rele
   the app. Writing the draft becomes a later step, started from the Linear issue by a local agent that can read the
   codebase. The app therefore needs no GitHub credential and no draft-writing AI feature.
 
+- 2026-11-02: the backend uses a **personal API key** (issues show Jordy as creator); the first version has **no status
+  sync** from Linear; after Accept a guest sees **Accepted and the optional reply** only.
+
 ## Accepting into Linear
 
 - **API:** Linear's GraphQL endpoint `https://api.linear.app/graphql`, mutation `issueCreate` with `teamId`, `title`,
@@ -27,12 +30,12 @@ tickets and an optional reply. Jordy considers this essential for the first rele
   feature request → Feature, improvement → Improvement, other → Idea). An unknown app falls back to "Platform".
 - **Idempotency:** the ticket stores the issue id once created; a retry first checks for it, so a double click or a
   timeout after Linear accepted the request never makes two issues.
-- **Credential:** an OAuth app installed with `actor=app` makes "JordyLab" the creator of the issue (installing needs
+- **Credential (decided: personal API key):** the alternative, an OAuth app installed with `actor=app` makes "JordyLab" the creator of the issue (installing needs
   workspace admin, and the `admin` scope is not allowed with it). A personal API key is simpler but creates issues as
   Jordy. Either one is a SOPS secret like the others, never sent to the browser.
 - **Limits:** 2,500 (API key) or 5,000 (OAuth app) requests per hour; the idea box needs a few a day. The Free plan's
   issue cap (about 250) is the real limit, so Backlog and Reject stay in the app and only accepted ideas reach Linear.
-- **Status back to the guest (optional):** a Linear webhook on issue updates maps Linear states to guest-visible ones
+- **Status back to the guest (later version, not in the first):** a Linear webhook on issue updates maps Linear states to guest-visible ones
   (Backlog/Drafted/Specified → Planned, In Progress/In Review → In progress, Done → Done, Canceled → Not planned).
   Deliveries are signed (`Linear-Signature`, HMAC-SHA256 of the raw body) and must be rejected when `webhookTimestamp`
   is more than 60 seconds old; Linear waits 5 seconds for an answer.
@@ -70,6 +73,4 @@ tickets and an optional reply. Jordy considers this essential for the first rele
 
 - Feedback types beyond bug report and feature request: "improvement" and "other"? A "question" type?
 - Screenshots on bug reports: allowed? (Storage, size limits, and uploading them to Linear.)
-- OAuth app with `actor=app` or a personal API key?
-- Status sync from Linear back to the guest in the first version, or later?
 - Can a backlog ticket be accepted or rejected later? (Expected: yes.)

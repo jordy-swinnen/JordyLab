@@ -1211,3 +1211,34 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): to decide with the owner (cluster change): `allocateLoadBalancerNodePorts: false` on the Traefik service via its HelmChartConfig (k3s ServiceLB does not need them), or a rule that drops the 30000–32767 range from the public interface; then rerun the scan.
 - Regression test added: none yet; the port scan of `specs/008-ovh-k8s-deployment/quickstart.md` ("Security check") is the check, rerun after the fix.
 - Verified on prod: pending
+
+### BUG-079: LibBot answers take 5 to 18 seconds on production, the spec asks for 10 seconds or less
+- Status: OPEN
+- Severity: S3 (the answers are correct and cited; the wait is long, not wrong)
+- Area/spec: gamecatalog LibBot / 013 (SC-006, FR-014)
+- Env found: prod (jordylab.be, admin), 2026-11-02, latest published release `v0.0.1-rc29`; the deployed tag was not read from the cluster
+- Coverage rows: 013-SC-006
+- Steps to reproduce:
+  1. Sign in as admin on https://jordylab.be, open LibBot.
+  2. Ask ten different questions in a row ("Which games support local multiplayer?", "There are 6 people here tonight, what should we play?", "Which co-op games can I play on the Switch?", "Which Nintendo 64 games do I have?", "Do I have any racing games?", "Welke games hebben lokale multiplayer?", "Do I own any Final Fantasy games?", ...) and time each from pressing Ask to the Ask button becoming active again.
+- Expected (cite spec/story): 013 SC-006: 95% of questions show progress within 1 second and have a complete answer within 10 seconds.
+- Actual (logs/screenshot, secrets redacted): complete answers took 8.9, 14.1, 10.3, 11.0, 14.0, 18.3, 14.4, 15.0, 7.8 and 5.2 seconds (median about 12.5; 3 of 10 within 10 seconds). The first answer showed its stages ("Understood", "Searching your library", "Writing the answer") straight away. The measurement ran in a hidden browser pane, so each value can be up to one second too high; that does not explain the gap.
+- Root cause: not investigated. Two model calls run per question (interpret, then write) through the gateway on the router model chosen on Settings → AI Models; the time per call was not measured.
+- Fix (PR / commit / tag): none yet.
+- Regression test added: none yet.
+- Verified on prod: pending
+
+### BUG-080: Library shows scene-release folder names as titles and a ".dec" file as a second game
+- Status: OPEN
+- Severity: S4 (cosmetic and a duplicate entry; nothing breaks)
+- Area/spec: gamecatalog scanner and title cleaning / 013 (one entry per game)
+- Env found: prod (jordylab.be, admin), 2026-11-02
+- Coverage rows: 013-A3-row-5
+- Steps to reproduce:
+  1. Open https://jordylab.be/games/grid (Status: Installed, 226 games), page 1.
+- Expected (cite spec/story): one clean title per game.
+- Actual (logs/screenshot, secrets redacted): PSP games from the cachyos-htpc EmuDeck source appear under their release-group folder names ("BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP", "Daxter USA PSN PSP-PLAYASiA", "Dissidia 012 Duodecim Final Fantasy USA PSP-PSPKiNG", "Final Fantasy Tactics The War Of The Lions USA PSP-pSyPSP", "Crisis Core Final Fantasy 7" with an initials placeholder cover), and "Demon's Souls .dec" is listed as a second PlayStation 3 game next to "Demon's Souls".
+- Root cause: probable, not confirmed: the scanner's filename normalisation does not strip the scene tags of PSP release folders, and a `.dec` file inside a PS3 game folder is read as its own game.
+- Fix (PR / commit / tag): none yet.
+- Regression test added: none yet.
+- Verified on prod: pending

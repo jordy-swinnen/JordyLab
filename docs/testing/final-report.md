@@ -59,3 +59,10 @@ guest pass (credentials), the JordyBox scan (hardware), Steam family sync (token
 3. Roll out the CSP in report-only mode first (MRB-11).
 4. Implement 010 (Eufy presence) and the garmin sidecar, both specified but absent.
 5. Next quarterly restore drill is due 2027-01-01.
+
+## Spec 013 production acceptance (2026-11-02)
+Real scan on this Mac against jordylab.be applied cleanly (5 submitted, nothing new). Covers: 92.7 % with a cover (target
+90 %). The admin pass of the Library, Filters, Sources, game page, Consoles and LibBot rows passed. **Two findings:**
+LibBot needs 5 to 18 seconds per answer, 3 of 10 within the 10 seconds the spec asks for (BUG-079); the Library shows
+scene-release folder names and a `.dec` file as a second game (BUG-080). Not covered: guest login, the Linux box scan
+(owner) and SC-007 (nothing new to auto-fill). Details: `specs/013-gamecatalog-refinement-ai/validation-results.md`.
