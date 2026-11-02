@@ -4,7 +4,7 @@
   (submit)="$event.preventDefault(); save.emit(nameInput.value)"
   (keydown.escape)="dismiss.emit()"
 >
-  <label class="mono-label" for="host-name-input">Name for this machine</label>
+  <label class="label" for="host-name-input">Name for this machine</label>
   <div class="flex flex-wrap items-center gap-2">
     <input
       #nameInput

@@ -40,7 +40,7 @@
             }
           </p>
         </div>
-        <button hlmBtn variant="outline" type="button" data-testid="change-model" (click)="openPicker.emit(feature.key)">
+        <button hlmBtn variant="outline" type="button" class="h-11" data-testid="change-model" (click)="openPicker.emit(feature.key)">
           Change model
         </button>
       </li>
@@ -56,7 +56,7 @@
   >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h3 class="text-base font-semibold">Model for {{ feature.displayName }}</h3>
-      <button hlmBtn variant="ghost" type="button" data-testid="close-picker" (click)="closePicker.emit()">Close</button>
+      <button hlmBtn variant="ghost" type="button" class="h-11" data-testid="close-picker" (click)="closePicker.emit()">Close</button>
     </div>
 
     @if (catalog(); as list) {

@@ -1,3 +1,5 @@
+> **Superseded in part (spec 014).** The colour, type and filter-bar direction in this file (Night Lab, Flare orange, Bricolage, Hanken and Martian Mono) is replaced by the six-theme system in `specs/014-app-redesign-themes/`. The behaviour it describes (what filters, chips and marks do) still stands.
+
 # UI design: filters, chips, cards, LibBot (spec 013)
 
 Design reference for User Stories 7, 9, 10, 13 and the LibBot page. Produced with the `frontend-design` skill, **inside the

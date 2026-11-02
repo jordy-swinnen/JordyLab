@@ -10,3 +10,10 @@
   font-stretch: 62% 125%;
   src: url('/fonts/archivo-latin-wdth-normal.woff2') format('woff2-variations');
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
+  }
+}

@@ -88,7 +88,7 @@
             <lib-platform-chip [chip]="platform" />
           }
           @if (game.enrichmentStatus === 'ENRICHED') {
-            <span class="pill">Enriched</span>
+            <span class="chip rounded-full bg-primary/15 px-[11px] py-1.5 text-accent-text">Enriched</span>
           }
         </div>
         <h2
@@ -97,22 +97,22 @@
           {{ game.title }}
         </h2>
         @if (hostLabels(game).length > 0) {
-          <div class="mono-label mt-4">Installed on · {{ hostLabels(game).join(', ') }}</div>
+          <div class="label mt-4">Installed on · {{ hostLabels(game).join(', ') }}</div>
         }
-        <div class="mono-label mt-2 flex flex-wrap items-center gap-2">
+        <div class="label mt-2 flex flex-wrap items-center gap-2">
           <lib-status-chip [status]="game.installStatus === 'INSTALLED' ? 'INSTALLED' : 'NOT_INSTALLED'" />
           @for (source of game.sources; track source) {
             <lib-source-label [source]="source" />
           }
         </div>
         @if (familyOwners(game); as owners) {
-          <div class="mono-label mt-2">Family · {{ owners }}</div>
+          <div class="label mt-2">Family · {{ owners }}</div>
         }
 
         @if (emulatedCopies(game); as copies) {
           @if (copies.length > 0) {
             <section class="mt-6 flex flex-col gap-3" aria-labelledby="rom-heading" data-testid="rom-section">
-              <h3 id="rom-heading" class="mono-label">Does it run? (per machine)</h3>
+              <h3 id="rom-heading" class="label">Does it run? (per machine)</h3>
               @for (copy of copies; track copy.installationId) {
                 <div class="flex flex-wrap items-center gap-3" data-testid="rom-copy">
                   <span class="min-w-32 text-[15px] font-medium">{{ copy.label }}</span>
@@ -144,7 +144,7 @@
         }
 
         <section class="mt-6 flex flex-col gap-3" aria-labelledby="marks-heading" data-testid="marks-section">
-          <h3 id="marks-heading" class="mono-label">Your mark</h3>
+          <h3 id="marks-heading" class="label">Your mark</h3>
           <lib-mark-buttons
             [myMark]="game.myMark"
             [disabled]="markPending()"
@@ -165,13 +165,13 @@
             <div
               class="panel w-full flex-shrink-0 px-6 pb-2.5 pt-1 xl:w-[380px]"
             >
-              <h3 class="eyebrow pb-1 pt-[18px]">Spec sheet</h3>
+              <h3 class="label pb-1 pt-[18px]">Spec sheet</h3>
               <dl class="text-sm">
                 @if (game.genres || game.genre) {
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Genres</dt>
+                    <dt class="label">Genres</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.genres ?? game.genre }}
                     </dd>
@@ -181,7 +181,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Developer</dt>
+                    <dt class="label">Developer</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.developer }}
                     </dd>
@@ -191,7 +191,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Publisher</dt>
+                    <dt class="label">Publisher</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.publisher }}
                     </dd>
@@ -201,7 +201,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Released</dt>
+                    <dt class="label">Released</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.releaseYear }}
                     </dd>
@@ -211,7 +211,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Local co-op</dt>
+                    <dt class="label">Local co-op</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.localMultiplayer ? 'Yes' : 'No' }}
                       @if (game.maxLocalPlayers !== null) {
@@ -224,7 +224,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Split-screen</dt>
+                    <dt class="label">Split-screen</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.splitScreen ? 'Yes' : 'No' }}
                     </dd>
@@ -234,7 +234,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Online only</dt>
+                    <dt class="label">Online only</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.onlineOnly ? 'Yes' : 'No' }}
                     </dd>
@@ -244,7 +244,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Multiplayer data</dt>
+                    <dt class="label">Multiplayer data</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.multiplayerSource === 'STEAM' ? 'Steam' : 'IGDB' }}
                     </dd>
@@ -254,7 +254,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Online multiplayer</dt>
+                    <dt class="label">Online multiplayer</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.onlineMultiplayer ? 'Yes' : 'No' }}
                     </dd>
@@ -264,7 +264,7 @@
                   <div
                     class="flex items-baseline justify-between gap-4 border-b border-border py-4"
                   >
-                    <dt class="mono-label">Single-player</dt>
+                    <dt class="label">Single-player</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ game.singlePlayer ? 'Yes' : 'No' }}
                     </dd>
@@ -272,7 +272,7 @@
                 }
                 @if (hostLabels(game).length > 0) {
                   <div class="flex items-baseline justify-between gap-4 border-b border-border py-4">
-                    <dt class="mono-label">Hosts</dt>
+                    <dt class="label">Hosts</dt>
                     <dd class="text-base font-medium text-foreground">
                       {{ hostLabels(game).join(', ') }}
                     </dd>
@@ -280,7 +280,7 @@
                 }
               </dl>
               @if (factSourcesLine(game.factSources); as sourceLine) {
-                <p class="mono-label py-4" data-testid="fact-sources">{{ sourceLine }}</p>
+                <p class="label py-4" data-testid="fact-sources">{{ sourceLine }}</p>
               }
             </div>
 
@@ -288,7 +288,7 @@
               @if (game.description; as description) {
                 @if (descriptionHeading(description); as heading) {
                   <div
-                    class="mono-label flex flex-wrap gap-x-2 [overflow-wrap:anywhere]"
+                    class="label flex flex-wrap gap-x-2 [overflow-wrap:anywhere]"
                     [attr.title]="heading.tooltip"
                     data-testid="about-heading"
                   >

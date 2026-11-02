@@ -155,28 +155,16 @@ const themeBase = plugin(({ addBase, addComponents }) => {
   addComponents({
     /* Typography: sentence case, one family. */
     '.label': { '@apply text-[12.5px] font-medium text-muted-foreground': {} },
-    // Kept while screens migrate; both now draw the plain label style. Removed with the last screen.
-    '.eyebrow': { '@apply text-[12.5px] font-medium text-muted-foreground': {} },
-    '.mono-label': { '@apply text-[12.5px] font-medium text-muted-foreground': {} },
     '.page-title': {
       '@apply font-bold leading-[1.04] tracking-[-0.03em]': {},
       fontSize: 'clamp(2.125rem, 4vw, 2.875rem)',
     },
     '.section-title': { '@apply text-lg font-semibold tracking-[-0.015em] sm:text-xl': {} },
-    '.display-md': { '@apply font-semibold tracking-[-0.02em]': {} },
 
     /* Chips and status pills */
     '.chip': {
       '@apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-[5px] text-xs font-medium leading-none': {},
     },
-    '.pill': {
-      '@apply inline-flex items-center gap-[7px] rounded-full bg-primary/15 px-[11px] py-[6px] text-xs font-medium text-accent-text': {},
-    },
-    '.pill::before': {
-      content: "''",
-      '@apply h-1.5 w-1.5 rounded-full bg-current': {},
-    },
-    '.pill-muted': { '@apply bg-secondary text-muted-foreground': {} },
 
     /* Surfaces */
     '.panel': { '@apply rounded-[14px] border border-border bg-card': {} },

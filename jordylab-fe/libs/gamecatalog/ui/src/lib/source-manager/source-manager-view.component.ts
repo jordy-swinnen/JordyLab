@@ -150,7 +150,7 @@ export class SourceManagerViewComponent {
       return `${pill} bg-destructive/15 text-destructive`;
     }
 
-    return `${pill} bg-secondary text-muted-foreground`;
+    return `${pill} bg-secondary text-secondary-foreground`;
   }
 
   outcomeVariant(

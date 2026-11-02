@@ -56,7 +56,7 @@
               </div>
               <div class="flex flex-wrap items-center gap-3">
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="default"
                   [disabled]="actioningId() === user.id"
                   (click)="approve.emit(user.id)"
@@ -65,7 +65,7 @@
                   Approve
                 </button>
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="outline"
                   [disabled]="actioningId() === user.id"
                   (click)="reject.emit(user.id)"
@@ -97,7 +97,7 @@
               </div>
               <div class="flex flex-wrap items-center gap-3">
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="outline"
                   [disabled]="actioningId() === user.id"
                   (click)="resetPassword.emit(user.id)"
@@ -106,7 +106,7 @@
                   Reset password
                 </button>
                 <button
-                  hlmBtn
+                  hlmBtn class="h-11"
                   variant="outline"
                   [disabled]="actioningId() === user.id"
                   (click)="revoke.emit(user.id)"
@@ -137,7 +137,7 @@
                 <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
               </div>
               <button
-                hlmBtn
+                hlmBtn class="h-11"
                 variant="outline"
                 [disabled]="actioningId() === user.id"
                 (click)="approve.emit(user.id)"

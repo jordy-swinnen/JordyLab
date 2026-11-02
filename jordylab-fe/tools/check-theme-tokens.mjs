@@ -27,7 +27,7 @@ const allowedPathPatterns = [
 function filesBelow(folder) {
   return readdirSync(folder).flatMap((entry) => {
     const path = join(folder, entry);
-    if (entry === 'node_modules' || entry === 'dist') {
+    if (['node_modules', 'dist', 'playwright-report', 'test-results'].includes(entry)) {
       return [];
     }
     return statSync(path).isDirectory() ? filesBelow(path) : [path];

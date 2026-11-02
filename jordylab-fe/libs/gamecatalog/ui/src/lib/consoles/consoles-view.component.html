@@ -135,7 +135,7 @@
     @if (consoles().length === 0 && !loading()) {
       <div class="rounded-[14px] border border-dashed border-input p-5 text-sm" data-testid="add-game-disabled">
         <p class="text-muted-foreground">A game lives on a console, so add a console first.</p>
-        <a href="#add-console" class="mt-2 inline-block font-semibold text-primary">Add a console</a>
+        <a href="#add-console" class="mt-2 inline-flex min-h-11 items-center font-semibold text-accent-text">Add a console</a>
       </div>
     } @else if (selected(); as current) {
       <label class="flex flex-col gap-1.5">

@@ -126,7 +126,7 @@
                 hlmBtn
                 variant="ghost"
                 size="sm"
-                class="text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                class="h-11 text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                 (click)="deletePosition.emit(position.id)"
               >
                 Remove
@@ -140,7 +140,7 @@
   }
 
   <!-- Add position form -->
-  <div class="flex flex-wrap items-center gap-3 bg-secondary px-7 py-[18px]">
+  <div class="flex flex-wrap items-center gap-3 bg-rail px-7 py-[18px]">
     <input
       #tickerField
       type="text"

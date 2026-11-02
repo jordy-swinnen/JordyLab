@@ -71,8 +71,9 @@ test.describe('Themes', () => {
       window.localStorage.setItem(key, 'glasshouse');
       const observed: (string | null)[] = [];
       (window as unknown as { observedThemes: (string | null)[] }).observedThemes = observed;
-      new MutationObserver(() => observed.push(document.documentElement.getAttribute('data-theme'))).observe(document.documentElement, {
+      new MutationObserver(() => observed.push(document.documentElement.getAttribute('data-theme'))).observe(document, {
         attributes: true,
+        subtree: true,
         attributeFilter: ['data-theme'],
       });
     }, STORAGE_KEY);

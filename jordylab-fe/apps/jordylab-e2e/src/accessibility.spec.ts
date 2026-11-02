@@ -96,6 +96,28 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
     }
   }
 
+  // Every signed-in page in the default dark and light themes (the Library and a game detail run in all six above).
+  for (const screen of SCREENS) {
+    for (const theme of ['content', 'paper'] as const) {
+      test.describe(`all pages, ${theme} theme on ${screen.name}`, () => {
+        test.use({ viewport: screen.viewport });
+
+        test.beforeEach(async ({ page }) => {
+          await page.addInitScript((id) => window.localStorage.setItem('jordylab.theme', id), theme);
+        });
+
+        for (const target of PAGES) {
+          test(`${target.name} has no violations`, async ({ page }) => {
+            await page.goto(target.path);
+            await expect(page.getByRole('heading', { name: target.heading }).first()).toBeVisible();
+
+            expect(await violationsOf(page)).toEqual([]);
+          });
+        }
+      });
+    }
+  }
+
   test('the login page has no violations', async ({ browser }) => {
     const context = await browser.newContext({ baseURL: environment.baseUrl, storageState: undefined });
     await pointAppAtKeycloak(context, environment.keycloakUrl);
