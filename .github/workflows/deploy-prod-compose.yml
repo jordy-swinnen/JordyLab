@@ -1,0 +1,197 @@
+name: Deploy to Production (Compose)
+
+# Deploys a release tag to the Compose stack on the VPS (spec 020, contracts/deploy-workflow.md, T047).
+# The tag must match ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ and its images must exist in GHCR as
+# ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:<tag>. Not wired into the release flow yet
+# (T062): run it by hand with a release tag. It shares the deploy-production concurrency group with
+# deploy-prod.yml, so a k3s deploy and a Compose deploy can never overlap while both exist.
+#
+# The host side is scripts/deploy-release.sh (T009): it pulls and starts only backend, frontend and
+# keycloak, checks the site through Caddy on the host, and restores the live release itself when its own
+# steps fail. Postgres, ntfy and Caddy are never restarted by a release. The Postgres image is built on
+# the host from the mirrored deploy/compose copy (pinned base digest and pgBackRest version), not pushed
+# to a registry: it changes rarely and deliberately, and compose.yaml already declares the build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Release tag to deploy (vX.Y.Z or vX.Y.Z-rcN; older tags are allowed, for rollback)"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+      queue: max
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      TARGET: ${{ inputs.target }}
+      DEPLOY_HOST: 100.93.81.41
+      DEPLOY_USER: jordylab-deploy
+      # The host's ed25519 fingerprint, cross-verified against the trusted public-IP anchor on
+      # 2026-11-03 (T023). Host keys are public data; a mismatch fails the job.
+      EXPECTED_ED25519_FP: SHA256:a7f59RlxrXwd5RIRZ5G0MphuKqyffsV6SB6RsnyLnm8
+    steps:
+      # Contract step 3 first in practice: validating the tag and mirroring the files both need its tree.
+      - name: Check out the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target }}
+          fetch-depth: 0
+
+      # Contract step 1: validate the tag (pattern, and it must exist in the repository history).
+      - name: Validate the release tag
+        run: |
+          pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$'
+          if ! printf '%s' "$TARGET" | grep -Eq "$pattern"; then
+            echo "::error::$TARGET is not a release tag (vX.Y.Z or vX.Y.Z-rcN)"
+            exit 1
+          fi
+          git rev-parse --verify --quiet "refs/tags/$TARGET^{commit}" \
+            || { echo "::error::tag $TARGET does not exist in the repository"; exit 1; }
+
+      - name: Set up buildx and log in to the registry
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same refusal as deploy-prod.yml (FR-014): a tag without images is refused before the host is touched,
+      # so the live release is untouched (this is also the T052 failure path).
+      - name: Check that the target's images exist
+        run: |
+          for component in backend frontend keycloak; do
+            image="ghcr.io/jordy-swinnen/jordylab-$component:$TARGET"
+            if ! docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
+              echo "::error::the image $image does not exist: the target is refused"
+              exit 1
+            fi
+          done
+
+      # Contract step 2: join the tailnet as tag:ci (same step as deploy-prod.yml).
+      - name: Join Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Install the deploy key and verify the host key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          scanned="$(ssh-keyscan -T 30 -t ed25519 "$DEPLOY_HOST" 2>/dev/null | grep -v '^#' | head -n 1)"
+          if [ -z "$scanned" ]; then
+            echo "::error::no SSH host key from $DEPLOY_HOST over the tailnet (is the tag:ci tcp:22 grant in place?)"
+            exit 1
+          fi
+          actual_fp="$(printf '%s\n' "$scanned" | ssh-keygen -lf - | awk '{print $2}')"
+          echo "host key fingerprint: $actual_fp (expected $EXPECTED_ED25519_FP)"
+          if [ "$actual_fp" != "$EXPECTED_ED25519_FP" ]; then
+            echo "::error::host key mismatch for $DEPLOY_HOST: the tailnet path is not trusted"
+            exit 1
+          fi
+          printf '%s\n' "$scanned" >> ~/.ssh/known_hosts
+          # One named host for every later step: no repeated flags, no tilde-in-quotes pitfalls.
+          cat > ~/.ssh/config <<CONFIG
+          Host jordylab-vps
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+          CONFIG
+          chmod 600 ~/.ssh/config
+          ssh jordylab-vps 'echo SSH_OK as $(whoami) on $(hostname)'
+
+      # Mirrors the tag's deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the
+      # running stack read (compose.yaml, Caddyfile, the timers, the Postgres Containerfile, the scripts).
+      # --delete keeps it an exact mirror; nothing host-side writes there.
+      - name: Copy deploy/compose to the host
+        run: |
+          rsync -az --delete deploy/compose/ jordylab-vps:/opt/jordylab/compose/
+          ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
+
+      # Contract steps 4 and 5: render the environment file on the runner (sops + PyYAML; values never
+      # reach a log) and write it on the host, keeping the file it replaces as prod.env.previous.
+      # The rendered output is checked before it replaces anything, so a failed render leaves prod.env alone.
+      - name: Write the environment file on the host
+        id: write_env
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          set -o pipefail
+          python3 -m venv /tmp/render-venv
+          /tmp/render-venv/bin/pip install --quiet pyyaml
+          export PATH="/tmp/render-venv/bin:$PATH"
+          # From here the host may have been touched, so the automatic rollback step is allowed to run.
+          echo "host_touched=true" >> "$GITHUB_OUTPUT"
+          deploy/compose/scripts/render-env.sh | ssh jordylab-vps \
+            'set -e; cd /opt/jordylab/env;
+             if [ -f prod.env ]; then cp -p prod.env prod.env.previous; fi;
+             cat > prod.env.new; chmod 600 prod.env.new;
+             grep -q "^SPRING_PROFILES_ACTIVE=" prod.env.new \
+               || { echo "rendered environment file is empty or incomplete; nothing was written" >&2; rm -f prod.env.new; exit 1; };
+             mv prod.env.new prod.env;
+             echo "environment file written (mode 600)"'
+
+      # Contract step 6: deploy on the host. On failure the script restores the live release itself and
+      # exits non-zero; the state files only change on success.
+      - name: Deploy the release on the host
+        id: deploy
+        run: |
+          # The tag was validated against the release pattern in an earlier step, so expanding it
+          # client-side into a literal remote command is intended.
+          # shellcheck disable=SC2029
+          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh deploy "$TARGET"
+
+      # Contract step 7: external check from the runner (the same smoke script as deploy-prod.yml).
+      - name: Smoke-check the public site
+        id: smoke
+        run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+
+      # Contract step 8: automatic rollback, only after the host was touched. deploy-release.sh acts only
+      # when TARGET is still the live release (a refused or self-restored deploy is a no-op), and it exits 1
+      # by design after a successful rollback too, so this step is expected to show as failed on an already
+      # failed job - the summary reports what actually happened.
+      - name: Roll back to the previous release
+        id: rollback
+        if: failure() && steps.write_env.outputs.host_touched == 'true'
+        run: |
+          # Same as the deploy step: the tag is pattern-validated, client-side expansion is intended.
+          # shellcheck disable=SC2029
+          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh rollback "$TARGET"
+
+      - name: Summarise the run
+        if: always()
+        run: |
+          live="unknown"
+          if [ -f ~/.ssh/config ]; then
+            live="$(ssh jordylab-vps 'cat /opt/jordylab/state/current-release 2>/dev/null' || true)"
+          fi
+          {
+            echo "## Deploy to Production (Compose)"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Target tag | $TARGET |"
+            echo "| Deploy on the host | ${{ steps.deploy.outcome }} |"
+            echo "| Smoke check | ${{ steps.smoke.outcome }} |"
+            echo "| Automatic rollback | ${{ steps.rollback.outcome }} |"
+            echo "| Live release on the host | ${live:-unknown} |"
+          } >> "$GITHUB_STEP_SUMMARY"
