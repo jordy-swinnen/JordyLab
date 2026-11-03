@@ -184,6 +184,43 @@ class UserAccountServiceTest {
     }
 
     @Test
+    void grantAppAddsTheGrantToAnApprovedAccount() {
+        UserAccount guest = approvedGuest();
+        when(userAccountRepository.findById(USER_ID)).thenReturn(Optional.of(guest));
+        when(userAccountRepository.save(guest)).thenReturn(guest);
+
+        service.grantApp(USER_ID, ManagedApp.GAME_CATALOG);
+
+        assertThat(guest.getAppGrants()).contains(ManagedApp.GAME_CATALOG);
+    }
+
+    @Test
+    void grantAppRefusesANonGrantableApp() {
+        assertThatThrownBy(() -> service.grantApp(USER_ID, ManagedApp.FNA))
+                .isInstanceOf(InvalidRequestException.class);
+    }
+
+    @Test
+    void grantAppRefusesAPendingAccount() {
+        UserAccount pending = pendingAccount();
+        when(userAccountRepository.findById(USER_ID)).thenReturn(Optional.of(pending));
+
+        assertThatThrownBy(() -> service.grantApp(USER_ID, ManagedApp.GAME_CATALOG))
+                .isInstanceOf(UserNotApprovedException.class);
+    }
+
+    @Test
+    void revokeAppRemovesTheGrant() {
+        UserAccount guest = approvedGuest();
+        when(userAccountRepository.findById(USER_ID)).thenReturn(Optional.of(guest));
+        when(userAccountRepository.save(guest)).thenReturn(guest);
+
+        service.revokeApp(USER_ID, ManagedApp.GAME_CATALOG);
+
+        assertThat(guest.getAppGrants()).isEmpty();
+    }
+
+    @Test
     void changeOwnPasswordRequiresTheCurrentPassword() {
         UserAccount guest = approvedGuest();
         when(userAccountRepository.findById(USER_ID)).thenReturn(Optional.of(guest));

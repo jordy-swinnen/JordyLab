@@ -4,12 +4,15 @@ import dev.jordy.jordylab.identity.rest.controller.model.ErrorBody;
 import dev.jordy.jordylab.identity.service.AccountLockedException;
 import dev.jordy.jordylab.identity.service.AccountRejectedException;
 import dev.jordy.jordylab.identity.service.AccountRevokedException;
+import dev.jordy.jordylab.identity.service.AdminAccountProtectedException;
 import dev.jordy.jordylab.identity.service.AlreadyApprovedException;
 import dev.jordy.jordylab.identity.service.InvalidCredentialsException;
 import dev.jordy.jordylab.identity.service.InvalidRequestException;
 import dev.jordy.jordylab.identity.service.InvalidUsernameException;
 import dev.jordy.jordylab.identity.service.LastAdminProtectedException;
+import dev.jordy.jordylab.identity.service.OwnAccountOperationException;
 import dev.jordy.jordylab.identity.service.PasskeyNotFoundException;
+import dev.jordy.jordylab.identity.service.SessionNotFoundException;
 import dev.jordy.jordylab.identity.service.UserNotFoundException;
 import dev.jordy.jordylab.identity.service.UserNotApprovedException;
 import dev.jordy.jordylab.identity.service.UsernameTakenException;
@@ -65,6 +68,24 @@ public class IdentityExceptionHandler {
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<ErrorBody> handleInvalidRequest(InvalidRequestException exception) {
         return ResponseEntity.badRequest().body(new ErrorBody("INVALID_REQUEST", exception.getMessage()));
+    }
+
+    @ExceptionHandler(OwnAccountOperationException.class)
+    public ResponseEntity<ErrorBody> handleOwnAccount(OwnAccountOperationException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorBody("OWN_ACCOUNT", "You cannot change your own account from here"));
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    public ResponseEntity<ErrorBody> handleSessionNotFound(SessionNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorBody("SESSION_NOT_FOUND", "That session is no longer active"));
+    }
+
+    @ExceptionHandler(AdminAccountProtectedException.class)
+    public ResponseEntity<ErrorBody> handleAdminProtected(AdminAccountProtectedException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorBody("ADMIN_PROTECTED", "Admin accounts cannot be deleted"));
     }
 
     @ExceptionHandler(PasskeyNotFoundException.class)

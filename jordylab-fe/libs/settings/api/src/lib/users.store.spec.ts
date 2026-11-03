@@ -12,6 +12,10 @@ describe('UsersStore', () => {
   const approve = vi.fn<SettingsUsersApiService['approve']>();
   const reject = vi.fn<SettingsUsersApiService['reject']>();
   const revoke = vi.fn<SettingsUsersApiService['revoke']>();
+  const grantApp = vi.fn<SettingsUsersApiService['grantApp']>();
+  const removeApp = vi.fn<SettingsUsersApiService['removeApp']>();
+  const deletePerson = vi.fn<SettingsUsersApiService['deletePerson']>();
+  const getSessions = vi.fn<SettingsUsersApiService['getSessions']>();
 
   let store: UsersStore;
 
@@ -27,13 +31,27 @@ describe('UsersStore', () => {
     approve.mockReturnValue(of(undefined));
     reject.mockReturnValue(of(undefined));
     revoke.mockReturnValue(of(undefined));
+    grantApp.mockReturnValue(of(undefined));
+    removeApp.mockReturnValue(of(undefined));
+    deletePerson.mockReturnValue(of(undefined));
+    getSessions.mockReturnValue(of([]));
 
     TestBed.configureTestingModule({
       providers: [
         UsersStore,
         {
           provide: SettingsUsersApiService,
-          useValue: { getUsers: users, getPendingCount: pendingCount, approve, reject, revoke },
+          useValue: {
+            getUsers: users,
+            getPendingCount: pendingCount,
+            approve,
+            reject,
+            revoke,
+            grantApp,
+            removeApp,
+            deletePerson,
+            getSessions,
+          },
         },
       ],
     });
@@ -55,6 +73,32 @@ describe('UsersStore', () => {
 
     expect(approve).toHaveBeenCalledWith('p1');
     expect(users).toHaveBeenCalledTimes(2);
+  });
+
+  it('grants and revokes an app through the API', () => {
+    store.grantApp('a1', 'gamecatalog');
+    store.removeApp('a1', 'gamecatalog');
+
+    expect(grantApp).toHaveBeenCalledWith('a1', 'gamecatalog');
+    expect(removeApp).toHaveBeenCalledWith('a1', 'gamecatalog');
+  });
+
+  it('deletes a person and reloads the list', () => {
+    store.deletePerson('a1');
+
+    expect(deletePerson).toHaveBeenCalledWith('a1');
+    expect(users).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens and closes the session panel for one user', () => {
+    store.toggleSessions('a1');
+
+    expect(getSessions).toHaveBeenCalledWith('a1');
+    expect(store.sessionsUserId()).toBe('a1');
+
+    store.toggleSessions('a1');
+
+    expect(store.sessionsUserId()).toBeNull();
   });
 
   it('maps the last-admin rejection to a message', () => {

@@ -1,6 +1,8 @@
 package dev.jordy.jordylab.identity.rest.controller;
 
 import dev.jordy.jordylab.identity.IdentitySecurityConfiguration;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
+import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.service.IdentityUserDetailsService;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserAccount;
@@ -8,7 +10,10 @@ import dev.jordy.jordylab.identity.domain.UserRole;
 import dev.jordy.jordylab.identity.domain.UserStatus;
 import dev.jordy.jordylab.identity.service.InvalidRequestException;
 import dev.jordy.jordylab.identity.service.LastAdminProtectedException;
+import dev.jordy.jordylab.identity.service.OwnAccountOperationException;
 import dev.jordy.jordylab.identity.service.UserAccountService;
+import dev.jordy.jordylab.identity.service.UserDeletionService;
+import dev.jordy.jordylab.identity.service.UserSessionService;
 import dev.jordy.jordylab.identity.service.UserNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +57,21 @@ class UserControllerTest {
 
     @MockitoBean
     private UserAccountService userAccountService;
+
+    @MockitoBean
+    private UserSessionService userSessionService;
+
+    @MockitoBean
+    private UserDeletionService userDeletionService;
+
+    @MockitoBean
+    private CurrentUserResolver currentUserResolver;
+
+    @org.junit.jupiter.api.BeforeEach
+    void resolveAdmin() {
+        org.mockito.Mockito.when(currentUserResolver.requireCurrentUserSubject())
+                .thenReturn(dev.jordy.jordylab.shared.config.IdentityTestAuthentication.ADMIN_SUBJECT);
+    }
 
     @Test
     void guestsCannotReachUserManagement() throws Exception {
@@ -162,6 +182,62 @@ class UserControllerTest {
         mockMvc.perform(get("/api/identity/users").with(asAdmin()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.users[0].createdAt").exists());
+    }
+
+    @Test
+    void grantsAndRevokesTheGameCatalog() throws Exception {
+        when(userAccountService.grantApp(USER_ID, ManagedApp.GAME_CATALOG)).thenReturn(approvedGuest());
+        when(userAccountService.revokeApp(USER_ID, ManagedApp.GAME_CATALOG)).thenReturn(approvedGuest());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/identity/users/{id}/apps/gamecatalog", USER_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/identity/users/{id}/apps/gamecatalog", USER_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void refusesANonGrantableApp() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/api/identity/users/{id}/apps/fna", USER_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void listsAndEndsSessions() throws Exception {
+        when(userSessionService.list(dev.jordy.jordylab.shared.config.IdentityTestAuthentication.ADMIN_ID, USER_ID))
+                .thenReturn(List.of(new UserSessionService.SessionInfo("session-1",
+                        java.time.Instant.parse("2026-11-03T12:00:00Z"),
+                        java.time.Instant.parse("2026-11-03T12:05:00Z"))));
+
+        mockMvc.perform(get("/api/identity/users/{id}/sessions", USER_ID).with(asAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessions[0].sessionId").value("session-1"));
+
+        mockMvc.perform(post("/api/identity/users/{id}/sessions/{sessionId}/end", USER_ID, "session-1")
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/identity/users/{id}/sessions/end-all", USER_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void refusesToActOnTheCallersOwnAccount() throws Exception {
+        org.mockito.Mockito.doThrow(new OwnAccountOperationException())
+                .when(userDeletionService)
+                .delete(dev.jordy.jordylab.shared.config.IdentityTestAuthentication.ADMIN_ID, USER_ID);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/identity/users/{id}", USER_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("OWN_ACCOUNT"));
     }
 
     private static UserAccount approvedGuest() {

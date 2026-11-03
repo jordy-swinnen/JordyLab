@@ -29,3 +29,10 @@ export interface AppUser {
   createdAt: string;
   pendingResetRequest: PendingResetRequest | null;
 }
+
+/** One web session of an account, from Spring Session (spec 019 US4). */
+export interface UserSession {
+  sessionId: string;
+  startedAt: string;
+  lastAccessedAt: string;
+}

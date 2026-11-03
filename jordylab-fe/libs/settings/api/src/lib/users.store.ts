@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 import { SettingsUsersApiService } from './settings-users-api.service';
-import { AppUser } from './settings.models';
+import { AppUser, UserSession } from './settings.models';
 
 @Injectable({ providedIn: 'root' })
 export class UsersStore {
@@ -13,12 +13,18 @@ export class UsersStore {
   readonly #error = signal<string | null>(null);
   readonly #pendingCount = signal(0);
   readonly #actioningId = signal<string | null>(null);
+  readonly #sessionsUserId = signal<string | null>(null);
+  readonly #sessions = signal<UserSession[]>([]);
+  readonly #sessionsLoading = signal(false);
 
   readonly users = this.#users.asReadonly();
   readonly loading = this.#loading.asReadonly();
   readonly error = this.#error.asReadonly();
   readonly pendingCount = this.#pendingCount.asReadonly();
   readonly actioningId = this.#actioningId.asReadonly();
+  readonly sessionsUserId = this.#sessionsUserId.asReadonly();
+  readonly sessions = this.#sessions.asReadonly();
+  readonly sessionsLoading = this.#sessionsLoading.asReadonly();
 
   readonly pendingUsers = computed(() => this.#users().filter((user) => user.status === 'PENDING'));
   readonly approvedUsers = computed(() => this.#users().filter((user) => user.status === 'APPROVED'));
@@ -67,6 +73,54 @@ export class UsersStore {
 
   revoke(id: string): void {
     this.#runAction(id, () => this.#api.revoke(id), 'Failed to revoke user.');
+  }
+
+  grantApp(id: string, appKey: string): void {
+    this.#runAction(id, () => this.#api.grantApp(id, appKey), 'Failed to grant the app.');
+  }
+
+  removeApp(id: string, appKey: string): void {
+    this.#runAction(id, () => this.#api.removeApp(id, appKey), 'Failed to remove the app.');
+  }
+
+  deletePerson(id: string): void {
+    this.#runAction(id, () => this.#api.deletePerson(id), 'Failed to delete the person.');
+  }
+
+  toggleSessions(userId: string): void {
+    if (this.#sessionsUserId() === userId) {
+      this.#sessionsUserId.set(null);
+      this.#sessions.set([]);
+
+      return;
+    }
+    this.#sessionsUserId.set(userId);
+    this.#sessionsLoading.set(true);
+    this.#api
+      .getSessions(userId)
+      .pipe(catchError(() => of<UserSession[]>([])))
+      .subscribe((sessions) => {
+        this.#sessions.set(sessions);
+        this.#sessionsLoading.set(false);
+      });
+  }
+
+  endSession(userId: string, sessionId: string): void {
+    this.#api.endSession(userId, sessionId).pipe(catchError(() => of(undefined))).subscribe(() => {
+      this.refreshSessions(userId);
+    });
+  }
+
+  endAllSessions(userId: string): void {
+    this.#api.endAllSessions(userId).pipe(catchError(() => of(undefined))).subscribe(() => {
+      this.refreshSessions(userId);
+    });
+  }
+
+  private refreshSessions(userId: string): void {
+    this.#api.getSessions(userId).pipe(catchError(() => of<UserSession[]>([]))).subscribe((sessions) => {
+      this.#sessions.set(sessions);
+    });
   }
 
   #runAction(id: string, request: () => Observable<void>, defaultErrorMessage: string): void {

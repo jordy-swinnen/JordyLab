@@ -87,6 +87,44 @@
               </div>
               <div class="flex flex-wrap items-center gap-3">
                 @if (user.role !== 'admin') {
+                  @if (user.appGrants.includes('gamecatalog')) {
+                    <button
+                      hlmBtn class="h-11"
+                      variant="outline"
+                      [disabled]="actioningId() === user.id"
+                      (click)="removeApp.emit(user.id)"
+                      data-testid="revoke-app"
+                    >
+                      Revoke Game Catalog
+                    </button>
+                  } @else {
+                    <button
+                      hlmBtn class="h-11"
+                      variant="outline"
+                      [disabled]="actioningId() === user.id"
+                      (click)="grantApp.emit(user.id)"
+                      data-testid="grant-app"
+                    >
+                      Grant Game Catalog
+                    </button>
+                  }
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
+                    (click)="toggleSessions.emit(user.id)"
+                    data-testid="toggle-sessions"
+                  >
+                    Sessions
+                  </button>
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
+                    [disabled]="actioningId() === user.id"
+                    (click)="onDelete(user.id)"
+                    data-testid="delete-user"
+                  >
+                    {{ confirmingDeleteId() === user.id ? 'Confirm delete' : 'Delete' }}
+                  </button>
                   <button
                     hlmBtn class="h-11"
                     variant="outline"
@@ -94,11 +132,41 @@
                     (click)="revoke.emit(user.id)"
                     data-testid="revoke-user"
                   >
-                    Revoke
+                    Revoke access
                   </button>
                 }
               </div>
             </div>
+
+            @if (sessionsUserId() === user.id) {
+              <div class="panel mt-3 px-6 py-4" data-testid="sessions-panel">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h4 class="section-title">Sessions</h4>
+                  <button hlmBtn variant="outline" class="h-9" (click)="endAllSessions.emit(user.id)" data-testid="end-all-sessions">
+                    End all sessions
+                  </button>
+                </div>
+                @if (sessionsLoading()) {
+                  <p class="mt-3 text-sm text-muted-foreground">Loading sessions…</p>
+                } @else if (sessions().length === 0) {
+                  <p class="mt-3 text-sm text-muted-foreground">No active sessions.</p>
+                } @else {
+                  <ul class="mt-3 flex flex-col gap-2">
+                    @for (session of sessions(); track session.sessionId) {
+                      <li class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span class="text-muted-foreground">
+                          started {{ session.startedAt | date: 'MMM d, h:mm a' }} · last seen
+                          {{ session.lastAccessedAt | date: 'MMM d, h:mm a' }}
+                        </span>
+                        <button hlmBtn variant="outline" class="h-8" (click)="endSession.emit(session)" data-testid="end-session">
+                          End
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
           }
         </div>
       }

@@ -2,6 +2,7 @@ package dev.jordy.jordylab.identity.service;
 
 import dev.jordy.jordylab.identity.IdentityProperties;
 import dev.jordy.jordylab.identity.domain.UserAccount;
+import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserRole;
 import dev.jordy.jordylab.identity.domain.UserStatus;
 import dev.jordy.jordylab.identity.domain.repository.UserAccountRepository;
@@ -90,6 +91,36 @@ public class UserAccountService {
         account.revoke();
 
         return userAccountRepository.save(account);
+    }
+
+    /** Grants one app to an approved account (spec 019 US4, parity with spec 014 FR-002). */
+    @Transactional
+    public UserAccount grantApp(UUID userId, ManagedApp app) {
+        UserAccount account = requireApproved(userId, app);
+        account.grantApp(app);
+
+        return userAccountRepository.save(account);
+    }
+
+    /** Revokes one app; the removed app's data is cleaned up by its event listener. */
+    @Transactional
+    public UserAccount revokeApp(UUID userId, ManagedApp app) {
+        UserAccount account = requireApproved(userId, app);
+        account.revokeApp(app);
+
+        return userAccountRepository.save(account);
+    }
+
+    private UserAccount requireApproved(UUID userId, ManagedApp app) {
+        if (app == null || !app.grantable()) {
+            throw new InvalidRequestException("That app cannot be granted");
+        }
+        UserAccount account = require(userId);
+        if (!account.isApproved()) {
+            throw new UserNotApprovedException();
+        }
+
+        return account;
     }
 
     /** The signed-in user changes their own password; the current one must be confirmed (spec 019 FR-005). */

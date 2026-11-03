@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { AppUser, UserStatus } from './settings.models';
+import { AppUser, UserSession, UserStatus } from './settings.models';
 
 /** Admin user management over the identity API (spec 019; was the Keycloak-backed settings API before). */
 @Injectable({ providedIn: 'root' })
@@ -35,5 +35,31 @@ export class SettingsUsersApiService {
 
   revoke(id: string): Observable<void> {
     return this.#http.post<void>(`/api/identity/users/${id}/revoke`, {});
+  }
+
+  grantApp(id: string, appKey: string): Observable<void> {
+    return this.#http.put<void>(`/api/identity/users/${id}/apps/${appKey}`, {});
+  }
+
+  removeApp(id: string, appKey: string): Observable<void> {
+    return this.#http.delete<void>(`/api/identity/users/${id}/apps/${appKey}`);
+  }
+
+  getSessions(id: string): Observable<UserSession[]> {
+    return this.#http
+      .get<{ sessions: UserSession[] }>(`/api/identity/users/${id}/sessions`)
+      .pipe(map((response) => response.sessions));
+  }
+
+  endSession(id: string, sessionId: string): Observable<void> {
+    return this.#http.post<void>(`/api/identity/users/${id}/sessions/${sessionId}/end`, {});
+  }
+
+  endAllSessions(id: string): Observable<void> {
+    return this.#http.post<void>(`/api/identity/users/${id}/sessions/end-all`, {});
+  }
+
+  deletePerson(id: string): Observable<void> {
+    return this.#http.delete<void>(`/api/identity/users/${id}`);
   }
 }

@@ -6,6 +6,7 @@ import {
   anAppUserMock,
   GuestChatLimit,
   GuestChatLimitStore,
+  UserSession,
   UsersStore,
 } from '@jordylab-fe/settings/api';
 import { UsersPageComponent } from './users-page.component';
@@ -17,6 +18,9 @@ describe('UsersPageComponent', () => {
   const loading = signal(true);
   const error = signal<string | null>(null);
   const actioningId = signal<string | null>(null);
+  const sessionsUserId = signal<string | null>(null);
+  const sessions = signal<UserSession[]>([]);
+  const sessionsLoading = signal(false);
 
   const approve = vi.fn<UsersStore['approve']>();
   const reject = vi.fn<UsersStore['reject']>();
@@ -29,9 +33,18 @@ describe('UsersPageComponent', () => {
     loading: loading.asReadonly(),
     error: error.asReadonly(),
     actioningId: actioningId.asReadonly(),
+    sessionsUserId: sessionsUserId.asReadonly(),
+    sessions: sessions.asReadonly(),
+    sessionsLoading: sessionsLoading.asReadonly(),
     approve,
     reject,
     revoke,
+    grantApp: vi.fn(),
+    removeApp: vi.fn(),
+    toggleSessions: vi.fn(),
+    endSession: vi.fn(),
+    endAllSessions: vi.fn(),
+    deletePerson: vi.fn(),
   };
 
   const guestLimit = signal<GuestChatLimit | null>(aGuestChatLimitMock());

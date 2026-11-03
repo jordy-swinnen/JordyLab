@@ -162,19 +162,19 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T054 [P] [US4] Extend `UserAccountServiceTest.java`: `grantApp`/`revokeApp` (authority changes, `AppAccessRemoved` published, duplicate grant idempotent), revoke clears grants
-- [ ] T055 [P] [US4] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/service/UserSessionServiceTest.java` and `UserDeletionServiceTest.java`: list/end web sessions (own account refused), staged deletion (self refused, any admin refused, events published, personal limit/usage cleanup signalled, idempotent)
-- [ ] T056 [P] [US4] Extend `UserControllerTest.java`: grant/revoke endpoints, sessions list/end/end-all (`409 OWN_ACCOUNT`), delete (`409 LAST_ADMIN_PROTECTED`), error codes per the contract
-- [ ] T057 [P] [US4] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/IdentityUserManagementIntegrationTest.java` (replaces the deleted `settings/UserManagementIntegrationTest.java`): approval default grants, grant/revoke end-to-end through the API, revocation ends sessions immediately, deletion cleans usage/limit, timing expectations
-- [ ] T058 [P] [US4] Extend the frontend specs: users-page grant toggles, session panel (end one/all), delete confirmation and the self/last-admin messages
+- [X] T054 [P] [US4] Extend `UserAccountServiceTest.java`: `grantApp`/`revokeApp` (authority changes, `AppAccessRemoved` published, duplicate grant idempotent), revoke clears grants
+- [X] T055 [P] [US4] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/service/UserSessionServiceTest.java` and `UserDeletionServiceTest.java`: list/end web sessions (own account refused), staged deletion (self refused, any admin refused, events published, personal limit/usage cleanup signalled, idempotent)
+- [X] T056 [P] [US4] Extend `UserControllerTest.java`: grant/revoke endpoints, sessions list/end/end-all (`409 OWN_ACCOUNT`), delete (`409 LAST_ADMIN_PROTECTED`), error codes per the contract
+- [ ] T057 [P] [US4] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/IdentityUserManagementIntegrationTest.java` (replaces the deleted `settings/UserManagementIntegrationTest.java`): approval default grants, grant/revoke end-to-end through the API, revocation ends sessions immediately, deletion cleans usage/limit, timing expectations *(parity covered by the service/controller/store suites and the live browser check; the full API journey lands in US7's `user-management.spec.ts` e2e)*
+- [X] T058 [P] [US4] Extend the frontend specs: users-page grant toggles, session panel (end one/all), delete confirmation and the self/last-admin messages
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] Add the grant endpoints to `UserController.java` (`PUT`/`DELETE /api/identity/users/{id}/apps/{app}`) backed by `UserAccountService`, and include `appGrants` in the user views
-- [ ] T060 [US4] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/UserSessionService.java` (Spring Session `FindByIndexNameSessionRepository` by username; end one/all; own account refused) and its endpoints in `UserController.java`
-- [ ] T061 [US4] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/UserDeletionService.java` (adapted from the deleted settings version: end sessions, delete account, publish `UserAccessRemoved` + `UserDeleted`; refuse self/any admin; idempotent) and `DELETE /api/identity/users/{id}` in `UserController.java`
-- [ ] T062 [US4] Add `jordylab-be/src/main/java/dev/jordy/jordylab/settings/GuestDataCleanupListener.java` (`@ApplicationModuleListener` on `UserAccessRemoved`/`UserDeleted` → clear the personal chat limit and usage via the existing `GuestChatLimitService`/repositories) and verify `ModularityTests`
-- [ ] T063 [US4] Restore the admin UI in `jordylab-fe/libs/settings/ui/src/lib/users-page/`: Game Catalog grant toggle, session panel (end one/all), delete with confirmation; extend `users.store.ts` + `settings-users-api.service.ts`; verify [quickstart.md](quickstart.md) §4
+- [X] T059 [US4] Add the grant endpoints to `UserController.java` (`PUT`/`DELETE /api/identity/users/{id}/apps/{app}`) backed by `UserAccountService`, and include `appGrants` in the user views
+- [X] T060 [US4] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/UserSessionService.java` (Spring Session `FindByIndexNameSessionRepository` by username; end one/all; own account refused) and its endpoints in `UserController.java`
+- [X] T061 [US4] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/UserDeletionService.java` (adapted from the deleted settings version: end sessions, delete account, publish `UserAccessRemoved` + `UserDeleted`; refuse self/any admin; idempotent) and `DELETE /api/identity/users/{id}` in `UserController.java`
+- [X] T062 [US4] Add `jordylab-be/src/main/java/dev/jordy/jordylab/settings/GuestDataCleanupListener.java` (`@ApplicationModuleListener` on `UserAccessRemoved`/`UserDeleted` → clear the personal chat limit and usage via the existing `GuestChatLimitService`/repositories) and verify `ModularityTests`
+- [X] T063 [US4] Restore the admin UI in `jordylab-fe/libs/settings/ui/src/lib/users-page/`: Game Catalog grant toggle, session panel (end one/all), delete with confirmation; extend `users.store.ts` + `settings-users-api.service.ts`; verify [quickstart.md](quickstart.md) §4
 
 **Checkpoint**: 014 parity restored — no admin capability lost with Keycloak.
 

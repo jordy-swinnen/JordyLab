@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { AppUser, GuestChatLimit } from '@jordylab-fe/settings/api';
+import { Component, input, output, ChangeDetectionStrategy, signal } from '@angular/core';
+import { AppUser, GuestChatLimit, UserSession } from '@jordylab-fe/settings/api';
 import { HlmBadgeDirective } from '@spartan-ng/ui-badge-helm';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { ErrorStateComponent, PageHeaderComponent, SkeletonRowsComponent } from '@jordylab-fe/shared/layout';
@@ -36,8 +36,31 @@ export class UsersPageViewComponent {
   approve = output<string>();
   reject = output<string>();
   revoke = output<string>();
+  grantApp = output<string>();
+  removeApp = output<string>();
+  toggleSessions = output<string>();
+  endSession = output<UserSession>();
+  endAllSessions = output<string>();
+  deletePerson = output<string>();
   reload = output<void>();
   saveGuestLimit = output<number>();
+
+  sessionsUserId = input.required<string | null>();
+  sessions = input.required<UserSession[]>();
+  sessionsLoading = input.required<boolean>();
+
+  protected readonly confirmingDeleteId = signal<string | null>(null);
+
+  onDelete(id: string): void {
+    if (this.confirmingDeleteId() === id) {
+      this.confirmingDeleteId.set(null);
+      this.deletePerson.emit(id);
+
+      return;
+    }
+    this.confirmingDeleteId.set(id);
+  }
+
 
   guestLimit = input.required<GuestChatLimit | null>();
   guestLimitLoading = input.required<boolean>();

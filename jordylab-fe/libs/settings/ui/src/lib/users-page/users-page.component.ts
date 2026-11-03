@@ -1,5 +1,5 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { GuestChatLimitStore, UsersStore } from '@jordylab-fe/settings/api';
+import { GuestChatLimitStore, UserSession, UsersStore } from '@jordylab-fe/settings/api';
 import { UsersPageViewComponent } from './users-page-view.component';
 
 @Component({
@@ -19,6 +19,15 @@ import { UsersPageViewComponent } from './users-page-view.component';
       (approve)="onApprove($event)"
       (reject)="onReject($event)"
       (revoke)="onRevoke($event)"
+      (grantApp)="onGrantApp($event)"
+      (removeApp)="onRemoveApp($event)"
+      (toggleSessions)="onToggleSessions($event)"
+      (endSession)="onEndSession($event)"
+      (endAllSessions)="onEndAllSessions()"
+      (deletePerson)="onDeletePerson($event)"
+      [sessionsUserId]="sessionsUserId()"
+      [sessions]="sessions()"
+      [sessionsLoading]="sessionsLoading()"
       [guestLimit]="guestLimit()"
       [guestLimitLoading]="guestLimitLoading()"
       [guestLimitSaving]="guestLimitSaving()"
@@ -37,6 +46,9 @@ export class UsersPageComponent {
   readonly loading = this.#store.loading;
   readonly error = this.#store.error;
   readonly actioningId = this.#store.actioningId;
+  readonly sessionsUserId = this.#store.sessionsUserId;
+  readonly sessions = this.#store.sessions;
+  readonly sessionsLoading = this.#store.sessionsLoading;
   readonly guestLimit = this.#guestChatLimit.limit;
   readonly guestLimitLoading = this.#guestChatLimit.loading;
   readonly guestLimitSaving = this.#guestChatLimit.saving;
@@ -56,6 +68,36 @@ export class UsersPageComponent {
 
   onRevoke(id: string): void {
     this.#store.revoke(id);
+  }
+
+  onGrantApp(id: string): void {
+    this.#store.grantApp(id, 'gamecatalog');
+  }
+
+  onRemoveApp(id: string): void {
+    this.#store.removeApp(id, 'gamecatalog');
+  }
+
+  onToggleSessions(id: string): void {
+    this.#store.toggleSessions(id);
+  }
+
+  onEndSession(session: UserSession): void {
+    const userId = this.#store.sessionsUserId();
+    if (userId) {
+      this.#store.endSession(userId, session.sessionId);
+    }
+  }
+
+  onEndAllSessions(): void {
+    const userId = this.#store.sessionsUserId();
+    if (userId) {
+      this.#store.endAllSessions(userId);
+    }
+  }
+
+  onDeletePerson(id: string): void {
+    this.#store.deletePerson(id);
   }
 
   onSaveGuestLimit(dailyLimit: number): void {
