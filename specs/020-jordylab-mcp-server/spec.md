@@ -102,7 +102,7 @@ News screens (articles, portfolio, wishlist, briefing).
 **Acceptance Scenarios**:
 
 1. **Given** articles were ingested today, **When** Jordy asks what is new about a ticker, **Then** Claude names
-   recent articles about it with their publication dates and sources.
+   recent articles whose title mentions the ticker or company name, with their publication dates and sources.
 2. **Given** the portfolio holds positions, **When** Jordy asks what it is worth, **Then** Claude reports each
    position and the total using the same prices and the price timestamp that the portfolio screen shows.
 3. **Given** the wishlist has entries, **When** Jordy asks what is on it, **Then** Claude lists the same tickers with
@@ -223,6 +223,8 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
   API keep working unchanged.
 - **FR-020**: Each admin MUST be limited to 60 tool calls per minute. A call over the limit MUST be refused at once with
   a clear, non-sensitive "try again shortly" error, and MUST NOT be run or queued.
+- **FR-021**: The MCP endpoint MUST accept only tokens issued for the connector, identified by the audience
+  `jordylab-mcp`. A token for the web app, without that audience, MUST be refused with the same `401` as a missing token.
 
 ### Key Entities
 
@@ -283,6 +285,10 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
   something.
 - Tool count stays small enough that the model can choose without confusion (roughly one tool per data area rather
   than one per REST endpoint).
+- A connector sign-in lasts as long as the JordyLab sign-in session: 30 days idle, 90 days at most. After that Jordy
+  signs in to the connector again. The connector does not hold a long-lived offline token.
+- The rate-limit count is kept by the running instance. There is one instance, so a restart (including a deploy) resets
+  the count, which is accepted.
 
 ## Out of Scope
 
