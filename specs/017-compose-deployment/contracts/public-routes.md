@@ -1,6 +1,6 @@
 # Contract: Public routes
 
-The public site must keep the same addresses it has today. Clients depend on them: the mobile app, the Keycloak redirect URIs, the Android app-links file and the sign-in pages. Caddy in `deploy/compose/Caddyfile` must match this table. Source: the Gateway routes in `deploy/k8s/base/gateway.yaml` (research R2).
+The public site must keep the same addresses it has today. Clients depend on them: the Keycloak redirect URIs, the Android app-links file and the sign-in pages. Caddy in `deploy/compose/Caddyfile` must match this table. Source: the Gateway routes in `deploy/k8s/base/gateway.yaml` (research R2).
 
 The Gateway's `PathPrefix` matches whole path segments: `/api` matches `/api` and `/api/...`, but not `/apis`. Caddy's `path` matcher is exact unless it ends in `*`, so each prefix row needs two Caddy patterns: the bare path and the path with `/*`.
 

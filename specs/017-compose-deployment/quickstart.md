@@ -33,7 +33,7 @@ Proves: every service starts healthy and the dependency order holds (FR-009).
 
 - `docker compose --env-file /opt/jordylab/env/prod.env up -d --wait`
 - `docker compose ps`: every service `healthy` (or `running` for ntfy and Caddy if they have no check).
-- Pass: exit code 0 within the wait timeout.
+- Pass: exit code 0 within the wait timeout. The backend's health check waits out its 150 s start period first.
 
 ## 4. Public routes
 
@@ -52,7 +52,6 @@ Proves: existing accounts and data work after cutover (User Story 1).
 
 - Sign in at `https://jordylab.be` as an existing user. Pass: the user reaches their own data.
 - Open a game with artwork. Pass: the artwork loads.
-- Download a mobile release from the public link. Pass: the file matches its size before the move.
 - Row counts for the `jordylab` database against the final dump. Pass: identical.
 
 ## 6. Point-in-time restore

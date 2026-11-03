@@ -35,17 +35,17 @@ These were decided by the owner on 2026-11-02. They are inputs to this spec, not
 
 ### User Story 1 - Production keeps serving the same site on Compose (Priority: P1)
 
-The owner moves production from the cluster to the Compose stack on the same VPS. Visitors reach the same addresses and sign in with the same accounts, and the library, artwork and mobile releases are all still there.
+The owner moves production from the cluster to the Compose stack on the same VPS. Visitors reach the same addresses and sign in with the same accounts, and the library and artwork are all still there.
 
 **Why this priority**: This is the whole purpose of the feature. Nothing else matters if the site or the data is lost.
 
-**Independent Test**: After cutover, load the site, sign in as an existing user, open a game with artwork, and download a mobile release. Each works and shows the data that was there before the move.
+**Independent Test**: After cutover, load the site, sign in as an existing user, open a game with artwork. Each works and shows the data that was there before the move.
 
 **Acceptance Scenarios**:
 
 1. **Given** the Compose stack is live on the VPS, **When** a visitor opens the site's main address, **Then** the site loads over HTTPS with a valid certificate.
 2. **Given** the cutover is complete, **When** an existing user signs in, **Then** the user reaches the same account and data as before the move.
-3. **Given** the cutover is complete, **When** a visitor requests an existing artwork file and an existing mobile release, **Then** both are returned unchanged.
+3. **Given** the cutover is complete, **When** a visitor requests an existing artwork file, **Then** it is returned unchanged.
 
 ---
 
@@ -117,7 +117,7 @@ The runbook, the operations skill and the devops agent describe the Compose stac
 - What happens to point-in-time restores to a time before cutover? They need the old backup chain in object storage, which pgBackRest cannot read. That chain is kept until its 30-day retention ends, and restoring to a time before cutover uses the old tooling.
 - What happens when the host reboots during a deploy? The stack must come back on its own, and the deploy must report the failure instead of stopping silently.
 - What happens to the Keycloak and Postgres roles after restore? The cutover dump is made with owners and privileges, and the roles are created before the restore. The encrypted copy taken on 2026-11-02 has no owners, so if it is used, the roles and schema ownership must be recreated before Keycloak starts.
-- What happens when the artwork or mobile release volume is empty or missing at restore? The restore reports it, because an empty volume is a valid state but a missing one is not.
+- What happens when the artwork volume is empty or missing at restore? The restore reports it, because an empty volume is a valid state but a missing one is not.
 - What happens if the Postgres container restarts often before cutover? The cause must be understood before the maintenance window, because the final dump depends on a stable database.
 
 ## Requirements *(mandatory)*
@@ -131,7 +131,7 @@ The runbook, the operations skill and the devops agent describe the Compose stac
 - **FR-005**: Backups MUST keep 30 days of restorable history, matching today's retention.
 - **FR-006**: Before the old cluster is removed, an encrypted backup of production MUST be held on the owner's Mac and MUST be restored and checked against production in a throwaway database.
 - **FR-007**: The cutover MUST take a final backup after writes stop, restore it on the new stack, and verify the restored data before traffic returns.
-- **FR-008**: The artwork and mobile release files MUST survive the cutover unchanged and MUST be included in the encrypted backup on the Mac.
+- **FR-008**: The artwork files MUST survive the cutover unchanged and MUST be included in the encrypted backup on the Mac. The APK volume is not migrated: it was removed from production with the native app (spec 018).
 - **FR-009**: Services MUST restart on their own after a host reboot, and each service MUST have a health check.
 - **FR-010**: Container logs MUST have size limits, and memory limits MUST fit within the host's memory.
 - **FR-011**: The deploy workflow MUST connect over the private network, wait for the new release to report healthy, and restore the previous release automatically if it does not.
@@ -178,5 +178,5 @@ The runbook, the operations skill and the devops agent describe the Compose stac
 - Object storage in the same region as today remains available for backups throughout the move.
 - The old backup chain stays in object storage until its 30-day retention ends, and nothing deletes it early.
 - Users accept a few seconds of downtime per release, as decided by the owner.
-- The artwork and mobile release volumes are small enough to copy within the maintenance window (artwork was about 4 KB and mobile releases about 291 MB on 2026-11-02).
+- The artwork volume is small enough to copy within the maintenance window (it was about 4 KB on 2026-11-02).
 - The authentication change that removes Keycloak, and the deploy-on-green-main change, are scheduled after this feature, so this feature keeps Keycloak and the current deploy trigger.

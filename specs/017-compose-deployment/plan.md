@@ -14,7 +14,7 @@ Move production from the one-node k3s cluster on the VPS to a single Docker Comp
 
 **Primary Dependencies**: Docker Engine with the Compose plugin (current stable at install, recorded on the host); Caddy (pinned tag); pgBackRest (Debian package, in the Postgres image); Keycloak 26.7.4, nginx-unprivileged 1.30, ntfy v2.28.0 (as today); backend, frontend and Keycloak images from GHCR, pinned by release tag; SOPS 3.13.3 and age 1.3.2 on the runner (as today).
 
-**Storage**: Postgres data in a named volume; artwork and mobile-release files in named volumes; ntfy cache and Caddy certificate data in named volumes; the pgBackRest repository in OVH Object Storage (Gravelines, prefix `/pgbackrest`); one encrypted copy of production on the owner's Mac (outside the repository).
+**Storage**: Postgres data in a named volume; artwork files in a named volume; ntfy cache and Caddy certificate data in named volumes; the pgBackRest repository in OVH Object Storage (Gravelines, prefix `/pgbackrest`); one encrypted copy of production on the owner's Mac (outside the repository).
 
 **Testing**: no automated unit tests for this change (no application code changes). Verification is the checklist in [quickstart.md](quickstart.md): restore and row counts, point-in-time restore, forced certificate renewal, reboot, deploy and rollback through the workflow, external port scan, and the smoke checks.
 
@@ -80,7 +80,7 @@ The cutover is a sequence of phases. Each phase has an exit check, and a failed 
 1. Build the Postgres image with pgBackRest and run it locally against the encrypted Mac backup (restore test, quickstart step 1).
 2. Write the Compose files, the environment template and the host timers. Validate them locally with dummy values (`docker compose config`).
 3. Install Docker Engine and the Compose plugin on the host. Publish no ports yet. k3s keeps running.
-4. Copy the artwork and mobile-release files from the k3s volumes to a staging folder on the host (bulk copy).
+4. Copy the artwork files from the k3s volume to a staging folder on the host (bulk copy).
 5. Owner approves the Tailscale policy change for `tag:ci` (`tcp:22`) and the deploy key for the runner.
 6. Add the Compose deploy workflow as a separate file. The current release path keeps deploying to k3s until cutover.
 
@@ -94,11 +94,11 @@ The cutover is a sequence of phases. Each phase has an exit check, and a failed 
 
 7. Scale the write paths down (backend, Keycloak, ntfy) so no new data arrives. This is a cluster change, so it needs the owner's yes.
 8. Take the final dump with owners, encrypt it to the Mac, and check the header and the row counts against production.
-9. Copy the changed artwork and mobile-release files (delta) into the host volumes.
+9. Copy the changed artwork files (delta) into the host volume.
 10. Stop and disable k3s. This frees ports 80 and 443.
 11. Start Postgres with pgBackRest. Create the `jordylab` and `keycloak` roles. Restore the final dump. Create the pgBackRest stanza and take the first full backup.
 12. Start the backend, Keycloak, ntfy, the frontend and Caddy with `up -d --wait`. Caddy obtains the certificate on first request.
-13. Smoke checks (quickstart step 9): site over HTTPS, sign-in, artwork, mobile release download, ntfy publish, Keycloak discovery, row counts against the final dump.
+13. Smoke checks (quickstart step 5): site over HTTPS, sign-in, artwork, ntfy publish, Keycloak discovery, row counts against the final dump.
 14. If every check passes, the window ends. The public address is unchanged, so DNS needs no change.
 15. Owner approves closing public SSH after tailnet SSH is confirmed. This is the last host change in the window.
 
@@ -129,7 +129,7 @@ The cutover is a sequence of phases. Each phase has an exit check, and a failed 
 | `ntfy` | `binwiederhier/ntfy:v2.28.0` | none | — |
 | `postgres` | `deploy/compose/postgres/` image (`pgvector/pgvector:pg16` pinned + pgBackRest) | none | — |
 
-Named volumes: `postgres-data`, `artwork`, `mobile-releases`, `ntfy-cache`, `caddy-data`. One Compose network with subnet `172.28.0.0/16`.
+Named volumes: `postgres-data`, `artwork`, `ntfy-cache`, `caddy-data`. One Compose network with subnet `172.28.0.0/16`.
 
 ## Project Structure
 
