@@ -48,12 +48,22 @@ jobs:
           ref: ${{ inputs.target }}
           fetch-depth: 0
 
+      # The workflow's own commit supplies the helpers and the host tooling. The target supplies the release (compose.yaml,
+      # the Caddyfile, the Postgres build), but rolling back to an older commit must not restore older tooling: run
+      # 41730834972 failed because it did exactly that (an old deploy-release.sh rejected the sha).
+      - name: Check out the workflow's own commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-src
+          fetch-depth: 1
+
       # Contract step 1: resolve the target with the script the k3s pipeline used (spec 019, research D6). A sha must
       # be in the history, a tag must exist, and the result names the image tag: sha-<sha>, or the tag unchanged.
       - name: Resolve the target
         id: resolve_target
         run: |
-          resolution="$(deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic false)"
+          resolution="$(workflow-src/deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic false)"
           printf '%s\n' "$resolution" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$resolution"
           if printf '%s\n' "$resolution" | grep -qx 'decision=refused'; then
@@ -124,12 +134,14 @@ jobs:
           chmod 600 ~/.ssh/config
           ssh jordylab-vps 'echo SSH_OK as $(whoami) on $(hostname)'
 
-      # Mirrors the tag's deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the
-      # running stack read (compose.yaml, Caddyfile, the timers, the Postgres Containerfile, the scripts).
-      # --delete keeps it an exact mirror; nothing host-side writes there.
+      # Mirrors deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the running stack read.
+      # The target supplies the release files (compose.yaml, the Caddyfile, the timers, the Postgres build);
+      # scripts/ comes from the workflow's own commit, so a rollback cannot restore older tooling.
+      # --delete keeps each side an exact mirror; nothing host-side writes there.
       - name: Copy deploy/compose to the host
         run: |
-          rsync -az --delete deploy/compose/ jordylab-vps:/opt/jordylab/compose/
+          rsync -az --delete --exclude 'scripts/' deploy/compose/ jordylab-vps:/opt/jordylab/compose/
+          rsync -az --delete workflow-src/deploy/compose/scripts/ jordylab-vps:/opt/jordylab/compose/scripts/
           ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
 
       # The runner needs sops to decrypt; it ships in no image on ubuntu-latest (T049 found this missing).
@@ -153,7 +165,7 @@ jobs:
           export PATH="/tmp/render-venv/bin:$PATH"
           # From here the host may have been touched, so the automatic rollback step is allowed to run.
           echo "host_touched=true" >> "$GITHUB_OUTPUT"
-          deploy/compose/scripts/render-env.sh | ssh jordylab-vps \
+          workflow-src/deploy/compose/scripts/render-env.sh | ssh jordylab-vps \
             'set -e; cd /opt/jordylab/env;
              if [ -f prod.env ]; then cp -p prod.env prod.env.previous; fi;
              cat > prod.env.new; chmod 600 prod.env.new;
@@ -177,7 +189,7 @@ jobs:
       # Contract step 7: external check from the runner (deploy/scripts/smoke-check.sh, written for spec 019).
       - name: Smoke-check the public site
         id: smoke
-        run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+        run: workflow-src/deploy/scripts/smoke-check.sh --base-url https://jordylab.be
 
       # Contract step 8: automatic rollback, only after the host was touched. deploy-release.sh acts only
       # when TARGET is still the live release (a refused or self-restored deploy is a no-op), and it exits 1

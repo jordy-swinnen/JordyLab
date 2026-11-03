@@ -15,7 +15,9 @@ The workflow `.github/workflows/deploy-prod-compose.yml` replaced the kubectl st
 
 1. **Resolve the target** with `deploy/scripts/deploy-decision.sh` (spec 019): the sha or tag is validated, and the result names the image tag `sha-<sha>` or the tag.
 2. **Join the tailnet** as `tag:ci` (existing step).
-3. **Check out the tag** so the Compose file and scripts match the images.
+3. **Check out the target** for the release files (`compose.yaml`, the Caddyfile, the Postgres build), and check out the
+   **workflow's own commit** for the helpers and the host scripts. The target must not supply the tooling: a rollback
+   to an older commit would otherwise restore older `deploy-release.sh`/`render-env.sh` (run 41730834972 failed that way).
 4. **Decrypt and render**: `scripts/render-env.sh` decrypts `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_AGE_KEY` and writes the environment file to standard output. The runner passes that output straight into the SSH session's standard input. Nothing is written to a log.
 5. **Write the environment file on the host**: `/opt/jordylab/env/prod.env`, mode 600, owner the deploy user. The file it replaces is kept as `prod.env.previous` until the next deploy overwrites it, and a rollback restores it.
 6. **Deploy on the host**: `scripts/deploy-release.sh deploy <tag>` over SSH. The script runs its own health check on the host before it records success (see below). On any failure it rolls back itself and exits non-zero.
