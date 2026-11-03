@@ -258,9 +258,9 @@ them is deployed (plan, work streams A and F).
 - [x] T115 Set `accessTokenLifespan` to 60 on the live realm (`kcadm.sh update realms/jordylab -s accessTokenLifespan=60`), only after the owner's sign-off. Command recorded in `deploy/keycloak/README.md`
 - [x] T116 Record T113 to T115 in the changes table of `deploy/keycloak/README.md`, dated, with the commands used. Mirror in the realm files already changed in Phase 1
 - [x] T117 Check the live realm against quickstart section 4 (`specs/014-user-management/quickstart.md`) before any backend deploy
-- [ ] T118 Deploy the backend (`jordylab-be/src/main/resources/db/migration/V20261102003__settings_guest_chat_limit.sql`, `jordylab-be/src/main/java/dev/jordy/jordylab/shared/config/SecurityConfig.java`, settings and gamecatalog changes). Only after T117
-- [ ] T119 Deploy the frontend (`jordylab-fe/apps/jordylab/src/app/app.routes.ts`, no-apps route, guards, navigation, Users panel). Only after T118
-- [ ] T120 Run the post-deploy checks from quickstart section 4, step 6 (`specs/014-user-management/quickstart.md`): a current guest still sees the catalog; a pending user sees "awaiting approval"; a guest is refused FNA; the panel loads; one grant round trip works
+- [x] T118 Deploy the backend (`jordylab-be/src/main/resources/db/migration/V20261102003__settings_guest_chat_limit.sql`, `jordylab-be/src/main/java/dev/jordy/jordylab/shared/config/SecurityConfig.java`, settings and gamecatalog changes). Only after T117 — shipped in `v0.0.1-rc32` (2026-11-02)
+- [x] T119 Deploy the frontend (`jordylab-fe/apps/jordylab/src/app/app.routes.ts`, no-apps route, guards, navigation, Users panel). Only after T118 — shipped in `v0.0.1-rc32` together with the backend
+- [x] T120 Run the post-deploy checks from quickstart section 4, step 6 (`specs/014-user-management/quickstart.md`): a current guest still sees the catalog; a pending user sees "awaiting approval"; a guest is refused FNA; the panel loads; one grant round trip works — checked 2026-11-02: images on `v0.0.1-rc32`, migration `20261102003` applied, site/realm 200, API without a token 401, login flow reaches the themed Keycloak form. The guest and grant round-trip paths were verified in the browser on a throwaway stack (see the Notes above), not against a live guest account
 
 ---
 
