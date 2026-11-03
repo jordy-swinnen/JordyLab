@@ -24,8 +24,9 @@ function markSvg(cornerRadius, markScale) {
 
 const ICONS = [
   // Launchers crop maskable icons to a centred safe zone, so the mark is scaled down to keep the whole J inside it.
-  { file: 'icon-192.png', size: 192, cornerRadius: 13, markScale: 0.7 },
-  { file: 'icon-512.png', size: 512, cornerRadius: 13, markScale: 0.7 },
+  // Maskable icons are full-bleed: rounded corners would leave transparent gaps on launchers that do not mask.
+  { file: 'icon-192.png', size: 192, cornerRadius: 0, markScale: 0.7 },
+  { file: 'icon-512.png', size: 512, cornerRadius: 0, markScale: 0.7 },
   // iOS rounds the corners itself and shows the whole square, so the touch icon is a full square at full mark size.
   { file: 'apple-touch-icon.png', size: 180, cornerRadius: 0, markScale: 1 },
 ];
