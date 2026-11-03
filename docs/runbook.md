@@ -193,17 +193,20 @@ $COMPOSE ps
    mismatch before it connects.
 4. No k3s credential is used any more. Production runs on Docker Compose (spec 020), k3s is stopped and disabled, and the
    `KUBE_*` secrets and the `ci-deploy` token belong to the retired pipeline; remove them when convenient.
-5. There is no automatic deploy since the cutover: the repository variable `AUTO_DEPLOY` is `false` and no workflow reads
-   it. Whether automatic deploys return is spec 020's T062, an owner decision.
+5. Automatic deploys are on since the pipeline was rewired (spec 020 T062). The repository variable `AUTO_DEPLOY` gates
+   them: `true` deploys a green `main` build by itself, anything else pauses that, and manual runs are unaffected.
 
 ## 10. Deploy
 
-Production is the Docker Compose stack on the VPS (spec 020); k3s is retired. A deploy is started by hand and runs without
-an approval. The automatic k3s pipeline of spec 019 could not reach anything after the cutover and was removed.
+Production is the Docker Compose stack on the VPS (spec 020); k3s is retired. A deploy runs without an approval: a green
+build on `main` deploys by itself while `AUTO_DEPLOY` is `true`, and a manual run works with or without it. An automatic run
+skips a target older than the live release (a slow build that finishes late); a manual run never does, which is what makes
+an older target a rollback.
 
-1. Merge to `main`. `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`; it does not
-   deploy anything.
-2. Deploy a target: GitHub → Actions → *Deploy to Production (Compose)* → *Run workflow*, or from a terminal:
+1. Merge to `main`. `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`, and while
+   `AUTO_DEPLOY` is `true` it then calls the Compose workflow with that commit.
+2. A manual deploy uses the same workflow: GitHub → Actions → *Deploy to Production (Compose)* → *Run workflow*, or from a
+   terminal:
    ```
    gh workflow run deploy-prod-compose.yml --repo jordy-swinnen/JordyLab -f target=<full-sha>
    ```
@@ -398,9 +401,10 @@ Keep the current and previous release images: they are the rollback targets name
 ## 20. Deploys, releases and the APK
 
 **Status: the deploy platform changed on 2026-11-03.** The automatic k3s pipeline (spec 019) deployed a green `main` build
-without approval; the Compose cutover (spec 020), later the same day, retired it. Deploys now run on Docker Compose, are
-started by hand, and take a commit sha or a release tag (§10, §11). The measurement tables below are the record of the k3s
-pipeline, not of the Compose deploys, which time themselves in their own runs.
+without approval; the Compose cutover (spec 020), later the same day, retired it. Deploys now run on Docker Compose: a green
+`main` build deploys by itself while `AUTO_DEPLOY` is `true`, and a manual run takes a commit sha or a release tag (§10,
+§11). The measurement tables below are the record of the k3s pipeline, not of the Compose deploys, which time themselves in
+their own runs.
 
 The first deploy through the Compose workflow (T049) was run 41728815560 on 2026-11-03: target `76f38366` (a commit sha),
 every step green, `current-release` set to it, and the public smoke checks 200/401/200. Later deploys are read the same way:
