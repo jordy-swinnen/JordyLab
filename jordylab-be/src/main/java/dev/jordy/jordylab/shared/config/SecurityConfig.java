@@ -59,6 +59,8 @@ public class SecurityConfig {
                     .hasRole("gamecatalog-scanner")
                     .requestMatchers("/api/gamecatalog/ingest/client").hasRole("admin")
                     .requestMatchers("/api/fna/**", "/api/settings/**").hasRole("admin")
+                    .requestMatchers("/api/feedback/inbox/**").hasRole("admin")
+                    .requestMatchers("/api/feedback/apps", "/api/feedback/tickets").hasRole("guest")
                     .requestMatchers(HttpMethod.GET, "/api/gamecatalog/games/**",
                             "/api/gamecatalog/platforms", "/api/gamecatalog/places")
                     .hasAnyRole("admin", "app-gamecatalog")

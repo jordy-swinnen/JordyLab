@@ -40,7 +40,9 @@
       ],
       "@jordylab-fe/settings/nav": ["libs/settings/nav/src/index.ts"],
       "@jordylab-fe/shared/theme/api": ["libs/shared/theme/api/src/index.ts"],
-      "@jordylab-fe/shared/layout": ["libs/shared/layout/src/index.ts"]
+      "@jordylab-fe/shared/layout": ["libs/shared/layout/src/index.ts"],
+      "@jordylab-fe/feedback/api": ["libs/feedback/api/src/index.ts"],
+      "@jordylab-fe/feedback/ui": ["libs/feedback/ui/src/index.ts"]
     },
     "strict": false,
     "noUncheckedSideEffectImports": false,

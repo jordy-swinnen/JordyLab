@@ -47,6 +47,10 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(manualArticleRequest(), admin))).isEqualTo(201);
             // LibBot's allowance and the console endpoints (spec 013): admins reach both.
             softly.assertThat(status(as(get("/api/gamecatalog/libbot/quota"), admin))).isEqualTo(200);
+            // spec 017: the admin owns the idea-box inbox; the guest feedback tab stays guest-only.
+            softly.assertThat(status(as(get("/api/feedback/inbox"), admin))).isEqualTo(200);
+            softly.assertThat(status(as(get("/api/feedback/apps"), admin))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/feedback/tickets"), admin))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/consoles"), admin))).isEqualTo(200);
             softly.assertThat(status(as(get("/api/gamecatalog/consoles/known?q=nin"), admin))).isEqualTo(200);
             // Naming a host is an admin action; an unknown host id reaches the controller and answers 404, never 403.
@@ -80,6 +84,13 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(refreshRunRequest(), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/fna/articles"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/settings/users"), guest))).isEqualTo(403);
+            // spec 017: guests submit feedback and read their own tickets; the inbox stays admin-only.
+            softly.assertThat(status(as(get("/api/feedback/apps"), guest))).isEqualTo(200);
+            softly.assertThat(status(as(get("/api/feedback/tickets"), guest))).isEqualTo(200);
+            softly.assertThat(status(as(submitFeedbackRequest(), guest))).isEqualTo(201);
+            softly.assertThat(status(as(get("/api/feedback/inbox"), guest))).isEqualTo(403);
+            softly.assertThat(status(as(post("/api/feedback/inbox/" + UUID.randomUUID() + "/reject"), guest)))
+                    .isEqualTo(403);
             softly.assertThat(status(as(post("/api/gamecatalog/games/refresh"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/library/status"), guest))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/ingest/client?libraryType=steam"), guest))).isEqualTo(403);
@@ -124,6 +135,9 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
             softly.assertThat(status(as(get("/api/gamecatalog/games"), pending))).isEqualTo(403);
             softly.assertThat(status(as(chatRequest(), pending))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/libbot/quota"), pending))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/feedback/apps"), pending))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/feedback/tickets"), pending))).isEqualTo(403);
+            softly.assertThat(status(as(get("/api/feedback/inbox"), pending))).isEqualTo(403);
             softly.assertThat(status(as(get("/api/gamecatalog/consoles"), pending))).isEqualTo(403);
             softly.assertThat(status(as(markRequest(), pending))).isEqualTo(403);
             softly.assertThat(status(as(romStatusRequest(), pending))).isEqualTo(403);
@@ -208,6 +222,13 @@ class RoleMatrixTest extends KeycloakIntegrationTest {
         return post("/api/fna/articles/manual")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"url\":\"https://example.invalid/article-" + UUID.randomUUID() + "\"}");
+    }
+
+    private MockHttpServletRequestBuilder submitFeedbackRequest() {
+        return post("/api/feedback/tickets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"app\":\"GAME_CATALOG\",\"type\":\"BUG_REPORT\",\"title\":\"It broke\","
+                        + "\"description\":\"It really broke.\"}");
     }
 
     private MockHttpServletRequestBuilder ingestScanRequest() {
