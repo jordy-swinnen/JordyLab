@@ -25,6 +25,29 @@
     ]
   },
   "clients": [
+      {
+      "clientId": "test-mcp",
+      "name": "Test MCP connector (audience jordylab-mcp)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["https://claude.ai/api/mcp/auth_callback"],
+      "webOrigins": [],
+      "protocol": "openid-connect",
+      "attributes": {"pkce.code.challenge.method": "S256"},
+      "protocolMappers": [{
+        "name": "mcp-audience",
+        "protocol": "openid-connect",
+        "protocolMapper": "oidc-audience-mapper",
+        "consentRequired": false,
+        "config": {"included.custom.audience": "jordylab-mcp", "access.token.claim": "true", "id.token.claim": "false"}
+      }],
+      "defaultClientScopes": ["profile", "email", "roles", "web-origins", "acr", "basic"],
+      "optionalClientScopes": []
+    },
     {
       "clientId": "test-public",
       "publicClient": true,

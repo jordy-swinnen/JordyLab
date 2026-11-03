@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.fna.service;
 
 import com.google.common.base.Preconditions;
+import dev.jordy.jordylab.fna.domain.Article;
 import dev.jordy.jordylab.fna.domain.Briefing;
 import dev.jordy.jordylab.fna.domain.PortfolioPosition;
 import dev.jordy.jordylab.fna.domain.repository.ArticleRepository;
@@ -11,6 +12,8 @@ import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.rest.controller.model.PortfolioPositionDto;
 import dev.jordy.jordylab.fna.rest.controller.model.WishlistItemDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -32,14 +35,25 @@ public class FnaService {
 
     public List<ArticleSummaryDto> getRecentArticles() {
         return articleRepository.findTop50ByOrderByPublishedAtDesc().stream()
-                .map(article -> new ArticleSummaryDto(
-                        article.getId(),
-                        article.getTitle(),
-                        article.getUrl(),
-                        article.getPublishedAt(),
-                        article.getFeed().getName()
-                ))
+                .map(this::toArticleSummary)
                 .toList();
+    }
+
+    /** Newest first. A blank text returns every article; otherwise the title must contain the text (spec change S2). */
+    public Page<ArticleSummaryDto> searchArticles(String titleText, Pageable pageable) {
+        Page<Article> articles = StringUtils.hasText(titleText)
+                ? articleRepository.findByTitleContainingIgnoreCaseOrderByPublishedAtDesc(titleText.trim(), pageable)
+                : articleRepository.findAll(pageable);
+        return articles.map(this::toArticleSummary);
+    }
+
+    private ArticleSummaryDto toArticleSummary(Article article) {
+        return new ArticleSummaryDto(
+                article.getId(),
+                article.getTitle(),
+                article.getUrl(),
+                article.getPublishedAt(),
+                article.getFeed().getName());
     }
 
     /** Held positions only: wishlist items have no share count and never contribute to worth or allocation. */

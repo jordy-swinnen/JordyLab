@@ -1,6 +1,8 @@
 package dev.jordy.jordylab.fna.domain.repository;
 
 import dev.jordy.jordylab.fna.domain.Article;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -11,4 +13,6 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
     boolean existsByUrl(String url);
 
     List<Article> findTop50ByOrderByPublishedAtDesc();
+
+    Page<Article> findByTitleContainingIgnoreCaseOrderByPublishedAtDesc(String title, Pageable pageable);
 }
