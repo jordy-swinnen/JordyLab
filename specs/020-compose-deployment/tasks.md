@@ -126,7 +126,7 @@
 - [ ] T053 [US4] Check the host firewall and Docker's published ports: `sudo ufw status verbose` shows only 22, 80, 443 and the tailnet rule, and `docker ps --format '{{.Names}} {{.Ports}}'` shows only caddy publishing 80 and 443 (research R8). Depends on T036
 - [ ] T054 [US4] External port scan from outside the tailnet: `nmap -Pn -p- 57.129.163.110`, the same scan as T017. Only 80 and 443 answer, plus 22 until T056. Record in the quickstart log (quickstart step 10). Depends on T053
 - [x] T055 [US4] Check tailnet SSH again from the owner's Mac and from a CI test job, now that the deploy key is in place (quickstart step 11, second check). Depends on T023, T048. Done 2026-11-03 19:23 UTC: Mac — `ssh ubuntu@100.93.81.41` over the tailnet; CI — the tailscale-ssh-smoke workflow dispatched on demand from main (run 41702833214), `jordylab-deploy` + `DEPLOY_SSH_KEY` + pinned fingerprint. Recorded in the quickstart log
-- [ ] T056 [US4] **OWNER APPROVAL**: close public SSH on port 22 in the host firewall, only after T055 passes. Depends on T054, T055
+- [X] T056 [US4] **OWNER APPROVAL**: close public SSH on port 22 in the host firewall, only after T055 passes. Depends on T054, T055 Done 2026-11-03: precondition verified (tailnet SSH from the Mac; CI in run 41724836036), the broad 22/tcp LIMIT rule deleted, public 22 closed from the Mac, tailnet SSH still works (Tailscale SSH needs no ufw rule).
 - [ ] T057 [US4] From outside the tailnet, confirm port 22 is closed and that tailnet SSH still works (quickstart step 11). Depends on T056
 
 **Checkpoint**: the external scan shows only the expected doors.

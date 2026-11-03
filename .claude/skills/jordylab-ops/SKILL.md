@@ -304,9 +304,12 @@ ssh ubuntu@100.93.81.41 'sudo apt-get update && sudo apt-get upgrade -y'
 ssh ubuntu@100.93.81.41 'sudo tailscale status | head -3'
 ```
 
-ufw rules in place: default deny incoming; allow 22/tcp (close it once tailnet SSH is proven, spec 020 T056), 80/tcp and
-443/tcp. Nothing else is public. SSH hardening lives in `/etc/ssh/sshd_config.d/00-hardening.conf` (no passwords, no root
-login) — always keep a second session open when changing it.
+ufw rules in place: default deny incoming; 80/tcp and 443/tcp only. **Public SSH (22) is closed** (2026-11-03, spec 020
+T056); administration is Tailscale SSH (`tailscale up --ssh`), which tailscaled terminates on `tailscale0`, so no ufw rule
+for 22 is needed — verified with public 22 closed and tailnet SSH working. SSH hardening lives in
+`/etc/ssh/sshd_config.d/00-hardening.conf` (no passwords, no root login) — always keep a second session open when changing
+it. A leftover `6443/tcp on tailscale0` rule from k3s can be deleted (`sudo ufw delete allow in on tailscale0 to any port
+6443 proto tcp`): nothing listens there any more.
 
 Tailscale policy: `tagOwners` for `tag:jordylab-vps` and `tag:ci`; grants: members → everything,
 `tag:ci` → `tag:jordylab-vps` `tcp:22` only; a `tests` block enforces it on save.
@@ -325,7 +328,6 @@ sudo nmap -Pn -p- -T4 --max-rate 200 57.129.163.110                        # onl
 ## Open items
 
 - Remove the retired `KUBE_*` environment secrets.
-- Close public SSH (port 22) once tailnet SSH is proven from the Mac and CI (spec 020 T056).
 - Decide whether automatic deploys return (spec 020 T062); until then a deploy is a manual run.
 - Replace Keycloak's temporary bootstrap admin with a permanent admin.
 - Restrict the OVH Object Storage user to the single bucket (currently project-wide operator role).

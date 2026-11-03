@@ -67,9 +67,10 @@ SSH in as the image's default user, then:
    ```
    sudo ufw default deny incoming
    sudo ufw default allow outgoing
-   sudo ufw allow 22/tcp     # public SSH; close it (spec 020 T056) once tailnet SSH works from the Mac and CI
    sudo ufw allow 80/tcp     # Caddy: Let's Encrypt HTTP-01 and the HTTP to HTTPS redirect
    sudo ufw allow 443/tcp    # Caddy: the site
+   # No rule for 22: public SSH was closed on 2026-11-03 (spec 020 T056). Administration is Tailscale SSH (§4),
+   # which tailscaled terminates on tailscale0 and which therefore needs no ufw rule.
    sudo ufw enable
    ```
    Nothing else is public. Only `caddy` publishes ports (`compose.yaml`), and administration goes over Tailscale (§4):
