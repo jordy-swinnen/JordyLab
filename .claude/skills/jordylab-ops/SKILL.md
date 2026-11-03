@@ -52,7 +52,7 @@ fallback; the narrative of the move is in `specs/020-compose-deployment/` and th
 | Stack         | Docker Compose project `jordylab` from `/opt/jordylab/compose/compose.yaml`, env file `/opt/jordylab/env/prod.env`           |
 | Live release  | `/opt/jordylab/state/current-release` (a tag or `sha-<sha>`), previous in `previous-release`; images `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:<release>` |
 | Backups       | pgBackRest → OVH Object Storage, bucket `jordylab-cnpg-backups`, path `/pgbackrest`, `https://s3.gra.io.cloud.ovh.net`        |
-| CI/CD         | `Build` on every push; deploy by hand with `Deploy to Production (Compose)` and a commit sha or release tag (no approval)     |
+| CI/CD         | `Build` on every push; a green `main` build deploys through `Deploy to Production (Compose)` while `AUTO_DEPLOY` is `true`; a manual run takes a commit sha or release tag (no approval) |
 | TLS           | Caddy, Let's Encrypt HTTP-01 on port 80 (contact `jordy.swinnen@pm.me`); certificate data in the `jordylab_caddy-data` volume  |
 | Secrets       | SOPS + age; private key at `~/Library/Application Support/sops/age/keys.txt` (+ password manager + GitHub env secret)          |
 
@@ -126,10 +126,13 @@ containers through the rendered environment.
 - **`admin` is a composite of `guest` + `gamecatalog-scanner`**; `mobile-release-publisher` is retired with the native app.
 - **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll`; `/actuator/info` reports the built commit.
 - **Frontend image** copies `dist/apps/jordylab/browser` (Angular application builder output) into nginx.
-- **Deploy workflow**: `deploy-prod-compose.yml`, run by hand with a commit sha or a release tag (`target`). It resolves the
-  target with `deploy/scripts/deploy-decision.sh` (`sha-<sha>` or the tag; refused when the images are missing), renders
-  `prod.env` from SOPS on the runner, and over Tailscale SSH runs `deploy-release.sh` on the host; it then smoke-checks the
-  public site and asks the host to roll back when a step failed. Pinned sops 3.13.3.
+- **Deploy workflow**: `deploy-prod-compose.yml`, called by `build.yml` for a green `main` build while `AUTO_DEPLOY` is
+  `true`, or run by hand with a commit sha or a release tag (`target`). It resolves the target with
+  `deploy/scripts/deploy-decision.sh` (`sha-<sha>` or the tag; refused when the images are missing), reads
+  `state/current-release` and skips an automatic target older than it, renders `prod.env` from SOPS on the runner, and over
+  Tailscale SSH runs `deploy-release.sh` on the host; it then smoke-checks the public site and asks the host to roll back
+  when a step failed. Helpers and host scripts come from the workflow's own commit, the release files from the target.
+  Pinned sops 3.13.3.
 - **Build workflow**: images only on push to `main`; image matrix `fail-fast: false`; the backend gets
   `JORDYLAB_GIT_COMMIT` as a build argument.
 
@@ -194,6 +197,8 @@ gh run rerun <run-id> --repo jordy-swinnen/JordyLab --failed
 gh workflow run deploy-prod-compose.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag>
 # The last deploys and what they reported:
 gh run list --repo jordy-swinnen/JordyLab --workflow deploy-prod-compose.yml --limit 5
+# Pause or resume automatic deploys:
+gh variable set AUTO_DEPLOY --repo jordy-swinnen/JordyLab --body false     # true to resume
 gh pr create --base main --fill
 ```
 
@@ -328,7 +333,6 @@ sudo nmap -Pn -p- -T4 --max-rate 200 57.129.163.110                        # onl
 ## Open items
 
 - Remove the retired `KUBE_*` environment secrets.
-- Decide whether automatic deploys return (spec 020 T062); until then a deploy is a manual run.
 - Replace Keycloak's temporary bootstrap admin with a permanent admin.
 - Restrict the OVH Object Storage user to the single bucket (currently project-wide operator role).
 - ntfy subdomain if attachments / web push are needed.
