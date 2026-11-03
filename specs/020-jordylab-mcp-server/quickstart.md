@@ -52,15 +52,21 @@ token decodes to `aud` containing `jordylab-mcp` and `realm_access.roles` contai
 
 ## 5. Answer questions from live data
 
-Ask Claude, in one chat, each of these and compare with the web app screen named:
+Ask Claude, in one chat, these ten questions (five catalog, five finance) and compare each with the web app screen named
+(SC-005):
 
 | Question | Compare with |
 |---|---|
 | Which local co-op games can four people play on one couch? | Game Catalog grid with the Local multiplayer filter and minimum 4 |
-| What is on my wishlist? | Finance → Wishlist |
-| What is my portfolio worth today? | Finance → Portfolio (same prices and fetch times) |
-| What did the latest briefing conclude? | Finance → Briefing (same generation time) |
+| Which games do I own through Steam Family only? | Game Catalog grid, source filter "Steam (Family)" |
+| Which games have I marked as played and liked? | Game Catalog grid, mark filter |
 | Which consoles do I have? | Places / Consoles |
+| Tell me about one game I own, and where it lives. | Game detail page for the same game |
+| What news is there about a ticker I hold? | Finance News articles, title match |
+| What is my portfolio worth today? | Finance → Portfolio (same prices and fetch times) |
+| Which portfolio positions have no price yet? | Finance → Portfolio (unpriced rows) |
+| What is on my wishlist? | Finance → Wishlist |
+| What did the latest briefing conclude? | Finance → Briefing (same generation time) |
 
 Expected: the same titles, values and times as the screens. Any unknown value is reported as unknown, not guessed.
 

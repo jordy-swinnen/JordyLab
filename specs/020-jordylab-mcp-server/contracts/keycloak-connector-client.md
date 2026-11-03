@@ -36,8 +36,10 @@ Inherited from the realm: `accessTokenLifespan` = 60 seconds (spec 014). Refresh
 
 - **Fresh imports**: the definition is added to `deploy/keycloak/realm-prod.json` and to
   `jordylab-be/compose/keycloak-realm-export.json`, so a new realm contains it.
-- **Live production** (realm already imported; imports run once): created with `kcadm` through the existing
-  `kubectl exec` pattern in `deploy/keycloak/README.md`, then recorded as a dated row in that README's change table.
+- **Live production** (realm already imported; imports run once): created with `kcadm` inside the Keycloak container of the
+  Compose stack, after the cutover in `specs/019-compose-deployment/` (I1). The `kubectl exec` pattern in
+  `deploy/keycloak/README.md` applies only to the k3s host, which is being retired. The change is then recorded as a dated
+  row in that README's change table.
   Run it before the first Claude connection. It can be run before or after the backend deploy, since the endpoint is
   admin-only either way.
 - **Local dev**: the same `kcadm` commands against the Podman Keycloak (`--server http://localhost:8080`, no `/auth`).

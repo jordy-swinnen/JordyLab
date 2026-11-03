@@ -45,7 +45,7 @@ it stands on 2026-11-03.
 - **Decision**: bind the token with Keycloak's standard **Audience** protocol mapper on the connector client
   (R5), which adds `jordylab-mcp` to the access token's `aud`. The `/mcp` chain rejects any token without that audience
   (401). This needs no experimental feature.
-- **Residual risk (open item OI-1)**: other chains do not check `aud`, so a connector token also works on `/api`. It
+- **Residual risk (OI-1, decided 2026-11-03: accepted for v1)**: other chains do not check `aud`, so a connector token also works on `/api`. It
   carries the admin's own rights there, which is the same as the browser session today. The read-only promise rests on
   the connector's tool list, not on the token.
 
@@ -165,7 +165,8 @@ it stands on 2026-11-03.
 
 ## R10. Gateway routes and a stale rule
 
-- **Add** to `deploy/k8s/base/gateway.yaml`, on the `https` listener, both to the backend:
+- **Add** to the public Caddyfile `deploy/compose/Caddyfile`, which `specs/019-compose-deployment/` creates. This happens after
+  the cutover, and the k3s `gateway.yaml` is not edited. Both routes go to the backend:
   - `PathPrefix /mcp`
   - `PathPrefix /.well-known/oauth-protected-resource` (matches the path-suffixed form too, since PathPrefix is
     segment-based)
@@ -190,6 +191,6 @@ it stands on 2026-11-03.
 
 ## Open items carried into the plan
 
-- OI-1: a connector token is accepted by `/api` (R3). Decision needed from Jordy.
+- OI-1: decided 2026-11-03, accepted for v1 (R3).
 - Confirmed by the spike rather than assumed: the STATELESS handshake with Claude (R1), AOP on MCP-invoked tools (R7),
   the Keycloak setting names and refresh behaviour (R5, R6), and the `WWW-Authenticate` header through Traefik (R10).

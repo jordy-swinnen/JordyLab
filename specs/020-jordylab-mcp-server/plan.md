@@ -37,7 +37,8 @@ realm configuration.
 `@Language("JSON")`, the shared `TestSecurityConfig` for slice tests, Testcontainers Postgres for query tests,
 `ModularityTests`. Live proof: `quickstart.md` steps 1–10, with Claude Desktop and Claude mobile.
 
-**Target Platform**: single-node k3s on OVH VPS-2, behind the Traefik Gateway, public at `https://jordylab.be`. Claude
+**Target Platform**: single host on OVH VPS-2, public at `https://jordylab.be`. Today it runs k3s behind Traefik. After the
+cutover in `specs/019-compose-deployment/` it runs Docker Compose behind Caddy, and this feature is released on that stack. Claude
 calls it from Anthropic's cloud, so it must be public HTTPS (Claude's docs).
 
 **Project Type**: backend feature (a new module and tool adapters), plus a realm client, gateway routes and docs. No
@@ -127,8 +128,8 @@ jordylab-be/
     └── fna/rest/controller/FnaMcpToolsTest.java                   # NEW (Testcontainers)
 
 deploy/
-├── k8s/base/gateway.yaml                               # + HTTPRoute /mcp and /.well-known/oauth-protected-resource;
-│                                                       #   − stale assetlinks rule
+├── compose/Caddyfile                                   # after the cutover (019): + /mcp and /.well-known/oauth-protected-resource;
+│                                                       #   the k3s k8s/base/gateway.yaml is not edited
 ├── keycloak/realm-prod.json                            # + jordylab-mcp-connector client (fresh imports)
 └── keycloak/README.md                                  # + dated row for the live kcadm apply
 
@@ -156,7 +157,7 @@ layout already names.
 3. **Catalog tools**: `GameCatalogMcpTools` (five tools) with Testcontainers tests for filters, unknown facts, hidden
    fields and the 50-item bound.
 4. **Finance tools**: `FnaMcpTools` (four tools), the title-search query, and the briefing "no briefing yet" case.
-5. **Keycloak and gateway**: the client in both realm files; the `kcadm` apply recorded in the README; the two routes;
+5. **Keycloak and gateway** (after the Compose cutover, I1): the client in both realm files; the `kcadm` apply recorded in the README; the two routes in the Caddyfile;
    the stale rule removed. Spike gate: token has `aud`, `realm_access`, a refresh token and no offline token; rotation
    on (R5).
 6. **Surface test and docs**: the exact-tool-list test, the read-only hint test, `AGENTS.md`, `jordylab-be/AGENTS.md`,
@@ -198,12 +199,13 @@ These follow from the research. They are applied to `spec.md` in the same change
 
 ## Open items (need Jordy)
 
-1. **OI-1: connector tokens and `/api`.** A connector token carries the admin's rights on `/api` as well, so a leaked
+1. **OI-1: connector tokens and `/api`. Decided 2026-11-03: option A.** A connector token carries the admin's rights on `/api` as well, so a leaked
    token could call a write endpoint. Options: (A) accept it for v1, as the browser session already carries the same
    rights, and revisit in a later spec (recommended); (B) require the audience on the `/api` chain too, which touches
    every login path and needs the web client to send the audience.
-2. **Keycloak apply before merge.** Confirm that the `kcadm` step for `jordylab-mcp-connector` runs before the PR merges,
-   since each merge deploys automatically.
+2. **Keycloak apply before release.** The release follows the Compose cutover (I1), so the `kcadm` step for
+   `jordylab-mcp-connector` runs before it. Confirm that, and confirm whether a merge still deploys: Compose decision 4
+   says deploys run on release tags only (T2 in the analysis).
 3. **Article matching.** Confirm S2: `search_articles` matches titles only, so a company mentioned only in the body is
    not found.
 

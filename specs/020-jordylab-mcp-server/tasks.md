@@ -28,11 +28,11 @@ Paths are relative to the repository root. The backend root is `jordylab-be/`.
 
 **Purpose**: settle the open items and add the libraries. Nothing else starts until T001 to T003 are answered.
 
-- [ ] T001 **OWNER DECISION** (OI-1): record the answer about connector tokens on `/api` in
-  `specs/020-jordylab-mcp-server/research.md` R3. Default if no answer: option A, accept for v1 (recommended). Option B
-  adds a task to Phase 2 that requires the audience on the `/api` chain as well.
-- [ ] T002 **OWNER DECISION** (OI-2): confirm in `specs/020-jordylab-mcp-server/plan.md` (Open items) that the production
-  Keycloak apply in T057 runs before the PR merges, because each merge deploys automatically (spec 019).
+- [x] T001 **DECIDED** (OI-1, 2026-11-03): option A. Connector tokens are accepted on `/api` in v1. Recorded in
+  `specs/020-jordylab-mcp-server/research.md` R3 and `spec.md` Assumptions. Option B is not planned.
+- [ ] T002 **OWNER DECISION** (OI-2, premise changed by I1): confirm in `specs/020-jordylab-mcp-server/plan.md` (Open items)
+  that the production Keycloak apply in T057 runs before the release. Also confirm whether a merge still deploys: Compose
+  decision 4 says deploys run on release tags only (T2).
 - [ ] T003 **OWNER DECISION** (OI-3): confirm in `specs/020-jordylab-mcp-server/spec.md` (User Story 2, scenario 1) that
   `search_articles` matches titles only (spec change S2).
 - [ ] T004 Add `org.springframework.ai:spring-ai-starter-mcp-server-webmvc` (version from the Spring AI BOM) and the
@@ -45,6 +45,9 @@ Paths are relative to the repository root. The backend root is `jordylab-be/`.
 
 **Purpose**: the `mcp` module, transport, authentication, discovery, guardrails and the Keycloak client. Every user story
 needs all of these.
+
+**Gate (I1)**: T017 and T057 wait for the Compose cutover in `specs/019-compose-deployment/`. The rest of this phase does
+not depend on the host.
 
 **CRITICAL**: no user story work begins until this phase is complete and its tests pass.
 
@@ -112,9 +115,10 @@ needs all of these.
 - [ ] T016 [P] Add the same client to `deploy/keycloak/realm-prod.json` for fresh production imports. The redirect has no
   `${PRODUCTION_DOMAIN}` placeholder because the callback is Claude's fixed URL. Validate with
   `python3 -m json.tool deploy/keycloak/realm-prod.json > /dev/null`.
-- [ ] T017 Add the gateway routes to `deploy/k8s/base/gateway.yaml` on the `https` listener, both to `backend` port
-  `8080`: `PathPrefix /mcp` and `PathPrefix /.well-known/oauth-protected-resource`. In the same file, remove the stale
-  `Exact /.well-known/assetlinks.json` rule (research R10). Confirm with `kustomize build deploy/k8s/overlays/prod > /dev/null`.
+- [ ] T017 **Waits for the Compose cutover (I1).** Add the two routes to the public Caddyfile `deploy/compose/Caddyfile`
+  (created by `specs/019-compose-deployment/` T005): `/mcp` and `/.well-known/oauth-protected-resource*`, both to the backend
+  service on port `8080`. Remove any stale `/.well-known/assetlinks.json` route (spec 018 removed that endpoint). The k3s
+  `deploy/k8s/base/gateway.yaml` is not edited (research R10). Confirm with T054.
 
 ### Foundational tests
 
@@ -126,11 +130,14 @@ needs all of these.
   paths return `200` with the exact snake_case fields and need no token.
 - [ ] T020 Test the chain in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpSecurityTest.java` with MockMvc:
   `POST /mcp` without a token returns `401` with the exact `WWW-Authenticate` pointer; an admin token passes the chain;
-  a guest-only token returns `403` with no data. Use the `jwt()` post-processor and `@Language("JSON")` bodies. The audience
-  check is covered by T021.
+  a guest-only token returns `403` with no data. Build the tokens with `McpJwtTestBuilder` (created in T021) and the `jwt()`
+  post-processor, with `@Language("JSON")` bodies. The audience check is covered by T021.
 - [ ] T021 [P] Test the audience validator in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpJwtDecoderFactoryTest.java`: a token without `jordylab-mcp`
-  is rejected and one with it is accepted. Build the `Jwt` instances with a test fixture.
+  is rejected and one with it is accepted. Create
+  `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpJwtTestBuilder.java` (`@UtilityClass`, `DEFAULT_*` constants,
+  `aDefaultJwt()` and `aJwt()` builder methods, the canonical TestBuilder structure; constitution IV). Build every `Jwt`
+  in the MCP tests with it.
 - [ ] T022 [P] Test the advice in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpToolCallAdviceTest.java`:
   the audit line names the admin, tool, outcome and duration and contains no arguments (captured log);
   a rate-limited call does not run the tool (a counting fake, asserted by value); an exception returns the sanitised
@@ -142,15 +149,18 @@ needs all of these.
 
 ### Gates (must pass before Phase 3)
 
-- [ ] T024 Protocol gate, run locally with MCP Inspector against `./gradlew bootRun`: `initialize` and `tools/list` complete
+- [ ] T024 Protocol gate, run after T059 (I2) with MCP Inspector against `./gradlew bootRun`. Obtain an admin token through
+  Inspector's OAuth flow for `jordylab-mcp-connector`. `initialize` and `tools/list` complete
   over Streamable HTTP in stateless mode, with no session header required. Claude connects from Anthropic's cloud and
   cannot reach localhost, so Claude's own check is in Phase 8. If the exchange fails, change the protocol in T005 to
   `STREAMABLE` and repeat. Record the result in `specs/020-jordylab-mcp-server/research.md` R1.
-- [ ] T025 Token gate, against the local Keycloak with T015 imported: a token for `jordylab-mcp-connector` carries `aud`
+- [ ] T025 Token gate, against the local Keycloak after T059 (I2) created the client live (the realm import runs only once):
+  a token for `jordylab-mcp-connector` carries `aud`
   containing `jordylab-mcp`, `realm_access.roles` with `admin`, a refresh token, and no offline token. Confirm the exact
   names of "Revoke Refresh Token" and "Refresh Token Max Reuse" in the admin console, and record them in
   `specs/020-jordylab-mcp-server/contracts/keycloak-connector-client.md` (Verification). Also confirm the
-  `tool-calls-per-minute` and capability property keys used in T005.
+  `tool-calls-per-minute` and capability property keys used in T005. Confirm that the realm refuses anonymous client
+  registration (anonymous access to Client Registration off) and record the setting (FR-002, G1).
 
 **Checkpoint**: foundation ready. Authentication, discovery, rate limit, audit and the Keycloak client pass their tests,
 and T024 and T025 are recorded.
@@ -169,7 +179,8 @@ from `search_games`.
 
 - [ ] T026 [P] [US1] Test the catalog tools in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpToolsTest.java` with Testcontainers
-  Postgres and synthetic fixtures created inside the test: `search_games` respects platform, local multiplayer and
+  Postgres and fixtures built with the existing `GameTestBuilder`, `GameInstallationTestBuilder`, `GameMarkTestBuilder` and
+  `ScanSourceTestBuilder` (constitution IV): `search_games` respects platform, local multiplayer and
   `minLocalPlayers` (confirmed counts only); unknown facts come back as `null`; `limit` is clamped to 50 with the correct
   `totalMatching`; `get_game` contains no voter identifiers; an unknown game id returns a "not found" tool error.
 
@@ -210,7 +221,9 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 ### Tests for User Story 2
 
 - [ ] T035 [P] [US2] Test the finance tools in
-  `jordylab-be/src/test/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpToolsTest.java` with Testcontainers Postgres:
+  `jordylab-be/src/test/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpToolsTest.java` with Testcontainers Postgres and the existing
+  fixtures `ArticleTestBuilder`, `PortfolioPositionTestBuilder`, `BriefingTestBuilder` and `WishlistItemDtoTestBuilder`
+  (constitution IV):
   `search_articles` matches titles only, newest first, honours `offset` and clamps `limit`; `get_portfolio` sums only
   the priced positions and sets `allPriced` to false when one is unpriced; `get_latest_briefing` returns
   `NO_BRIEFING_YET` when none exists and never calls `triggerBriefing` (`verify(never())`); `get_wishlist` returns the
@@ -284,7 +297,9 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 - [ ] T052 Run `cd jordylab-be && ./gradlew :test --tests "*ModularityTests*"` and fix any boundary violation. The `mcp`
   module must not depend on a domain module; the domain modules may depend only on `mcp` root.
 - [ ] T053 Run `cd jordylab-be && ./gradlew :test --tests "*Mcp*"`. Every test in the `Mcp` family passes.
-- [ ] T054 Confirm `kustomize build deploy/k8s/overlays/prod` renders with the two new routes and without the assetlinks rule.
+- [ ] T054 **Waits for the Compose cutover, with T017.** Validate the Caddyfile:
+  `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Confirm the two new routes are present and the stale
+  assetlinks route is absent.
 - [ ] T055 Record the spike outcomes (T024, T025) and the Keycloak setting names in
   `specs/020-jordylab-mcp-server/research.md` R1 and R5.
 - [ ] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web` (SC-011: the web app is unchanged),
@@ -294,14 +309,16 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 ## Phase 7: OPERATIONS before merge
 
-**Purpose**: the live Keycloak client must exist before the PR merges, because the merge deploys automatically (OI-2).
+**Purpose**: the live Keycloak client must exist before the release, which follows the Compose cutover (I1, OI-2).
 
-- [ ] T057 **OPERATIONS**: create `jordylab-mcp-connector` in the live production realm with `kcadm`, through the
-  `kubectl exec` pattern in `deploy/keycloak/README.md`. Verify with `kcadm get clients -r jordylab -q clientId=jordylab-mcp-connector`
-  that it is public, has the redirect, PKCE `S256` and the audience mapper. Print no secret. Requires T002 confirmed.
+**Gate (I1)**: starts only after the Compose cutover in `specs/019-compose-deployment/`.
+
+- [ ] T057 **OPERATIONS** (after the Compose cutover, I1): create `jordylab-mcp-connector` in the live production realm with
+  `kcadm`, inside the Keycloak container of the Compose stack. Verify with `kcadm get clients -r jordylab -q clientId=jordylab-mcp-connector`
+  that it is public, has the redirect, PKCE `S256` and the audience mapper. Confirm that anonymous client registration is off (FR-002, G1). Print no secret. Requires T002 confirmed.
 - [ ] T058 **OPERATIONS**: change the pending row in `deploy/keycloak/README.md` (T051) to applied, with the date and a
   command summary and no secret values.
-- [ ] T059 **OPERATIONS**: create the same client in the local Podman Keycloak (`--server http://localhost:8080`, no `/auth`),
+- [ ] T059 **OPERATIONS** (runs before T024 and T025, I2): create the same client in the local Podman Keycloak (`--server http://localhost:8080`, no `/auth`),
   so local token checks match production.
 
 ---
@@ -311,13 +328,13 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 **Purpose**: the checks only the deployed system can answer. Claude connects from its cloud, so these steps need the live
 endpoint.
 
-- [ ] T060 **OPERATIONS**: quickstart steps 1 and 2 on production (metadata document; `401` pointer through Traefik).
+- [ ] T060 **OPERATIONS**: quickstart steps 1 and 2 on production (metadata document; `401` pointer through the public proxy).
   Record the output in `docs/runbook.md`.
 - [ ] T061 **OPERATIONS**: quickstart step 3 on production (`code_challenge_methods_supported` contains `S256`). Record it
   in `docs/runbook.md`.
 - [ ] T062 **OPERATIONS**: quickstart step 4 (Claude Desktop connects, nine read-only tools listed). Record the result in
   `docs/runbook.md`. This is Jordy's action in Claude.
-- [ ] T063 **OPERATIONS**: quickstart step 5 (five catalog and finance questions, each compared with its screen). Record
+- [ ] T063 **OPERATIONS**: quickstart step 5 (the ten questions, five catalog and five finance, each compared with its screen). Record
   any difference and the time each answer took (SC-002) in `docs/runbook.md`.
 - [ ] T064 **OPERATIONS**: quickstart step 6 (Claude mobile over mobile data). Record it in `docs/runbook.md`. This closes
   the mobile assumption in the spec.
@@ -344,7 +361,7 @@ endpoint.
   and not `gamecatalog`.
 - **Phase 5 (US3)** depends on Phases 3 and 4 (the surface test needs all nine tools).
 - **Phase 6** depends on all user story phases.
-- **Phase 7** depends on T002 (owner) and T016, and it must finish before the PR merges.
+- **Phase 7** depends on T002 (owner), T016 and the Compose cutover (I1), and it must finish before the release.
 - **Phase 8** depends on the merge and the deploy.
 
 ### Parallel example: Phase 2
@@ -370,8 +387,8 @@ Developer B: T035 → T036 → T037 → T038 → T039 → T043 (fna)
   Inspector, and after the deploy, through Claude (Phase 8, steps 4 to 6).
 - **Then** User Story 2 (finance), then User Story 3 (the surface and read-only tests). Each adds tools without changing
   the earlier ones.
-- **Before any merge**: all of Phases 1 to 6 pass, and Phase 7 is done (OI-2). The PR is one branch and one spec (the
-  house rule for specs).
+- **Before the release**: all of Phases 1 to 6 pass, the Compose cutover has happened (I1), and Phase 7 is done (OI-2).
+  The PR is one branch and one spec (the house rule for specs). Compose decision 4 makes the release a tag.
 - **After the merge**: Phase 8 runs with Jordy in Claude. Its findings go to `docs/runbook.md`.
 
 ## Summary
