@@ -86,7 +86,8 @@ it stands on 2026-11-03.
 - **Claude side**: Jordy enters only the client identifier under "Use your own OAuth client" and leaves the secret blank
   (Claude's docs allow this for a public client). This is the choice recorded for Q2.
 - **Applying it**: the prod realm is imported once (`deploy/keycloak/README.md`), so the client is created live with
-  `kcadm` through the existing `kubectl exec` pattern and recorded in that README's change table. The same definition
+  `kcadm` inside the Compose Keycloak container (`docker compose exec keycloak`), and recorded in that README's change table.
+  The README's `kubectl exec` form is for the retired k3s host. The same definition
   goes into `deploy/keycloak/realm-prod.json` and the dev export `jordylab-be/compose/keycloak-realm-export.json`, so a
   fresh import matches.
 - **Token lifetime**: the realm's 60-second access token (spec 014) applies unchanged.
@@ -165,12 +166,13 @@ it stands on 2026-11-03.
 
 ## R10. Gateway routes and a stale rule
 
-- **Add** to the public Caddyfile `deploy/compose/Caddyfile`, which `specs/019-compose-deployment/` creates. This happens after
-  the cutover, and the k3s `gateway.yaml` is not edited. Both routes go to the backend:
+- **Add** to the public Caddyfile `deploy/compose/Caddyfile`, which the Compose cutover (`specs/020-compose-deployment/`) created and which is live on
+  production. The retired k3s `gateway.yaml` is not edited. The `@backend` matcher also lists the stale
+  `/.well-known/assetlinks.json`, which is removed. Both routes go to the backend:
   - `PathPrefix /mcp`
   - `PathPrefix /.well-known/oauth-protected-resource` (matches the path-suffixed form too, since PathPrefix is
     segment-based)
-- **Verify**: Traefik passes the `WWW-Authenticate` header through unchanged (quickstart step 2).
+- **Verify**: Caddy passes the `WWW-Authenticate` header through unchanged (quickstart step 2).
 - **Remove** the stale `Exact /.well-known/assetlinks.json` rule. Spec 018 removed that endpoint, and the
   `SecurityConfig` comment says so. The rule forwards to a path that nothing serves.
 
@@ -193,4 +195,4 @@ it stands on 2026-11-03.
 
 - OI-1: decided 2026-11-03, accepted for v1 (R3).
 - Confirmed by the spike rather than assumed: the STATELESS handshake with Claude (R1), AOP on MCP-invoked tools (R7),
-  the Keycloak setting names and refresh behaviour (R5, R6), and the `WWW-Authenticate` header through Traefik (R10).
+  the Keycloak setting names and refresh behaviour (R5, R6), and the `WWW-Authenticate` header through Caddy (R10).

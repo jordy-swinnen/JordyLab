@@ -27,7 +27,8 @@ curl -si -X POST https://jordylab.be/mcp -H 'Content-Type: application/json' -d 
 ```
 
 Expected: `HTTP/2 401` and `www-authenticate: Bearer resource_metadata="https://jordylab.be/.well-known/oauth-protected-resource/mcp"`.
-If the header is missing, Traefik or the backend strips it: stop and fix the route (research R10) before anything else.
+If the header is missing, the public proxy (Caddy, `deploy/compose/Caddyfile`) or the backend strips it: stop and fix the
+route (research R10) before anything else.
 
 ## 3. Authorization server metadata
 
@@ -92,7 +93,7 @@ to a small number (a Keycloak setting), re-run, and record the change in the REA
 ## 9. Audit lines
 
 ```bash
-kubectl -n jordylab logs deploy/backend --since=30m | grep 'dev.jordy.jordylab.mcp.audit' | tail -20
+docker compose -f /opt/jordylab/compose/compose.yaml --env-file /opt/jordylab/env/prod.env logs backend --since 30m | grep 'dev.jordy.jordylab.mcp.audit' | tail -20
 ```
 
 Expected: one line per tool call with `admin=<sub>`, `tool=<name>`, `outcome=` and `durationMs=`. No query text, no

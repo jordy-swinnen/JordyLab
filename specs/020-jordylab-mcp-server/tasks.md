@@ -46,8 +46,8 @@ Paths are relative to the repository root. The backend root is `jordylab-be/`.
 **Purpose**: the `mcp` module, transport, authentication, discovery, guardrails and the Keycloak client. Every user story
 needs all of these.
 
-**Gate (I1)**: T017 and T057 wait for the Compose cutover in `specs/019-compose-deployment/`. The rest of this phase does
-not depend on the host.
+**Gate (I1): met.** The Compose cutover is live on production (`specs/020-compose-deployment/`). T017 and T057 can run; the
+rest of this phase does not depend on the host.
 
 **CRITICAL**: no user story work begins until this phase is complete and its tests pass.
 
@@ -115,10 +115,11 @@ not depend on the host.
 - [ ] T016 [P] Add the same client to `deploy/keycloak/realm-prod.json` for fresh production imports. The redirect has no
   `${PRODUCTION_DOMAIN}` placeholder because the callback is Claude's fixed URL. Validate with
   `python3 -m json.tool deploy/keycloak/realm-prod.json > /dev/null`.
-- [ ] T017 **Waits for the Compose cutover (I1).** Add the two routes to the public Caddyfile `deploy/compose/Caddyfile`
-  (created by `specs/019-compose-deployment/` T005): `/mcp` and `/.well-known/oauth-protected-resource*`, both to the backend
-  service on port `8080`. Remove any stale `/.well-known/assetlinks.json` route (spec 018 removed that endpoint). The k3s
-  `deploy/k8s/base/gateway.yaml` is not edited (research R10). Confirm with T054.
+- [ ] T017 Add the two routes to the live public Caddyfile `deploy/compose/Caddyfile`. Add `@mcp path /mcp /mcp/*` and
+  `@protected_resource path /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*`, each with
+  `handle` and `reverse_proxy backend:8080`, following the file's existing pattern. Remove `/.well-known/assetlinks.json` from
+  the `@backend` matcher (spec 018 removed that endpoint). The retired k3s `deploy/k8s/base/gateway.yaml` is not edited
+  (research R10). Confirm with T054.
 
 ### Foundational tests
 
@@ -297,7 +298,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 - [ ] T052 Run `cd jordylab-be && ./gradlew :test --tests "*ModularityTests*"` and fix any boundary violation. The `mcp`
   module must not depend on a domain module; the domain modules may depend only on `mcp` root.
 - [ ] T053 Run `cd jordylab-be && ./gradlew :test --tests "*Mcp*"`. Every test in the `Mcp` family passes.
-- [ ] T054 **Waits for the Compose cutover, with T017.** Validate the Caddyfile:
+- [ ] T054 Validate the Caddyfile after T017:
   `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Confirm the two new routes are present and the stale
   assetlinks route is absent.
 - [ ] T055 Record the spike outcomes (T024, T025) and the Keycloak setting names in
@@ -311,7 +312,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 **Purpose**: the live Keycloak client must exist before the release, which follows the Compose cutover (I1, OI-2).
 
-**Gate (I1)**: starts only after the Compose cutover in `specs/019-compose-deployment/`.
+**Gate (I1): met.** The Compose cutover is live (`specs/020-compose-deployment/`). The release path is open in T002 and T2.
 
 - [ ] T057 **OPERATIONS** (after the Compose cutover, I1): create `jordylab-mcp-connector` in the live production realm with
   `kcadm`, inside the Keycloak container of the Compose stack. Verify with `kcadm get clients -r jordylab -q clientId=jordylab-mcp-connector`

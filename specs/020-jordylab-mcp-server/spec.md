@@ -289,7 +289,7 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
   signs in to the connector again. The connector does not hold a long-lived offline token.
 - The rate-limit count is kept by the running instance. There is one instance, so a restart (including a deploy) resets
   the count, which is accepted.
-- The feature is released after the production move to Docker Compose (`specs/019-compose-deployment/`). Until then it
+- The feature is released after the production move to Docker Compose (`specs/020-compose-deployment/`). Until then it
   is built and tested on its branch and not released.
 - A connector token is also accepted by the `/api` routes in v1. Those routes check the issuer and the admin role, not
   the audience, so the admin's rights there equal the browser session's. The read-only promise rests on the connector's
@@ -315,8 +315,8 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 - `specs/016-fna-stock-wishlist/` and the finance module: the portfolio, wishlist and briefing data.
 - `specs/018-pwa-replaces-capacitor/`: the PWA that remains the web client; the connector is a separate door and
   does not change it.
-- `specs/019-compose-deployment/` (Draft): moves production to Docker Compose behind Caddy, and owns the public routes
-  after its cutover. The connector's address and discovery routes are added to that Caddyfile, and this feature is
+- `specs/020-compose-deployment/` (Draft): moved production to Docker Compose behind Caddy, which has served production
+  since the cutover of 2026-11-03, and owns the public routes. The connector's address and discovery routes are added to that Caddyfile, and this feature is
   released only after the cutover (owner decision I1, 2026-11-03).
 - Keycloak: one public connector client in the `jordylab` realm, created once (FR-002), with the existing admin role as
   the only way in.

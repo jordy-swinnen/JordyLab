@@ -37,8 +37,8 @@ realm configuration.
 `@Language("JSON")`, the shared `TestSecurityConfig` for slice tests, Testcontainers Postgres for query tests,
 `ModularityTests`. Live proof: `quickstart.md` steps 1–10, with Claude Desktop and Claude mobile.
 
-**Target Platform**: single host on OVH VPS-2, public at `https://jordylab.be`. Today it runs k3s behind Traefik. After the
-cutover in `specs/019-compose-deployment/` it runs Docker Compose behind Caddy, and this feature is released on that stack. Claude
+**Target Platform**: single host on OVH VPS-2, public at `https://jordylab.be`. It has run Docker Compose behind Caddy since the
+cutover (`specs/020-compose-deployment/`, live 2026-11-03). The k3s stack is retired, and this feature is released on the Compose stack. Claude
 calls it from Anthropic's cloud, so it must be public HTTPS (Claude's docs).
 
 **Project Type**: backend feature (a new module and tool adapters), plus a realm client, gateway routes and docs. No
