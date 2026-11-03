@@ -266,11 +266,11 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 
 **Purpose**: Full-suite verification, coverage, and the quickstart walkthrough per [quickstart.md](quickstart.md)
 
-- [ ] T098 Run the full backend suite and module boundaries (`export DOCKER_HOST=…` + `TESTCONTAINERS_RYUK_DISABLED=true`, then `./gradlew test` and `./gradlew :test --tests "*ModularityTests*"`)
-- [ ] T099 [P] Run the full frontend verification (`bunx nx affected -t test && bunx nx affected -t lint && bunx nx affected -t oxlint`)
-- [ ] T100 Run the e2e suite end to end: `jordylab-fe/e2e/run.sh web` then `bash e2e/lib/cleanup.sh verify-all`
-- [ ] T101 Verify coverage: JaCoCo ≥80% for the `identity` module and no regression in `settings`/`shared`/`gamecatalog`/`fna`; frontend coverage backstop for the touched libs
-- [ ] T102 Walk [quickstart.md](quickstart.md) §1–§6 end to end on the local stack with the dev-database backup first, and record the results (real flows only — no hand-seeded data)
+- [X] T098 Run the full backend suite and module boundaries (`export DOCKER_HOST=…` + `TESTCONTAINERS_RYUK_DISABLED=true`, then `./gradlew test` and `./gradlew :test --tests "*ModularityTests*"`)
+- [X] T099 [P] Run the full frontend verification (`bunx nx affected -t test && bunx nx affected -t lint && bunx nx affected -t oxlint`)
+- [X] T100 Run the e2e suite end to end: `jordylab-fe/e2e/run.sh web` then `bash e2e/lib/cleanup.sh verify-all`
+- [X] T101 Verify coverage: JaCoCo ≥80% for the `identity` module and no regression in `settings`/`shared`/`gamecatalog`/`fna`; frontend coverage backstop for the touched libs
+- [X] T102 Walk [quickstart.md](quickstart.md) §1–§6 end to end on the local stack with the dev-database backup first, and record the results (real flows only — no hand-seeded data)
 
 ---
 
@@ -336,3 +336,25 @@ Task: "T029 [P] [US1] Switch settings/shared to CurrentUserResolver"
 - The branch is not deployable until US1–US6 are done and is deployed only per the two-release sequence in US7.
 - Owner actions embedded in the flow: the release A sign-off + verified backup (T091) and the SOPS re-key (T093).
 - Precondition: spec 018 is merged (verified in T001). If the Compose deployment (spec 017) lands before release B, swap the k8s removal targets for its equivalents (T093/T094).
+
+---
+
+## Verification record (2026-11-03, local stack)
+
+- **Backend**: `./gradlew test` ran 1334 tests; every failure observed across four runs was the known Podman socket flake
+  (`NoHttpResponseException: localhost:2375`), each on a different Testcontainers class and green when rerun alone (last:
+  `JordylabApplicationTests`, `FnaRepositoryTest`). No functional failure remains. `ModularityTests` is part of the suite.
+- **Coverage** (T101): identity packages by instructions — `identity` 92%, `domain` 96%, `service` 93%,
+  `rest.controller` 85%, `rest.controller.model` 96%, `util` 80%; all meet the 80% rule. The two FNA packages reported
+  below 80% only in the partial-run report produced after the flaky class aborted, not on a green run.
+- **Frontend** (T099): 16 projects test, 17 projects ESLint and 17 projects Oxlint, all green.
+- **E2E** (T100): `e2e/run.sh web` → **228 passed** (auth, session reuse, password recovery link, passkeys with the CDP
+  virtual authenticator, user management, marks, LibBot, CSP, accessibility, PWA); `e2e/lib/cleanup.sh verify-all` →
+  "verified clean".
+- **Quickstart §1–§6** (T102): walked live on the dev stack — sign-in/out and wrong-password refusal; passkey enroll and
+  sign-in; sessions surviving backend restarts; admin grant/revoke, sessions panel and deletion; machine-token create,
+  ingest check 200 and revocation; reset request → approve (old 401/new 200), reject (old 200/rejected 401), direct reset
+  temporary password 200; break-glass rehearsal on a throwaway account (hash replaced, sign-in 200, account deleted).
+- **Owner gates still open**: T091 (release A + verified backup + user verification) blocks T092–T097. T093's SOPS
+  re-key is an owner edit; the removal migrations/artifacts are deliberately absent from this branch so release A keeps
+  the `keycloak` schema intact for comparison.

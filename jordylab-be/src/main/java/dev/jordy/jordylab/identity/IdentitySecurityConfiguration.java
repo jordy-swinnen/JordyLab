@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.identity;
 
 import dev.jordy.jordylab.identity.rest.controller.MachineTokenAuthenticationFilter;
+import dev.jordy.jordylab.identity.service.MachineTokenService;
 import dev.jordy.jordylab.identity.service.IdentityUserDetailsService;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
@@ -54,6 +55,11 @@ import java.util.function.Supplier;
 @EnableWebSecurity
 @EnableConfigurationProperties(IdentityProperties.class)
 public class IdentitySecurityConfiguration {
+
+    @Bean
+    public MachineTokenAuthenticationFilter machineTokenAuthenticationFilter(MachineTokenService machineTokenService) {
+        return new MachineTokenAuthenticationFilter(machineTokenService);
+    }
 
     @Bean
     @Order(1)
