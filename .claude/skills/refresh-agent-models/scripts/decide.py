@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import datetime
+import functools
 import json
 import logging
 import math
@@ -37,7 +38,7 @@ EFFORT_IN_NAME = re.compile(r"\(([\w-]+)")
 CLAUDE_FAMILY = re.compile(r"(Claude \w+ [\d.]+)")
 CODING_CLAUSE_TOLERANCE = 3.0
 
-T = TypeVar("T")
+ItemType = TypeVar("ItemType")
 
 
 class SettingsError(Exception):
@@ -170,6 +171,7 @@ def load_settings(raw: Mapping[str, Any]) -> Settings:
         go = raw["go"]
         claude = raw["claude"]
         current = raw["current"]
+
         return Settings(
             go=GoJudgement(
                 cost_axis=go["cost_axis"],
@@ -199,20 +201,26 @@ def load_settings(raw: Mapping[str, Any]) -> Settings:
 
 def apply_overrides(raw: Mapping[str, Any], assignments: Sequence[str]) -> dict[str, Any]:
     """Apply PATH=VALUE pairs, e.g. claude.lambda.index.Planner=0.15. VALUE is JSON or a bare word."""
-    updated = json.loads(json.dumps(raw))
+    updated: dict[str, Any] = json.loads(json.dumps(raw))
     for assignment in assignments:
         path, separator, text = assignment.partition("=")
         if not separator:
             raise SettingsError(f"--set needs PATH=VALUE, got {assignment!r}")
         keys = path.split(".")
-        node = updated
+        node: Any = updated
         for key in keys[:-1]:
+            if not isinstance(node, dict) or key not in node:
+                raise SettingsError(f"--set path {path!r} has no key {key!r}")
             node = node[key]
+        final_key = keys[-1]
+        if not isinstance(node, dict) or final_key not in node:
+            raise SettingsError(f"--set path {path!r} has no key {final_key!r}")
         try:
             value = json.loads(text)
         except ValueError:
             value = text
-        node[keys[-1]] = value
+        node[final_key] = value
+
     return updated
 
 
@@ -220,6 +228,7 @@ def effort_of(name: str) -> str | None:
     match = EFFORT_IN_NAME.search(name)
     if match and match.group(1).lower() in RECOGNISED_EFFORTS:
         return match.group(1).lower()
+
     return None
 
 
@@ -230,11 +239,13 @@ def resolve_variant(effort: str | None, variants: Sequence[str]) -> tuple[str | 
     if effort is not None:
         if effort in variants:
             return effort, None
+
         return None, f"effort {effort} is not an OpenCode variant of this model"
     if not variants:
         return None, None
     if "high" in variants:
         return "high", None
+
     return None, "unlabelled AA row and no high variant"
 
 
@@ -249,10 +260,13 @@ def go_plan_basis(
         days_left = (datetime.date.fromisoformat(promo.ends) - as_of).days if promo.ends else 0
         if days_left <= judgement.promo_window_days:
             requests = requests * (promo.price_out or 0.0) / price_out
+
             return price_out, requests, "post-promo list"
+
         return promo.price_out or price_out, requests, "promo"
     if entry.peak_split:
         return price_out, requests * judgement.peak_request_factor, "peak"
+
     return price_out, requests, "list"
 
 
@@ -266,6 +280,7 @@ def row_problems(record: AaRecord, variant_problem: str | None) -> list[str]:
         problems.append("no AA cost per task")
     if variant_problem:
         problems.append(variant_problem)
+
     return problems
 
 
@@ -315,6 +330,7 @@ def scan_go_entry(
                 price_ratio=ratio,
             )
         )
+
     return found, rejected, []
 
 
@@ -340,6 +356,7 @@ def build_go_candidates(
             excluded.append(
                 ExcludedCandidate(entry.go_id, None, None, tuple(dict.fromkeys(reasons)))
             )
+
     return candidates, excluded
 
 
@@ -356,6 +373,7 @@ def floor_reasons(candidate: GoCandidate, role: str, judgement: GoJudgement) -> 
     cap = judgement.response_cap_seconds[role]
     if candidate.end_to_end_seconds is not None and candidate.end_to_end_seconds > cap:
         reasons.append(f"{role}: response {candidate.end_to_end_seconds:.0f} s > {cap:g} s")
+
     return reasons
 
 
@@ -392,6 +410,7 @@ def go_walk(
             break
         current = best
         path.append(best)
+
     return current, tuple(path)
 
 
@@ -405,7 +424,14 @@ def go_step5(
     incumbent_label = (
         incumbent_key[0] if incumbent_key[1] is None else f"{incumbent_key[0]} {incumbent_key[1]}"
     )
-    incumbent = next((c for c in candidates if (c.go_id, c.variant) == incumbent_key), None)
+    incumbent = next(
+        (
+            candidate
+            for candidate in candidates
+            if (candidate.go_id, candidate.variant) == incumbent_key
+        ),
+        None,
+    )
     if pick is None:
         return Step5Verdict(role, incumbent_label, None, "no eligible candidate", "")
     if incumbent is None or floor_reasons(incumbent, role, judgement):
@@ -427,6 +453,7 @@ def go_step5(
         return Step5Verdict(role, incumbent_label, pick.label, "switch: gain", detail)
     if pick_value > incumbent_value and pick.index >= incumbent.index - judgement.margin:
         return Step5Verdict(role, incumbent_label, pick.label, "switch: cost cut", detail)
+
     return Step5Verdict(role, incumbent_label, pick.label, "keep incumbent", detail)
 
 
@@ -473,11 +500,8 @@ def choose_opencode(
                 step5=go_step5(role, pick, incumbent_key, candidates, judgement),
             )
         )
+
     return tuple(results)
-
-
-def _incumbent_key(spec: Mapping[str, Any]) -> tuple[str, str | None]:
-    return spec["go_id"], spec.get("variant")
 
 
 def claude_rows(records: Sequence[AaRecord]) -> list[ClaudeRow]:
@@ -508,6 +532,7 @@ def claude_rows(records: Sequence[AaRecord]) -> list[ClaudeRow]:
                 end_to_end_seconds=record.end_to_end_seconds,
             )
         )
+
     return rows
 
 
@@ -515,6 +540,7 @@ def claude_slope(base: ClaudeRow, other: ClaudeRow, metric: str) -> float:
     gain = (other.score(metric) or 0.0) - (base.score(metric) or 0.0)
     if gain <= 0:
         return math.inf
+
     return (other.cost_per_task - base.cost_per_task) / gain
 
 
@@ -547,6 +573,7 @@ def claude_walk(
             ladder = higher_effort
         else:
             break
+
     return ladder, tuple(path)
 
 
@@ -580,6 +607,7 @@ def claude_step5(
         and cheap_enough
     ):
         return Step5Verdict(role, incumbent.name, pick.name, "switch: coding evidence", detail)
+
     return Step5Verdict(role, incumbent.name, pick.name, "keep incumbent", detail)
 
 
@@ -604,25 +632,48 @@ def choose_claude(rows: Sequence[ClaudeRow], settings: Settings) -> tuple[Claude
                 step5=claude_step5(role, pick, incumbent, metric, judgement),
             )
         )
+
     return tuple(results)
 
 
 def pareto_front(
-    items: Sequence[T], score: Callable[[T], float], cost: Callable[[T], float]
-) -> list[T]:
+    items: Sequence[ItemType], score: Callable[[ItemType], float], cost: Callable[[ItemType], float]
+) -> list[ItemType]:
     """Items no other item beats on both: not costlier, and scoring at least as well."""
-    front: list[T] = []
+    front: list[ItemType] = []
     best_score = -math.inf
     for item in sorted(items, key=lambda entry: (cost(entry), -score(entry))):
         if score(item) > best_score:
             front.append(item)
             best_score = score(item)
+
     return front
+
+
+def go_candidate_index(candidate: GoCandidate) -> float:
+    return candidate.index
+
+
+def go_candidate_frontier_cost(candidate: GoCandidate, cost_axis: str) -> float:
+    return -value_of(candidate, cost_axis)
+
+
+def claude_row_index(row: ClaudeRow) -> float:
+    return row.index
+
+
+def claude_row_coding(row: ClaudeRow) -> float:
+    return row.coding or 0.0
+
+
+def claude_row_cost(row: ClaudeRow) -> float:
+    return row.cost_per_task
 
 
 def request_floor_reasons(entry: GoPlanEntry, judgement: GoJudgement) -> list[str]:
     if entry.requests_per_month is None:
         return []
+
     return [
         f"{role}: requests {entry.requests_per_month:,} < {floor:,.0f}"
         for role, floor in judgement.requests_floor.items()
@@ -653,20 +704,15 @@ def decide(
     value_axis = settings.go.cost_axis
     go_front = pareto_front(
         candidates,
-        score=lambda candidate: candidate.index,
-        cost=lambda candidate: -value_of(candidate, value_axis),
+        score=go_candidate_index,
+        cost=functools.partial(go_candidate_frontier_cost, cost_axis=value_axis),
     )
     rows = claude_rows(records)
     claude_roles = choose_claude(rows, settings)
-    index_front = pareto_front(
-        rows, score=lambda row: row.index, cost=lambda row: row.cost_per_task
-    )
+    index_front = pareto_front(rows, score=claude_row_index, cost=claude_row_cost)
     coding_rows = [row for row in rows if row.coding is not None]
-    coding_front = pareto_front(
-        coding_rows,
-        score=lambda row: row.coding or 0.0,
-        cost=lambda row: row.cost_per_task,
-    )
+    coding_front = pareto_front(coding_rows, score=claude_row_coding, cost=claude_row_cost)
+
     return Decision(
         as_of=as_of,
         cost_axis=value_axis,
@@ -723,6 +769,7 @@ def render_markdown(decision: Decision) -> str:
             else f"{exclusion.model} {exclusion.variant}"
         )
         lines.append(f"- `{name}`: " + "; ".join(exclusion.reasons))
+
     return "\n".join(lines) + "\n"
 
 
@@ -731,6 +778,7 @@ def read_snapshot(snapshot_path: Path) -> tuple[list[GoPlanEntry], list[AaRecord
     snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     entries = [_entry_from_json(item) for item in snapshot["go"]]
     records = [_record_from_json(item) for item in snapshot["aa"]]
+
     return entries, records, snapshot["as_of"]
 
 
@@ -743,42 +791,8 @@ def run(
         overrides.append(f"go.cost_axis={cost_axis}")
     settings = load_settings(apply_overrides(raw_settings, overrides))
     entries, records, as_of = read_snapshot(snapshot_path)
+
     return decide(entries, records, as_of, settings)
-
-
-def _entry_from_json(item: Mapping[str, Any]) -> GoPlanEntry:
-    promo = item.get("promo")
-    return GoPlanEntry(
-        go_id=item["go_id"],
-        docs_name=item["docs_name"],
-        creator=item["creator"],
-        monthly_limit=item["monthly_limit"],
-        price_in=item["price_in"],
-        price_out=item["price_out"],
-        peak_split=item["peak_split"],
-        promo=None
-        if promo is None
-        else PromoTerms(promo["price_in"], promo["price_out"], promo["ends"]),
-        requests_per_month=item["requests_per_month"],
-        variants=None if item["variants"] is None else tuple(item["variants"]),
-        aa_rows=tuple(item["aa_rows"]),
-        note=item["note"],
-    )
-
-
-def _record_from_json(item: Mapping[str, Any]) -> AaRecord:
-    return AaRecord(
-        name=item["name"],
-        creator=item["creator"],
-        deprecated=item["deprecated"],
-        intelligence_index=item["intelligence_index"],
-        cost_per_task=item["cost_per_task"],
-        price_in=item["price_in"],
-        price_out=item["price_out"],
-        end_to_end_seconds=item["end_to_end_seconds"],
-        terminal_bench_4=item["terminal_bench_4"],
-        frontiercode_2=item["frontiercode_2"],
-    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -810,7 +824,48 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(render_markdown(decision), end="")
     else:
         print(json.dumps(dataclasses.asdict(decision), indent=2, ensure_ascii=False))
+
     return 0
+
+
+def _incumbent_key(spec: Mapping[str, Any]) -> tuple[str, str | None]:
+    return spec["go_id"], spec.get("variant")
+
+
+def _entry_from_json(item: Mapping[str, Any]) -> GoPlanEntry:
+    promo = item.get("promo")
+
+    return GoPlanEntry(
+        go_id=item["go_id"],
+        docs_name=item["docs_name"],
+        creator=item["creator"],
+        monthly_limit=item["monthly_limit"],
+        price_in=item["price_in"],
+        price_out=item["price_out"],
+        peak_split=item["peak_split"],
+        promo=None
+        if promo is None
+        else PromoTerms(promo["price_in"], promo["price_out"], promo["ends"]),
+        requests_per_month=item["requests_per_month"],
+        variants=None if item["variants"] is None else tuple(item["variants"]),
+        aa_rows=tuple(item["aa_rows"]),
+        note=item["note"],
+    )
+
+
+def _record_from_json(item: Mapping[str, Any]) -> AaRecord:
+    return AaRecord(
+        name=item["name"],
+        creator=item["creator"],
+        deprecated=item["deprecated"],
+        intelligence_index=item["intelligence_index"],
+        cost_per_task=item["cost_per_task"],
+        price_in=item["price_in"],
+        price_out=item["price_out"],
+        end_to_end_seconds=item["end_to_end_seconds"],
+        terminal_bench_4=item["terminal_bench_4"],
+        frontiercode_2=item["frontiercode_2"],
+    )
 
 
 if __name__ == "__main__":

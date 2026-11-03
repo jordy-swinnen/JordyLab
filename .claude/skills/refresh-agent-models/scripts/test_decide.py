@@ -33,6 +33,7 @@ def decide_with(overrides: Sequence[str] = (), cost_axis: str | None = None) -> 
     if cost_axis is not None:
         assignments.append(f"go.cost_axis={cost_axis}")
     settings = decide.load_settings(decide.apply_overrides(raw_settings, assignments))
+
     return decide.decide(entries, records, as_of, settings)
 
 
@@ -115,7 +116,11 @@ def test_excluded_models_carry_their_reasons() -> None:
 
 
 def test_gemini_uses_the_post_promo_list_price_when_the_promo_ends_within_45_days() -> None:
-    gemini = next(c for c in decide_with().opencode_candidates if c.go_id == "gemini-4-argon")
+    gemini = next(
+        candidate
+        for candidate in decide_with().opencode_candidates
+        if candidate.go_id == "gemini-4-argon"
+    )
     assert gemini.basis == "post-promo list"
     assert gemini.cost_per_task == pytest.approx(7.683, abs=0.01)
     assert gemini.requests_per_month == pytest.approx(1060)
@@ -125,7 +130,9 @@ def test_gemini_uses_the_promo_price_while_the_promo_is_far_off() -> None:
     entries, records, _ = decide.read_snapshot(SNAPSHOT_PATH)
     settings = decide.load_settings(json.loads(SETTINGS_PATH.read_text(encoding="utf-8")))
     result = decide.decide(entries, records, "2026-09-01", settings)
-    gemini = next(c for c in result.opencode_candidates if c.go_id == "gemini-4-argon")
+    gemini = next(
+        candidate for candidate in result.opencode_candidates if candidate.go_id == "gemini-4-argon"
+    )
     assert gemini.basis == "promo"
     assert gemini.cost_per_task == pytest.approx(3.84, abs=0.01)
     assert gemini.requests_per_month == pytest.approx(2120)
@@ -133,7 +140,9 @@ def test_gemini_uses_the_promo_price_while_the_promo_is_far_off() -> None:
 
 def test_deepseek_is_priced_and_counted_at_peak() -> None:
     deepseek = next(
-        c for c in decide_with().opencode_candidates if c.go_id == "deepseek-v4.1-flash"
+        candidate
+        for candidate in decide_with().opencode_candidates
+        if candidate.go_id == "deepseek-v4.1-flash"
     )
     assert deepseek.basis == "peak"
     assert deepseek.price_ratio == pytest.approx(1.0)
@@ -197,3 +206,9 @@ def test_apply_overrides_rejects_an_assignment_without_a_value() -> None:
 def test_snapshot_is_dated_for_the_2026_11_03_run() -> None:
     _, _, as_of = decide.read_snapshot(SNAPSHOT_PATH)
     assert datetime.date.fromisoformat(as_of) == datetime.date(2026, 11, 3)
+
+
+def test_apply_overrides_names_a_key_that_does_not_exist() -> None:
+    settings = {"claude": {"lambda": {"index": {"Planner": 0.2}}}}
+    with pytest.raises(decide.SettingsError, match="claude.lamda.index.Planner"):
+        decide.apply_overrides(settings, ["claude.lamda.index.Planner=0.15"])

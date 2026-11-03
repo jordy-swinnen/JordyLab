@@ -169,6 +169,7 @@ def run_opencode_catalog() -> str:
         raise SnapshotSourceError(
             "could not run the OpenCode CLI; pass --opencode-models FILE"
         ) from error
+
     return completed.stdout
 
 
@@ -178,11 +179,13 @@ def html_to_text(raw_html: str) -> str:
     with_cell_bars = re.sub(r"(?i)</t[dh]>", " | ", with_line_breaks)
     text = html.unescape(re.sub(r"<[^>]+>", "", with_cell_bars))
     text = re.sub(r"[ \t]+", " ", text)
+
     return re.sub(r"\n\s*\n+", "\n", text)
 
 
 def base_name(row_name: str) -> str:
     """'DeepSeek V4.1 Flash (Peak)' -> 'DeepSeek V4.1 Flash'."""
+
     return re.sub(r"\s*\(.*\)\s*$", "", row_name).strip()
 
 
@@ -207,6 +210,7 @@ def table_rows(lines: Sequence[str], header_prefix: str) -> list[list[str]]:
         cells = [cell.strip() for cell in line.split("|") if cell.strip()]
         if cells:
             rows.append(cells)
+
     return rows
 
 
@@ -226,6 +230,7 @@ def parse_price_rows(lines: Sequence[str]) -> list[PriceRow]:
                 monthly_limit=limits[0],
             )
         )
+
     return rows
 
 
@@ -238,6 +243,7 @@ def parse_request_rows(lines: Sequence[str]) -> list[RequestRow]:
             rows.append(
                 RequestRow(row_name=cells[0], requests_per_month=int(cells[3].replace(",", "")))
             )
+
     return rows
 
 
@@ -247,6 +253,7 @@ def promo_end_dates(text: str) -> dict[str, str]:
     for sentence in PROMO_END_SENTENCE.finditer(text):
         end_date = datetime.datetime.strptime(sentence.group(2), "%B %d, %Y").date()
         ends[base_name(sentence.group(1).strip())] = end_date.isoformat()
+
     return ends
 
 
@@ -285,6 +292,7 @@ def build_go_entry(
             price_out=chosen.output_prices[1],
             ends=promo_ends.get(spec.docs_name),
         )
+
     return GoPlanEntry(
         go_id=spec.go_id,
         docs_name=spec.docs_name,
@@ -306,6 +314,7 @@ def build_go_entries(text: str) -> list[GoPlanEntry]:
     price_rows = parse_price_rows(lines)
     request_rows = parse_request_rows(lines)
     ends = promo_end_dates(text)
+
     return [build_go_entry(spec, price_rows, request_rows, ends) for spec in GO_MODEL_SPECS]
 
 
@@ -333,11 +342,13 @@ def parse_aa_objects(raw: str) -> tuple[dict[str, dict[str, Any]], dict[str, dic
             minimal.setdefault(parsed["name"], parsed)
     if not rows:
         raise SnapshotSourceError("the AA page has no model rows; its layout may have changed")
+
     return rows, minimal
 
 
 def aa_record_from_object(obj: Mapping[str, Any]) -> AaRecord:
     scores = obj.get("scores") or {}
+
     return AaRecord(
         name=obj.get("shortName") or obj.get("name", ""),
         creator=obj.get("modelCreatorName"),
@@ -361,7 +372,7 @@ def attach_aa_rows(
     """Match each Go model to its AA names. A model with no index says why (deprecated or not)."""
     all_names = list(rows) + [name for name in minimal if name not in rows]
     attached: list[GoPlanEntry] = []
-    for entry, spec in zip(entries, specs):
+    for entry, spec in zip(entries, specs, strict=True):
         names: tuple[str, ...] = ()
         if spec.aa_name_pattern is not None:
             names = tuple(name for name in all_names if re.search(spec.aa_name_pattern, name))
@@ -379,6 +390,7 @@ def attach_aa_rows(
         )
         note = "deprecated on AA, no index" if deprecated else "no AA index"
         attached.append(dataclasses.replace(entry, aa_rows=names, note=note))
+
     return attached
 
 
@@ -395,6 +407,7 @@ def collect_aa_records(
     for name in sorted(wanted_names):
         if name not in records and name in minimal:
             records[name] = aa_record_from_object(minimal[name])
+
     return list(records.values())
 
 
@@ -414,6 +427,7 @@ def parse_opencode_variants(catalog_text: str) -> dict[str, tuple[str, ...]]:
         variants[header.group(1)] = tuple((parsed.get("variants") or {}).keys())
     if not variants:
         raise SnapshotSourceError("the OpenCode catalog lists no opencode-go models")
+
     return variants
 
 
@@ -425,6 +439,7 @@ def build_snapshot(aa_raw: str, go_raw: str, catalog_text: str, as_of: str) -> d
     entries = attach_aa_rows(entries, GO_MODEL_SPECS, rows, minimal)
     wanted = frozenset(name for entry in entries for name in entry.aa_rows)
     records = collect_aa_records(rows, minimal, wanted)
+
     return {
         "as_of": as_of,
         "sources": {
@@ -476,6 +491,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(
         f"wrote {arguments.out}: {len(snapshot['go'])} Go models, {len(snapshot['aa'])} AA records"
     )
+
     return 0
 
 
