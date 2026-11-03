@@ -1,45 +1,57 @@
 name: Deploy to Production
 
-# Deploys one released version (a `v*` tag) to production — docs/runbook.md §20.
-# - Called by release.yml after a tag is verified and its images are retagged.
-# - Run by hand (Actions → Deploy to Production → Run workflow) to redeploy or roll back to any
-#   earlier release: enter its tag, e.g. v0.1.0.
-# A push to main no longer deploys by itself (spec 011 BUG-008); an empty input can no longer
-# deploy an image tagged `sha-` (BUG-005).
+# Deploys one target to production (docs/runbook.md §10, §11). The target is a commit sha or a release tag.
+# - Called by build.yml after a green Build on main (automatic: true). Runs only while the repository variable
+#   AUTO_DEPLOY is 'true'; a superseded target (older than the live commit) is skipped, not applied.
+# - Run by hand (Actions → Deploy to Production → Run workflow): a commit sha or a release tag, for a redeploy or a
+#   rollback. Older commits are allowed, so manual runs are never superseded.
 
 on:
   workflow_call:
     inputs:
-      version:
-        description: "Release tag to deploy, e.g. v0.1.0"
+      target:
+        description: "Commit sha to deploy (build.yml passes github.sha)"
         required: true
         type: string
+      automatic:
+        description: "true when called from build.yml; enables the superseded check"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release tag to deploy or roll back to, e.g. v0.1.0"
+      target:
+        description: "A full commit sha, or a release tag vX.Y.Z or vX.Y.Z-rcN (older commits are allowed, for rollback)"
         required: true
         type: string
 
 jobs:
   deploy:
-    # One production deploy at a time, whether called by release.yml or run by hand.
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
     runs-on: ubuntu-latest
-    environment: production # required reviewer = Jordy (docs/runbook.md §9) — this is the manual approval gate (FR-006)
+    environment: production
+    permissions:
+      contents: read
+      packages: read
     env:
-      VERSION: ${{ inputs.version }}
+      TARGET: ${{ inputs.target }}
+      AUTOMATIC: ${{ inputs.automatic }}
     steps:
-      - name: Reject anything that isn't a release tag
-        run: |
-          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]] || { echo "::error::'$VERSION' is not a release tag (vX.Y.Z or vX.Y.Z-rcN)"; exit 1; }
-
-      # Check out the released commit, so the manifests match the images.
-      - uses: actions/checkout@v4
+      - name: Check out the target
+        uses: actions/checkout@v4
         with:
-          ref: ${{ env.VERSION }}
+          ref: ${{ inputs.target }}
+          fetch-depth: 0
+
+      - name: Validate and resolve the target
+        id: resolve_target
+        run: |
+          resolution="$(deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic "$AUTOMATIC")"
+          printf '%s\n' "$resolution" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$resolution"
+          if printf '%s\n' "$resolution" | grep -qx 'decision=refused'; then
+            echo "::error::the target is refused: $(printf '%s\n' "$resolution" | grep '^reason=' | cut -d= -f2-)"
+            exit 1
+          fi
 
       - name: Join Tailscale
         uses: tailscale/github-action@v4
@@ -71,23 +83,88 @@ jobs:
           kubectl config set-context jordylab --cluster=jordylab --user=ci-deploy --namespace=jordylab
           kubectl config use-context jordylab
 
-      - name: Decrypt secrets and apply
+      - name: Read the live images
+        id: read_live_state
+        run: |
+          backend_image="$(kubectl -n jordylab get deploy backend -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          frontend_image="$(kubectl -n jordylab get deploy frontend -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          keycloak_image="$(kubectl -n jordylab get deploy keycloak -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          {
+            echo "live_backend_image=$backend_image"
+            echo "live_frontend_image=$frontend_image"
+            echo "live_keycloak_image=$keycloak_image"
+            echo "live_tag=${backend_image##*:}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to apply
+        id: decide
+        env:
+          LIVE_TAG: ${{ steps.read_live_state.outputs.live_tag }}
+        run: |
+          decision_output="$(deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "$LIVE_TAG" --automatic "$AUTOMATIC")"
+          printf '%s\n' "$decision_output" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$decision_output"
+
+      - name: Check the newest backup
+        id: backup
+        continue-on-error: true
+        run: |
+          kubectl -n jordylab get backups.postgresql.cnpg.io -o json 2>/dev/null | deploy/scripts/backup-freshness.sh >> "$GITHUB_OUTPUT"
+
+      - name: Apply the target
+        id: apply
+        if: steps.decide.outputs.decision == 'proceed'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
           cd deploy/k8s/overlays/prod
-          # Decrypts in place, in this ephemeral, never-committed checkout only — the ciphertext
-          # in git is untouched. kustomization.yaml's `resources:` already points at this
-          # filename, so `kustomize build` below picks up the now-plaintext Secret.
+          # Decrypts in place, in this ephemeral, never-committed checkout only: the ciphertext in git is untouched.
           sops --output secrets.sops.yaml -d secrets.sops.yaml
           kustomize edit set image \
-            ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${VERSION}" \
-            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${VERSION}" \
-            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${VERSION}"
+            ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${IMAGE_TAG}" \
+            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${IMAGE_TAG}" \
+            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${IMAGE_TAG}"
+          echo "started=true" >> "$GITHUB_OUTPUT"
           kustomize build . | kubectl apply -f -
 
       - name: Wait for a healthy rollout
+        id: rollout
+        if: steps.decide.outputs.decision == 'proceed'
         run: |
           kubectl -n jordylab rollout status deploy/backend --timeout=8m
           kubectl -n jordylab rollout status deploy/frontend --timeout=5m
           kubectl -n jordylab rollout status deploy/keycloak --timeout=8m
+
+      - name: Summarise the run
+        if: always()
+        env:
+          TARGET_COMMIT: ${{ steps.resolve_target.outputs.target_commit }}
+          DECISION: ${{ steps.decide.outputs.decision }}
+          PREVIOUS_LIVE_COMMIT: ${{ steps.decide.outputs.live_commit }}
+          ROLLOUT_OUTCOME: ${{ steps.rollout.outcome }}
+          BACKUP_NEWEST: ${{ steps.backup.outputs.newest_completed_at }}
+          BACKUP_AGE_HOURS: ${{ steps.backup.outputs.age_hours }}
+          BACKUP_WARNING: ${{ steps.backup.outputs.warning }}
+          BACKUP_REASON: ${{ steps.backup.outputs.reason }}
+        run: |
+          if [ "$ROLLOUT_OUTCOME" = "success" ]; then
+            live_after="$TARGET_COMMIT"
+          else
+            live_after="not confirmed (rollout: ${ROLLOUT_OUTCOME:-not run})"
+          fi
+          {
+            echo "## Deploy to Production"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Decision | $DECISION |"
+            echo "| Target commit | $TARGET_COMMIT |"
+            echo "| Previously live commit | $PREVIOUS_LIVE_COMMIT |"
+            echo "| Live after the run | $live_after |"
+            if [ -n "$BACKUP_NEWEST" ]; then
+              echo "| Newest completed backup | $BACKUP_NEWEST (${BACKUP_AGE_HOURS} h old) |"
+            else
+              echo "| Newest completed backup | none found (${BACKUP_REASON:-unreadable}) |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
