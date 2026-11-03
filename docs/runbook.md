@@ -410,6 +410,10 @@ The first deploy through the Compose workflow (T049) was run 41728815560 on 2026
 every step green, `current-release` set to it, and the public smoke checks 200/401/200. Later deploys are read the same way:
 the run's own timings, and `/opt/jordylab/state/current-release` for what is live.
 
+The rollback path was exercised the same day: the older sha `9cc83c4` went live and `76f38366` was restored (runs
+41732623682 and 41732871477), and an unresolvable target (`v9.9.9`) failed at checkout with the live release untouched
+(run 41733143053). Automatic deploys were switched on afterwards (`AUTO_DEPLOY=true`), so the next merge deployed itself.
+
 ### The flow
 
 1. Merge to `main`: the Build publishes the three `sha-<commit>` images and deploys nothing.
