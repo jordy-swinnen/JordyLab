@@ -1,0 +1,10 @@
+# Monday to Saturday at 03:00 UTC. Sunday is skipped so it never runs back to back with the full backup.
+[Unit]
+Description=Run the JordyLab differential backup Monday to Saturday at 03:00 UTC
+
+[Timer]
+OnCalendar=Mon..Sat *-*-* 03:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

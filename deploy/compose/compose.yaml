@@ -1,0 +1,185 @@
+# Production stack on the VPS (spec 020, research R1, R2, R7, R8). Only caddy publishes ports.
+# Every value comes from the environment file (names in env/prod.env.example). No value is written here.
+# The host runs it as: docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml ...
+# JORDYLAB_RELEASE (the release tag) is exported by scripts/deploy-release.sh before each run.
+name: jordylab
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
+    restart: unless-stopped
+    mem_limit: 128m
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      ntfy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    image: ghcr.io/jordy-swinnen/jordylab-frontend:${JORDYLAB_RELEASE}
+    restart: unless-stopped
+    mem_limit: 64m
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/jordy-swinnen/jordylab-backend:${JORDYLAB_RELEASE}
+    restart: unless-stopped
+    mem_limit: 1536m
+    logging: *logging
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      POSTGRES_URL: ${POSTGRES_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_INTERNAL_URL: ${KEYCLOAK_INTERNAL_URL}
+      KEYCLOAK_BACKEND_SECRET: ${KEYCLOAK_BACKEND_SECRET}
+      JORDYLAB_CORS_ALLOWED_ORIGINS: ${JORDYLAB_CORS_ALLOWED_ORIGINS}
+      JORDYLAB_APP_BASE_URL: ${JORDYLAB_APP_BASE_URL}
+      NTFY_BASE_URL: ${NTFY_BASE_URL}
+      NTFY_TOPIC: ${NTFY_TOPIC}
+      NTFY_TOKEN: ${NTFY_TOKEN}
+      LINEAR_API_KEY: ${LINEAR_API_KEY}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_ENVIRONMENT: ${LANGFUSE_ENVIRONMENT}
+      LANGFUSE_CAPTURE_CONTENT: ${LANGFUSE_CAPTURE_CONTENT}
+      SPRINGDOC_API_DOCS_ENABLED: ${SPRINGDOC_API_DOCS_ENABLED}
+      SPRINGDOC_SWAGGER_UI_ENABLED: ${SPRINGDOC_SWAGGER_UI_ENABLED}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      STEAM_WEB_API_KEY: ${STEAM_WEB_API_KEY}
+      STEAM_ID: ${STEAM_ID}
+      IGDB_CLIENT_ID: ${IGDB_CLIENT_ID}
+      IGDB_CLIENT_SECRET: ${IGDB_CLIENT_SECRET}
+      THEGAMESDB_API_KEY: ${THEGAMESDB_API_KEY}
+    volumes:
+      - artwork:/var/jordylab/artwork
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    # Bash's /dev/tcp is used because the runtime image has no curl. A cold start can take about 70 s, so the
+    # start period covers 150 s, as the startup probe on the Kubernetes deploy did (JOR-76).
+    healthcheck:
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /actuator/health/readiness HTTP/1.0\r\n\r\n" >&3 && head -n1 <&3 | grep -q " 200 "']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 150s
+
+  keycloak:
+    image: ghcr.io/jordy-swinnen/jordylab-keycloak:${JORDYLAB_RELEASE}
+    restart: unless-stopped
+    mem_limit: 1024m
+    logging: *logging
+    environment:
+      KC_DB_URL: ${KC_DB_URL}
+      KC_DB_SCHEMA: ${KC_DB_SCHEMA}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KEYCLOAK_BACKEND_CLIENT_SECRET: ${KEYCLOAK_BACKEND_CLIENT_SECRET}
+      KC_HOSTNAME: ${KC_HOSTNAME}
+      KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH}
+      KC_PROXY_HEADERS: ${KC_PROXY_HEADERS}
+      KC_HTTP_ENABLED: ${KC_HTTP_ENABLED}
+      KC_PROXY_TRUSTED_ADDRESSES: ${KC_PROXY_TRUSTED_ADDRESSES}
+      PRODUCTION_DOMAIN: ${PRODUCTION_DOMAIN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # The Keycloak image has bash but no curl, so the check opens the management port (9000) with bash's /dev/tcp.
+    healthcheck:
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/9000 && printf "GET /health/ready HTTP/1.0\r\n\r\n" >&3 && head -n1 <&3 | grep -q " 200 "']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.28.0
+    restart: unless-stopped
+    mem_limit: 128m
+    logging: *logging
+    command: ["serve"]
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 -O - http://localhost:80/v1/health | grep -Eq '\"healthy\"[[:space:]]*:[[:space:]]*true' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    build:
+      context: .
+      dockerfile: postgres/Containerfile
+    image: jordylab-postgres:pg16-pgbackrest
+    restart: unless-stopped
+    mem_limit: 1024m
+    logging: *logging
+    # Docker's default 64 MB /dev/shm is too small for PostgreSQL's shared memory use under parallel queries.
+    shm_size: 256m
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      PGBACKREST_REPO1_S3_KEY: ${PGBACKREST_REPO1_S3_KEY}
+      PGBACKREST_REPO1_S3_KEY_SECRET: ${PGBACKREST_REPO1_S3_KEY_SECRET}
+    # Continuous WAL archiving to the pgBackRest repository (contracts/backup-contract.md, "Archiving").
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest --stanza=jordylab archive-push %p
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jordylab"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  artwork:
+  ntfy-cache:
+  caddy-data:
+
+# Fixed subnet: Keycloak trusts X-Forwarded-* only from here (research R8, KC_PROXY_TRUSTED_ADDRESSES).
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,9 @@
+# Differential pgBackRest backup, Monday to Saturday (contracts/backup-contract.md). Output goes to the journal.
+[Unit]
+Description=JordyLab pgBackRest differential backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml exec -T postgres pgbackrest --stanza=jordylab --type=diff backup
