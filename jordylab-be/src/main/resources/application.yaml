@@ -71,7 +71,13 @@ server:
     include-exception: false
     include-binding-errors: never
 
+info:
+  commit: ${JORDYLAB_GIT_COMMIT:unknown}
+
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:

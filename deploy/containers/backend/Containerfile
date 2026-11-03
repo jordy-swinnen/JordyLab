@@ -22,6 +22,9 @@ RUN useradd --create-home --shell /usr/sbin/nologin jordylab
 USER jordylab
 WORKDIR /home/jordylab
 
+ARG JORDYLAB_GIT_COMMIT=unknown
+ENV JORDYLAB_GIT_COMMIT=${JORDYLAB_GIT_COMMIT}
+
 COPY --from=build --chown=jordylab:jordylab /workspace/build/libs/*.jar app.jar
 
 EXPOSE 8080

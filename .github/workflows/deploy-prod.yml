@@ -181,6 +181,28 @@ jobs:
         if: steps.decide.outputs.decision == 'proceed'
         run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
 
+      - name: Check the commit the running backend reports
+        id: info_check
+        if: steps.smoke.outcome == 'success' && inputs.dry_run != true
+        env:
+          TARGET_COMMIT: ${{ steps.resolve_target.outputs.target_commit }}
+        run: |
+          kubectl -n jordylab port-forward deploy/backend 18080:8080 >/dev/null 2>&1 &
+          port_forward_pid=$!
+          reported_commit=""
+          for _ in $(seq 1 15); do
+            reported_commit="$(curl -fsS http://localhost:18080/actuator/info 2>/dev/null | jq -r '.commit // empty' || true)"
+            if [ -n "$reported_commit" ]; then
+              break
+            fi
+            sleep 2
+          done
+          kill "$port_forward_pid" 2>/dev/null || true
+          echo "reported_commit=${reported_commit:-unreachable}" >> "$GITHUB_OUTPUT"
+          if [ "$reported_commit" != "$TARGET_COMMIT" ]; then
+            echo "::warning::the running backend reports '${reported_commit:-nothing}', not the target $TARGET_COMMIT (FR-017, SC-006)"
+          fi
+
       - name: Roll back to the previously live commit
         id: rollback
         # Only after the cluster was changed, with a known previous commit (FR-010, FR-012); never for a refused or superseded target.
@@ -234,6 +256,7 @@ jobs:
           ROLLBACK_OUTCOME: ${{ steps.rollback.outcome }}
           ROLLBACK_SMOKE_OUTCOME: ${{ steps.rollback_smoke.outcome }}
           SECRETS_CHANGED: ${{ steps.rollback.outputs.secrets_changed }}
+          REPORTED_COMMIT: ${{ steps.info_check.outputs.reported_commit }}
           BACKUP_NEWEST: ${{ steps.backup.outputs.newest_completed_at }}
           BACKUP_AGE_HOURS: ${{ steps.backup.outputs.age_hours }}
           BACKUP_REASON: ${{ steps.backup.outputs.reason }}
@@ -289,6 +312,9 @@ jobs:
             echo "| Target commit | $TARGET_COMMIT |"
             echo "| Previously live commit | $PREVIOUS_LIVE_COMMIT |"
             echo "| Live after the run | $live_after |"
+            if [ -n "$REPORTED_COMMIT" ]; then
+              echo "| Reported by the running backend | $REPORTED_COMMIT |"
+            fi
             if [ "$SECRETS_CHANGED" = "true" ]; then
               echo "| Warning | the secrets file differs from the previous commit; a rollback re-applies the old values |"
             fi
