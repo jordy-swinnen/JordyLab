@@ -441,6 +441,8 @@ The rollback drill above also proved the manual path (T057): a dispatch to `09f8
 
 **Not yet observed live:** the superseded skip (FR-006). The two merges that landed close together (rows 3 and 4) both deployed, in order, because the newer commit's build finished last. The skip is covered by the fixtures in `deploy/scripts/tests/deploy-decision-cases.sh`; watch for it the next time a slow build finishes after a newer one is live.
 
+**Spec 019 is live (2026-11-03).** Six automatic deploys, all green: `09f8f23`, `ef9dcd7` (the drill), `6088af8`, `cca388d`, `14f97f0` and `2c1091d`. The only rollbacks were the drill's and the manual ones it proved. No APK or release workflow exists any more, so no merge can build one (SC-005). The superseded skip has fixture coverage only until a slow build finishes after a newer commit is live; page that in as soon as it happens.
+
 ### Broken-image drill and manual rollback (quickstart Q5, Q6)
 
 | Date | Broken commit | Rolled back to | Time from start to previous commit serving | Manual rollback result |
