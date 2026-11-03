@@ -61,6 +61,18 @@ Rules behind each item: `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/
       `AiGatewayWiringTest` and `AiPropertiesTest` still pass
 <!-- END AI CHECKLIST -->
 
+## Database migration checklist
+
+Applies to any change under `jordylab-be/src/main/resources/db/migration/`. The rule behind each item is in
+`.claude/skills/flyway-migration/SKILL.md` (Compatibility with the previous release) and `docs/runbook.md` (rollback and
+the database). Spec 019, FR-019.
+
+- [ ] Blocking: no migration changes a file that has already been applied; a new migration is added instead
+- [ ] Blocking: each migration starts with `CREATE SCHEMA IF NOT EXISTS <schema>;` and `SET search_path`
+- [ ] Blocking: a drop, rename or type change of a column, table or index that the previous release still reads is split: an expand step in this release and a contract step in a later one
+- [ ] Blocking: a column added as `NOT NULL` has a default or is backfilled in the same migration, because the previous release still inserts without it
+- [ ] Important: a backfill of a large table runs in batches, not in one statement that holds the table
+
 ## Output Format
 
 ```
