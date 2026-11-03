@@ -1,0 +1,50 @@
+name: Tailscale SSH smoke
+
+# Proves the CI deploy path to the Compose host (spec 020, T023 — quickstart step 11, CI half; FR-013):
+# a runner tagged tag:ci joins the tailnet and SSHes to the host's tailnet address as jordylab-deploy
+# with DEPLOY_SSH_KEY. This must pass before public SSH closes at cutover (plan step 15); re-run it
+# whenever the tailnet policy, the deploy key or the host changes. Read-only: echo, id, hostname only.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ssh-smoke:
+    runs-on: ubuntu-latest
+    environment: production # DEPLOY_SSH_KEY and the Tailscale OAuth credentials live here
+    timeout-minutes: 5
+    steps:
+      - name: Join Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: SSH to the host over the tailnet as jordylab-deploy
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: 100.93.81.41
+          DEPLOY_USER: jordylab-deploy
+          # The host's ed25519 fingerprint, cross-verified against the trusted public-IP anchor on
+          # 2026-11-03 (T023). Host keys are public data; a mismatch fails the job rather than
+          # trusting an unverified key.
+          EXPECTED_ED25519_FP: SHA256:a7f59RlxrXwd5RIRZ5G0MphuKqyffsV6SB6RsnyLnm8
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          scanned="$(ssh-keyscan -T 30 -t ed25519 "$DEPLOY_HOST" 2>/dev/null | grep -v '^#' | head -n 1)"
+          if [ -z "$scanned" ]; then
+            echo "::error::no SSH host key from $DEPLOY_HOST over the tailnet (is the tag:ci tcp:22 grant in place?)"
+            exit 1
+          fi
+          actual_fp="$(printf '%s\n' "$scanned" | ssh-keygen -lf - | awk '{print $2}')"
+          echo "host key fingerprint: $actual_fp (expected $EXPECTED_ED25519_FP)"
+          if [ "$actual_fp" != "$EXPECTED_ED25519_FP" ]; then
+            echo "::error::host key mismatch for $DEPLOY_HOST: the tailnet path is not trusted"
+            exit 1
+          fi
+          printf '%s\n' "$scanned" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'echo SSH_OK as $(whoami) on $(hostname)'
