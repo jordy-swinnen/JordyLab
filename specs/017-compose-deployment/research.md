@@ -58,7 +58,7 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
 - **Schedule (FR-004)**: a weekly full backup and differential backups Monday to Saturday together satisfy "daily and weekly base backups". Both run from host systemd timers (R13).
 - **Restore**: point-in-time restore uses `pgbackrest --stanza=jordylab --type=time --target=<UTC time> restore` against an empty data directory.
 - **Alternatives considered**: WAL-G (rejected by the owner's decision, pgBackRest); keeping the Barman plugin outside Kubernetes (rejected: the plugin needs the CNPG operator).
-- **To confirm during the build** (not decided here): that the `pgbackrest` package exists for Debian trixie at the version the build pulls. The restore test in quickstart covers the result either way.
+- **Confirmed locally on 2026-11-02**: the `pgbackrest` package installs on the `pgvector/pgvector:pg16` base (pgBackRest 2.60.0, PostgreSQL 16.15, Debian bookworm). The S3 connection is not yet confirmed; see the quickstart log.
 
 ## R4. Ownership and dump format at cutover
 
