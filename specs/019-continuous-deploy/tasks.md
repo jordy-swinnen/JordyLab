@@ -151,7 +151,7 @@ its own. Setup and Foundational come first; Polish and the operational rollout c
 
 - [X] T037 [US7] Delete `.github/workflows/release.yml` (refinement: the APK job was already removed on main by spec 018-pwa-replaces-capacitor, so nothing is left to rename; the rest of the file is the tag-based deploy that FR-024 retires, and manual rollback to a release goes through the tag input of `deploy-prod.yml`).
 - [X] T038 [US7] Already done on main: spec 018-pwa-replaces-capacitor removed `e2e-android.yml` with the native app, so there is no `workflow_run` trigger left to remove.
-- [ ] T039 [P] [US7] Update the comments that name `release.yml` in `jordylab-fe/apps/jordylab-mobile/android/app/build.gradle` (lines near 10 and 24) and in `jordylab-fe/e2e/run.sh` (line 161) to `apk-release.yml`. Comments only.
+- [X] T039 [US7] Nothing left to change: the comments that named `release.yml` went with the native app (spec 018-pwa-replaces-capacitor), and a repository search finds no other reference outside the history documents.
 
 ---
 
@@ -161,8 +161,8 @@ its own. Setup and Foundational come first; Polish and the operational rollout c
 
 **Independent Test**: with a backup older than 26 hours (a fixture in T007, and the real object in T041), the summary and the annotation show a warning and the deploy still completes.
 
-- [ ] T040 [US8] In `.github/workflows/deploy-prod.yml`, render the backup outputs from T015 in the summary (T016): on `warning=true`, add `::warning::` with the reason (`none-completed`, `older-than-26h` or `unreadable`) and a summary line; the step never fails the run (FR-018).
-- [ ] T041 [US8] Check the CloudNativePG phase value on the live objects: `kubectl -n jordylab get backups.postgresql.cnpg.io -o jsonpath='{range .items[*]}{.metadata.name} {.status.phase} {.status.stoppedAt}{"\n"}{end}'` (quickstart Q7). If the phase is not `completed` for finished backups, fix the match in `deploy/scripts/backup-freshness.sh` (T004) and its fixtures in `deploy/scripts/tests/backup-freshness-cases.sh` (T007), then re-run the suite.
+- [X] T040 [US8] In `.github/workflows/deploy-prod.yml`, render the backup outputs from T015 in the summary (T016): on `warning=true`, add `::warning::` with the reason (`none-completed`, `older-than-26h` or `unreadable`) and a summary line; the step never fails the run (FR-018).
+- [X] T041 [US8] Check the CloudNativePG phase value on the live objects: `kubectl -n jordylab get backups.postgresql.cnpg.io -o jsonpath='{range .items[*]}{.metadata.name} {.status.phase} {.status.stoppedAt}{"\n"}{end}'` (quickstart Q7). If the phase is not `completed` for finished backups, fix the match in `deploy/scripts/backup-freshness.sh` (T004) and its fixtures in `deploy/scripts/tests/backup-freshness-cases.sh` (T007), then re-run the suite.
 
 ---
 

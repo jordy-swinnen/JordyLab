@@ -260,6 +260,7 @@ jobs:
           BACKUP_NEWEST: ${{ steps.backup.outputs.newest_completed_at }}
           BACKUP_AGE_HOURS: ${{ steps.backup.outputs.age_hours }}
           BACKUP_REASON: ${{ steps.backup.outputs.reason }}
+          BACKUP_WARNING: ${{ steps.backup.outputs.warning }}
         run: |
           if [ "$RESOLVE_DECISION" = "refused" ]; then
             outcome="refused"
@@ -303,6 +304,10 @@ jobs:
             echo "::notice::$TARGET_COMMIT is older than the live commit; it was not applied"
           fi
 
+          if [ "$BACKUP_WARNING" = "true" ]; then
+            echo "::warning::the newest completed backup needs attention (${BACKUP_REASON:-unknown}); the deploy continues (FR-018)"
+          fi
+
           {
             echo "## Deploy to Production"
             echo ""
@@ -322,5 +327,8 @@ jobs:
               echo "| Newest completed backup | $BACKUP_NEWEST (${BACKUP_AGE_HOURS} h old) |"
             else
               echo "| Newest completed backup | none found (${BACKUP_REASON:-unreadable}) |"
+            fi
+            if [ "$BACKUP_WARNING" = "true" ]; then
+              echo "| Backup warning | ${BACKUP_REASON:-unknown} (the deploy continues) |"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
