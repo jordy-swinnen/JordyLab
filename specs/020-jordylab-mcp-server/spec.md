@@ -14,8 +14,8 @@
 
 JordyLab joins Claude as a remote, read-only data source. Jordy adds one HTTPS address as a custom connector in
 Claude Desktop and in Claude mobile, signs in with his existing JordyLab account, and from then on asks Claude things
-like "which four-player couch games do I own?", "what did the latest briefing say about my watchlist?" or "who is
-waiting for approval?". Claude answers from the live data in JordyLab instead of guessing.
+like "which four-player couch games do I own?", "what did the latest briefing conclude?" or "what is my portfolio worth today?". Claude answers from the live data in
+JordyLab instead of guessing.
 
 The connector is a second door into the same data, not a second app: it shows what the admin already sees in
 JordyLab, obeys the same access rules, and can only read. It cannot add, change or delete anything, cannot start a
@@ -45,9 +45,16 @@ refused, and nothing in JordyLab changes.
 
 ### Session 2026-11-03
 
-- No questions were blocking. Two defaults are recorded in Assumptions and can be revisited with `/speckit-clarify`:
-  v1 covers every built domain (game catalog, finance, feedback, settings), and guest personal data is limited to
-  what the admin already sees in the app.
+- Q: Which data may Claude read through the connector in v1? (FR-006) → A: Game catalog and finance only; the feedback
+  inbox and user administration move to a later spec, because they hold guests' personal data.
+- Q: How should Claude identify itself to JordyLab's Keycloak when Jordy connects? (FR-002) → A: One public client,
+  created once in the `jordylab` realm; Jordy enters its client identifier in Claude. No secret, no experimental feature,
+  no anonymous registration.
+- Q: Where should each connector call be recorded: only in the backend log, or also in a database table? (FR-016) → A:
+  Backend log only; no database table for connector calls.
+- Q: Should the connector limit how many tool calls one admin can make per minute? (FR-020) → A: Yes, 60 calls per
+  minute per admin; calls over the limit are refused, not queued.
+- Q: How many items may one tool call return before it says more exist? (FR-009) → A: 50 items per call.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -131,30 +138,6 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 
 ---
 
-### User Story 4 - Ask about the app's own administration (Priority: P3)
-
-Jordy asks who is waiting for approval, who can currently use the Game Catalog, what feedback guests have sent, and
-which AI model each feature uses. Claude answers from the Users, Inbox and AI Models screens' data.
-
-**Why this priority**: useful for a quick status check away from a browser, but less frequent than the catalog and
-finance, and it exposes the most sensitive data, so it comes after the read-only guarantee is proven.
-
-**Independent Test**: ask one question per area and compare the answers with the Users page, the feedback inbox and
-Settings → AI Models.
-
-**Acceptance Scenarios**:
-
-1. **Given** sign-ups are pending, **When** Jordy asks who is waiting, **Then** Claude reports the same pending count
-   and the same people as the Users page.
-2. **Given** users hold or lack the Game Catalog grant, **When** Jordy asks who can use the catalog, **Then** Claude
-   lists exactly the people the Users page shows with that grant.
-3. **Given** the inbox holds tickets, **When** Jordy asks what guests reported, **Then** Claude summarizes the same
-   tickets, with their states and dates, that the inbox shows.
-4. **Given** a model is chosen per AI feature, **When** Jordy asks which model writes LibBot's answers, **Then**
-   Claude names the model the AI Models screen shows for that feature.
-
----
-
 ### Edge Cases
 
 - **Access revoked while connected**: an account revoked or stripped of the admin role in Keycloak stops getting data
@@ -162,19 +145,19 @@ Settings → AI Models.
   not retry with cached data.
 - **Wrong account**: signing in with a guest account, or with an account that is still pending approval, is refused
   before any data is read.
-- **Empty data**: with no installed games, no portfolio, no wishlist, no briefing or no feedback, the answer says the
+- **Empty data**: with no installed games, no portfolio, no wishlist or no briefing, the answer says the
   collection is empty rather than inventing entries.
 - **Unknown facts**: a game whose local player count was never confirmed is reported as unknown, never inferred from
   its genre or description.
-- **Very large results**: a question that would match the whole catalog or every article returns a bounded list and
-  states how much more exists, so a single answer cannot dump the database.
+- **Very large results**: a question that would match the whole catalog or every article returns the first 50 items and
+  states how many more match, so a single answer cannot dump the database.
 - **Stale prices**: a price that was last fetched hours ago is reported with its fetch time; the answer does not call
   it current.
 - **Work in progress in the app**: a scan, refresh run or library sync that is running does not block reads; the
   connector answers from the last committed state and can say a refresh is running.
 - **Backend or database unavailable**: the tool returns a clear failure the model can explain, never partial data
   presented as complete and never internal details such as stack traces or connection strings.
-- **Untrusted text**: article titles, game descriptions and feedback text are data. A sentence inside them that looks
+- **Untrusted text**: article titles and game descriptions are data. A sentence inside them that looks
   like an instruction does not cause any action, because no action exists to take.
 - **Same question, two clients**: desktop and mobile return the same values for the same underlying data.
 - **No connector configured**: the web app works exactly as before; the connector is optional.
@@ -187,9 +170,10 @@ Settings → AI Models.
 
 - **FR-001**: An admin MUST be able to add JordyLab to Claude Desktop and to Claude mobile as a remote connector
   using a single public HTTPS address on `https://jordylab.be`.
-- **FR-002**: Connecting MUST use the existing JordyLab account through the standard browser sign-in that Claude uses
-  for remote connectors. No password, API key or client secret may be copied into Claude by hand; a public client
-  identifier is allowed if the sign-in flow needs one.
+- **FR-002**: Connecting MUST use the existing JordyLab account through the browser sign-in that Claude uses for remote
+  connectors, against one public client for the connector, created once in the `jordylab` realm. Jordy enters that
+  client's identifier in Claude. No secret is copied into Claude, and the realm MUST NOT accept anonymous client
+  registration for this purpose.
 - **FR-003**: Only an account holding the `admin` role MUST be able to connect or call any tool. A guest, a pending
   or revoked account and the scan client's role MUST all be refused, and the refusal MUST reveal no data.
 - **FR-004**: Revoking the account or the admin role MUST stop access within the existing 60-second token lifetime,
@@ -199,14 +183,15 @@ Settings → AI Models.
 
 **Reading**
 
-- **FR-006**: The server MUST expose read-only tools covering: the game catalog (games, platforms, places, sources,
-  marks and library state), finance (articles, portfolio, wishlist, latest briefing), the feedback inbox, and app
-  administration (users and their app access, pending count, per-feature AI model settings, guest chat limit).
+- **FR-006**: The server MUST expose read-only tools covering the game catalog (games, platforms, places, sources,
+  marks and library state) and finance (articles, portfolio, wishlist, latest briefing). The feedback inbox and app
+  administration are not exposed in v1 (see Out of Scope).
 - **FR-007**: Every tool MUST obey the same access rule as the corresponding screen or API. A tool MUST NOT return
   data the admin cannot see in JordyLab.
 - **FR-008**: Every answer MUST reflect the data committed at call time; the connector MUST NOT serve a snapshot
   older than the data the app itself would show.
-- **FR-009**: A list-returning tool MUST be bounded and MUST report whether more results exist. It MUST accept
+- **FR-009**: A list-returning tool MUST return at most 50 items per call and MUST report whether more results exist. It
+  MUST accept
   narrowing arguments (for example platform, source, mark, state or text) and MUST NOT return an entire table in one
   call.
 - **FR-010**: A value the app does not know (for example an unconfirmed player count or a missing briefing) MUST be
@@ -226,17 +211,18 @@ Settings → AI Models.
 - **FR-014**: Responses MUST NOT contain secrets or credentials — API keys, client secrets, SMTP or Ntfy tokens,
   database passwords, Keycloak admin credentials, the Linear API key, scan-client tokens or other people's session
   data.
-- **FR-015**: Responses MUST NOT contain personal data beyond what the admin already sees in JordyLab: no guest
-  e-mail addresses or other account details that no screen shows, and no hidden fields.
-- **FR-016**: Each tool call MUST be attributable in the backend log to the signed-in admin, with the tool name, the
-  time and the outcome. Arguments and returned data MUST NOT be logged when they contain personal or financial
-  values.
+- **FR-015**: Responses MUST NOT contain personal data of any account other than the admin's own, and no hidden fields.
+- **FR-016**: Each tool call MUST leave one line in the backend log naming the signed-in admin, the tool name, the time
+  and the outcome. Nothing about a call is stored in the database. Arguments and returned data MUST NOT be logged when
+  they contain personal or financial values.
 - **FR-017**: Tool descriptions MUST state what each tool returns and that the access is read-only, so the model
   chooses correctly without trial and error.
 - **FR-018**: A failing tool MUST return a clear, non-sensitive error that the model can explain, and MUST NOT expose
   stack traces, SQL, internal host names or credentials.
 - **FR-019**: The connector MUST be optional: if it is not configured or unreachable, the web app and every existing
   API keep working unchanged.
+- **FR-020**: Each admin MUST be limited to 60 tool calls per minute. A call over the limit MUST be refused at once with
+  a clear, non-sensitive "try again shortly" error, and MUST NOT be run or queued.
 
 ### Key Entities
 
@@ -244,10 +230,10 @@ Settings → AI Models.
   role; revocable with the account.
 - **Read-only tool**: a named capability with a description, the data it may read and its bounds. The complete set is
   the contract with Claude.
-- **Tool call record**: who called which tool, when and with what outcome; no payload.
+- **Tool call record**: one backend log line per call, naming who called which tool, when and with what outcome. No
+  payload and no database row.
 - **Existing data read through tools**: game entries and their places, marks and player facts; finance articles,
-  portfolio positions, wishlist items and briefings; feedback tickets and their states; users with their app access,
-  pending sign-ups, per-feature AI model settings and the guest chat limit.
+  portfolio positions, wishlist items and briefings.
 
 ## Success Criteria *(mandatory)*
 
@@ -255,12 +241,12 @@ Settings → AI Models.
 
 - **SC-001**: An admin who has never configured a connector can connect from Claude Desktop and from Claude mobile
   in under 5 minutes each, with no help beyond the address.
-- **SC-002**: 95% of catalog, finance and administration questions return an answer within 10 seconds for the data
+- **SC-002**: 95% of catalog and finance questions return an answer within 10 seconds for the data
   volumes JordyLab holds today.
 - **SC-003**: Across a recorded test session, zero attempts to change data through the connector succeed, and no
   record in JordyLab differs afterwards.
 - **SC-004**: Across every tool, a non-admin account completes zero successful calls and receives no data.
-- **SC-005**: In a spot-check of ten questions spanning all four domains, every answer matches what the corresponding
+- **SC-005**: In a spot-check of ten questions spanning both v1 domains, every answer matches what the corresponding
   screen shows, or states the same reason for a difference (for example a price fetched earlier).
 - **SC-006**: After an account is revoked, its next call within 60 seconds is refused and returns no data.
 - **SC-007**: A review of the tool list and of representative responses finds no secret, no credential and no
@@ -269,27 +255,28 @@ Settings → AI Models.
   zero notifications and zero Linear issues.
 - **SC-009**: The connector is reachable over the public HTTPS address from a phone on mobile data, not only from
   the local network or a desktop browser.
-- **SC-010**: Every tool call leaves one attributable audit line naming the admin, the tool and the outcome, and a
-  review of those lines finds no personal or financial values.
+- **SC-010**: Every tool call leaves one attributable line in the backend log naming the admin, the tool and the
+  outcome, and a review of those lines finds no personal or financial values.
 - **SC-011**: With the connector not configured, every existing web-app journey still passes unchanged.
+- **SC-012**: A test that sends 61 tool calls from one admin within one minute runs exactly 60 of them and refuses the
+  61st with the "try again shortly" error, without running it.
+- **SC-013**: A question that matches more than 50 games or articles returns exactly 50 items and states the full number
+  of matches.
 
 ## Assumptions
 
-- v1 covers every domain that is built: game catalog, finance, feedback and settings. Garmin, recipe and trading have
-  no code and are added only when those modules exist.
+- v1 covers the game catalog and finance. The feedback inbox and administration are built but stay out of v1 (see Out
+  of Scope). Garmin, recipe and trading have no code and are added only when those modules exist.
 - There is exactly one admin today, Jordy. "Admin role" is still the rule, so a second admin would work without a
   code change.
-- Claude Desktop and Claude mobile support remote MCP connectors with browser-based OAuth. The address is the only
-  thing Jordy needs: Claude identifies itself through Anthropic's published client identity, through automatic client
-  registration, or with a public client identifier Jordy enters once. Nothing secret is copied into Claude.
-  (Keycloak 26.7.4 supports dynamic client registration today; the published-identity mechanism is an experimental
-  feature there, so the plan picks the one that needs the least configuration.)
+- Claude Desktop and Claude mobile support remote MCP connectors with browser-based OAuth and a user-entered OAuth client
+  identifier with no secret. This is assumed, not yet tested: the first connection from each client verifies it.
+  Keycloak 26.7.4 also offers dynamic registration and an experimental published-identity mode; neither is used.
 - Read-only means: no state change, no AI generation, no external side effect and no cost. A question that can only
   be answered by generating something new is answered with what exists, or refused.
 - The connector publishes what the app already knows. It is not a data warehouse, does not add caching that could go
   stale, and does not reshape or pre-aggregate the domain data beyond what a screen shows.
-- Guest personal data is limited to what the admin already sees: display names and ticket text in the inbox, account
-  e-mail addresses only where the Users screen shows them. No field hidden by a DTO is reconstructed.
+- No guest personal data reaches a tool in v1: guests' names, e-mail addresses and ticket text stay in the web app.
 - The public address lives on the existing origin and certificate. No new domain, tunnel or hosted MCP service is
   introduced.
 - The web app remains the place for changes. The connector complements it and never becomes the only way to do
@@ -301,6 +288,8 @@ Settings → AI Models.
 
 - Any write, approval, triage or configuration change through the connector.
 - A natural-language "ask JordyLab" tool that runs LibBot or another model; the reasoning stays in Claude.
+- The feedback inbox and app administration (users, pending sign-ups, app grants, AI model settings, guest chat limit)
+  in v1. They hold guests' personal data; a later spec decides whether and how they join.
 - Garmin, recipe, trading and Eufy data (modules not built).
 - Guests using the connector, per-user tool scopes or sharing the connector with other people.
 - A local (stdio) MCP server for Jordy's desktop, and support for MCP clients other than Claude Desktop and Claude
@@ -310,13 +299,11 @@ Settings → AI Models.
 
 ## Dependencies
 
-- `specs/006-settings-module/`: the users, app grants and AI model settings the administration tools read.
 - `specs/014-console-player-counts/`: the access matrix (admin, guest, per-app grant) and the 60-second token
   lifetime the connector reuses.
 - `specs/016-fna-stock-wishlist/` and the finance module: the portfolio, wishlist and briefing data.
-- `specs/017-guest-feedback/`: the feedback inbox fields and states.
 - `specs/018-pwa-replaces-capacitor/`: the PWA that remains the web client; the connector is a separate door and
   does not change it.
 - `specs/019-compose-deployment/`: the public gateway where the connector's address and discovery routes are added.
-- Keycloak: a connector client (or dynamic registration) in the `jordylab` realm, with the existing admin role as the
-  only way in.
+- Keycloak: one public connector client in the `jordylab` realm, created once (FR-002), with the existing admin role as
+  the only way in.
