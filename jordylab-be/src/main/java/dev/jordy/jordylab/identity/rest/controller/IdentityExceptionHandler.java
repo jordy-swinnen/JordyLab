@@ -9,6 +9,7 @@ import dev.jordy.jordylab.identity.service.InvalidCredentialsException;
 import dev.jordy.jordylab.identity.service.InvalidRequestException;
 import dev.jordy.jordylab.identity.service.InvalidUsernameException;
 import dev.jordy.jordylab.identity.service.LastAdminProtectedException;
+import dev.jordy.jordylab.identity.service.PasskeyNotFoundException;
 import dev.jordy.jordylab.identity.service.UserNotFoundException;
 import dev.jordy.jordylab.identity.service.UserNotApprovedException;
 import dev.jordy.jordylab.identity.service.UsernameTakenException;
@@ -64,6 +65,12 @@ public class IdentityExceptionHandler {
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<ErrorBody> handleInvalidRequest(InvalidRequestException exception) {
         return ResponseEntity.badRequest().body(new ErrorBody("INVALID_REQUEST", exception.getMessage()));
+    }
+
+    @ExceptionHandler(PasskeyNotFoundException.class)
+    public ResponseEntity<ErrorBody> handlePasskeyNotFound(PasskeyNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorBody("PASSKEY_NOT_FOUND", "This passkey is not enrolled for your account"));
     }
 
     @ExceptionHandler(UserNotFoundException.class)

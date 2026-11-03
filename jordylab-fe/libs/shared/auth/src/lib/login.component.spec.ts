@@ -17,6 +17,7 @@ const USER: CurrentUser = {
 describe('LoginComponent', () => {
   const isAuthenticated = signal(false);
   let login: ReturnType<typeof vi.fn>;
+  let signInWithPasskey: ReturnType<typeof vi.fn>;
   let navigateByUrl: ReturnType<typeof vi.fn>;
   let returnUrl: string | null;
 
@@ -40,6 +41,7 @@ describe('LoginComponent', () => {
         provide: AuthService,
         useValue: {
           login: (...args: unknown[]) => login(...args),
+          signInWithPasskey: (...args: unknown[]) => signInWithPasskey(...args),
           isAuthenticated: isAuthenticated.asReadonly(),
         },
       },
@@ -48,6 +50,7 @@ describe('LoginComponent', () => {
 
   beforeEach(() => {
     login = vi.fn().mockResolvedValue(USER);
+    signInWithPasskey = vi.fn().mockResolvedValue(USER);
     navigateByUrl = vi.fn().mockResolvedValue(true);
     isAuthenticated.set(false);
     returnUrl = null;
@@ -104,6 +107,18 @@ describe('LoginComponent', () => {
 
     expect(spectator.query('[data-testid="login-error"]')).toHaveText('Invalid username or password.');
     expect(navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('signs in with a passkey when the browser supports them', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', { value: vi.fn(), configurable: true });
+    spectator = createComponent();
+    expect(spectator.query('[data-testid="login-passkey"]')).toExist();
+
+    spectator.click('[data-testid="login-passkey"]');
+    await spectator.fixture.whenStable();
+
+    expect(signInWithPasskey).toHaveBeenCalled();
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 
   it('leaves as soon as a session already exists', () => {

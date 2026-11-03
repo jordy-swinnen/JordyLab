@@ -1,0 +1,135 @@
+<lib-page-header title="Account" subtitle="Your name, password and sign-in devices." />
+
+<div class="mt-8 grid gap-6 lg:grid-cols-2">
+  <section class="panel flex flex-col gap-4 p-6">
+    <div>
+      <h3 class="section-title">Display name</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Shown in the app instead of your username where there is room.</p>
+    </div>
+    <form class="flex flex-col gap-3" (ngSubmit)="onSaveDisplayName()">
+      <label class="flex flex-col gap-1">
+        <span class="label">Display name</span>
+        <input
+          class="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          type="text"
+          name="displayName"
+          data-testid="account-display-name"
+          [(ngModel)]="displayName"
+        />
+      </label>
+      @if (displayNameMessage(); as message) {
+        <p class="text-sm" [class.text-destructive]="displayNameFailed()" data-testid="account-display-name-message">{{ message }}</p>
+      }
+      <button hlmBtn variant="default" type="submit" class="h-11 self-start" [disabled]="displayNameSaving()" data-testid="account-display-name-save">
+        Save name
+      </button>
+    </form>
+  </section>
+
+  <section class="panel flex flex-col gap-4 p-6">
+    <div>
+      <h3 class="section-title">Change password</h3>
+      <p class="mt-1 text-sm text-muted-foreground">At least 12 characters. You stay signed in afterwards.</p>
+    </div>
+    <form class="flex flex-col gap-3" (ngSubmit)="onChangePassword()">
+      <label class="flex flex-col gap-1">
+        <span class="label">Current password</span>
+        <input
+          class="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          type="password"
+          name="currentPassword"
+          data-testid="account-current-password"
+          autocomplete="current-password"
+          [(ngModel)]="currentPassword"
+        />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="label">New password</span>
+        <input
+          class="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          type="password"
+          name="newPassword"
+          data-testid="account-new-password"
+          autocomplete="new-password"
+          [(ngModel)]="newPassword"
+        />
+      </label>
+      @if (passwordMessage(); as message) {
+        <p class="text-sm" [class.text-destructive]="passwordFailed()" data-testid="account-password-message">{{ message }}</p>
+      }
+      <button hlmBtn variant="default" type="submit" class="h-11 self-start" [disabled]="passwordSaving()" data-testid="account-password-save">
+        Change password
+      </button>
+    </form>
+  </section>
+
+  <section class="panel flex flex-col gap-4 p-6 lg:col-span-2">
+    <div>
+      <h3 class="section-title">Passkeys</h3>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Sign in with the fingerprint or face on this device instead of typing your password. You can add more than one.
+      </p>
+    </div>
+
+    @if (!passkeysSupported) {
+      <p class="text-sm text-muted-foreground" data-testid="account-passkeys-unsupported">
+        This browser cannot use passkeys. Your password still works.
+      </p>
+    } @else {
+      @if (passkeysLoading()) {
+        <p class="text-sm text-muted-foreground">Loading your passkeys…</p>
+      } @else if (passkeys().length === 0) {
+        <p class="text-sm text-muted-foreground" data-testid="account-passkeys-empty">
+          No passkey yet. Add one to sign in with this device's fingerprint or face.
+        </p>
+      } @else {
+        <ul class="flex flex-col gap-2">
+          @for (passkey of passkeys(); track passkey.credentialId) {
+            <li class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
+              <div>
+                <p class="text-sm text-foreground">{{ passkey.label ?? 'Passkey' }}</p>
+                <p class="text-xs text-muted-foreground">
+                  added {{ passkey.createdAt | date: 'MMM d, y' }}
+                  @if (passkey.lastUsedAt) {
+                    · last used {{ passkey.lastUsedAt | date: 'MMM d, y' }}
+                  }
+                </p>
+              </div>
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                class="h-9"
+                [disabled]="passkeyBusy()"
+                (click)="onRemovePasskey(passkey.credentialId)"
+                data-testid="account-passkey-remove"
+              >
+                Remove
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
+      <form class="flex flex-wrap items-end gap-3" (ngSubmit)="onAddPasskey()">
+        <label class="flex flex-col gap-1">
+          <span class="label">Label</span>
+          <input
+            class="h-11 w-56 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            type="text"
+            name="passkeyLabel"
+            data-testid="account-passkey-label"
+            [(ngModel)]="newPasskeyLabel"
+          />
+        </label>
+        <button hlmBtn variant="default" type="submit" class="h-11" [disabled]="passkeyBusy()" data-testid="account-passkey-add">
+          Add passkey
+        </button>
+      </form>
+
+      @if (passkeysError(); as message) {
+        <p class="text-sm text-destructive" role="alert" data-testid="account-passkeys-error">{{ message }}</p>
+      }
+    }
+  </section>
+</div>

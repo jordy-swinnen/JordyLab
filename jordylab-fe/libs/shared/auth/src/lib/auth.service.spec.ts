@@ -99,6 +99,73 @@ describe('AuthService', () => {
     expect(spectator.service.displayName()).toBe('Jordy S.');
   });
 
+  it('signs in with a passkey assertion', async () => {
+    const assertion = {
+      id: 'cred-1',
+      rawId: new Uint8Array([1]).buffer,
+      type: 'public-key',
+      getClientExtensionResults: () => ({}),
+      response: {
+        authenticatorData: new Uint8Array([2]).buffer,
+        clientDataJSON: new Uint8Array([3]).buffer,
+        signature: new Uint8Array([4]).buffer,
+        userHandle: null,
+      },
+    } as unknown as PublicKeyCredential;
+    Object.defineProperty(navigator, 'credentials', {
+      value: { get: vi.fn().mockResolvedValue(assertion), create: vi.fn() },
+      configurable: true,
+    });
+
+    const signIn = spectator.service.signInWithPasskey();
+    await flushCsrf();
+    http.expectOne('/webauthn/authenticate/options').flush({ challenge: 'AAAA' });
+    await nextTask();
+    await nextTask();
+    const login = http.expectOne('/login/webauthn');
+    expect(login.request.method).toBe('POST');
+    expect((login.request.body as { id: string }).id).toBe('cred-1');
+    login.flush({ authenticated: true, redirectUrl: '/' });
+    await nextTask();
+    http.expectOne('/api/identity/me').flush(USER);
+
+    await expect(signIn).resolves.toEqual(USER);
+    expect(spectator.service.isAuthenticated()).toBe(true);
+  });
+
+  it('treats a cancelled passkey prompt as a cancellation, not an error', async () => {
+    Object.defineProperty(navigator, 'credentials', {
+      value: { get: vi.fn().mockResolvedValue(null), create: vi.fn() },
+      configurable: true,
+    });
+
+    const signIn = spectator.service.signInWithPasskey();
+    const rejection = expect(signIn).rejects.toThrow('PASSKEY_CANCELLED');
+    await flushCsrf();
+    http.expectOne('/webauthn/authenticate/options').flush({ challenge: 'AAAA' });
+    await nextTask();
+    await nextTask();
+
+    await rejection;
+    expect(spectator.service.isAuthenticated()).toBe(false);
+  });
+
+  it('lists and removes the account passkeys', async () => {
+    const list = spectator.service.passkeys();
+    http.expectOne('/api/identity/passkeys').flush({
+      passkeys: [{ credentialId: 'cred-1', label: 'MacBook', createdAt: '2026-11-03T12:00:00Z', lastUsedAt: null }],
+    });
+
+    await expect(list).resolves.toHaveLength(1);
+
+    const remove = spectator.service.removePasskey('cred-1');
+    await flushCsrf();
+    const request = http.expectOne('/api/identity/passkeys/cred-1');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await remove;
+  });
+
   it('changes the password through the identity endpoint', async () => {
     const change = spectator.service.changePassword('old password 12', 'new password 12');
     await flushCsrf();

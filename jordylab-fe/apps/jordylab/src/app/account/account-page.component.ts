@@ -1,85 +1,21 @@
+import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AuthService, authErrorMessage } from '@jordylab-fe/shared/auth';
+import { AuthService, authErrorMessage, canUsePasskeys, Passkey } from '@jordylab-fe/shared/auth';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { PageHeaderComponent } from '@jordylab-fe/shared/layout';
 
 /**
- * The signed-in user's account settings (spec 019): display name and password now, the passkey card with US2. Emails do
- * not exist on this platform — no email is shown or asked for.
+ * The signed-in user's account settings (spec 019 US1/US2): display name, password, and the passkeys that sign in with
+ * this device's fingerprint or face. Emails do not exist on this platform — none is shown or asked for.
  */
 @Component({
   selector: 'app-account-page',
   standalone: true,
-  imports: [FormsModule, HlmButtonDirective, PageHeaderComponent],
+  imports: [DatePipe, FormsModule, HlmButtonDirective, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
-  template: `
-    <lib-page-header title="Account" subtitle="Your name, password and sign-in devices." />
-
-    <div class="mt-8 grid gap-6 lg:grid-cols-2">
-      <section class="panel flex flex-col gap-4 p-6">
-        <div>
-          <h3 class="section-title">Display name</h3>
-          <p class="mt-1 text-sm text-muted-foreground">Shown in the app instead of your username where there is room.</p>
-        </div>
-        <form class="flex flex-col gap-3" (ngSubmit)="onSaveDisplayName()">
-          <label class="flex flex-col gap-1">
-            <span class="label">Display name</span>
-            <input
-              class="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              type="text"
-              name="displayName"
-              data-testid="account-display-name"
-              [(ngModel)]="displayName"
-            />
-          </label>
-          @if (displayNameMessage(); as message) {
-            <p class="text-sm" [class.text-destructive]="displayNameFailed()" data-testid="account-display-name-message">{{ message }}</p>
-          }
-          <button hlmBtn variant="default" type="submit" class="h-11 self-start" [disabled]="displayNameSaving()" data-testid="account-display-name-save">
-            Save name
-          </button>
-        </form>
-      </section>
-
-      <section class="panel flex flex-col gap-4 p-6">
-        <div>
-          <h3 class="section-title">Change password</h3>
-          <p class="mt-1 text-sm text-muted-foreground">At least 12 characters. You stay signed in afterwards.</p>
-        </div>
-        <form class="flex flex-col gap-3" (ngSubmit)="onChangePassword()">
-          <label class="flex flex-col gap-1">
-            <span class="label">Current password</span>
-            <input
-              class="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              type="password"
-              name="currentPassword"
-              data-testid="account-current-password"
-              autocomplete="current-password"
-              [(ngModel)]="currentPassword"
-            />
-          </label>
-          <label class="flex flex-col gap-1">
-            <span class="label">New password</span>
-            <input
-              class="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              type="password"
-              name="newPassword"
-              data-testid="account-new-password"
-              autocomplete="new-password"
-              [(ngModel)]="newPassword"
-            />
-          </label>
-          @if (passwordMessage(); as message) {
-            <p class="text-sm" [class.text-destructive]="passwordFailed()" data-testid="account-password-message">{{ message }}</p>
-          }
-          <button hlmBtn variant="default" type="submit" class="h-11 self-start" [disabled]="passwordSaving()" data-testid="account-password-save">
-            Change password
-          </button>
-        </form>
-      </section>
-    </div>
-  `,
+  templateUrl: './account-page.component.html',
 })
 export class AccountPageComponent {
   readonly #auth = inject(AuthService);
@@ -87,6 +23,7 @@ export class AccountPageComponent {
   protected displayName = this.#auth.displayName() ?? '';
   protected currentPassword = '';
   protected newPassword = '';
+  protected newPasskeyLabel = 'This device';
 
   protected readonly displayNameSaving = signal(false);
   protected readonly displayNameMessage = signal<string | null>(null);
@@ -94,6 +31,68 @@ export class AccountPageComponent {
   protected readonly passwordSaving = signal(false);
   protected readonly passwordMessage = signal<string | null>(null);
   protected readonly passwordFailed = signal(false);
+
+  protected readonly passkeysSupported = canUsePasskeys();
+  protected readonly passkeys = signal<Passkey[]>([]);
+  protected readonly passkeysLoading = signal(true);
+  protected readonly passkeysError = signal<string | null>(null);
+  protected readonly passkeyBusy = signal(false);
+
+  constructor() {
+    void this.loadPasskeys();
+  }
+
+  async loadPasskeys(): Promise<void> {
+    this.passkeysLoading.set(true);
+    this.passkeysError.set(null);
+    try {
+      this.passkeys.set(await this.#auth.passkeys());
+    } catch (failure) {
+      this.passkeysError.set(authErrorMessage(failure));
+    } finally {
+      this.passkeysLoading.set(false);
+    }
+  }
+
+  async onAddPasskey(): Promise<void> {
+    if (this.passkeyBusy()) {
+      return;
+    }
+    this.passkeyBusy.set(true);
+    this.passkeysError.set(null);
+    try {
+      await this.#auth.addPasskey(this.newPasskeyLabel.trim() || 'Passkey');
+      await this.loadPasskeys();
+    } catch (failure) {
+      if (failure instanceof Error && failure.message === 'PASSKEY_CANCELLED') {
+        this.passkeysError.set('Passkey creation was cancelled.');
+      } else {
+        this.passkeysError.set(authErrorMessage(failure));
+      }
+    } finally {
+      this.passkeyBusy.set(false);
+    }
+  }
+
+  async onRemovePasskey(credentialId: string): Promise<void> {
+    if (this.passkeyBusy()) {
+      return;
+    }
+    this.passkeyBusy.set(true);
+    this.passkeysError.set(null);
+    try {
+      await this.#auth.removePasskey(credentialId);
+      await this.loadPasskeys();
+    } catch (failure) {
+      this.passkeysError.set(
+        failure instanceof HttpErrorResponse && failure.status === 404
+          ? 'That passkey no longer exists.'
+          : authErrorMessage(failure),
+      );
+    } finally {
+      this.passkeyBusy.set(false);
+    }
+  }
 
   async onSaveDisplayName(): Promise<void> {
     this.displayNameSaving.set(true);

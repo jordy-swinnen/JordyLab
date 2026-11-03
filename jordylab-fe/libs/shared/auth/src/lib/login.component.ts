@@ -1,8 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, effect, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { AuthService, authErrorMessage } from './auth.service';
+import { canUsePasskeys } from './webauthn';
 
 /** The app's own sign-in form (spec 019 US1): username and password, with a link to register. */
 @Component({
@@ -74,6 +76,26 @@ import { AuthService, authErrorMessage } from './auth.service';
           </button>
         </form>
 
+        @if (passkeysSupported) {
+          <div class="mt-5 border-t border-border pt-5">
+            <button
+              hlmBtn
+              variant="outline"
+              type="button"
+              [disabled]="passkeySubmitting()"
+              (click)="onPasskey()"
+              class="h-11 w-full"
+              data-testid="login-passkey"
+            >
+              Sign in with a passkey
+            </button>
+            <p class="mt-2 text-xs text-muted-foreground">Use the fingerprint or face you enrolled on this device.</p>
+            @if (passkeyError(); as message) {
+              <p class="mt-2 text-sm text-destructive" role="alert" data-testid="login-passkey-error">{{ message }}</p>
+            }
+          </div>
+        }
+
         <p class="mt-5 text-sm text-muted-foreground">
           No account yet?
           <a class="text-accent-text underline-offset-2 hover:underline" routerLink="/register">Register</a>
@@ -91,6 +113,9 @@ export class LoginComponent {
   protected password = '';
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly passkeysSupported = canUsePasskeys();
+  protected readonly passkeySubmitting = signal(false);
+  protected readonly passkeyError = signal<string | null>(null);
 
   constructor() {
     // A session restored in another tab (or still valid) authenticates without any form submit: leave immediately.
@@ -99,6 +124,28 @@ export class LoginComponent {
         void this.#router.navigateByUrl(this.#returnUrl);
       }
     });
+  }
+
+  async onPasskey(): Promise<void> {
+    if (this.passkeySubmitting()) {
+      return;
+    }
+    this.passkeySubmitting.set(true);
+    this.passkeyError.set(null);
+    try {
+      await this.#auth.signInWithPasskey();
+      await this.#router.navigateByUrl(this.#returnUrl);
+    } catch (failure) {
+      if (failure instanceof Error && failure.message === 'PASSKEY_CANCELLED') {
+        this.passkeyError.set('Passkey sign-in was cancelled.');
+      } else if (failure instanceof HttpErrorResponse && failure.status === 401) {
+        this.passkeyError.set('No passkey matched this site. Enroll one after signing in.');
+      } else {
+        this.passkeyError.set(authErrorMessage(failure));
+      }
+    } finally {
+      this.passkeySubmitting.set(false);
+    }
   }
 
   async onLogin(): Promise<void> {

@@ -3,6 +3,7 @@ package dev.jordy.jordylab.identity;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -34,6 +35,7 @@ import java.util.function.Supplier;
  */
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(IdentityProperties.class)
 public class IdentitySecurityConfiguration {
 
     @Bean
@@ -58,8 +60,8 @@ public class IdentitySecurityConfiguration {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain sessionFilterChain(HttpSecurity http,
-            CsrfTokenRepository csrfTokenRepository) throws Exception {
+    public SecurityFilterChain sessionFilterChain(HttpSecurity http, CsrfTokenRepository csrfTokenRepository,
+            IdentityProperties identityProperties) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         // Let Spring's error dispatch through (spec 011): otherwise every exception becomes a bare 403.
@@ -68,6 +70,10 @@ public class IdentitySecurityConfiguration {
                         .requestMatchers("/actuator/metrics/**").hasRole("admin")
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/identity/auth/**").permitAll()
+                        // Spring Security's WebAuthn ceremony endpoints (spec 019 D16): options and the assertion
+                        // are public; enrolling a passkey requires a signed-in session.
+                        .requestMatchers("/webauthn/authenticate/options", "/login/webauthn").permitAll()
+                        .requestMatchers("/webauthn/register/options", "/webauthn/register").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/identity/me").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/identity/me").authenticated()
                         .requestMatchers("/api/identity/passkeys/**").authenticated()
@@ -89,7 +95,12 @@ public class IdentitySecurityConfiguration {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
-                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()));
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+                .webAuthn(webAuthn -> webAuthn
+                        .rpId(identityProperties.webauthn().rpId())
+                        .rpName(identityProperties.webauthn().rpName())
+                        .allowedOrigins(identityProperties.webauthn().allowedOrigins().toArray(String[]::new))
+                        .disableDefaultRegistrationPage(true));
 
         return http.build();
     }

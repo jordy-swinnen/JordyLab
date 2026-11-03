@@ -1,6 +1,18 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, Signal, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import {
+  createCredential,
+  getAssertion,
+  serializeAssertion,
+  serializeAttestation,
+  toCreationOptions,
+  toRequestOptions,
+} from './webauthn';
+import type {
+  PublicKeyCredentialCreationOptionsJson,
+  PublicKeyCredentialRequestOptionsJson,
+} from './webauthn';
 
 /** The two application roles (spec 019 FR-003). Self-registered users hold neither until approved. */
 export type AppRole = 'admin' | 'guest';
@@ -22,6 +34,14 @@ export interface CurrentUser {
 }
 
 const APP_ROLES: readonly AppRole[] = ['admin', 'guest'];
+
+/** One enrolled passkey (spec 019 US2). */
+export interface Passkey {
+  credentialId: string;
+  label: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
 
 /**
  * Session authentication against the backend (spec 019): the browser holds an HttpOnly session cookie, so the app
@@ -118,6 +138,60 @@ export class AuthService {
     this.#init = this.#loadCurrentUser();
 
     return this.#init;
+  }
+
+  /** One enrolled passkey as the identity API lists it (spec 019 US2). */
+  async passkeys(): Promise<Passkey[]> {
+    const response = await firstValueFrom(
+      this.#http.get<{ passkeys: Passkey[] }>('/api/identity/passkeys'),
+    );
+
+    return response.passkeys;
+  }
+
+  /**
+   * Signs in with a passkey (spec 019 US2): the verification options are usernameless — the authenticator offers the
+   * passkeys stored for this site — and the assertion establishes the same session a password would.
+   */
+  async signInWithPasskey(): Promise<CurrentUser> {
+    await this.#ensureCsrfToken();
+    const options = await firstValueFrom(
+      this.#http.post<PublicKeyCredentialRequestOptionsJson>('/webauthn/authenticate/options', {}),
+    );
+    const credential = await getAssertion(toRequestOptions(options));
+    if (!credential) {
+      throw new Error('PASSKEY_CANCELLED');
+    }
+    await firstValueFrom(this.#http.post('/login/webauthn', serializeAssertion(credential)));
+    const user = await firstValueFrom(this.#http.get<CurrentUser>('/api/identity/me'));
+    this.#user.set(user);
+    this.#init = Promise.resolve(true);
+
+    return user;
+  }
+
+  /** Adds a passkey to the signed-in account; the device prompts for fingerprint/face. */
+  async addPasskey(label: string): Promise<void> {
+    await this.#ensureCsrfToken();
+    const options = await firstValueFrom(
+      this.#http.post<PublicKeyCredentialCreationOptionsJson>('/webauthn/register/options', {}),
+    );
+    const credential = await createCredential(toCreationOptions(options));
+    if (!credential) {
+      throw new Error('PASSKEY_CANCELLED');
+    }
+    await firstValueFrom(
+      this.#http.post('/webauthn/register', {
+        publicKey: { credential: serializeAttestation(credential), label },
+      }),
+    );
+  }
+
+  async removePasskey(credentialId: string): Promise<void> {
+    await this.#ensureCsrfToken();
+    await firstValueFrom(
+      this.#http.delete<void>(`/api/identity/passkeys/${encodeURIComponent(credentialId)}`),
+    );
   }
 
   async #loadCurrentUser(): Promise<boolean> {

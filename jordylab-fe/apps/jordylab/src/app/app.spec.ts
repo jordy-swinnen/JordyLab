@@ -18,7 +18,7 @@ describe('App', () => {
   const authInit = vi.fn();
   const createComponent = createComponentFactory({
     component: App,
-    imports: [RouterModule.forRoot([])],
+    imports: [RouterModule.forRoot([{ path: 'login', children: [] }])],
     providers: [
       provideHttpClient(),
       {

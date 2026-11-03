@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.identity.rest.controller;
 
 import dev.jordy.jordylab.identity.IdentitySecurityConfiguration;
+import dev.jordy.jordylab.identity.service.IdentityUserDetailsService;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.domain.UserRole;
@@ -45,6 +46,9 @@ class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private IdentityUserDetailsService identityUserDetailsService;
 
     @MockitoBean
     private UserAccountService userAccountService;
