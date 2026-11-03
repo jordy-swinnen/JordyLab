@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# One end-to-end run on its own throwaway Postgres + Keycloak (spec 012 US11, contracts/e2e-environment.md).
+# One end-to-end run on its own throwaway Postgres (spec 019 US7; the app has its own authentication, no Keycloak).
 #   run.sh web                 build the app fresh, start the stack, run the Playwright suite
 #   run.sh selftest-pass|selftest-fail|selftest-wait    full lifecycle with a trivial test command (cleanup proofs)
 # Whatever happens (pass, fail, Ctrl-C, SIGTERM) the stack is removed and verified gone; leftovers fail the run (exit 97).
-# Never touches jordylab-be/compose.yaml, the dev database or the dev realm. Credentials are generated per run, kept in an
+# Never touches jordylab-be/compose.yaml or the dev database. Credentials are generated per run, kept in an
 # untracked 0600 file and never printed.
 set -u
 
@@ -94,9 +94,6 @@ finish() {
     mkdir -p "$E2E_ARTIFACT_DIRECTORY"
     cp "$RUN_DIRECTORY"/*.log "$E2E_ARTIFACT_DIRECTORY"/ 2>/dev/null
   fi
-  if [[ -n "${E2E_ARTIFACT_DIRECTORY:-}" ]]; then
-    compose logs --no-color keycloak >"$E2E_ARTIFACT_DIRECTORY/keycloak.log" 2>/dev/null
-  fi
   compose down --volumes --remove-orphans >/dev/null 2>&1
   e2e_remove_run "$RUN_ID"
   rm -rf "$RUN_DIRECTORY"
@@ -121,13 +118,13 @@ start_backend() {
   jar="${E2E_BACKEND_JAR:-$(ls "$REPOSITORY_ROOT"/jordylab-be/build/libs/*.jar 2>/dev/null | grep -v -- '-plain' | head -1)}"
   [[ -n "$jar" ]] || { log "no backend jar found"; return 1; }
   mkdir -p "$RUN_DIRECTORY/artwork"
-  # The backend refuses to start without profile `local` or `prod`, and `local` hard-codes the DEV stack (database on
-  # localhost:5432, Keycloak on 8180, a dev client secret, dev CORS origins). Environment variables beat profile files, so
-  # every one of those values is overridden below; nothing may fall back to the dev stack (see the port guard in main).
+  # The backend refuses to start without a valid profile, and `local` hard-codes the DEV stack (database on localhost:5432,
+  # dev CORS origins). Environment variables beat profile files, so every one of those values is overridden below; nothing
+  # may fall back to the dev stack (see the port guard in main). `e2e` enables the profile-gated test sign-in helper only.
   # -u: the throwaway backend must have no AI provider keys, whatever the developer's shell exports. The cover lookup is off:
   # the auto-fill would otherwise ask the public internet, and a journey must not depend on a third party being up.
   env -u OPENROUTER_API_KEY -u ANTHROPIC_API_KEY \
-    SPRING_PROFILES_ACTIVE=local \
+    SPRING_PROFILES_ACTIVE=local,e2e \
     SERVER_PORT="$API_PORT" \
     SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:$POSTGRES_PORT/jordylab" \
     SPRING_DATASOURCE_USERNAME=jordylab \
@@ -135,12 +132,11 @@ start_backend() {
     POSTGRES_URL="jdbc:postgresql://localhost:$POSTGRES_PORT/jordylab" \
     POSTGRES_USER=jordylab \
     POSTGRES_PASSWORD="$E2E_DB_PASSWORD" \
-    KEYCLOAK_URL="http://localhost:$KEYCLOAK_PORT" \
-    KEYCLOAK_BACKEND_SECRET="$E2E_BACKEND_CLIENT_SECRET" \
-    JORDYLAB_SETTINGS_KEYCLOAK_SERVER_URL="http://localhost:$KEYCLOAK_PORT" \
-    JORDYLAB_SETTINGS_KEYCLOAK_ADMIN_CLIENT_SECRET="$E2E_BACKEND_CLIENT_SECRET" \
-    JORDYLAB_SCRIPT_KEYCLOAK_URL="http://localhost:$KEYCLOAK_PORT" \
-    SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="http://localhost:$KEYCLOAK_PORT/realms/jordylab" \
+    JORDYLAB_IDENTITY_BOOTSTRAP_USERNAME="$E2E_ADMIN_USERNAME" \
+    JORDYLAB_IDENTITY_BOOTSTRAP_PASSWORD="$E2E_ADMIN_PASSWORD" \
+    IDENTITY_BOOTSTRAP_ADMIN_USERNAME="$E2E_ADMIN_USERNAME" \
+    IDENTITY_BOOTSTRAP_ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD" \
+    JORDYLAB_IDENTITY_WEBAUTHN_ALLOWED_ORIGINS="http://localhost:$WEB_PORT" \
     JORDYLAB_CORS_ALLOWED_ORIGINS="http://localhost:$WEB_PORT" \
     JORDYLAB_APP_BASE_URL="http://localhost:$WEB_PORT" \
     GAMECATALOG_ARTWORK_DIR="$RUN_DIRECTORY/artwork" \
@@ -150,7 +146,7 @@ start_backend() {
 }
 
 web_is_up() { curl -fsS "http://localhost:$WEB_PORT/" -o /dev/null; }
-keycloak_is_up() { curl -fsS "http://localhost:$KEYCLOAK_PORT/realms/jordylab/.well-known/openid-configuration" -o /dev/null; }
+postgres_is_up() { compose exec -T postgres pg_isready -U jordylab -d jordylab; }
 backend_is_up() { curl -fsS "http://localhost:$API_PORT/actuator/health" -o /dev/null; }
 
 # Serves a built web app (static files plus the /api proxy) next to the backend.
@@ -198,42 +194,34 @@ main() {
   e2e_sweep
   mkdir -p "$RUN_DIRECTORY" && chmod 700 "$RUN_DIRECTORY"
 
-  POSTGRES_PORT="$(free_port)"; KEYCLOAK_PORT="$(free_port)"; API_PORT="$(free_port)"; WEB_PORT="$(free_port)"
+  POSTGRES_PORT="$(free_port)"; API_PORT="$(free_port)"; WEB_PORT="$(free_port)"
   E2E_DB_PASSWORD="$(random_secret)"
-  E2E_KEYCLOAK_ADMIN_PASSWORD="$(random_secret)"
   E2E_ADMIN_USERNAME="e2e-admin"
   E2E_ADMIN_PASSWORD="$(random_secret)"
-  E2E_INGEST_CLIENT_SECRET="$(random_secret)"
-  E2E_BACKEND_CLIENT_SECRET="$(random_secret)"
-  if [[ "$POSTGRES_PORT" == "5432" || "$KEYCLOAK_PORT" == "8180" ]]; then
+  if [[ "$POSTGRES_PORT" == "5432" ]]; then
     log "refusing to run: a chosen port collides with the dev stack"; TEST_EXIT_CODE=1; exit 1
   fi
   export E2E_PROJECT="$PROJECT" E2E_RUN_ID="$RUN_ID" E2E_RUNNER_PID="$$" E2E_REPO_ROOT="$REPOSITORY_ROOT"
-  export E2E_POSTGRES_PORT="$POSTGRES_PORT" E2E_KEYCLOAK_PORT="$KEYCLOAK_PORT" E2E_WEB_PORT="$WEB_PORT"
-  export E2E_DB_PASSWORD E2E_KEYCLOAK_ADMIN_PASSWORD E2E_ADMIN_USERNAME E2E_ADMIN_PASSWORD E2E_INGEST_CLIENT_SECRET E2E_BACKEND_CLIENT_SECRET
-  export E2E_REALM_FILE="$RUN_DIRECTORY/realm.json"
-
-  python3 "$SCRIPT_DIRECTORY/lib/make-realm.py" "$E2E_REALM_FILE" || { TEST_EXIT_CODE=1; exit 1; }
+  export E2E_POSTGRES_PORT="$POSTGRES_PORT" E2E_WEB_PORT="$WEB_PORT"
+  export E2E_DB_PASSWORD E2E_ADMIN_USERNAME E2E_ADMIN_PASSWORD
 
   # Everything a test needs, in one untracked 0600 file (also exported below). Values are never printed.
   umask 077
   {
     echo "E2E_RUN_ID=$RUN_ID"
     echo "E2E_BASE_URL=http://localhost:$WEB_PORT"
-    echo "E2E_KEYCLOAK_URL=http://localhost:$KEYCLOAK_PORT"
     echo "E2E_API_ORIGIN=http://localhost:$API_PORT"
     echo "E2E_ADMIN_USERNAME=$E2E_ADMIN_USERNAME"
     echo "E2E_ADMIN_PASSWORD=$E2E_ADMIN_PASSWORD"
-    echo "E2E_INGEST_CLIENT_SECRET=$E2E_INGEST_CLIENT_SECRET"
   } >"$RUN_DIRECTORY/env"
   set -a
   # shellcheck disable=SC1091
   . "$RUN_DIRECTORY/env"
   set +a
 
-  log "starting Postgres and Keycloak (ports $POSTGRES_PORT / $KEYCLOAK_PORT)"
+  log "starting Postgres on port $POSTGRES_PORT"
   compose up -d >"$RUN_DIRECTORY/compose.log" 2>&1 || { log "compose up failed (see compose log)"; tail -20 "$RUN_DIRECTORY/compose.log" >&2; TEST_EXIT_CODE=1; exit 1; }
-  wait_for "Keycloak realm on port $KEYCLOAK_PORT" keycloak_is_up || { compose logs --tail 30 keycloak >&2; TEST_EXIT_CODE=1; exit 1; }
+  wait_for "Postgres on port $POSTGRES_PORT" postgres_is_up || { compose logs --tail 30 postgres >&2; TEST_EXIT_CODE=1; exit 1; }
   start_backend || { TEST_EXIT_CODE=1; exit 1; }
   wait_for "the backend on port $API_PORT" backend_is_up || { tail -30 "$RUN_DIRECTORY/backend.log" >&2; TEST_EXIT_CODE=1; exit 1; }
 

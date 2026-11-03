@@ -3,12 +3,11 @@ import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { environment, expect, test } from './support/fixtures';
 import { PAGES } from './support/pages';
-import { pointAppAtKeycloak } from './support/session';
 
 // The production Content-Security-Policy (the Report-Only header in deploy/containers/frontend/security-headers.conf, MRB-11) applied here as
 // an ENFORCING header to every page of the signed-in app, so anything the policy would block shows up as a failing test instead of a line in
-// the owner's console. In production the page origin is jordylab.be and 'self' covers the API and Keycloak; in this throwaway stack they are
-// other origins, so exactly those two origins are added to default-src and connect-src, nothing else is relaxed.
+// the owner's console. In production the page origin is jordylab.be and 'self' covers the API; in this throwaway stack the API is another
+// origin, so exactly that origin is added to default-src and connect-src, nothing else is relaxed.
 // (This runs against the e2e build; tools/app-boot-check.mjs checks the optimised production bundle, including its one inline script.)
 function productionPolicy(): string {
   const root = process.env['E2E_REPO_ROOT'];
@@ -21,7 +20,7 @@ function productionPolicy(): string {
   if (!policy) {
     throw new Error('No Content-Security-Policy-Report-Only header found in security-headers.conf');
   }
-  const stackOrigins = [environment.keycloakUrl, environment.apiOrigin].map((url) => new URL(url).origin).join(' ');
+  const stackOrigins = new URL(environment.apiOrigin).origin;
 
   return policy.replace(/(default-src|connect-src) 'self'/g, `$1 'self' ${stackOrigins}`);
 }
@@ -96,23 +95,17 @@ test.describe('Content-Security-Policy (production policy, enforced)', () => {
     expect(await violationsOf(page)).toEqual([]);
   });
 
-  // Keycloak's silent sign-in loads this page in a hidden iframe on every app start; the e2e stack's session never reaches it, so it is opened
-  // directly. Its script must be an external file: an inline one is refused by script-src and single sign-on silently stops (BUG-070).
-  test('the silent sign-in page runs its script under the policy', async ({ page }) => {
-    await enforcePolicy(page);
-    await page.goto('/silent-check-sso.html');
-
-    expect(await violationsOf(page)).toEqual([]);
-  });
-
   test('signing in and out with the policy on works and blocks nothing', async ({ browser }) => {
     const context = await browser.newContext({ baseURL: environment.baseUrl, storageState: undefined });
-    await pointAppAtKeycloak(context, environment.keycloakUrl);
     const page = await context.newPage();
     await enforcePolicy(page);
 
     await page.goto('/login');
-    await expect(page.getByRole('button', { name: 'Sign in with Keycloak' })).toBeVisible();
+    await expect(page.getByTestId('login-submit')).toBeVisible();
+    await page.getByTestId('login-username').fill(environment.adminUsername);
+    await page.getByTestId('login-password').fill(environment.adminPassword);
+    await page.getByTestId('login-submit').click();
+    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
 
     expect(await violationsOf(page)).toEqual([]);
     await context.close();

@@ -41,9 +41,13 @@ describe('parseSseBlocks', () => {
 });
 
 describe('askLibBot', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
 
-  it('emits the stages in order and then the answer, sending the bearer token and the body', async () => {
+  it('emits the stages in order and then the answer, sending the CSRF header and the body', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-value';
     const answer = aLibBotAnswerMock();
     respondWith(
       streamOf(
@@ -62,6 +66,7 @@ describe('askLibBot', () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(url).toBe('/api/gamecatalog/libbot/ask');
     expect((init?.headers as Record<string, string>)['Authorization']).toBeUndefined();
+    expect((init?.headers as Record<string, string>)['X-XSRF-TOKEN']).toBe('csrf-value');
     expect(init?.credentials).toBe('same-origin');
     expect(JSON.parse(init?.body as string)).toEqual(REQUEST);
   });

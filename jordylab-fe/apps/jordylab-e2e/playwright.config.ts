@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { requiredEnvironment } from './src/support/environment';
 
-// Run through jordylab-fe/e2e/run.sh web: it builds the app fresh, starts the throwaway Postgres + Keycloak + backend and exports
+// Run through jordylab-fe/e2e/run.sh web: it builds the app fresh, starts the throwaway Postgres + backend and exports
 // the E2E_* variables read here. Nothing in this config points at a fixed address or the dev stack.
 const environment = requiredEnvironment();
 
@@ -27,7 +27,7 @@ export default defineConfig({
     { name: 'chromium', testIgnore: '**/csp.spec.ts', use: { ...devices['Desktop Chrome'] } },
     {
       // csp.spec.ts serves each document through route.fulfill() to add the policy header. Chrome then has no address for the document, treats it
-      // as public and its Local Network Access check refuses the page's requests to the throwaway Keycloak on localhost. That check is a
+      // as public and its Local Network Access check refuses the page's requests to the throwaway API on localhost. That check is a
       // browser feature, not part of the policy under test, so only this project switches it off.
       name: 'chromium-csp',
       testMatch: '**/csp.spec.ts',

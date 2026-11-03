@@ -17,7 +17,12 @@ Bun.serve({
   hostname: '127.0.0.1',
   async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/')) {
+    // Spring Security's WebAuthn ceremony endpoints live outside /api; like production's ingress, forward them too.
+    const backendPath =
+      url.pathname.startsWith('/api/') ||
+      url.pathname.startsWith('/webauthn/') ||
+      url.pathname === '/login/webauthn';
+    if (backendPath) {
       return fetch(new Request(apiOrigin + url.pathname + url.search, request));
     }
     const requested = normalize(join(distDirectory, url.pathname));

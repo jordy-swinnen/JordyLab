@@ -77,6 +77,17 @@ async function failureEvent(response: Response): Promise<LibBotAskEvent> {
 }
 
 /**
+ * The raw `fetch` below bypasses Angular's HttpClient, so it must carry the CSRF header itself: the backend's session
+ * chain rejects a POST without it. The value comes from the `XSRF-TOKEN` cookie the app bootstraps at start-up.
+ */
+function csrfToken(): string | null {
+  const prefix = 'XSRF-TOKEN=';
+  const cookie = document.cookie.split('; ').find((candidate) => candidate.startsWith(prefix));
+
+  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+}
+
+/**
  * Asks LibBot and emits its stage events, then exactly one `answer`, `error`, `limitReached` or `rejected` event.
  * Uses `fetch` because `EventSource` cannot send a POST body. The session cookie authenticates the call (spec 019).
  * Unsubscribing aborts the request, and the server then neither remembers nor counts the question.
@@ -86,11 +97,13 @@ export function askLibBot(request: LibBotAskRequest): Observable<LibBotAskEvent>
     const controller = new AbortController();
 
     const run = async (): Promise<void> => {
+      const token = csrfToken();
       const response = await fetch('/api/gamecatalog/libbot/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
+          ...(token ? { 'X-XSRF-TOKEN': token } : {}),
         },
         body: JSON.stringify(request),
         credentials: 'same-origin',

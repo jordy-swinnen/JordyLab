@@ -1,6 +1,5 @@
 import { environment, expect, test } from './support/fixtures';
 import { signedInApprovedGuest } from './support/guest';
-import { pointAppAtKeycloak } from './support/session';
 
 /**
  * The installable-web-app shell (spec 018 US1, FR-001/FR-002). These journeys prove what the browser install criteria
@@ -118,20 +117,17 @@ test.describe('Share target', () => {
 
   test('a shared link survives the sign-in round trip', async ({ browser }) => {
     // `storageState: undefined` opts out of the admin session the runner applies to hand-made contexts.
-      const anonymous = await browser.newContext({ baseURL: environment.baseUrl, storageState: undefined });
+    const anonymous = await browser.newContext({ baseURL: environment.baseUrl, storageState: undefined });
     try {
-      await pointAppAtKeycloak(anonymous, environment.keycloakUrl);
       const signInPage = await anonymous.newPage();
       await signInPage.goto('/share?text=remember%20me');
 
       // authGuard carries the share URL as returnUrl, so the login page is shown first. Wait for that
-      // client-side redirect to settle before clicking; clicking straight after goto races the router.
+      // client-side redirect to settle before filling; acting straight after goto races the router.
       await expect(signInPage).toHaveURL(/\/login\?returnUrl=/);
-      await expect(signInPage.getByRole('button', { name: 'Sign in with Keycloak' })).toBeVisible();
-      await signInPage.getByRole('button', { name: 'Sign in with Keycloak' }).click();
-      await signInPage.locator('#username').fill(environment.adminUsername);
-      await signInPage.locator('#password').fill(environment.adminPassword);
-      await signInPage.locator('#kc-login').click();
+      await signInPage.getByTestId('login-username').fill(environment.adminUsername);
+      await signInPage.getByTestId('login-password').fill(environment.adminPassword);
+      await signInPage.getByTestId('login-submit').click();
 
       await expect(signInPage.getByRole('heading', { level: 2, name: 'Share to JordyLab' })).toBeVisible();
       await expect(signInPage.locator('.jordylab-share-landing__text')).toContainText('remember me');

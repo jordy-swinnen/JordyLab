@@ -30,7 +30,7 @@ import { AuthService, authErrorMessage } from './auth.service';
             </p>
             <a
               routerLink="/login"
-              class="text-sm font-semibold text-accent-text underline-offset-4 hover:underline"
+              class="text-sm font-semibold text-accent-text underline underline-offset-4"
               data-testid="reset-back-to-login"
               >Back to sign in</a
             >
@@ -90,7 +90,7 @@ import { AuthService, authErrorMessage } from './auth.service';
 
           <p class="mt-5 text-sm text-muted-foreground">
             Remembered it?
-            <a routerLink="/login" class="font-semibold text-accent-text underline-offset-4 hover:underline">Sign in</a>
+            <a routerLink="/login" class="font-semibold text-accent-text underline underline-offset-4">Sign in</a>
           </p>
         }
       </div>
