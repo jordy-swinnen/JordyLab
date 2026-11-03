@@ -1257,7 +1257,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: platform-blind digest pinning — `FROM image@sha256:…` used a single-platform manifest digest instead of the multi-arch manifest-list digest.
 - Fix (PR / commit / tag): pin the manifest-list digest `sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f` (amd64 + arm64; the same file still builds on the Mac). The caddy pin in compose.yaml was already a list digest, which is why it was fine. Committed on the cutover-continue branch during the window.
 - Regression test added: none in CI (no amd64 runner builds this image before deploy); the cutover window's own T032 build is the verification, and the Containerfile comment documents the rule.
-- Verified on prod: pending (T032)
+- Verified on prod: yes - the T032 rebuild with the list digest succeeded on the VPS (2026-11-03, cutover window) and Postgres came up healthy.
 
 ### BUG-082: The Caddy healthcheck probes localhost:2019, which resolves to ::1 while Caddy binds 127.0.0.1 only - the container can never report healthy
 - Status: FIXED-LOCAL (found and fixed during the cutover window 2026-11-03)
@@ -1270,4 +1270,20 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Root cause: a hostname in the healthcheck URL instead of the explicit IPv4 loopback
 - Fix (PR / commit / tag): `http://127.0.0.1:2019/config/` in deploy/compose/compose.yaml, committed on the cutover-continue branch during the window; `up -d caddy` recreates the container with the fixed check
 - Regression test added: none in CI (this stack is not run in CI); the quickstart step 3 `up -d --wait` is the check
-- Verified on prod: pending (the recreate immediately after this entry)
+- Verified on prod: yes - the recreated caddy reported healthy and `up -d --wait` completed (2026-11-03, cutover window)
+
+### BUG-083: Stopping the k3s service left its data plane serving ports 80/443, so the Compose stack never received public traffic
+- Status: FIXED (during the cutover window 2026-11-03: k3s-killall.sh plus shim cleanup; verified by the full smoke suite)
+- Severity: S1 (the cutover looked complete while the OLD stack still served the public ports: the old certificate kept being served and /api, /auth and /ntfy returned 503 because the old Traefik proxied to the scaled-down pods)
+- Area/spec: prod cutover / 020 (T031, T036, T037)
+- Env found: prod VPS, 2026-11-03 cutover window: `systemctl disable --now k3s` returned cleanly and no listener held 80/443 (ss), yet the public checks after `up -d --wait` answered 503 for the matched routes and 200 for the homepage - with the OLD certificate (issued 2026-09-30, expiring 2026-12-29), not Caddy's
+- Steps to reproduce:
+  1. On a node where k3s ServiceLB (klipper) publishes hostPorts, stop k3s with `systemctl disable --now k3s`.
+  2. `iptables -t nat -S PREROUTING` still shows the `KUBE-SERVICES` and `CNI-HOSTPORT-DNAT` jumps; the CNI-HOSTPORT-DNAT rule for dports 80,443 DNATs public traffic to the svclb pod BEFORE Docker's DOCKER chain is reached, and containerd-shim processes keep the pods alive.
+  3. Note that `ss -tlnp` shows nothing on 80/443: CNI hostPorts are iptables DNAT, not listeners, so the "ports free" check in T031 passed while the old path still won the packet race.
+- Expected (cite spec/story): 020 T031 - "stop and disable k3s. This frees ports 80 and 443"; T036/T037 - the Compose stack serves and the smoke checks pass.
+- Actual: stopping the service tree did not flush the kube-proxy/flannel iptables rules nor kill the running shims; the old frontend and svclb-traefik pods silently kept serving.
+- Root cause: only `/usr/local/bin/k3s-killall.sh` performs the full cleanup (its iptables-save | grep -v KUBE-/CNI-/flannel | iptables-restore and its process kill list); `systemctl stop` does not.
+- Fix (PR / commit / tag): ran `sudo /usr/local/bin/k3s-killall.sh` mid-window, then killed the surviving k3s shims. Lesson recorded: `pkill -f containerd-shim-runc-v2` is too broad - dockerd uses the same shim binary and the Compose containers were briefly killed too (restart: unless-stopped healed them in ~1 minute); k3s shims must be selected by their `-namespace k8s.io` argument. After cleanup Caddy obtained a fresh Let's Encrypt certificate (issuer YE2, expires 2027-02-01) and every public check passed.
+- Regression test added: none automated; the T054 post-cutover external scan and the quickstart step 4/5 checks are the verification.
+- Verified on prod: yes - smoke suite green at ~20:44 UTC, owner signed in successfully.
