@@ -1,8 +1,9 @@
 package dev.jordy.jordylab.settings.service;
 
+import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.gamecatalog.GameCatalogAccess;
 import dev.jordy.jordylab.settings.rest.client.KeycloakAdminClient;
-import dev.jordy.jordylab.shared.event.AppAccessRemoved;
+import dev.jordy.jordylab.identity.AppAccessRemoved;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

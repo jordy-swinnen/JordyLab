@@ -20,6 +20,14 @@ jordylab:
       admin-client-secret: local-dev-backend-secret-not-for-prod
   script:
     keycloak-url: http://localhost:8180
+  # Identity module (spec 019): first-boot admin only while the account table is empty.
+  identity:
+    bootstrap:
+      username: jordy
+      password: local-dev-admin-password-not-for-prod
+    webauthn:
+      rp-id: localhost
+      allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400
   cors:
     # One origin per per-domain dev server (Angular's jordylab/fna/gamecatalog apps on nx serve).
     allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400

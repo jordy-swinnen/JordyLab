@@ -2,8 +2,8 @@ package dev.jordy.jordylab.settings.service;
 
 import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
 import dev.jordy.jordylab.settings.rest.client.KeycloakAdminClient;
-import dev.jordy.jordylab.shared.event.UserAccessRemoved;
-import dev.jordy.jordylab.shared.event.UserDeleted;
+import dev.jordy.jordylab.identity.UserAccessRemoved;
+import dev.jordy.jordylab.identity.UserDeleted;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

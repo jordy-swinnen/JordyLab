@@ -1,6 +1,6 @@
 package dev.jordy.jordylab.settings.rest.controller.model;
 
-import dev.jordy.jordylab.settings.service.ManagedApp;
+import dev.jordy.jordylab.identity.ManagedApp;
 
 import java.util.Arrays;
 import java.util.List;

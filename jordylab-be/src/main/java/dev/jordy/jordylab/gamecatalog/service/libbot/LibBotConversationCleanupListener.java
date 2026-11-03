@@ -1,6 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.service.libbot;
 
-import dev.jordy.jordylab.shared.event.UserDeleted;
+import dev.jordy.jordylab.identity.UserDeleted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;

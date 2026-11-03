@@ -186,5 +186,19 @@ jordylab:
       base-url: ${NTFY_BASE_URL:}
       topic: ${NTFY_TOPIC:}
       token: ${NTFY_TOKEN:}
+  # Identity module (spec 019). The bootstrap admin is created only while the account table is empty.
+  identity:
+    password:
+      min-length: 12
+    lockout:
+      max-failures: 5
+      lock-minutes: 15
+    bootstrap:
+      username: ${IDENTITY_BOOTSTRAP_ADMIN_USERNAME:}
+      password: ${IDENTITY_BOOTSTRAP_ADMIN_PASSWORD:}
+    webauthn:
+      rp-id: ${IDENTITY_WEBAUTHN_RP_ID:localhost}
+      rp-name: JordyLab
+      allowed-origins: ${IDENTITY_WEBAUTHN_ALLOWED_ORIGINS:http://localhost:4200}
   cors:
     allowed-origins: ${JORDYLAB_CORS_ALLOWED_ORIGINS}

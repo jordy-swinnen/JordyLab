@@ -38,3 +38,10 @@ jordylab:
   script:
     # The downloadable scan client logs in from the user's own machine, so it needs the public URL.
     keycloak-url: ${KEYCLOAK_URL}
+  # Identity module (spec 019): passkeys are bound to the public domain. Bootstrap credentials come
+  # from the IDENTITY_BOOTSTRAP_ADMIN_* keys in jordylab-secrets (already env placeholders in
+  # application.yaml).
+  identity:
+    webauthn:
+      rp-id: jordylab.be
+      allowed-origins: https://jordylab.be

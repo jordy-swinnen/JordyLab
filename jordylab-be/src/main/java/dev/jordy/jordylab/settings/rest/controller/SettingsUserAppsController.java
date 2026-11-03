@@ -1,12 +1,12 @@
 package dev.jordy.jordylab.settings.rest.controller;
 
+import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.settings.rest.client.KeycloakUnavailableException;
 import dev.jordy.jordylab.settings.rest.controller.model.AppsResponse;
 import dev.jordy.jordylab.settings.service.AppAccessService;
 import dev.jordy.jordylab.settings.service.AppNotGrantableException;
 import dev.jordy.jordylab.settings.service.AppNotFoundException;
 import dev.jordy.jordylab.settings.service.CannotChangeOwnAccountException;
-import dev.jordy.jordylab.settings.service.ManagedApp;
 import dev.jordy.jordylab.settings.service.UserNotFoundException;
 import dev.jordy.jordylab.settings.service.UserNotApprovedException;
 import lombok.RequiredArgsConstructor;

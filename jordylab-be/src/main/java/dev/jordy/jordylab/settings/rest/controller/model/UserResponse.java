@@ -1,7 +1,7 @@
 package dev.jordy.jordylab.settings.rest.controller.model;
 
+import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.settings.service.AppUser;
-import dev.jordy.jordylab.settings.service.ManagedApp;
 
 import java.time.Instant;
 import java.util.Arrays;

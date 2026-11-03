@@ -7,7 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import dev.jordy.jordylab.shared.event.UserAccessRemoved;
+import dev.jordy.jordylab.identity.UserAccessRemoved;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.support.TransactionOperations;
 

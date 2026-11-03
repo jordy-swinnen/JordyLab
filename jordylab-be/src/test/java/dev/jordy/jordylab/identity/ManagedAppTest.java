@@ -1,30 +1,31 @@
-package dev.jordy.jordylab.settings.service;
+package dev.jordy.jordylab.identity;
 
-import dev.jordy.jordylab.gamecatalog.GameCatalogAccess;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
+/**
+ * The app registry moved here from {@code settings} with spec 019. The Game Catalog key is spelled as the catalog's
+ * own constant {@code GameCatalogAccess.APP_KEY}; identity deliberately does not import the gamecatalog module, so the
+ * literal is asserted here and the catalog-side consistency is covered where the two are wired together.
+ */
 class ManagedAppTest {
 
-    @Test
-    void keysAreUnique() {
-        List<String> keys = Arrays.stream(ManagedApp.values()).map(ManagedApp::key).toList();
+    private static final String GAME_CATALOG_KEY = "gamecatalog";
 
-        assertThat(keys).doesNotHaveDuplicates();
+    @Test
+    void exposesEveryAppKey() {
+        List<String> keys = java.util.Arrays.stream(ManagedApp.values()).map(ManagedApp::key).toList();
+
+        assertThat(keys).containsExactly(GAME_CATALOG_KEY, "fna", "settings");
     }
 
     @Test
-    void gameCatalogUsesTheSharedKey() {
-        assertThat(ManagedApp.GAME_CATALOG.key()).isEqualTo(GameCatalogAccess.APP_KEY);
-    }
-
-    @Test
-    void onlyTheGameCatalogIsGrantableAndADefaultGrant() {
+    void gameCatalogIsTheOnlyGrantableDefault() {
         assertSoftly(softly -> {
             softly.assertThat(ManagedApp.defaultGrants()).containsExactly(ManagedApp.GAME_CATALOG);
             softly.assertThat(ManagedApp.GAME_CATALOG.grantable()).isTrue();
@@ -39,9 +40,9 @@ class ManagedAppTest {
     }
 
     @Test
-    void fromKeyFindsAKnownAppAndRejectsAnUnknownOne() {
+    void resolvesAppsByKey() {
         assertSoftly(softly -> {
-            softly.assertThat(ManagedApp.fromKey(GameCatalogAccess.APP_KEY)).contains(ManagedApp.GAME_CATALOG);
+            softly.assertThat(ManagedApp.fromKey(GAME_CATALOG_KEY)).contains(ManagedApp.GAME_CATALOG);
             softly.assertThat(ManagedApp.fromKey("unknown")).isEmpty();
             softly.assertThat(ManagedApp.fromKey(null)).isEmpty();
         });

@@ -1,7 +1,8 @@
 package dev.jordy.jordylab.settings.service;
 
+import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.settings.rest.client.KeycloakAdminClient;
-import dev.jordy.jordylab.shared.event.AppAccessRemoved;
+import dev.jordy.jordylab.identity.AppAccessRemoved;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
