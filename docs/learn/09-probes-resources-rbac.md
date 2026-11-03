@@ -15,9 +15,6 @@ Two different questions Kubernetes asks a container, both present on
   block) — distinct from the single combined `/actuator/health` endpoint you'd hit for a manual
   check.
 
-Keycloak (`deploy/k8s/base/keycloak.yaml`) exposes the equivalent on its separate **management
-port** (`9000`, via `KC_HEALTH_ENABLED=true`) at `/health/ready` and `/health/live` — deliberately
-never routed publicly (Chapter 5, FR-009).
 
 ## Resource requests and limits
 
@@ -28,8 +25,8 @@ Every container in this repo declares both:
   exceeding the CPU limit just throttles it.
 
 On a single 8GB-RAM node with no second node to fail over to, these numbers are the difference
-between "the JVM and Keycloak briefly overlap during a rolling deploy without incident" and "the
-node runs out of memory and the kubelet starts evicting things unpredictably" — see the drafts'
+between "the old and new backend pods briefly overlap during a rolling deploy without incident" and
+"the node runs out of memory and the kubelet starts evicting things unpredictably" — see the drafts'
 research.md §3 for the sizing rationale behind choosing an 8GB VPS-2 over a 4GB VPS-1 in the first
 place.
 

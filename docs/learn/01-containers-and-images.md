@@ -14,10 +14,6 @@ name) is the recipe that builds one, instruction by instruction, each producing 
 - `deploy/containers/frontend/Containerfile` — builds the Angular app with Bun and Nx
   (`nx build jordylab --configuration=production`), then copies the static output into an
   `nginx-unprivileged` runtime stage. The Node/Bun toolchain never ships either.
-- `deploy/containers/keycloak/Containerfile` — a different kind of multi-stage build: both stages
-  use the *same* Keycloak base image, but the first stage runs `kc.sh build` (which bakes
-  configuration decisions — which database, which features — into an optimized image), and the
-  final stage just copies that pre-built `/opt/keycloak/` directory.
 
 ## Why multi-stage matters
 

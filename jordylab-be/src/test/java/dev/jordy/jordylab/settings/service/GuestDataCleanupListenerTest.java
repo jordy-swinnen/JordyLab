@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-/** The event-driven cleanup that replaces the old direct call in the Keycloak-backed admin service (spec 019 D17). */
+/** The event-driven cleanup that replaces the old direct call in the settings admin service (spec 019 D17). */
 class GuestDataCleanupListenerTest {
 
     private static final String SUBJECT = "22222222-2222-4222-8222-222222222222";

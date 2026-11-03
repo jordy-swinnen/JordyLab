@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { AppUser, UserSession, UserStatus } from './settings.models';
 
-/** Admin user management over the identity API (spec 019; was the Keycloak-backed settings API before). */
+/** Admin user management over the identity API (spec 019). */
 @Injectable({ providedIn: 'root' })
 export class SettingsUsersApiService {
   #http = inject(HttpClient);

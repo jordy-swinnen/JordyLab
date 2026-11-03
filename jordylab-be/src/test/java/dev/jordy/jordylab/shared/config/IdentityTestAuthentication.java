@@ -15,7 +15,7 @@ import java.util.UUID;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 /**
- * Session principals for {@code @WebMvcTest} slices after Keycloak (spec 019): the controllers resolve the current user
+ * Session principals for {@code @WebMvcTest} slices after the identity rewrite (spec 019): the controllers resolve the current user
  * through {@code CurrentUserResolver}, whose principal is an {@link AuthenticatedUser}. The ids are fixed UUIDs so
  * tests can assert the subject the services receive.
  */

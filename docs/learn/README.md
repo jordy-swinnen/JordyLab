@@ -21,8 +21,8 @@ generic tutorial.
 
 - [ ] Build an image locally: Chapter 1's `docker build` command against `deploy/containers/backend/Containerfile`.
 - [ ] Sandbox a manifest: Chapter 2's `podman kube play deploy/k8s/base/backend.yaml`.
-- [ ] Port-forward to the Keycloak admin console (never publicly routed — Chapter 5):
-      `kubectl -n jordylab port-forward deploy/keycloak 8080:8080`, then open `http://localhost:8080/auth/admin`.
+- [ ] Read the identity tables read-only (Chapter 6): `kubectl -n jordylab exec cnpg-cluster-1 -c postgres --
+      psql -U postgres -d jordylab -At -c "select username, role, status from identity.user_account"`.
 - [ ] Read pod logs: Chapter 4/9's `kubectl -n jordylab logs deploy/backend -f`.
 - [ ] Rotate a SOPS secret: Chapter 6's `sops` edit → commit → deploy → restart sequence (`docs/runbook.md` §13).
 - [ ] Perform a rollback on prod: Chapter 10's `kubectl rollout undo` (`docs/runbook.md` §11).

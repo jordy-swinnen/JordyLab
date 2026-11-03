@@ -42,12 +42,12 @@ class AiFeatureModelSettingTest {
     void updateModelSwitchesTheModelAndAnnouncesIt() {
         AiFeatureModelSetting setting = AiFeatureModelSettingTestBuilder.aDefaultAiFeatureModelSetting();
 
-        setting.updateModel("openai/gpt-6-luna-pro", "keycloak-subject-other-admin");
+        setting.updateModel("openai/gpt-6-luna-pro", "identity-subject-other-admin");
 
         Collection<Object> events = ReflectionTestUtils.invokeMethod(setting, "domainEvents");
         assertSoftly(softly -> {
             softly.assertThat(setting.getModelId()).isEqualTo("openai/gpt-6-luna-pro");
-            softly.assertThat(setting.getUpdatedBySubject()).isEqualTo("keycloak-subject-other-admin");
+            softly.assertThat(setting.getUpdatedBySubject()).isEqualTo("identity-subject-other-admin");
             softly.assertThat(events).containsExactly(new AiFeatureModelSettingUpdated(
                     AiFeatureModelSettingTestBuilder.DEFAULT_FEATURE_KEY, "openai/gpt-6-luna-pro"));
         });
@@ -68,7 +68,7 @@ class AiFeatureModelSettingTest {
     void updateModelRejectsABlankModel() {
         AiFeatureModelSetting setting = AiFeatureModelSettingTestBuilder.aDefaultAiFeatureModelSetting();
 
-        assertThatThrownBy(() -> setting.updateModel(" ", "keycloak-subject-admin"))
+        assertThatThrownBy(() -> setting.updateModel(" ", "identity-subject-admin"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(setting.getModelId()).isEqualTo(AiFeatureModelSettingTestBuilder.DEFAULT_MODEL_ID);
     }

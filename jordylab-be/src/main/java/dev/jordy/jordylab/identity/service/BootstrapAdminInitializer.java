@@ -17,7 +17,7 @@ import org.springframework.util.StringUtils;
 import java.util.Locale;
 
 /**
- * Creates the first admin on a fresh database (spec 019 D9), the analogue of Keycloak's bootstrap admin. Runs only
+ * Creates the first admin on a fresh database (spec 019 D9), the platform's own first admin. Runs only
  * while the account table is empty; afterwards the credentials in configuration are inert. The password is never
  * logged, and a too-short configured password fails fast instead of creating a weak admin.
  */

@@ -1,7 +1,7 @@
 # Runbook: deploying a web app to a single VPS with k3s
 
 This runbook describes, start to finish, how we took a typical full-stack application
-(Spring Boot backend, Angular frontend, Keycloak for login, PostgreSQL, a small push-notification
+(Spring Boot backend with built-in session auth, Angular frontend, PostgreSQL, a small push-notification
 service) and put it into production on **one rented Linux server**, with HTTPS, automatic
 backups and a "merge → approve → deployed" pipeline.
 
@@ -49,7 +49,7 @@ Every step says **what** we do and **why** — the "why" is the part that transf
 │  Traefik (Gateway API)  ── TLS certificate from Let's Encrypt        │
 │     /            → frontend  (nginx serving the Angular build)       │
 │     /api         → backend   (Spring Boot)                           │
-│     /auth/...    → Keycloak  (only the public login endpoints)       │
+│     /webauthn    → backend   (passkey ceremony endpoints)            │
 │     /ntfy        → ntfy      (push notifications)                    │
 │                                                                      │
 │  PostgreSQL (CloudNativePG) ── continuous backups ──┐                │
@@ -121,7 +121,7 @@ brew install kubectl helm sops age kustomize gitleaks gh
 ## 4. Phase 1 — Server and domain
 
 **Server.** Rent a VPS with a current **Ubuntu LTS** image. We used 4 vCPU / 8 GB RAM / 75 GB NVMe,
-which comfortably runs Postgres, a JVM backend, Keycloak and the rest. Add your **SSH public key**
+which comfortably runs Postgres, a JVM backend and the rest. Add your **SSH public key**
 when ordering (or when reinstalling the OS) so password login is never needed.
 
 ```bash
@@ -424,7 +424,7 @@ spec:
 > onto them.
 
 One `HTTPRoute` per service, attached to the `https` listener, by path prefix:
-`/` → frontend, `/api` → backend, `/auth/realms/jordylab`, `/auth/resources`, `/auth/.well-known` → Keycloak (the `master` realm is not public)
+`/` → frontend, `/api` plus `/webauthn` and `/login/webauthn` → backend
 (deliberately **not** `/auth/admin`), `/ntfy` → ntfy (with a prefix-strip rewrite).
 
 Plus one route on the `http` listener that redirects everything to HTTPS:
@@ -483,16 +483,6 @@ spec:
       database: app
       owner: app
       secret: { name: db-app }                  # username + password for the owner
-      postInitSQL:                               # runs in the `postgres` database
-        - CREATE ROLE keycloak LOGIN;
-      postInitApplicationSQL:                    # runs inside the `app` database
-        - CREATE SCHEMA IF NOT EXISTS keycloak AUTHORIZATION keycloak;
-  managed:
-    roles:                                       # CNPG keeps this role's password in sync
-      - name: keycloak
-        ensure: present
-        login: true
-        passwordSecret: { name: db-keycloak }
   plugins:
     - name: barman-cloud.cloudnative-pg.io
       isWALArchiver: true
@@ -505,9 +495,6 @@ spec:
 Secret db-app       (type kubernetes.io/basic-auth: username, password)
    ├── CNPG creates the database owner with it
    └── backend reads POSTGRES_USER / POSTGRES_PASSWORD from it (secretKeyRef)
-Secret db-keycloak  (same shape)
-   ├── CNPG sets the keycloak role's password from it
-   └── Keycloak reads KC_DB_USERNAME / KC_DB_PASSWORD from it
 ```
 
 If the app kept its own copy of the password, the two would drift and logins would fail.
@@ -548,46 +535,18 @@ spec:
 > - Retention is **time-based** (`30d`). CNPG has no "keep the last 7 daily + 4 weekly" setting;
     > the schedules only decide *how often* a full backup is taken. WAL archiving is continuous.
 
-### 10.6 Keycloak
+### 10.6 Identity
 
-Keycloak has **build-time** options (baked into the image by `kc.sh build`) and **runtime** options
-(environment variables). With `start --optimized`, a runtime value that differs from the built value
-makes Keycloak refuse to start — so decide deliberately which is which.
+The backend owns authentication (spec 019): accounts, per-app grants, passkeys, sessions and machine
+tokens all live in the `identity` schema. There is no identity container to build or run.
 
-```dockerfile
-FROM quay.io/keycloak/keycloak:<version> AS builder
-ENV KC_DB=postgres
-ENV KC_HEALTH_ENABLED=true
-ENV KC_METRICS_ENABLED=true
-ENV KC_HTTP_RELATIVE_PATH=/auth             # build-time: Keycloak lives under /auth
-ENV KC_HTTP_MANAGEMENT_RELATIVE_PATH=/      # build-time: health stays at :9000/health/*
-RUN /opt/keycloak/bin/kc.sh build
-
-FROM quay.io/keycloak/keycloak:<version>
-COPY --from=builder /opt/keycloak/ /opt/keycloak/
-COPY deploy/keycloak/realm-prod.json /opt/keycloak/data/import/realm-prod.json
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start", "--optimized", "--import-realm"]
-```
-
-Runtime settings (ConfigMap in the overlay):
-
-| Variable                     | Value                   | Why                                                                           |
-|------------------------------|-------------------------|-------------------------------------------------------------------------------|
-| `KC_HOSTNAME`                | `https://<domain>/auth` | The public URL Keycloak puts in tokens and redirects.                         |
-| `KC_HTTP_RELATIVE_PATH`      | `/auth`                 | Must equal the built value.                                                   |
-| `KC_HTTP_ENABLED`            | `true`                  | Traefik terminates HTTPS; inside the cluster Keycloak speaks plain HTTP.      |
-| `KC_PROXY_HEADERS`           | `xforwarded`            | Trust `X-Forwarded-*` so Keycloak knows the original request was HTTPS.       |
-| `KC_PROXY_TRUSTED_ADDRESSES` | `10.42.0.0/16`          | …but only from inside the cluster (the pod network), never from the internet. |
-
-**Realm as code.** The realm (clients, roles, settings) is a JSON file baked into the image and imported
-on first start. Values that differ per environment use `${VAR}` placeholders, filled from the container's
-environment at import time (e.g. `${PRODUCTION_DOMAIN}`, `${BACKEND_CLIENT_SECRET}`).
-Keycloak **skips the import if the realm already exists**, so later changes to the file must be applied
-through the admin console or `kcadm.sh`.
-
-**The admin console is not routed publicly** — only the login-related paths are. Reach it through a
-tunnel when needed (see [Day-2](#14-day-2-operations)).
+- Create the first admin with `IDENTITY_BOOTSTRAP_ADMIN_USERNAME` / `_PASSWORD` in the app Secret; it is
+  used only while the account table is empty, then ignored (never logged).
+- Passkeys need the public origin: `IDENTITY_WEBAUTHN_RP_ID=<domain>` and
+  `IDENTITY_WEBAUTHN_ALLOWED_ORIGINS=https://<domain>` (defaults in `application.yaml`), and the Gateway
+  must route `/webauthn` and `/login/webauthn` to the backend.
+- Sessions are rows in `identity.spring_session`, so a rollout keeps everyone signed in; revoke/delete
+  ends them on the next request. Password resets are admin-approved in Settings → Users (no email).
 
 ### 10.7 Backend and frontend
 
@@ -764,7 +723,6 @@ jobs:
       - run: |
           kubectl -n <app> rollout status deploy/backend  --timeout=8m
           kubectl -n <app> rollout status deploy/frontend --timeout=5m
-          kubectl -n <app> rollout status deploy/keycloak --timeout=8m
 ```
 
 Why the details matter:
@@ -785,7 +743,7 @@ export KUBECONFIG=~/.kube/<app>.yaml
 watch -n 5 'kubectl -n <app> get pods,cluster,certificate,gateway'
 ```
 
-Expect: the database first (a minute of initialization), then backend and Keycloak (a few restarts
+Expect: the database first (a minute of initialization), then the backend and frontend (a few restarts
 while the database comes up are normal), certificate `READY True` once DNS resolves.
 
 **Verification checklist:**
@@ -794,25 +752,16 @@ while the database comes up are normal), certificate `READY True` once DNS resol
 |----------------------|-------------------------------------------------------------------------|-------------------------------|
 | Site over HTTPS      | open `https://<domain>`                                                 | your app, valid certificate   |
 | HTTP redirects       | `curl -I http://<domain>`                                               | `301` to `https://`           |
-| Login endpoints      | `https://<domain>/auth/realms/<realm>/.well-known/openid-configuration` | JSON with the right `issuer`  |
-| Admin console hidden | `https://<domain>/auth/admin/`                                          | **not** Keycloak              |
+| Session endpoint     | `https://<domain>/api/identity/auth/csrf`                               | `204`                         |
+| Old identity route   | `https://<domain>/auth/realms/<realm>`                                  | `404`                         |
 | Only 3 open ports    | `nmap -Pn <vps-ip>` from outside                                        | 22, 80, 443                   |
 | Backups flowing      | `kubectl -n <app> get backups`; look in the bucket                      | objects under the backup path |
 | No secrets in Git    | `gitleaks git --redact .`                                               | no leaks                      |
 
-**Your first admin user.** The production realm ships without users. Register on the login page
-(self-registration), then grant yourself the admin role from inside the Keycloak pod — the bootstrap
-admin's credentials are already in its environment, so no password is typed or shown:
-
-```bash
-kubectl -n <app> exec deploy/keycloak -- bash -c '
-K=/opt/keycloak/bin/kcadm.sh; C="--config /tmp/kc.cfg"
-$K config credentials $C --server http://localhost:8080/auth --realm master \
-   --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null
-$K add-roles -r <realm> $C --uusername <your-email> --rolename admin'
-```
-
-Log out and in again so your token carries the new role.
+**Your first admin user.** On a fresh database the backend creates the admin from
+`IDENTITY_BOOTSTRAP_ADMIN_USERNAME` / `_PASSWORD` (in the app Secret) before anyone can sign in. Sign in,
+change that password in Account settings and add a passkey. Everyone else registers on `/register` and is
+approved in Settings → Users; there is no email and no admin console.
 
 ---
 
@@ -843,15 +792,9 @@ kubectl -n <app> rollout status deploy/<name>
 If it works, put the same change in Git so the next deploy keeps it. This shortens the feedback loop
 from "PR + build + deploy" (15+ min) to about a minute.
 
-**Keycloak admin console** (not public on purpose):
-
-```bash
-kubectl -n <app> port-forward deploy/keycloak 8080:8080
-# open http://localhost:8080/auth/admin
-```
-
-Keycloak's bootstrap admin is meant to be **temporary**: through the console, create a permanent admin
-in the `master` realm and then remove the bootstrap one.
+**Identity and users:** Settings → Users / Machines covers approvals, grants, session ending, reset
+requests and scanner tokens. A locked-out admin is recovered with the break-glass procedure in
+`docs/runbook.md` §24; the bootstrap credentials are inert once accounts exist.
 
 **Add or change a secret:** `sops deploy/k8s/overlays/prod/secrets.sops.yaml` → edit → close → commit →
 deploy. Keys in the app Secret are exposed to the backend as environment variables automatically

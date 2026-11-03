@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        image: [backend, frontend, keycloak]
+        image: [backend, frontend]
     steps:
       - uses: docker/login-action@v4
         with:

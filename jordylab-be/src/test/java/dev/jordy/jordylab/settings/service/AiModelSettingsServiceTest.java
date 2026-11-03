@@ -46,7 +46,7 @@ class AiModelSettingsServiceTest {
     private static final AiFeature FEATURE = AiFeature.GAMECATALOG_ENRICHMENT;
     private static final String DEFAULT_MODEL = "anthropic/claude-haiku-4.5";
     private static final String CHOSEN_MODEL = "deepseek/deepseek-v4.1-flash";
-    private static final String ADMIN = "keycloak-subject-admin";
+    private static final String ADMIN = "identity-subject-admin";
     private static final Instant NOW = Instant.parse("2026-10-01T12:00:00Z");
 
     @Mock

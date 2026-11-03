@@ -50,7 +50,7 @@ Jordy is available to help, but you do most of the work. Hand a step to him only
 cases:
 
 - **Running the game scanner** (`gamecatalog-scanner` / downloaded `jordylab-scan` client) on his real machines (
-  MacBook, and JordyBox/CachyOS), including the Keycloak device-code login in his browser.
+  MacBook, and JordyBox/CachyOS), including creating a machine token in Settings → Machines.
 - Anything needing his physical devices or accounts: Android phone (APK install), Eufy HomeBase, Garmin, Steam login, a
   second browser profile for a guest account.
 - Approvals or settings you're not allowed to change (see Phase 3).
@@ -68,7 +68,7 @@ For each handoff:
 
 ## Tools you have
 
-- Local stack: Podman Compose (`jordylab-be/compose.yaml`, Keycloak on :8180, Postgres on :5432), backend via
+- Local stack: Podman Compose (`jordylab-be/compose.yaml`, Postgres on :5432), backend via
   `./gradlew bootRun` (with `.env` sourced), frontend via `bunx nx serve jordylab` (:4200). See `.claude/launch.json`.
   The `local` and `prod` profiles are the only two environments.
 - Browser automation for UI testing (Claude in Chrome, the built-in browser, or `agent-browser` via the `browser-test`
@@ -91,8 +91,7 @@ For each handoff:
    TODO/FIXME in code).
 3. Flag high-risk areas first: anything with unchecked tasks or checklist items, anything without a
    `validation-results.md`, specs 005 through 010 (newest, least proven), and everything that changed between local and
-   prod config (Keycloak realm `realm-prod.json` vs the dev realm export, CORS origins, `KEYCLOAK_URL` under `/auth`,
-   `environment.prod.ts`).
+   prod config (CORS origins, `environment.prod.ts`, the WebAuthn origin).
 4. Run the existing automated test suites **once** as a baseline and record results (backend: `./gradlew test` incl.
    `ModularityTests`; frontend: `bunx nx run-many -t test,lint`; scanner and sidecar tests; check coverage gates,
    JaCoCo). Note failures as bugs.
@@ -109,10 +108,10 @@ and refresh/deep-link behavior.
 **A. Production infrastructure and smoke (https://jordylab.be)**
 
 - DNS, HTTPS/TLS validity and expiry, HTTP to HTTPS redirect, security headers, Gateway/Traefik routing for `/`, `/api`,
-  `/auth`, SPA deep-link refresh (e.g. reload on a nested route returns the app, not 404), gzip/caching,
+  `/webauthn` proxy, SPA deep-link refresh (e.g. reload on a nested route returns the app, not 404), gzip/caching,
   favicon/manifest.
-- Backend health/readiness endpoints, Keycloak reachable at `/auth`, correct issuer/redirect URIs from
-  `realm-prod.json`, CORS (`https://jordylab.be`, `https://localhost` for Capacitor).
+- Backend health/readiness endpoints, identity endpoints reachable (`/api/identity/auth/csrf`), the correct
+  WebAuthn origin, CORS (`https://jordylab.be`).
 - Browser console and network tab on every page: no errors, no failing requests, no mixed content.
 - Persistence: data survives a pod restart (only if you have safe cluster access and I approved it), CNPG backup status
   visible if you have cluster access.
@@ -128,8 +127,7 @@ and refresh/deep-link behavior.
 **C. Game Catalog (specs 002, 003, 004, 005, 009)**
 
 - Scanner: Jordy runs the scanner himself (HANDOFF). You prepare the download and exact commands, against **local first,
-  then prod**, on his MacBook and JordyBox; then you verify including the device-code login (Keycloak Device
-  Authorization Grant), `/ingest/check` then `/ingest/scan`, source auto-register/adopt on `(machineId, libraryType)`,
+  then prod**, on his MacBook and JordyBox; then you verify including machine-token login, `/ingest/check` then `/ingest/scan`, source auto-register/adopt on `(machineId, libraryType)`,
   re-scan idempotency, `gamecatalog-scanner` role scoping (token must not reach other APIs).
 - Steam library sync (005): owned and Steam-family games, install status filter, host filter.
 - Manual Switch games (009): create/edit/delete through the UI, validation, duplicates.
@@ -219,7 +217,7 @@ the `production` environment with a short comment referencing the BUG IDs). Cond
 - Only approve deployments of commits you just merged for this task, after `Build` is green. Never approve a deployment
   you don't recognize.
 - Before approving, state what is being deployed (PR, BUG IDs, migrations yes/no). If the change includes a **Flyway
-  migration, a Keycloak realm change, or a secret/config change**, pause and ask me first.
+  migration, an identity/password change, or a secret/config change**, pause and ask me first.
 - Possible blocker to report, not work around: GitHub may refuse self-approval ("prevent self-review", or the token
   isn't a configured reviewer). If approval fails, stop, tell me exactly what failed and what setting is involved, and
   wait. Do not change repository/environment protection rules, secrets or reviewers yourself.
@@ -227,7 +225,7 @@ the `production` environment with a short comment referencing the BUG IDs). Cond
 
 After each deploy:
 
-1. Watch the workflow through `rollout status` for backend, frontend and keycloak.
+1. Watch the workflow through `rollout status` for backend and frontend.
 2. Check that the running image tag equals the merged `sha-` (footer/version endpoint or cluster if available).
 3. Re-run the failing reproduction steps **on https://jordylab.be** and the smoke suite (Section A). Capture evidence.
 4. **If production regresses** (login broken, 5xx, failing rollout), roll back immediately by re-running

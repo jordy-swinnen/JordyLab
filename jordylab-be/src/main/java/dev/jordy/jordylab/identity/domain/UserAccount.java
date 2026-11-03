@@ -31,8 +31,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * One person's account (spec 019 US1, D7). The stored {@code status} replaces the value spec 014 derived from Keycloak;
- * {@code appGrants} replaces the {@code app-gamecatalog} realm role. For migrated users the id is the Keycloak subject,
+ * One person's account (spec 019 US1, D7). The stored {@code status} replaces the value spec 014 derived from the old provider;
+ * {@code appGrants} replaces the {@code app-gamecatalog} role. For migrated users the id is the original subject,
  * so every owner column keeps matching (FR-011).
  */
 @Entity

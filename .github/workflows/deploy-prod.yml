@@ -82,12 +82,10 @@ jobs:
           sops --output secrets.sops.yaml -d secrets.sops.yaml
           kustomize edit set image \
             ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${VERSION}" \
-            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${VERSION}" \
-            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${VERSION}"
+            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${VERSION}"
           kustomize build . | kubectl apply -f -
 
       - name: Wait for a healthy rollout
         run: |
           kubectl -n jordylab rollout status deploy/backend --timeout=8m
           kubectl -n jordylab rollout status deploy/frontend --timeout=5m
-          kubectl -n jordylab rollout status deploy/keycloak --timeout=8m

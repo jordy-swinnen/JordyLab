@@ -6,7 +6,6 @@ namespace: jordylab
 resources:
   - backend.yaml
   - frontend.yaml
-  - keycloak.yaml
   - ntfy.yaml
   - artwork-pvc.yaml
   - gateway.yaml

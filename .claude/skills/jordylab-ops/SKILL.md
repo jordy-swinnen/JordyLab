@@ -1,6 +1,6 @@
 ---
 name: jordylab-ops
-description: JordyLab production operations — OVH VPS + k3s, Tailscale access, kubectl/helm, GitHub Actions deploys, approvals and rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), Keycloak admin via kcadm, CloudNativePG backups, TLS and Gateway routing. Load before running, proposing or explaining anything that touches the live cluster, the deploy pipeline, prod secrets or the prod Keycloak realm.
+description: JordyLab production operations — OVH VPS + k3s, Tailscale access, kubectl/helm, GitHub Actions deploys, approvals and rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), identity/user administration, CloudNativePG backups, TLS and Gateway routing. Load before running, proposing or explaining anything that touches the live cluster, the deploy pipeline, prod secrets or the prod identity data.
 ---
 
 # JordyLab production operations
@@ -21,14 +21,14 @@ depth than this file gives.
 1. **Read before you change.** Diagnose with read-only commands first (`get`, `describe`, `logs`,
    `kustomize build`). Quote the error you found before proposing a fix.
 2. **Mutations need Jordy's explicit yes**: anything that runs `kubectl apply/delete/patch/set/rollout
-   restart/exec … kcadm (write)`, `helm install/upgrade/uninstall`, `ssh` commands that change the
+   restart/exec … psql (write)`, `helm install/upgrade/uninstall`, `ssh` commands that change the
    server, `ufw`, Tailscale policy changes, GitHub environment/secret changes, or approving a deploy.
    Show the exact command and what it changes, then wait. Exception: when Jordy has explicitly delegated
    deploy approval for the current task (e.g. the spec 011 E2E campaign), approve only commits you merged
-   yourself with a green Build, and still pause for Flyway migrations, realm changes and secret/config changes.
+   yourself with a green Build, and still pause for Flyway migrations, identity/password changes and secret/config changes.
 3. **Secrets never pass through the conversation.** Never print, echo, `cat`, or decrypt secret values
-   to the screen. Pipe values (`… | gh secret set …`), run `kcadm` inside the Keycloak pod using the
-   env vars already there, use `gitleaks --redact`, and filter logs with
+   to the screen. Pipe values (`… | gh secret set …`), never select password hashes or machine-token
+   hashes in `psql`, use `gitleaks --redact`, and filter logs with
    `grep -v -i -E 'password|secret'`. `~/.kube/jordylab.yaml` is cluster-admin: never show its content.
 4. **Production changes go through Git** (PR → merge → Build → approved deploy). A live
    `kubectl set env` / `patch` is fine to *test* a fix quickly, but the same change must land in
@@ -53,7 +53,7 @@ depth than this file gives.
 | Kubeconfig (Mac) | `~/.kube/jordylab.yaml` → `export KUBECONFIG=~/.kube/jordylab.yaml`                                                   |
 | App namespace    | `jordylab`                                                                                                            |
 | Backups          | OVH Object Storage, bucket `jordylab-cnpg-backups`, Gravelines (GRA), `https://s3.gra.io.cloud.ovh.net`               |
-| Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:sha-<full-commit-sha>` (Build) + `:vX.Y.Z` (release retag) |
+| Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend}:sha-<full-commit-sha>` (Build) + `:vX.Y.Z` (release retag) |
 | CI/CD            | `Build` on every push; **`v*` tag** → `Release` → `Deploy to Production` (environment `production`, reviewer Jordy)   |
 | TLS              | cert-manager + Let's Encrypt (`letsencrypt-prod`, account e-mail jordy.swinnen@pm.me)                                 |
 | Secrets          | SOPS + age; private key at `~/Library/Application Support/sops/age/keys.txt` (+ password manager + GitHub env secret) |
@@ -61,7 +61,7 @@ depth than this file gives.
 Versions at first deploy (2026-09-30): k3s v1.36.4+k3s1 (stable channel), bundled Traefik 3.7.8,
 cert-manager v1.21.2, CloudNativePG operator 1.30.1 (chart 0.29.1), Barman Cloud plugin v0.15.0
 (chart 0.8.0), PostgreSQL 16.15 (`ghcr.io/cloudnative-pg/postgresql:16.15-standard-trixie`),
-Keycloak 26.7.4, nginx-unprivileged 1.30, ntfy v2.28.0.
+nginx-unprivileged 1.30, ntfy v2.28.0.
 
 ## Architecture
 
@@ -70,12 +70,11 @@ Internet ──► VPS :80/:443 (ufw: only 22, 80, 443 public)
              └─ k3s ─ Traefik (Gateway API, entryPoints web:8000 / websecure:8443)
                       Gateway jordylab-gateway (TLS secret jordylab-tls)
                         /                          → frontend  (nginx :8080, Angular build)
-                        /api, /.well-known/assetlinks.json → backend (Spring Boot :8080)
-                        /auth/realms/jordylab|resources|.well-known → keycloak (:8080, mgmt :9000)
+                        /api, /webauthn, /.well-known/assetlinks.json → backend (Spring Boot :8080)
                         /ntfy (prefix stripped)    → ntfy (:80)
                         http listener: redirect → https (cert-manager's HTTP-01 route wins)
                       cnpg-cluster (PostgreSQL 16, 1 instance, local-path 10Gi)
-                        db `jordylab` (owner jordylab) + schema `keycloak` (owner keycloak)
+                        db `jordylab` (owner jordylab), schema `identity` + module schemas
                         └─ Barman Cloud plugin → S3 GRA (WAL continuous, base daily 03:00 UTC
                            + weekly Sun 04:00 UTC, retention 30d)
 Laptop / CI ──Tailscale──► :6443 k3s API (CI node tag:ci may reach only tcp:6443 on the server)
@@ -89,16 +88,14 @@ Laptop / CI ──Tailscale──► :6443 k3s API (CI node tag:ci may reach onl
 | `deploy/k8s/bootstrap/`                                       | Namespace, ClusterIssuers (prod + staging), CI ServiceAccount/Role/RoleBinding + token Secret            | Jordy, admin kubeconfig: `kubectl apply -k`                                |
 | `deploy/k8s/base/`                                            | Deployments, Services, PVCs, Gateway, HTTPRoutes                                                         | CI via overlay                                                             |
 | `deploy/k8s/cluster/`                                         | CNPG `Cluster`, `ObjectStore`, `ScheduledBackup`s, `Certificate`                                         | CI via overlay                                                             |
-| `deploy/k8s/overlays/prod/`                                   | `namespace: jordylab`, ConfigMaps (`backend-config`, `keycloak-config`), image tags, `secrets.sops.yaml` | CI                                                                         |
-| `deploy/containers/{backend,frontend,keycloak}/Containerfile` | Image builds                                                                                             | Build workflow                                                             |
-| `deploy/keycloak/realm-prod.json`                             | Realm, baked into the Keycloak image, imported on first start                                            | Keycloak `--import-realm`                                                  |
+| `deploy/k8s/overlays/prod/`                                   | `namespace: jordylab`, ConfigMap (`backend-config`), image tags, `secrets.sops.yaml`                      | CI                                                                         |
+| `deploy/containers/{backend,frontend}/Containerfile`          | Image builds                                                                                             | Build workflow                                                             |
 | `.sops.yaml`                                                  | age public key + `encrypted_regex: ^(data\|stringData)$`                                                 | sops                                                                       |
 | `.github/workflows/build.yml`, `deploy-prod.yml`              | CI/CD                                                                                                    | GitHub                                                                     |
 
-Secrets in `secrets.sops.yaml`: `jordylab-secrets` (Keycloak bootstrap admin, `KEYCLOAK_BACKEND_CLIENT_SECRET`,
-Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app` and
-`jordylab-db-keycloak` (basic-auth: `username` + `password`). Contract:
-`specs/008-ovh-k8s-deployment/contracts/secrets-schema.md`.
+Secrets in `secrets.sops.yaml`: `jordylab-secrets` (`IDENTITY_BOOTSTRAP_ADMIN_USERNAME`/`_PASSWORD`,
+Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`) and `jordylab-db-app` (basic-auth:
+`username` + `password`). Contract: `specs/008-ovh-k8s-deployment/contracts/secrets-schema.md`.
 
 ## How the pieces fit (things that must stay true)
 
@@ -106,28 +103,18 @@ Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app
 - **No HTTP→HTTPS redirect at Traefik's entryPoint**; the redirect is an HTTPRoute, so Let's Encrypt HTTP-01 works.
 - **Cluster-scoped objects live in `bootstrap/`**; CI's token is namespace-scoped (Role allows core, apps,
   gateway.networking.k8s.io, cert-manager.io, postgresql.cnpg.io, barmancloud.cnpg.io, batch).
-- **One password, one Secret**: CNPG creates the DB owner from `jordylab-db-app` and syncs the `keycloak`
-  role from `jordylab-db-keycloak`; backend and Keycloak read the same Secrets.
-  `postInitSQL` runs in the `postgres` DB (creates role), `postInitApplicationSQL` in `jordylab` (creates schema).
+- **One password, one Secret**: CNPG creates the DB owner from `jordylab-db-app`; the backend reads the
+  same Secret. The first admin on a fresh database comes from `IDENTITY_BOOTSTRAP_ADMIN_*` in
+  `jordylab-secrets` and is ignored once any account exists.
 - **CNPG `ScheduledBackup.schedule` is 6-field cron, seconds first** (`"0 0 3 * * *"`). Retention is only the
   ObjectStore's `retentionPolicy: 30d`.
 - **pgvector comes from the CNPG `standard` image**; ImageVolume extensions need PostgreSQL 18+.
-- **Keycloak build-time options are baked into the image** (`KC_DB`, `KC_HEALTH_ENABLED`, `KC_METRICS_ENABLED`,
-  `KC_HTTP_RELATIVE_PATH=/auth`, `KC_HTTP_MANAGEMENT_RELATIVE_PATH=/`); `start --optimized` refuses a differing
-  runtime value. Runtime (ConfigMap): `KC_HOSTNAME=https://jordylab.be/auth`, `KC_HTTP_RELATIVE_PATH=/auth`,
-  `KC_HTTP_ENABLED=true`, `KC_PROXY_HEADERS=xforwarded`, `KC_PROXY_TRUSTED_ADDRESSES=10.42.0.0/16`,
-  `PRODUCTION_DOMAIN=jordylab.be`. Probes: `:9000/health/{ready,live}`.
-- **Realm import runs once** (skipped when the realm exists). Later realm changes: admin console or `kcadm.sh`,
-  and record each one in the table in `deploy/keycloak/README.md` together with the realm-file change.
-  Placeholders use `${VAR}`. The admin console **and the Admin REST API** (`/auth/admin/**`) are **not** routed
-  publicly — so the backend calls Keycloak's Admin API in-cluster via `KEYCLOAK_INTERNAL_URL`
-  (`http://keycloak:8080/auth`, `backend-config`), while browsers and the downloaded scan client use the public
-  `KEYCLOAK_URL`. A public `/auth/admin/…` URL answers with the SPA's `index.html` (HTTP 200, HTML).
-- **`jordylab-backend` has `fullScopeAllowed=false`**: its service-account token only carries the
-  `realm-management` roles that are scope-mapped (`view-users`, `manage-users`, `view-realm`). A missing mapping
-  shows up as a 403 from the Admin REST API.
-- **`admin` is a composite of `guest` + `gamecatalog-scanner`**; `mobile-release-publisher` is CI-only.
-- **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll` in `SecurityConfig`.
+- **Authentication is in the backend** (`identity` module): sessions live in `identity.spring_session`, so a
+  rollout keeps everyone signed in; revoke/delete ends sessions immediately on the next request.
+- **WebAuthn needs the public origin**: `IDENTITY_WEBAUTHN_RP_ID=jordylab.be` and
+  `IDENTITY_WEBAUTHN_ALLOWED_ORIGINS=https://jordylab.be` (defaults in `application.yaml`), and Traefik routes
+  `/webauthn` and `/login/webauthn` to the backend.
+- **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll` in `IdentitySecurityConfiguration`.
 - **Frontend image** copies `dist/apps/jordylab/browser` (Angular application builder output) into nginx.
 - **ntfy has no `NTFY_BASE_URL`** (sub-path hosting unsupported); a subdomain is needed for attachments/web push.
 - **Deploy workflow**: only via `release.yml` (a `v*` tag) or *Run workflow* with a release tag; checks out the tag; pinned
@@ -170,7 +157,7 @@ chmod 600 ~/.kube/jordylab.yaml
 ```bash
 kubectl -n jordylab get pods,cluster,certificate,gateway,httproute
 watch -n 5 'kubectl -n jordylab get pods,cluster,pvc'      # kubectl -w only takes one resource type
-kubectl -n jordylab logs deploy/<backend|frontend|keycloak|ntfy> --tail=100
+kubectl -n jordylab logs deploy/<backend|frontend|ntfy> --tail=100
 kubectl -n jordylab logs deploy/<name> --previous --tail=60     # the crashed attempt
 kubectl -n jordylab describe pod -l app=<name> | sed -n '/Events:/,$p'
 kubectl -n jordylab get events --sort-by=.lastTimestamp | tail -25
@@ -221,7 +208,7 @@ Approve: GitHub → Actions → Deploy to Production → the run → *Review dep
 Check images exist and are public (anonymous pull):
 
 ```bash
-for img in backend frontend keycloak; do
+for img in backend frontend; do
   T=$(curl -s "https://ghcr.io/token?scope=repository:jordy-swinnen/jordylab-$img:pull" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("token",""))')
   printf '%s: ' $img; curl -s -H "Authorization: Bearer $T" "https://ghcr.io/v2/jordy-swinnen/jordylab-$img/tags/list" | head -c 300; echo
 done
@@ -242,8 +229,7 @@ gitleaks dir --no-banner --redact .                        # hits in gitignored 
 root. `idea` is the JetBrains Toolbox launcher (on his `PATH`); `--wait` makes sops block until he closes the
 IntelliJ tab, then sops re-encrypts on exit (sops ≥ 3.9 reads `SOPS_EDITOR` before `EDITOR`). Never run this
 yourself: the decrypted file must only ever open in his editor. New keys under `jordylab-secrets.stringData`
-reach the backend automatically (`envFrom`); the Keycloak pod only sees keys wired explicitly in
-`deploy/k8s/base/keycloak.yaml`. Editors can keep plaintext in local history: clear IntelliJ Local History for
+reach the backend automatically (`envFrom`). Editors can keep plaintext in local history: clear IntelliJ Local History for
 the temp file afterwards, or use the VS Code `sops` profile (`workbench.localHistory.enabled: false`).
 
 ### GitHub `production` environment
@@ -266,32 +252,24 @@ gh secret set TS_OAUTH_CLIENT_SECRET --env production --repo $REPO   # prompts; 
 Tailscale CI credential: admin console → Settings → *Trust credentials* → OAuth, scope **Keys → Auth Keys → Write**
 only, tag `tag:ci`. The secret is shown once; revoke the old credential after replacing it.
 
-### Keycloak
+### Identity and users
+
+Accounts, grants, sessions and machine tokens are managed in **Settings → Users / Machines**; there is no
+identity container or admin console. For a locked-out admin, follow `docs/runbook.md` §24 (break-glass: a
+BCrypt hash and a single `UPDATE identity.user_account`).
+
+Read-only checks (never select `password_hash`, token hashes or session attributes):
 
 ```bash
-# Admin console (not public): then open http://localhost:8080/auth/admin
-kubectl -n jordylab port-forward deploy/keycloak 8080:8080
+kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c \
+  "select username, role, status from identity.user_account order by username"
+kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c \
+  "select principal_name, count(*) from identity.spring_session group by principal_name"
+kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c \
+  "select name, scope, revoked_at is not null from identity.machine_token order by created_at desc"
 ```
 
-`kcadm` inside the pod, logging in with the bootstrap admin env vars (no password on screen):
-
-```bash
-kubectl -n jordylab exec deploy/keycloak -- bash -c '
-K=/opt/keycloak/bin/kcadm.sh; C="--config /tmp/kc.cfg"
-$K config credentials $C --server http://localhost:8080/auth --realm master \
-  --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null 2>&1 && echo LOGIN_OK
-# examples — pick what you need:
-$K add-roles -r jordylab $C --uusername <email> --rolename admin
-$K get-roles -r jordylab $C --uusername <email> --effective --fields name --format csv --noquotes
-$K get client-scopes -r jordylab $C --fields name
-$K get realms/jordylab/default-default-client-scopes $C --fields name
-ID=$($K get clients -r jordylab -q clientId=jordylab-host $C --fields id --format csv --noquotes)
-$K get clients/$ID/default-client-scopes -r jordylab $C --fields name --format csv --noquotes'
-```
-
-New users self-register (e-mail = username, password ≥ 12 chars) and have no role until an admin grants
-one; they must log out/in to get the new role in their token. The bootstrap admin is temporary — replace it
-with a permanent `master`-realm admin via the console.
+A machine token is shown once at creation; if it is lost, revoke it and add the machine again.
 
 ### Database and backups (CloudNativePG)
 
@@ -359,15 +337,14 @@ Tailscale policy: `tagOwners` for `tag:jordylab-vps` and `tag:ci`; grants: membe
 dig +short jordylab.be @1.1.1.1                   # → 57.129.163.110
 whois jordylab.be | grep -i -E 'status|nameserver' -A2
 curl -sI http://jordylab.be | head -3             # 301 → https
-curl -s https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration | head -c 200
-curl -s -o /dev/null -w '%{http_code}\n' https://jordylab.be/auth/admin/   # must NOT be Keycloak
+curl -s -o /dev/null -w '%{http_code}\n' https://jordylab.be/api/identity/auth/csrf   # 204: backend and sessions are up
+curl -s -o /dev/null -w '%{http_code}\n' https://jordylab.be/auth/realms/jordylab     # 404: the old identity route is gone
 nmap -Pn 57.129.163.110                           # only 22, 80, 443 open
 ```
 
 ## Open items (as of 2026-09-30)
 
 - Restore drill not yet performed.
-- Replace Keycloak's temporary bootstrap admin with a permanent admin.
 - Restrict the OVH Object Storage user to the single bucket (currently project-wide operator role).
 - ntfy subdomain if attachments / web push are needed.
 - Turn on VPS auto-renewal at OVH; watch domain renewal.

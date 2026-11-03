@@ -88,7 +88,7 @@ class AiModelSelectionIntegrationTest {
                         null, 128000, false))));
         AiCallResult before = aiService.call(AiFeature.GAMECATALOG_ENRICHMENT, "system", "user");
 
-        settingsService.saveModel(AiFeature.GAMECATALOG_ENRICHMENT.key(), CHOSEN_MODEL, "keycloak-subject-admin");
+        settingsService.saveModel(AiFeature.GAMECATALOG_ENRICHMENT.key(), CHOSEN_MODEL, "identity-subject-admin");
         AiCallResult after = aiService.call(AiFeature.GAMECATALOG_ENRICHMENT, "system", "user");
 
         ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);

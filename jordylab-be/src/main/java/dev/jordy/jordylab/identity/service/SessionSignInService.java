@@ -26,7 +26,7 @@ import static dev.jordy.jordylab.identity.domain.UserStatus.REJECTED;
 import static dev.jordy.jordylab.identity.domain.UserStatus.REVOKED;
 
 /**
- * Username/password sign-in without Keycloak (spec 019 US1, D1/D9). Unknown usernames and wrong passwords are
+ * Username/password sign-in without an external identity provider (spec 019 US1, D1/D9). Unknown usernames and wrong passwords are
  * indistinguishable; five consecutive failures lock the account for the configured window; rejected and revoked
  * accounts are refused with their own reason; pending accounts authenticate with no authority (the frontend routes
  * them to {@code /awaiting-approval}, exactly as before).

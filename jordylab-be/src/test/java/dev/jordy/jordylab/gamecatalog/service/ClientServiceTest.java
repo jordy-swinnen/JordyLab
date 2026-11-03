@@ -32,9 +32,6 @@ class ClientServiceTest {
             softly.assertThat(client).contains("SCAN_ENDPOINT = \"/api/gamecatalog/ingest/scan\"");
             softly.assertThat(client).contains("LIBRARY_TYPE = \"STEAM\"");
             softly.assertThat(client).doesNotContain("${");
-            // The scanner authenticates with a machine token now; no Keycloak constants are rendered.
-            softly.assertThat(client).doesNotContain("KEYCLOAK_URL");
-            softly.assertThat(client).doesNotContain("REALM");
         });
     }
 

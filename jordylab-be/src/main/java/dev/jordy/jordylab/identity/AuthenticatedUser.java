@@ -15,7 +15,7 @@ import java.util.UUID;
 
 /**
  * The signed-in person as every other module sees them (spec 019 FR-009, D6) — the narrow public API of the identity
- * module. {@code id} is the same UUID the owner columns already hold (the Keycloak subject for migrated users).
+ * module. {@code id} is the same UUID the owner columns already hold (the original subject for migrated users).
  *
  * <p>Implements {@link Principal} so Spring Session stores the username as the session's principal name, {@link
  * UserDetails} so Spring Security's WebAuthn provider builds the session principal from this same type (spec 019 D16),

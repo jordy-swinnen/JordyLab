@@ -110,7 +110,7 @@ jobs:
         working-directory: jordylab-fe
         run: bun tools/app-boot-check.mjs
 
-  # End-to-end journeys against a freshly built app, on this run's own throwaway Postgres + Keycloak + backend (spec 012 FR-045).
+  # End-to-end journeys against a freshly built app, on this run's own throwaway Postgres + backend (spec 019).
   # Gates merges: make this check required in branch protection. The cleanup steps always run, so nothing outlives the job.
   e2e-web:
     runs-on: ubuntu-latest
@@ -164,10 +164,10 @@ jobs:
       contents: read
       packages: write
     strategy:
-      # One image failing shouldn't cancel the others (Build #14 lost backend/keycloak this way).
+      # One image failing shouldn't cancel the others.
       fail-fast: false
       matrix:
-        image: [backend, frontend, keycloak]
+        image: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
 

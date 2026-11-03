@@ -13,12 +13,12 @@ day-to-day operations: the `jordylab-devops` agent (`.claude/agents/`, `.opencod
 
 ```mermaid
 flowchart TB
-    user(["Browser / Android app"])
+    user(["Browser / installed PWA"])
     dev(["Jordy's Mac<br/>kubectl · helm · sops"])
 
     subgraph gh["GitHub"]
         repo["Repo + PR"] --> build["Build workflow<br/>tests → images"]
-        build --> ghcr[("GHCR<br/>backend · frontend · keycloak<br/>tag sha-&lt;commit&gt;")]
+        build --> ghcr[("GHCR<br/>backend · frontend<br/>tag sha-&lt;commit&gt;")]
         build --> deploy["Deploy workflow<br/>env: production<br/>(manual approval)"]
     end
 
@@ -37,9 +37,8 @@ flowchart TB
             subgraph ns["namespace jordylab"]
                 fe["frontend<br/>nginx · Angular"]
                 be["backend<br/>Spring Boot"]
-                kc["Keycloak<br/>/auth"]
                 ntfy["ntfy<br/>/ntfy"]
-                pg[("PostgreSQL 16<br/>app DB + keycloak schema")]
+                pg[("PostgreSQL 16<br/>app data + identity")]
                 pvc[("PVCs<br/>artwork · APKs")]
             end
         end
@@ -49,15 +48,12 @@ flowchart TB
 
     user -- "HTTPS jordylab.be" --> traefik
     traefik -- "/" --> fe
-    traefik -- "/api" --> be
-    traefik -- "/auth/realms …" --> kc
+    traefik -- "/api, /webauthn" --> be
     traefik -- "/ntfy" --> ntfy
     certm -. "TLS cert" .-> traefik
     be --> pg
     be --> pvc
-    be -- "token validation" --> kc
     be -- "publish" --> ntfy
-    kc --> pg
     cnpgop -. "manages" .-> pg
     pg -- "WAL + daily/weekly base backups" --> s3
 
@@ -69,8 +65,9 @@ flowchart TB
 
 ## Running locally
 
-Three pieces run together: Postgres + Keycloak (via Podman Compose), the Spring Boot backend,
-and the Angular frontend.
+Two local services run together with the apps: Postgres + pgvector (via Podman Compose) and the
+Spring Boot backend; the Angular frontend talks to it with a normal session cookie. Authentication is
+built into the backend (passwords + passkeys) — there is no identity container.
 
 ### Prerequisites
 
@@ -86,8 +83,6 @@ Create `jordylab-be/.env` (git-ignored, never committed):
 ```bash
 POSTGRES_USER=jordylab
 POSTGRES_PASSWORD=<any local dev password>
-KEYCLOAK_ADMIN=admin
-KEYCLOAK_ADMIN_PASSWORD=<any local dev password>
 GAMECATALOG_ARTWORK_DIR=/tmp/jordylab-artwork   # a real path — doesn't need to exist yet
 ANTHROPIC_API_KEY=<your Anthropic API key>       # required for AI-backed features (FNA
                                                   # briefings, gamecatalog chat/enrichment)
@@ -95,19 +90,16 @@ ANTHROPIC_API_KEY=<your Anthropic API key>       # required for AI-backed featur
 
 These are local bootstrap credentials for the containers below — not production secrets.
 
-### 2. Start Postgres + Keycloak
+### 2. Start Postgres
 
 ```bash
 cd jordylab-be
 podman compose up -d
 ```
 
-This starts `pgvector/pgvector:pg16` on `localhost:5432` and Keycloak
-(`quay.io/keycloak/keycloak`) on `localhost:8180`, with the `jordylab` realm auto-imported from
-`compose/keycloak-realm-export.json`. A `jordy` dev user is seeded with the `admin` role (which includes
-`guest` and `gamecatalog-scanner`); its password is in that file. The backend's `jordylab-backend` service
-client uses the dev-only secret `local-dev-backend-secret-not-for-prod`, already set in
-`application-local.yaml`, so Settings → Users works locally without extra configuration.
+This starts `pgvector/pgvector:pg16` on `localhost:5432`. The `identity` tables (accounts, passkeys,
+sessions, machine tokens) are created by Flyway on the backend's first start; there is no identity
+container to run.
 
 ### 3. Start the backend
 
@@ -117,8 +109,11 @@ set -a && source .env && set +a
 SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
 ```
 
-Runs on `http://localhost:8080`, validating requests against the Keycloak realm from step 2. The `local`
-profile is required: without it the backend stops immediately with *"No valid Spring profile is active"*.
+Runs on `http://localhost:8080` and authenticates against its own `identity` tables. On a fresh database
+the `local` profile creates the admin **jordy** with the dev-only password
+`local-dev-admin-password-not-for-prod` (change it in Account settings; it is never used in production).
+The `local` profile is required: without it the backend stops immediately with
+*"No valid Spring profile is active"*.
 
 ### 3b. Run the backend tests
 
@@ -131,8 +126,8 @@ cd jordylab-be && ./gradlew build
 ```
 
 Give the Podman machine at least 6 GiB of memory (`podman machine stop && podman machine set --memory 6144 &&
-podman machine start`): with the default 2 GiB, the later test classes that start their own Keycloak and
-Postgres containers fail with `localhost:2375 failed to respond`.
+podman machine start`): with the default 2 GiB, the later test classes that start their own Postgres
+containers fail with `localhost:2375 failed to respond`.
 
 ### 4. Start the frontend
 
@@ -142,42 +137,27 @@ bun install
 bunx nx serve jordylab            # host app, http://localhost:4200 — lazy-loads fna + gamecatalog
 ```
 
-Or run a single domain standalone, without the host shell (still authenticates against the same
-Keycloak realm — see `jordylab-fe/AGENTS.md`'s "Auth via Keycloak" section):
+Or run a single domain standalone, without the host shell (it uses the same session authentication):
 
 ```bash
 bunx nx serve fna                 # http://localhost:4300
 bunx nx serve gamecatalog         # http://localhost:4400
 ```
 
-### 5. Your own local admin account
+### 5. Your own local account
 
-Register at http://localhost:4200 (Keycloak's *Register* link). New accounts have no role and land on
-"awaiting approval". Make yours admin — `admin` includes `guest` and `gamecatalog-scanner`, so the scan client
-works too — with `kcadm` inside the Keycloak container (it reads the bootstrap admin from the container's env):
+Register at http://localhost:4200. New accounts are `PENDING` and land on "awaiting approval". Sign in as
+**jordy** and approve the new account in Settings → Users (approval grants the `guest` role and Game Catalog
+access). There is only one admin, so roles are not edited from the panel.
 
-```bash
-podman exec jordylab-be-keycloak-1 sh -c '/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg && /opt/keycloak/bin/kcadm.sh add-roles -r jordylab --uusername you@example.com --rolename admin --config /tmp/kc.cfg; rm -f /tmp/kc.cfg'
-```
-
-Log out and in again to get the role in your token. Forgot the local password? Keycloak admin console at
-http://localhost:8180/admin (user/password = `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` from `.env`) → realm
-**jordylab** → Users → your account → **Credentials** → **Reset password** (switch *Temporary* off). Local and
-production are separate Keycloaks with separate passwords.
-
-A Keycloak that imported the realm **before** the fixed dev backend secret existed keeps its old random one.
-Align it once (the import never re-runs on an existing realm):
-
-```bash
-podman exec jordylab-be-keycloak-1 sh -c 'K=/opt/keycloak/bin/kcadm.sh; C="--config /tmp/kc.cfg"; $K config credentials --server http://localhost:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" $C && ID=$($K get clients -r jordylab -q clientId=jordylab-backend --fields id $C | sed -n "s/.*\"id\" : \"\(.*\)\".*/\1/p") && $K update clients/$ID -r jordylab -s secret=local-dev-backend-secret-not-for-prod $C; rm -f /tmp/kc.cfg'
-```
+Forgot the local password? Use the admin-approved reset on `/forgot-password`, or the break-glass procedure in
+`docs/runbook.md` §24. The scan client uses a per-machine token from Settings → Machines, not a password.
 
 ### Ports at a glance
 
 | Service | Port |
 |---|---|
 | Backend API | 8080 |
-| Keycloak | 8180 |
 | Postgres | 5432 |
 | Frontend host (`jordylab`) | 4200 |
 | `fna` standalone harness | 4300 |

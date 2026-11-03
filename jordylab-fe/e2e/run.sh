@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One end-to-end run on its own throwaway Postgres (spec 019 US7; the app has its own authentication, no Keycloak).
+# One end-to-end run on its own throwaway Postgres (spec 019 US7; the app has its own authentication).
 #   run.sh web                 build the app fresh, start the stack, run the Playwright suite
 #   run.sh selftest-pass|selftest-fail|selftest-wait    full lifecycle with a trivial test command (cleanup proofs)
 # Whatever happens (pass, fail, Ctrl-C, SIGTERM) the stack is removed and verified gone; leftovers fail the run (exit 97).

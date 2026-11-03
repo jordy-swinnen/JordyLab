@@ -3,8 +3,8 @@
 ## ConfigMap
 
 Non-sensitive configuration that varies by environment: `deploy/k8s/overlays/prod/kustomization.yaml`'s
-`configMapGenerator` produces `backend-config` and `keycloak-config` from plain key-value
-pairs (the real domain, CORS origins, Keycloak's hostname settings). `deploy/k8s/base/backend.yaml`
+`configMapGenerator` produces `backend-config` from plain key-value pairs (database URL, CORS origins,
+the public app URL). `deploy/k8s/base/backend.yaml`
 consumes it with `envFrom: - configMapRef: {name: backend-config}` — every key becomes an
 environment variable inside the container, with no code change needed if a new key is added.
 
@@ -35,12 +35,6 @@ secrets.sops.yaml` decrypts to a temp file, opens your editor, and re-encrypts o
 (`deploy-prod.yml`), the same decrypt happens non-interactively, using the private key from a
 GitHub Actions secret, entirely inside the ephemeral runner — the plaintext never touches disk in
 your own checkout, and never gets committed.
-
-## The realm file's own placeholders
-
-`deploy/keycloak/realm-prod.json` uses a related but separate mechanism: Keycloak's own
-`${env.VAR_NAME}` substitution, resolved at Keycloak's own startup — not by SOPS. See
-`deploy/keycloak/README.md` for why that needs its own allowlist configuration.
 
 ## Hands-on
 

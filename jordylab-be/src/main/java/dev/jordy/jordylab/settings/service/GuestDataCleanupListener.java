@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 /**
  * Clears a removed account's guest chat data (spec 019 D17): the personal limit and the usage rows. The identity module
  * publishes the events; settings owns the tables, so this listener is the module-boundary-safe replacement for the old
- * direct call inside the Keycloak-backed administration service.
+ * direct call inside the former settings administration service.
  */
 @Component
 @RequiredArgsConstructor

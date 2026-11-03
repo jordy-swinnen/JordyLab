@@ -43,7 +43,7 @@ import java.io.IOException;
 import java.util.function.Supplier;
 
 /**
- * The platform's security configuration after Keycloak (spec 019 D5, contracts/access-matrix.md).
+ * The platform's security configuration after the identity rewrite (spec 019 D5, contracts/access-matrix.md).
  *
  * <p>Two chains: a stateless machine-token chain for the scanner ingest endpoints (the token filter arrives with US5)
  * and the browser session chain that carries the same URL matrix as before — {@code admin} for FNA, Settings and

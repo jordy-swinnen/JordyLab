@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * Account lifecycle without Keycloak (spec 019 US1/US4, D7/D17). Registration notifies the admin through the shared
+ * Account lifecycle without an external identity provider (spec 019 US1/US4, D7/D17). Registration notifies the admin through the shared
  * ntfy client (replacing the old pending-signup poller); approval applies the {@code guest} role and the default app
  * grants; reject/revoke publish {@code UserAccessRemoved} through the entity's registered events; the last approved
  * admin can never be removed.

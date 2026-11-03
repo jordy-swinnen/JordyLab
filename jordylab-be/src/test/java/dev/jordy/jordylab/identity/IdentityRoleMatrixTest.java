@@ -28,8 +28,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * The executable access matrix after Keycloak (spec 019 T017, contracts/access-matrix.md): the real security chains on
- * a real Postgres, no Keycloak container. Replaces {@code settings/RoleMatrixTest}.
+ * The executable access matrix after the identity rewrite (spec 019 T017, contracts/access-matrix.md): the real security
+ * chains on a real Postgres, no identity container. Replaces {@code settings/RoleMatrixTest}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

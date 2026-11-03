@@ -1,4 +1,4 @@
-# Throwaway Postgres for ONE end-to-end run (spec 019 US7). No Keycloak: the app signs in with its own accounts.
+# Throwaway Postgres for ONE end-to-end run (spec 019 US7). The app signs in with its own accounts; no identity container.
 # Everything is parameterised by run.sh: unique project name, free host ports, per-run credentials. No named volumes, nothing
 # persisted; every container and the network carry the run labels so cleanup can find them even after a hard kill.
 name: ${E2E_PROJECT}

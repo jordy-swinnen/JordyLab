@@ -9,7 +9,7 @@ import java.util.UUID;
 /**
  * The admin's per-person chat limit (spec 014 FR-010, FR-013): refused for their own account, and refused for an admin,
  * who is never limited. Everything is checked before the limit table is touched. The target is read through identity's
- * public lookup (spec 019) instead of Keycloak.
+ * public lookup (spec 019) instead of an external provider.
  */
 @Service
 @RequiredArgsConstructor

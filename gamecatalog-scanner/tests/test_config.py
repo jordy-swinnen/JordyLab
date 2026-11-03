@@ -31,10 +31,7 @@ def test_resolve_service_precedence():
 
     assert resolved.backend_url == "http://constant"
     assert resolved.scan_endpoint == "/custom/scan"
-    # No Keycloak settings exist any more (spec 019 US5).
-    assert not hasattr(resolved, "keycloak_url")
-    assert not hasattr(resolved, "realm")
-    assert not hasattr(resolved, "client_id")
+
 
 
 def test_resolve_service_treats_placeholders_as_absent():

@@ -231,7 +231,6 @@ Emergency path (no pipeline):
 ```
 kubectl -n jordylab rollout undo deploy/backend
 kubectl -n jordylab rollout undo deploy/frontend
-kubectl -n jordylab rollout undo deploy/keycloak
 ```
 Both should restore a healthy previous version within 5 minutes (SC-002).
 
@@ -240,7 +239,6 @@ Both should restore a healthy previous version within 5 minutes (SC-002).
 ```
 kubectl -n jordylab logs deploy/backend -f
 kubectl -n jordylab logs deploy/frontend -f
-kubectl -n jordylab logs deploy/keycloak -f
 kubectl -n jordylab logs deploy/ntfy -f
 kubectl -n jordylab logs cnpg-cluster-1 -c postgres -f        # the database (cluster `cnpg-cluster`, namespace `jordylab`)
 kubectl -n cnpg-system logs deploy/cnpg-cloudnative-pg -f   # the CloudNativePG operator itself
@@ -255,7 +253,7 @@ kubectl -n cnpg-system logs deploy/cnpg-cloudnative-pg -f   # the CloudNativePG 
 3. Deploy as usual (§10) — the new value reaches the cluster as an updated `Secret`.
 4. (Player-count key: see §23, "Player counts are missing".) Restart the pods that read it so they pick it up:
    ```
-   kubectl -n jordylab rollout restart deploy/backend deploy/keycloak
+   kubectl -n jordylab rollout restart deploy/backend
    ```
 
 ## 14. Age key lost (re-keying)
@@ -263,7 +261,7 @@ kubectl -n cnpg-system logs deploy/cnpg-cloudnative-pg -f   # the CloudNativePG 
 If the private key is gone from **both** the password manager and the GitHub environment secret:
 
 1. Every value in `secrets.sops.yaml` is unrecoverable as ciphertext — you must know the plaintext values
-   independently (e.g. re-generate DB/Keycloak credentials, re-fetch API keys from their providers).
+   independently (e.g. re-generate DB credentials and the identity bootstrap password, re-fetch API keys from their providers).
 2. Generate a **new** age key (§7).
 3. Re-create `secrets.sops.yaml` from scratch with the new key's public half in `.sops.yaml`, and the
    (re-obtained) plaintext values.
@@ -291,7 +289,7 @@ backend is pointed at the restored database. Row counts plus Flyway history show
 which is what FR-015 asks of a backup.
 
 ```bash
-Q="select 'gamecatalog.game', count(*) from gamecatalog.game union all select 'keycloak.user_entity', count(*) from keycloak.user_entity union all select 'flyway history', count(*) from flyway_schema_history"
+Q="select 'gamecatalog.game', count(*) from gamecatalog.game union all select 'identity.user_account', count(*) from identity.user_account union all select 'flyway history', count(*) from flyway_schema_history"
 kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "$Q"
 kubectl -n jordylab exec cnpg-restore-drill-1 -c postgres -- psql -U postgres -d jordylab -At -c "$Q"
 ```
@@ -305,7 +303,7 @@ kubectl -n jordylab get pvc | grep restore-drill || echo "drill volume removed"
 
 | Date | Recovered from | Ready after | Row counts match | By | Next due |
 |------|----------------|-------------|------------------|----|----------|
-| 2026-10-01 | base backup `cnpg-daily-backup-20261001030000` (03:00 UTC) + archived WAL up to ~09:53 UTC | 1 min 55 s (09:53:35 → 09:55:30 UTC) | yes — `gamecatalog.game` 128/128, `keycloak.user_entity` 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | 2027-01-01 (quarterly, FR-015) |
+| 2026-10-01 | base backup `cnpg-daily-backup-20261001030000` (03:00 UTC) + archived WAL up to ~09:53 UTC | 1 min 55 s (09:53:35 → 09:55:30 UTC) | yes — `gamecatalog.game` 128/128, users 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | 2027-01-01 (quarterly, FR-015) |
 
 ## 16. Full VPS rebuild
 
@@ -394,15 +392,8 @@ safe to skip temporarily; none of them changes the web app.
 1. Deploy the release (above). The backend boots with `jordylab.notifications.*` and `/.well-known/assetlinks.json`
    now answers 403 (expected — the endpoint is gone).
 2. Delete the APK volume once no pod mounts it: `kubectl -n jordylab delete pvc mobile-releases`.
-3. Delete the native identity entries from the live realm (the realm file no longer contains them; a first-boot import
-   would not remove them):
-   ```bash
-   kubectl -n jordylab exec -it deploy/keycloak -- /opt/keycloak/bin/kcadm.sh config credentials \
-     --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg
-   kubectl -n jordylab exec -it deploy/keycloak -- /opt/keycloak/bin/kcadm.sh get clients -r jordylab -q clientId=jordylab-mobile --fields id --config /tmp/kc.cfg
-   ```
-   Delete that client's id with `delete clients/<id> -r jordylab`, then the same for `mobile-release-ci`, then
-   `delete roles/mobile-release-publisher -r jordylab`. Confirm `get clients -r jordylab` no longer lists them.
+3. The native app's identity clients and roles are gone with the identity-provider removal (spec 019 release B); nothing
+   is left to delete.
 4. Remove the retired CI secret from GitHub (`gh secret remove MOBILE_RELEASE_CI_CLIENT_SECRET --repo jordy-swinnen/JordyLab`
    and, if present, `--env production`).
 5. SOPS: `MOBILE_RELEASE_CI_CLIENT_SECRET` and `MOBILE_DOWNLOAD_LINK_SECRET` are already gone from

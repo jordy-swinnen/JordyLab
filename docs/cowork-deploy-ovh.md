@@ -9,7 +9,7 @@ built-in browser available. Written 2026-09-29 from `specs/008-ovh-k8s-deploymen
 
 You are deploying JordyLab to production, following `docs/runbook.md` (sections 1-11) and validating with
 `specs/008-ovh-k8s-deployment/quickstart.md`. Target: single-node k3s on one OVH VPS-2 (4 vCores / 8 GB / 75 GB NVMe),
-one public HTTPS domain serving `/` (web), `/api` (backend), `/auth` (Keycloak public endpoints), plus `/ntfy`.
+one public HTTPS domain serving `/` (web), `/api` and `/webauthn` (backend), plus `/ntfy`.
 
 Jordy has already created an OVH account with the VPS-2 subscription paid. Everything else is yours, except the steps
 marked **JORDY**.
@@ -135,7 +135,7 @@ Runbook sections 7 and 13. This phase is deliberately human.
    the local file.
 2. Cowork: put the public key in `.sops.yaml`; commit only that file.
 3. **JORDY:** `sops deploy/k8s/overlays/prod/secrets.sops.yaml` and fill each key in `contracts/secrets-schema.md` (DB
-   passwords, Keycloak bootstrap admin, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, Keycloak service-account secret, S3
+   passwords, identity bootstrap admin, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, S3
    keys, ntfy token). Cowork can list the key names to fill and later check that the file contains only ciphertext, but
    must not read decrypted values.
 4. Cowork: replace `__DOMAIN__` and `__TRAEFIK_CIDR__`, set the frontend production environment domain, then run

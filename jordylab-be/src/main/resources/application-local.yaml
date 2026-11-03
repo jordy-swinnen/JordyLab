@@ -1,7 +1,7 @@
 # Local development defaults. Only active under the "local" Spring profile — never merged into
 # application.yaml, so these values can never leak into prod (FR-002).
 #
-# Matches podman compose (../compose.yaml): Postgres runs in Podman on localhost (Keycloak until spec 019 release B).
+# Matches podman compose (../compose.yaml): Postgres runs in Podman on localhost.
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/jordylab

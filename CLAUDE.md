@@ -22,7 +22,7 @@ Skills (invoke with `/skill-name`):
 - `/refresh-agent-models` — re-curate the Planner, Reviewer and Worker agent models and effort levels for OpenCode (OpenCode Go) and Claude Code using the Artificial Analysis leaderboards
 - `trading-guard` — background rules for the trading module (human-in-the-loop enforcement, not user-invocable)
 - `jordylab-ops` — production operations knowledge (VPS + k3s, deploys/approvals/rollbacks, SOPS secrets edited in
-  IntelliJ, Keycloak kcadm, CNPG backups); the single source of truth, shared natively with OpenCode
+  IntelliJ, identity/user administration, CNPG backups); the single source of truth, shared natively with OpenCode
 
 Agents (run automatically by Claude):
 - `code-reviewer` — reviews against all JordyLab conventions; reports issues by severity

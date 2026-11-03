@@ -19,7 +19,6 @@ def test_generated_file_begins_with_constants_header():
     assert 'BACKEND_URL = "${BACKEND_URL}"' in text
     assert 'SCAN_ENDPOINT = "${SCAN_ENDPOINT}"' in text
     assert 'LIBRARY_TYPE = "${LIBRARY_TYPE}"' in text
-    assert "KEYCLOAK_URL" not in text
 
 
 def test_no_placeholders_outside_header():

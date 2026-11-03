@@ -38,7 +38,7 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"
   Steam manifests and playlist/disc text for grouping).
 - Steam relpaths are namespaced `libraryfolders/<n>/steamapps/appmanifest_<appid>.acf`
   so they still satisfy the server regex `.*steamapps/appmanifest_(\d+)\.acf$`.
-- Non-interactive runs never start the device flow: a failed refresh exits 2.
+- Non-interactive runs never prompt for a token: a missing or rejected machine token exits 2 (re-auth).
 - Exit codes: 0 ok/no-change, 2 re-auth, 3 network, 4 server rejected/413,
   5 partial (skipped configured roots), 6 config/fatal.
 
@@ -47,7 +47,7 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 - Fixed module order, LF endings, deterministic output.
 - Intra-package imports are stripped; the flattened file resolves names globally.
 - The frozen file **begins** with the rendered constants header. `--selftest`
-  ignores that header and runs fully offline (no network, no Keycloak). The
+  ignores that header and runs fully offline (no network). The
   committed template keeps `${...}` placeholders; `--local` renders defaults.
 - No literal `${` may appear outside the header (use `PLACEHOLDER_MARK`).
 
@@ -56,5 +56,5 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 - pytest + pytest-cov, target ≥80% on `src`.
 - Cover: manifest/digest (NFD/NFC, size/mtime, symlink loop, realpath dedupe),
   normalize/platforms parity, grouping (steam multi-library, m3u, cue+bin, gdi,
-  chd, disc sets), auth (local `http.server` mock), schedule text (no `${`),
+  chd, disc sets), auth (token cache/env/prompt), schedule text (no `${`),
   CLI exit codes, frozen-artifact build/compile.
