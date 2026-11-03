@@ -1287,3 +1287,16 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): ran `sudo /usr/local/bin/k3s-killall.sh` mid-window, then killed the surviving k3s shims. Lesson recorded: `pkill -f containerd-shim-runc-v2` is too broad - dockerd uses the same shim binary and the Compose containers were briefly killed too (restart: unless-stopped healed them in ~1 minute); k3s shims must be selected by their `-namespace k8s.io` argument. After cleanup Caddy obtained a fresh Let's Encrypt certificate (issuer YE2, expires 2027-02-01) and every public check passed.
 - Regression test added: none automated; the T054 post-cutover external scan and the quickstart step 4/5 checks are the verification.
 - Verified on prod: yes - smoke suite green at ~20:44 UTC, owner signed in successfully.
+
+### BUG-084: The Postgres image ships no CA bundle, so pgBackRest cannot verify the S3 endpoint's certificate
+- Status: FIXED-LOCAL (found during the cutover window's Phase 4, 2026-11-03; verification is the stanza-create/check and first backup right after the rebuild)
+- Severity: S2 (blocked all backups of the new stack: stanza-create failed with "unable to verify certificate ... self-signed certificate in certificate chain")
+- Area/spec: prod backups / 020 (T001, T040, T042)
+- Env found: prod VPS, 2026-11-03, `pgbackrest stanza-create` in the postgres container; the earlier local analogue (quickstart step 1) had hit the same error and mis-attributed it to the Mac's network
+- Steps to reproduce: `docker exec jordylab-postgres-1 ls /etc/ssl/certs/ca-certificates.crt` - the file does not exist; the host verifies the same endpoint fine (curl 307, chain Sectigo -> USERTrust, all publicly trusted)
+- Expected (cite spec/story): 020 T040/T042 - the stanza is created and the S3 repository works with the real keys
+- Actual: the pgvector/pgvector base image ships without ca-certificates, so pgBackRest's TLS verification has no trust store; the misleading "self-signed certificate in certificate chain" is the symptom
+- Root cause: the Containerfile installed only pgbackrest, no CA bundle
+- Fix (PR / commit / tag): `ca-certificates` added to the apt-get install line in deploy/compose/postgres/Containerfile; image rebuilt on the host and the postgres container recreated (~15 s of database downtime, the app reconnects)
+- Regression test added: none in CI (no amd64 runner builds this image); the T040/T042 commands are the check
+- Verified on prod: pending (the stanza-create and first backup immediately after)
