@@ -87,7 +87,7 @@ Proves: deploy and rollback need no server access (SC-004, FR-011, FR-012, contr
 
 ## 10. External port scan
 
-Proves: only the expected doors are open (SC-006, FR-014). The same scan was run on the old host (research R12).
+Proves: only the expected doors are open (SC-006, FR-014). The same scan was run on the old host (research R12). It also runs on the new host before cutover, with the same command (tasks T017 and T054).
 
 - `nmap -Pn <public IPv4>` from outside the tailnet.
 - Pass: only 80 and 443 open, plus 22 until public SSH is closed. No other TCP port answers.

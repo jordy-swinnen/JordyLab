@@ -79,21 +79,21 @@ The cutover is a sequence of phases. Each phase has an exit check, and a failed 
 
 1. Build the Postgres image with pgBackRest and run it locally against the encrypted Mac backup (restore test, quickstart step 1).
 2. Write the Compose files, the environment template and the host timers. Validate them locally with dummy values (`docker compose config`).
-3. Install Docker Engine and the Compose plugin on the host. Publish no ports yet. k3s keeps running.
+3. Install Docker Engine and the Compose plugin on the host. Publish no ports yet. k3s keeps running. Run the external port scan before cutover (FR-014), with the same scan as step 20.
 4. Copy the artwork files from the k3s volume to a staging folder on the host (bulk copy).
 5. Owner approves the Tailscale policy change for `tag:ci` (`tcp:22`) and the deploy key for the runner.
 6. Add the Compose deploy workflow as a separate file. The current release path keeps deploying to k3s until cutover.
 
 6a. Run the kept CloudNativePG restore drill to a point in time inside the 30-day window, while k3s still runs. This is the only way to prove that the old backup chain restores (backup contract, "The old chain"). It creates a drill cluster, so it needs the owner's yes, and the drill cluster and its volume are deleted afterwards.
 
-*Exit check*: the local restore matches, the Compose config validates, Docker is up, the staging copy matches the source, and the tailnet SSH path works from a test job.
+*Exit check*: the local restore matches, the Compose config validates, Docker is up, the pre-cutover port scan is recorded, the old-chain drill has run, the staging copy matches the source, and the tailnet SSH path works from a test job.
 
 **Phase B: maintenance window** (the owner starts it):
 
 **Release freeze**: from the start of this phase until step 22, no release tag is pushed. `release.yml` still targets k3s, so a tag pushed in that time would fail. Phase C tests run the Compose workflow by hand.
 
 7. Scale the write paths down (backend, Keycloak, ntfy) so no new data arrives. This is a cluster change, so it needs the owner's yes.
-8. Take the final dump with owners, encrypt it to the Mac, and check the header and the row counts against production.
+8. Take the final dump with owners, encrypt it to the Mac, and check the header and the row counts against production. Encrypt the artwork folder to the Mac the same way (FR-008).
 9. Copy the changed artwork files (delta) into the host volume.
 10. Stop and disable k3s. This frees ports 80 and 443.
 11. Start Postgres with pgBackRest. Create the `jordylab` and `keycloak` roles. Restore the final dump. Create the pgBackRest stanza and take the first full backup.
