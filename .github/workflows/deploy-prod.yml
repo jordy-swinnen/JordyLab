@@ -25,6 +25,11 @@ on:
         description: "A full commit sha, or a release tag vX.Y.Z or vX.Y.Z-rcN (older commits are allowed, for rollback)"
         required: true
         type: string
+      dry_run:
+        description: "Check the target without changing the cluster: validation, live state, a server-side apply dry run and the smoke checks"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -35,7 +40,8 @@ jobs:
       packages: read
     env:
       TARGET: ${{ inputs.target }}
-      AUTOMATIC: ${{ inputs.automatic }}
+      AUTOMATIC: ${{ inputs.automatic || false }}
+      DRY_RUN: ${{ inputs.dry_run || false }}
     steps:
       - name: Check out the target
         uses: actions/checkout@v4
@@ -53,6 +59,28 @@ jobs:
             echo "::error::the target is refused: $(printf '%s\n' "$resolution" | grep '^reason=' | cut -d= -f2-)"
             exit 1
           fi
+
+      - name: Set up buildx and log in to the registry
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check that the target's images exist
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
+        run: |
+          for component in backend frontend keycloak; do
+            image="ghcr.io/jordy-swinnen/jordylab-${component}:${IMAGE_TAG}"
+            if ! docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
+              echo "::error::the image $image does not exist: the target is refused (FR-014)"
+              exit 1
+            fi
+          done
 
       - name: Join Tailscale
         uses: tailscale/github-action@v4
@@ -126,13 +154,17 @@ jobs:
             ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${IMAGE_TAG}" \
             ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${IMAGE_TAG}" \
             ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${IMAGE_TAG}"
-          # Recorded before the apply: from here on a failure may roll back (see the rollback step).
-          echo "started=true" >> "$GITHUB_OUTPUT"
-          kustomize build . | kubectl apply -f -
+          # Recorded just before the real apply: from here on a failure may roll back (see the rollback step).
+          if [ "$DRY_RUN" = "true" ]; then
+            kustomize build . | kubectl apply --dry-run=server -f -
+          else
+            echo "started=true" >> "$GITHUB_OUTPUT"
+            kustomize build . | kubectl apply -f -
+          fi
 
       - name: Wait for a healthy rollout
         id: rollout
-        if: steps.decide.outputs.decision == 'proceed'
+        if: steps.decide.outputs.decision == 'proceed' && inputs.dry_run != true
         run: |
           kubectl -n jordylab rollout status deploy/backend --timeout=8m
           kubectl -n jordylab rollout status deploy/frontend --timeout=5m
@@ -146,7 +178,7 @@ jobs:
       - name: Roll back to the previously live commit
         id: rollback
         # Only after the cluster was changed, with a known previous commit (FR-010, FR-012); never for a refused or superseded target.
-        if: failure() && steps.apply.outputs.started == 'true' && steps.decide.outputs.live_commit != 'unknown'
+        if: failure() && steps.apply.outputs.started == 'true' && steps.decide.outputs.live_commit != 'unknown' && inputs.dry_run != true
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           PREVIOUS_COMMIT: ${{ steps.decide.outputs.live_commit }}
@@ -185,10 +217,12 @@ jobs:
         if: always()
         env:
           RESOLVE_DECISION: ${{ steps.resolve_target.outputs.decision }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
           TARGET_COMMIT: ${{ steps.resolve_target.outputs.target_commit }}
           DECISION: ${{ steps.decide.outputs.decision }}
           PREVIOUS_LIVE_COMMIT: ${{ steps.decide.outputs.live_commit }}
           APPLY_STARTED: ${{ steps.apply.outputs.started }}
+          APPLY_OUTCOME: ${{ steps.apply.outcome }}
           ROLLOUT_OUTCOME: ${{ steps.rollout.outcome }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           ROLLBACK_OUTCOME: ${{ steps.rollback.outcome }}
@@ -201,6 +235,12 @@ jobs:
           if [ "$RESOLVE_DECISION" = "refused" ]; then
             outcome="refused"
             live_after="unchanged"
+          elif [ "$DRY_RUN" = "true" ] && [ "$DECISION" = "proceed" ] && [ "$SMOKE_OUTCOME" = "success" ] && [ "$APPLY_OUTCOME" = "success" ]; then
+            outcome="dry-run-ok"
+            live_after="unchanged (dry run)"
+          elif [ "$DRY_RUN" = "true" ]; then
+            outcome="dry-run-failed"
+            live_after="unchanged (dry run)"
           elif [ "$DECISION" = "superseded" ]; then
             outcome="superseded"
             live_after="unchanged"
