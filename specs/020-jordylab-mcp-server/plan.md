@@ -115,7 +115,7 @@ jordylab-be/
 │   │   ├── GameCatalogMcpTools.java                    # NEW: search_games, get_game, list_places, list_sources, get_library_status
 │   │   └── model/                                      # NEW result records (GameSearchItem, GameDetail, PlaceSummary, …)
 │   └── fna/
-│       ├── domain/repository/ArticleRepository.java    # + findTop50ByTitleContainingIgnoreCaseOrderByPublishedAtDesc
+│       ├── domain/repository/ArticleRepository.java    # + findByTitleContainingIgnoreCaseOrderByPublishedAtDesc (Pageable, so offset works)
 │       ├── rest/controller/
 │       │   ├── FnaMcpTools.java                        # NEW: search_articles, get_portfolio, get_wishlist, get_latest_briefing
 │       │   └── model/                                  # NEW result records (ArticleItem, PortfolioItem, BriefingView, …)
@@ -149,7 +149,8 @@ layout already names.
 
 1. **Foundation**: the `mcp` module skeleton, the starter dependency, the STATELESS property, the security chain (401
    with the pointer, 403 for non-admins, 401 for a missing audience), the metadata controller, `ModularityTests` green.
-   Spike gate: Claude Desktop completes `initialize` and `tools/list` against a stateless server (R1).
+   Spike gate: an MCP client (MCP Inspector, run locally) completes `initialize` and `tools/list` against the stateless
+   server (R1). Claude connects from Anthropic's cloud and cannot reach localhost, so Claude's own check runs after the deploy.
 2. **Guardrails**: the rate limiter, the advice (limit, audit, error mapping), with the 61st-call test and the audit-line
    test. Spike gate: the advice runs on tool beans invoked by the framework (R7).
 3. **Catalog tools**: `GameCatalogMcpTools` (five tools) with Testcontainers tests for filters, unknown facts, hidden

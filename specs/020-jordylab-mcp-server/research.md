@@ -18,8 +18,9 @@ it stands on 2026-11-03.
   server for Boot 4.
 - **Rejected**: `STREAMABLE` with sessions (lost at each deploy); `SSE` (deprecated since 2.0.0); a hand-written
   JSON-RPC handler (protocol drift); the community MCP Security library (its own docs mark it work in progress).
-- **Risk**: Claude's handshake against a STATELESS server is not yet tested. The first implementation task confirms the
-  initialize and tools/list exchange with Claude Desktop; if it fails, switch to `STREAMABLE` (a property change only).
+- **Risk**: Claude's handshake against a STATELESS server is not yet tested. Task T024 confirms `initialize` and `tools/list`
+  locally with MCP Inspector. Claude's own check runs after the deploy (Phase 8), because Claude connects from Anthropic's
+  cloud and cannot reach localhost. If either check fails, switch to `STREAMABLE` (a property change only).
 
 ## R2. Authentication and authorization on `/mcp`
 
@@ -153,8 +154,9 @@ it stands on 2026-11-03.
     Exact method names are confirmed when each tool is written.
   - finance: `FnaService.getRecentArticles()` (already the newest 50), `getPortfolioPositions()`,
     `getWishlistItems()`, `getLatestBriefing()`.
-- **One new query**: a Spring Data derived query on `ArticleRepository`, `findTop50ByTitleContainingIgnoreCaseOrderByPublishedAtDesc`
-  (the final name is fixed when the code is written). FNA stores no ticker tags on articles (`Article` has feed, title, url, hash, full content and
+- **One new query**: a Spring Data derived query on `ArticleRepository`,
+  `Page<Article> findByTitleContainingIgnoreCaseOrderByPublishedAtDesc(String title, Pageable pageable)`. It takes a
+  `Pageable` so the tool's `offset` works (task T036). FNA stores no ticker tags on articles (`Article` has feed, title, url, hash, full content and
   dates). So `search_articles` matches the title. Full-text search over `fullContent` was rejected: it is large and not
   needed for a 50-item answer. This narrows User Story 2 (spec change S2).
 - **Output records are tool-specific**, not the REST DTOs. Each record lists its fields explicitly, so fields the UI
