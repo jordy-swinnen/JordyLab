@@ -32,6 +32,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 21. [Manual tests the E2E campaign could not run](#21-manual-tests-the-e2e-campaign-could-not-run)
 22. [Before a release that changes the database: backup and pgvector](#22-before-a-release-that-changes-the-database-backup-and-pgvector)
 23. [LibBot and the auto-fill: what to check](#23-libbot-and-the-auto-fill-what-to-check)
+24. [Postgres major-version upgrade](#24-postgres-major-version-upgrade)
 
 ---
 
@@ -511,3 +512,66 @@ $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select extname, e
   - **A paused source.** The Sources page says until when and why: the key was refused or the monthly allowance (1,000 lookups) is used up (paused at least an hour, or until the allowance timer runs out), the allowance is almost used up (20 left), or the service could not be reached (15 minutes). Games are not charged a failed attempt while it is paused. The key is regenerated on the service's own API key page; then update the secret (§13) and deploy.
   - **Never paste a response.** TheGamesDB echoes the full request address, key included, in the `pages` field of every answer. The backend never logs addresses or bodies; do not paste raw answers into chat, tickets or files either.
 - **Search index.** `game_embedding` is rebuilt by the auto-fill sweep when a game changes or the embedding model changes. If it is empty, LibBot still answers (by structure and words), only without meaning-based ranking.
+
+## 24. Postgres major-version upgrade
+
+**Status: written 2026-11-03, not yet rehearsed** (no major bump is planned). A minor or patch bump never needs this: it
+is a new tag of the same major image. A major upgrade is a deliberate rebuild, a dump and a restore, and it is downtime:
+Postgres stops for the dump and again for the cutover. Rehearse step 4 before the real window.
+
+**Before you start:** a full backup and a restore drill from the last week (§15); the live release in
+`state/current-release` (§5); at least twice the database size free under `/var/lib/docker` (a dump plus a second volume);
+and confirmation that both the backend (Spring Boot/Hibernate) and Keycloak support the new major — check their release
+notes, and keep the pgvector extension: the pinned base image is the `pgvector/pgvector` one.
+
+1. **Stop the writers, keep Postgres up**, so the dump is consistent:
+   ```
+   $COMPOSE stop backend keycloak
+   ```
+2. **Dump everything** — roles, the `jordylab` database and the `keycloak` schema — as root with a private mode:
+   ```
+   sudo sh -c 'umask 077; docker exec -i jordylab-postgres-1 pg_dumpall -U postgres --clean --if-exists' \
+     > /opt/jordylab/postgres-<old-major>-<date>.sql
+   ```
+   The dump is a copy of production data: keep it on the host, mode 600, and delete it once the new stack is proven.
+3. **Build the new image.** In `deploy/compose/postgres/Containerfile`, change the base to the new major's
+   `pgvector/pgvector:pg<new>` **multi-arch manifest-list digest** (a single-platform manifest breaks the build, BUG-081)
+   and the pinned `pgbackrest` version. Mirror `deploy/compose` to the host (§5), then build; keep the old image:
+   ```
+   cd /opt/jordylab/compose
+   sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env build postgres
+   sudo docker image ls jordylab-postgres
+   ```
+4. **Rehearse into a throwaway volume** (no published ports, nothing touches the real data):
+   ```
+   sudo docker volume create jordylab-postgres-<new>-rehearsal
+   sudo docker run -d --name jordylab-pg<new>-rehearsal --env-file /opt/jordylab/env/prod.env \
+     --mount type=volume,src=jordylab-postgres-<new>-rehearsal,dst=/var/lib/postgresql/data \
+     jordylab-postgres:pg<new>-pgbackrest
+   sudo sh -c 'docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d postgres' \
+     < /opt/jordylab/postgres-<old-major>-<date>.sql
+   sudo docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d jordylab -At \
+     -c "select count(*) from gamecatalog.game" -c "select version, success from flyway_schema_history order by installed_rank desc limit 1"
+   sudo docker rm -f jordylab-pg<new>-rehearsal && sudo docker volume rm jordylab-postgres-<new>-rehearsal
+   ```
+   Fix anything here, not on the real volume.
+5. **Cut over.** Stop the stack, point `compose.yaml` at the new image and a **new** volume
+   (`jordylab_postgres-data-<new>`), start Postgres alone, load the dump, then the rest of the stack:
+   ```
+   $COMPOSE down
+   # edit compose.yaml: postgres image and the postgres-data volume name
+   $COMPOSE up -d --wait postgres
+   sudo sh -c 'docker exec -i jordylab-postgres-1 psql -U postgres -d postgres' < /opt/jordylab/postgres-<old-major>-<date>.sql
+   $COMPOSE up -d --wait
+   ```
+   Then the smoke checks (§10 step 5). Leave the old volume in place: that is the way back.
+6. **Restart backups on the new major.** Take a full backup now; WAL archiving resumes by itself, and pgBackRest reads
+   the old chain fine (retention drops it on its own):
+   ```
+   $COMPOSE exec -T postgres pgbackrest --stanza=jordylab --type=full backup
+   $COMPOSE exec -T postgres pgbackrest --stanza=jordylab info
+   ```
+   Delete the dump file from step 2 once this succeeds.
+7. **Go back** (while the old volume still exists): `$COMPOSE down`, point `compose.yaml` back at the old image and
+   `jordylab_postgres-data`, `$COMPOSE up -d --wait`, and deploy the previous release (§11). Anything written after the
+   cutover lives only in the new volume: dump it first if it matters.
