@@ -49,16 +49,20 @@ public class LinearClient {
             """;
 
     private static final String WORKFLOW_STATES_QUERY = """
-            query States($teamId: String!) {
+            query States($teamId: ID!) {
               workflowStates(filter: {team: {id: {eq: $teamId}}}) {
                 nodes { id name }
               }
             }
             """;
 
+    /**
+     * The App and Type label groups are workspace-level (verified against the live workspace); a
+     * team-filtered issueLabels query returns none of them. Query the workspace's labels instead.
+     */
     private static final String LABELS_QUERY = """
-            query Labels($teamId: String!) {
-              issueLabels(filter: {team: {id: {eq: $teamId}}}) {
+            query Labels {
+              issueLabels(first: 250) {
                 nodes { id name }
               }
             }
@@ -74,7 +78,7 @@ public class LinearClient {
             """;
 
     private static final String ISSUE_SEARCH_QUERY = """
-            query Issues($teamId: String!, $title: String!) {
+            query Issues($teamId: ID!, $title: String!) {
               issues(filter: {team: {id: {eq: $teamId}}, title: {eq: $title}, description: {contains: "Source: idea box"}}, first: 5) {
                 nodes { id url }
               }
@@ -104,7 +108,7 @@ public class LinearClient {
      */
     public LinearIssue createIssue(FeedbackTicket ticket, String privateNote) {
         String team = teamId();
-        Map<String, String> labels = labelIds(team);
+        Map<String, String> labels = labelIds();
         Map<String, Object> input = new LinkedHashMap<>();
         input.put("teamId", team);
         input.put("title", ticket.getTitle());
@@ -169,12 +173,12 @@ public class LinearClient {
         throw new LinearUnavailableException("Linear workflow state '" + TRIAGE_STATE_NAME + "' not found");
     }
 
-    private Map<String, String> labelIds(String team) {
+    private Map<String, String> labelIds() {
         Map<String, String> cached = labelIdsByName;
         if (cached != null) {
             return cached;
         }
-        JsonNode data = execute(LABELS_QUERY, Map.of("teamId", team));
+        JsonNode data = execute(LABELS_QUERY, Map.of());
         Map<String, String> byName = new HashMap<>();
         for (JsonNode node : data.path("issueLabels").path("nodes")) {
             byName.put(node.path("name").asText(), node.path("id").asText());

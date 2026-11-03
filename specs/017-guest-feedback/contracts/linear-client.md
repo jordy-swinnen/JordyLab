@@ -2,7 +2,7 @@
 
 `feedback/rest/client/LinearClient` — the module's only outbound integration. GraphQL as JSON over a module-private `RestClient` (short connect/read timeouts, built `@PostConstruct` like `KeycloakAdminClient`), authenticated with Jordy's **personal API key** (JOR-33 decision). Issue creation is the only write; everything else is lookups.
 
-> Field names below are the contract's *shapes*; the exact GraphQL syntax must be verified once against Linear's live schema during implementation (a `viewer` ping doubles as the credential check). Linear is on the Free plan — API-key limit 2 500 requests/hour, far beyond the idea box's few-per-week volume; the real cap is the ≈250-issue plan limit, which only accepted tickets ever touch.
+> **Verified against the live workspace on 2026-11-03** (validation issue created in Triage and checked back): the personal key authenticates with the raw `Authorization` header, the team resolves by key `JOR`, the Triage state resolves, the App and Type label groups are **workspace-level** (a team-filtered `issueLabels` query returns none of them), and filter variables that carry a team id are typed `ID!`, not `String!`. Those two facts were found by the live check; the WireMock tests cannot catch them. Linear is on the Free plan — API-key limit 2 500 requests/hour, far beyond the idea box's few-per-week volume; the real cap is the ≈250-issue plan limit, which only accepted tickets ever touch.
 
 ## Authentication
 
@@ -15,8 +15,8 @@
 | What | Operation (shape) | Used for |
 |---|---|---|
 | Team | `teams(filter: {key: {eq: "JOR"}})` → `id` | `issueCreate.teamId` — by **key**, not the display name "JordyLab" |
-| Triage state | `workflowStates(filter: {team: {id: …}, name: {eq: "Triage"}})` → `id` | explicit `stateId` (FR-009) |
-| Labels | `issueLabels(filter: {team: {id: …}})` → `id`, `name`, `group.name` | App + Type label ids |
+| Triage state | `workflowStates(filter: {team: {id: {eq: $teamId}}})`, `$teamId: ID!` → `id`, `name` (pick "Triage") | explicit `stateId` (FR-009) |
+| Labels | `issueLabels(first: 250)` → `id`, `name` — **workspace-level, no team filter** | App + Type label ids |
 
 The cache is plain in-memory state with `volatile` fields, mirroring `IgdbClient`'s token cache — no TTL machinery, a miss re-fetches.
 
@@ -79,7 +79,7 @@ Only taken when the ticket carries an `accept_error` (a previous attempt reached
 
 ```json
 {
-  "query": "query($teamId: String!, $title: String!) { issues(filter: {team: {id: {eq: $teamId}}, title: {eq: $title}, description: {contains: \"Source: idea box\"}}, first: 5) { nodes { id url createdAt } } }",
+  "query": "query($teamId: ID!, $title: String!) { issues(filter: {team: {id: {eq: $teamId}}, title: {eq: $title}, description: {contains: \"Source: idea box\"}}, first: 5) { nodes { id url createdAt } } }",
   "variables": { "teamId": "<JOR>", "title": "<ticket title>" }
 }
 ```
