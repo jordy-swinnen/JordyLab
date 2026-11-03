@@ -8,30 +8,6 @@
   (saveDefault)="saveGuestLimit.emit($event)"
 />
 
-@if (temporaryPassword(); as reveal) {
-  <div
-    class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-accent-text p-4"
-  >
-    <div>
-      <p class="label text-accent-text">Temporary password — shown once</p>
-      <p class="mt-1 text-base font-semibold tabular-nums text-foreground" data-testid="temporary-password">
-        {{ reveal.password }}
-      </p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        Share this with the user out-of-band. It will not be shown again.
-      </p>
-    </div>
-    <button
-      hlmBtn
-      variant="outline"
-      (click)="dismissTemporaryPassword.emit()"
-      data-testid="dismiss-temporary-password"
-    >
-      Dismiss
-    </button>
-  </div>
-}
-
 @if (error()) {
   <div class="mt-6">
     <lib-error-state [message]="error() ?? ''" (retry)="reload.emit()" />
@@ -57,7 +33,7 @@
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.username }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">
                   signed up {{ user.createdAt | date: 'MMM d, h:mm a' }}
                 </p>
@@ -98,71 +74,30 @@
       } @else {
         <div class="space-y-3">
           @for (user of approvedUsers(); track user.id) {
-            <div class="panel px-6 py-5">
-              <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="min-w-0">
-                  <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                  <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
+            <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+              <div class="min-w-0">
+                <p class="text-base text-foreground">{{ displayName(user) }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.username }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {{ user.role ?? 'no role' }}
+                  @if (user.appGrants.length > 0) {
+                    · {{ user.appGrants.join(', ') }}
+                  }
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                @if (user.role !== 'admin') {
                   <button
                     hlmBtn class="h-11"
                     variant="outline"
                     [disabled]="actioningId() === user.id"
-                    (click)="resetPassword.emit(user.id)"
-                    data-testid="reset-password"
+                    (click)="revoke.emit(user.id)"
+                    data-testid="revoke-user"
                   >
-                    Reset password
+                    Revoke
                   </button>
-                  @if (!user.isAdmin) {
-                    <button
-                      hlmBtn class="h-11"
-                      variant="outline"
-                      [disabled]="actioningId() === user.id"
-                      (click)="revoke.emit(user.id)"
-                      data-testid="revoke-user"
-                    >
-                      Revoke
-                    </button>
-                    <button
-                      hlmBtn class="h-11"
-                      variant="outline"
-                      [disabled]="actioningId() === user.id"
-                      (click)="toggleSessions.emit(user.id)"
-                      [attr.data-testid]="'toggle-sessions-' + user.id"
-                    >
-                      Sessions
-                    </button>
-                    <lib-delete-person-dialog
-                      [user]="user"
-                      [busy]="actioningId() === user.id"
-                      (confirm)="deletePerson.emit(user.id)"
-                    />
-                  }
-                </div>
+                }
               </div>
-              <lib-person-access
-                [user]="user"
-                [busy]="actioningId() === user.id"
-                (grant)="grantApp.emit({ userId: user.id, appKey: $event })"
-                (remove)="removeApp.emit({ userId: user.id, appKey: $event })"
-              />
-              <lib-person-chat-limit
-                [user]="user"
-                [busy]="actioningId() === user.id"
-                (setPersonal)="setPersonalLimit.emit({ userId: user.id, dailyLimit: $event })"
-                (clearPersonal)="clearPersonalLimit.emit(user.id)"
-              />
-              @if (openSessionsUserId() === user.id) {
-                <lib-person-sessions
-                  [sessions]="sessions()"
-                  [loading]="sessionsLoading()"
-                  [actioning]="sessionsActioning()"
-                  [error]="sessionsError()"
-                  (endOne)="endSession.emit($event)"
-                  (endAll)="endAllSessions.emit(user.id)"
-                />
-              }
             </div>
           }
         </div>
@@ -171,28 +106,30 @@
 
     <section>
       <div class="mb-4 flex items-center gap-3">
-        <h3 class="section-title">Rejected</h3>
+        <h3 class="section-title">Rejected or revoked</h3>
         <span hlmBadge variant="secondary">{{ rejectedUsers().length }}</span>
       </div>
       @if (rejectedUsers().length === 0) {
-        <p class="text-sm text-muted-foreground">No rejected accounts.</p>
+        <p class="text-sm text-muted-foreground">No rejected or revoked accounts.</p>
       } @else {
         <div class="space-y-3">
           @for (user of rejectedUsers(); track user.id) {
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.username }} · {{ user.status }}</p>
               </div>
-              <button
-                hlmBtn class="h-11"
-                variant="outline"
-                [disabled]="actioningId() === user.id"
-                (click)="approve.emit(user.id)"
-                data-testid="approve-user"
-              >
-                Approve
-              </button>
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  hlmBtn class="h-11"
+                  variant="default"
+                  [disabled]="actioningId() === user.id"
+                  (click)="approve.emit(user.id)"
+                  data-testid="approve-user"
+                >
+                  Approve again
+                </button>
+              </div>
             </div>
           }
         </div>

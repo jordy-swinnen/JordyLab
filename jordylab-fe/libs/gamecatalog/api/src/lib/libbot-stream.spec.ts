@@ -52,7 +52,7 @@ describe('askLibBot', () => {
       ),
     );
 
-    const events = await firstValueFrom(askLibBot(REQUEST, 'token-1').pipe(toArray()));
+    const events = await firstValueFrom(askLibBot(REQUEST).pipe(toArray()));
 
     expect(events).toEqual<LibBotAskEvent[]>([
       { kind: 'stage', stage: 'UNDERSTANDING' },
@@ -61,14 +61,15 @@ describe('askLibBot', () => {
     ]);
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(url).toBe('/api/gamecatalog/libbot/ask');
-    expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer token-1');
+    expect((init?.headers as Record<string, string>)['Authorization']).toBeUndefined();
+    expect(init?.credentials).toBe('same-origin');
     expect(JSON.parse(init?.body as string)).toEqual(REQUEST);
   });
 
   it('reassembles an event split across chunks', async () => {
     respondWith(streamOf('event:stage\nda', 'ta:{"stage":"WRITING"}\n', '\n'));
 
-    const events = await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()));
+    const events = await firstValueFrom(askLibBot(REQUEST).pipe(toArray()));
 
     expect(events[0]).toEqual({ kind: 'stage', stage: 'WRITING' });
   });
@@ -76,7 +77,7 @@ describe('askLibBot', () => {
   it('maps an error event', async () => {
     respondWith(streamOf('event:error\ndata:{"code":"UNAVAILABLE","retryable":true}\n\n'));
 
-    const events = await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()));
+    const events = await firstValueFrom(askLibBot(REQUEST).pipe(toArray()));
 
     expect(events).toEqual([{ kind: 'error', code: 'UNAVAILABLE', retryable: true }]);
   });
@@ -86,17 +87,17 @@ describe('askLibBot', () => {
       status: 429,
     });
 
-    const events = await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()));
+    const events = await firstValueFrom(askLibBot(REQUEST).pipe(toArray()));
 
     expect(events).toEqual([{ kind: 'limitReached', resetsAt: '2026-10-08T00:00:00Z' }]);
   });
 
   it('maps other client errors to rejected and server errors to unavailable', async () => {
     respondWith(streamOf('{}'), { status: 400 });
-    expect(await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()))).toEqual([{ kind: 'rejected' }]);
+    expect(await firstValueFrom(askLibBot(REQUEST).pipe(toArray()))).toEqual([{ kind: 'rejected' }]);
 
     respondWith(streamOf('{}'), { status: 502 });
-    expect(await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()))).toEqual([
+    expect(await firstValueFrom(askLibBot(REQUEST).pipe(toArray()))).toEqual([
       { kind: 'error', code: 'UNAVAILABLE', retryable: true },
     ]);
   });
@@ -104,7 +105,7 @@ describe('askLibBot', () => {
   it('reports an unavailable error when the stream ends without an answer', async () => {
     respondWith(streamOf('event:stage\ndata:{"stage":"SEARCHING"}\n\n'));
 
-    const events = await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()));
+    const events = await firstValueFrom(askLibBot(REQUEST).pipe(toArray()));
 
     expect(events.at(-1)).toEqual({ kind: 'error', code: 'UNAVAILABLE', retryable: true });
   });
@@ -113,7 +114,7 @@ describe('askLibBot', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('network down')));
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const events = await firstValueFrom(askLibBot(REQUEST, null).pipe(toArray()));
+    const events = await firstValueFrom(askLibBot(REQUEST).pipe(toArray()));
 
     expect(events).toEqual([{ kind: 'error', code: 'UNAVAILABLE', retryable: true }]);
   });
@@ -129,7 +130,7 @@ describe('askLibBot', () => {
       }),
     );
 
-    askLibBot(REQUEST, null).subscribe().unsubscribe();
+    askLibBot(REQUEST).subscribe().unsubscribe();
 
     expect(signal?.aborted).toBe(true);
   });

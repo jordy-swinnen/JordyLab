@@ -1,214 +1,111 @@
-import { Router } from '@angular/router';
-import {
-  createServiceFactory,
-  SpectatorService,
-} from '@ngneat/spectator/vitest';
-import { AUTH_CONFIG, AuthConfig } from './auth-config';
-import { AuthService } from './auth.service';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { createServiceFactory, SpectatorService } from '@ngneat/spectator/vitest';
+import { AuthService, CurrentUser } from './auth.service';
 
-// vi.mock factories are hoisted above imports, so the spies they close over must be created
-// through vi.hoisted() — a plain top-level const here would still be in its temporal dead zone
-// when the (also hoisted) factory below first evaluates.
-const { keycloakInit, keycloakLogin, keycloakLogout, keycloakUpdateToken } = vi.hoisted(() => ({
-  keycloakInit: vi.fn(),
-  keycloakLogin: vi.fn(),
-  keycloakLogout: vi.fn(),
-  keycloakUpdateToken: vi.fn(),
-}));
-
-vi.mock('keycloak-js', () => ({
-  // A regular `function` here, not an arrow function: the mock is invoked with `new` (AuthService
-  // does `new Keycloak(...)`), and arrow functions can never be constructors — using one throws
-  // "is not a constructor" the moment mockImplementation's function is invoked via `new`.
-  default: vi.fn().mockImplementation(function keycloakConstructor() {
-    return {
-      init: keycloakInit,
-      login: keycloakLogin,
-      logout: keycloakLogout,
-      updateToken: keycloakUpdateToken,
-      token: 'the-access-token',
-      tokenParsed: {
-        preferred_username: 'jordy',
-        realm_access: { roles: ['admin', 'offline_access'] },
-      },
-    };
-  }),
-}));
-
-const aTestAuthConfig: AuthConfig = {
-  keycloakUrl: 'http://localhost:8180',
-  keycloakRealm: 'jordylab',
-  keycloakClientId: 'jordylab-host',
+const USER: CurrentUser = {
+  id: '11111111-1111-4111-8111-111111111111',
+  username: 'jordy',
+  displayName: 'Jordy Swinnen',
+  role: 'guest',
+  status: 'APPROVED',
+  appGrants: ['gamecatalog'],
 };
 
-describe('AuthService', () => {
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn> | undefined;
-  const navigateByUrl = vi.fn().mockResolvedValue(true);
-  let spectator: SpectatorService<AuthService>;
+/** Lets the pending promise continuations run so the next HTTP call is issued. */
+function nextTask(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
 
+describe('AuthService', () => {
+  let spectator: SpectatorService<AuthService>;
+  let http: HttpTestingController;
   const createService = createServiceFactory({
     service: AuthService,
-    providers: [
-      { provide: AUTH_CONFIG, useValue: aTestAuthConfig },
-      { provide: Router, useValue: { navigateByUrl } },
-    ],
+    providers: [provideHttpClient(), provideHttpClientTesting()],
   });
 
   beforeEach(() => {
-    vi.clearAllMocks();
     spectator = createService();
+    http = spectator.inject(HttpTestingController);
   });
 
   afterEach(() => {
-    vi.useRealTimers();
-    consoleErrorSpy?.mockRestore();
-    consoleErrorSpy = undefined;
+    http.verify();
   });
 
-  it('starts unauthenticated before init', () => {
+  async function flushCsrf(): Promise<void> {
+    http.expectOne('/api/identity/auth/csrf').flush(null, { status: 204, statusText: 'No Content' });
+    await nextTask();
+  }
+
+  it('boots signed out after an unauthenticated /me', async () => {
+    const ready = spectator.service.init();
+    await flushCsrf();
+    http.expectOne('/api/identity/me').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(ready).resolves.toBe(false);
     expect(spectator.service.isAuthenticated()).toBe(false);
-    expect(spectator.service.username()).toBeNull();
-    expect(spectator.service.token()).toBeNull();
-    expect(spectator.service.roles()).toEqual([]);
-    expect(spectator.service.hasAppRole()).toBe(false);
   });
 
-  it('sets authenticated state and reads the token/username on a successful init', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
+  it('boots with the profile from /me', async () => {
+    const ready = spectator.service.init();
+    await flushCsrf();
+    http.expectOne('/api/identity/me').flush(USER);
 
-    const authenticated = await spectator.service.init();
-
-    expect(authenticated).toBe(true);
-    expect(spectator.service.isAuthenticated()).toBe(true);
-    expect(spectator.service.token()).toBe('the-access-token');
+    await expect(ready).resolves.toBe(true);
     expect(spectator.service.username()).toBe('jordy');
+    expect(spectator.service.isGuest()).toBe(true);
+    expect(spectator.service.hasGameCatalogAccess()).toBe(true);
   });
 
-  it('reads the realm roles and derives the role flags on a successful init', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
+  it('signs in with a username and password', async () => {
+    const login = spectator.service.login('jordy', 'correct horse battery');
+    await flushCsrf();
+    const request = http.expectOne('/api/identity/auth/login');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ username: 'jordy', password: 'correct horse battery' });
+    request.flush(USER);
 
-    await spectator.service.init();
-
-    expect(spectator.service.roles()).toEqual(['admin', 'offline_access']);
-    expect(spectator.service.isAdmin()).toBe(true);
-    expect(spectator.service.isGuest()).toBe(false);
-    expect(spectator.service.hasAppRole()).toBe(true);
+    await expect(login).resolves.toEqual(USER);
+    expect(spectator.service.isAuthenticated()).toBe(true);
   });
 
-  it('keeps the realm roles in sync when getToken refreshes the token', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-    keycloakUpdateToken.mockResolvedValueOnce(true);
-    await spectator.service.init();
+  it('clears the session on logout', async () => {
+    const login = spectator.service.login('jordy', 'pw');
+    await flushCsrf();
+    http.expectOne('/api/identity/auth/login').flush(USER);
+    await login;
 
-    await spectator.service.getToken();
+    const logout = spectator.service.logout();
+    await nextTask();
+    http.expectOne('/api/identity/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+    await logout;
 
-    expect(spectator.service.roles()).toEqual(['admin', 'offline_access']);
-  });
-
-  it('stays unauthenticated when Keycloak reports no session', async () => {
-    keycloakInit.mockResolvedValueOnce(false);
-
-    const authenticated = await spectator.service.init();
-
-    expect(authenticated).toBe(false);
     expect(spectator.service.isAuthenticated()).toBe(false);
   });
 
-  it('returns false and does not throw when Keycloak init rejects', async () => {
-    keycloakInit.mockRejectedValueOnce(new Error('network error'));
+  it('updates the display name locally after a successful change', async () => {
+    const login = spectator.service.login('jordy', 'pw');
+    await flushCsrf();
+    http.expectOne('/api/identity/auth/login').flush(USER);
+    await login;
 
-    const authenticated = await spectator.service.init();
+    const update = spectator.service.updateDisplayName('Jordy S.');
+    await nextTask();
+    http.expectOne('/api/identity/me').flush(null, { status: 204, statusText: 'No Content' });
+    await update;
 
-    expect(authenticated).toBe(false);
+    expect(spectator.service.displayName()).toBe('Jordy S.');
   });
 
-  it('carries on signed out when Keycloak never answers, instead of leaving the app on a blank page', async () => {
-    vi.useFakeTimers();
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    keycloakInit.mockReturnValueOnce(new Promise<boolean>(() => undefined));
+  it('changes the password through the identity endpoint', async () => {
+    const change = spectator.service.changePassword('old password 12', 'new password 12');
+    await flushCsrf();
+    const request = http.expectOne('/api/identity/auth/change-password');
+    expect(request.request.body).toEqual({ currentPassword: 'old password 12', newPassword: 'new password 12' });
+    request.flush(null, { status: 204, statusText: 'No Content' });
 
-    const initialization = spectator.service.init();
-    await vi.advanceTimersByTimeAsync(8000);
-
-    await expect(initialization).resolves.toBe(false);
-    expect(spectator.service.isAuthenticated()).toBe(false);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-  });
-
-  it('only initializes Keycloak once across repeated init() calls', async () => {
-    keycloakInit.mockResolvedValue(true);
-
-    await spectator.service.init();
-    await spectator.service.init();
-
-    expect(keycloakInit).toHaveBeenCalledTimes(1);
-  });
-
-  it('initializes before delegating to Keycloak login when not yet initialized', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-
-    await spectator.service.login();
-
-    expect(keycloakInit).toHaveBeenCalledTimes(1);
-    expect(keycloakLogin).toHaveBeenCalledWith({
-      redirectUri: window.location.origin,
-    });
-  });
-
-  it('returns to the requested in-app path after login so a signed-out share keeps its payload (spec 018 FR-008)', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-
-    await spectator.service.login('/share?text=remember%20me');
-
-    expect(keycloakLogin).toHaveBeenCalledWith({
-      redirectUri: `${window.location.origin}/share?text=remember%20me`,
-    });
-  });
-
-  it('sends the user to Keycloak to change their password and back to the current page', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-    await spectator.service.init();
-
-    await spectator.service.requestAction('UPDATE_PASSWORD');
-
-    expect(keycloakLogin).toHaveBeenCalledWith({
-      redirectUri: window.location.href,
-      action: 'UPDATE_PASSWORD',
-    });
-  });
-
-  it('delegates logout to the Keycloak SDK', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-    await spectator.service.init();
-
-    await spectator.service.logout();
-
-    expect(keycloakLogout).toHaveBeenCalledWith({
-      redirectUri: window.location.origin,
-    });
-  });
-
-  it('refreshes the token before returning it', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-    keycloakUpdateToken.mockResolvedValueOnce(true);
-    await spectator.service.init();
-
-    const token = await spectator.service.getToken();
-
-    expect(keycloakUpdateToken).toHaveBeenCalledWith(30);
-    expect(token).toBe('the-access-token');
-  });
-
-  it('triggers login and returns null when the token refresh fails', async () => {
-    keycloakInit.mockResolvedValueOnce(true);
-    keycloakUpdateToken.mockRejectedValueOnce(new Error('token expired'));
-    await spectator.service.init();
-
-    const token = await spectator.service.getToken();
-
-    expect(token).toBeNull();
-    expect(keycloakLogin).toHaveBeenCalledWith({
-      redirectUri: window.location.origin,
-    });
+    await expect(change).resolves.toBeUndefined();
   });
 });

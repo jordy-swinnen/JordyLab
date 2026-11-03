@@ -78,13 +78,10 @@ async function failureEvent(response: Response): Promise<LibBotAskEvent> {
 
 /**
  * Asks LibBot and emits its stage events, then exactly one `answer`, `error`, `limitReached` or `rejected` event.
- * Uses `fetch` because `EventSource` cannot send the bearer header or a POST body. Unsubscribing aborts the request,
- * and the server then neither remembers nor counts the question.
+ * Uses `fetch` because `EventSource` cannot send a POST body. The session cookie authenticates the call (spec 019).
+ * Unsubscribing aborts the request, and the server then neither remembers nor counts the question.
  */
-export function askLibBot(
-  request: LibBotAskRequest,
-  token: string | null | undefined,
-): Observable<LibBotAskEvent> {
+export function askLibBot(request: LibBotAskRequest): Observable<LibBotAskEvent> {
   return new Observable<LibBotAskEvent>((subscriber) => {
     const controller = new AbortController();
 
@@ -94,9 +91,9 @@ export function askLibBot(
         headers: {
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(request),
+        credentials: 'same-origin',
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {

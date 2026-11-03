@@ -1,12 +1,13 @@
 import { Component, computed, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { ConnectedPosition } from '@angular/cdk/overlay';
+import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
 /**
- * The signed-in user's own menu (006 US5, FR-008): change password, edit name and change email on Keycloak's
- * pages, and sign out. Open to every authenticated user — admins and guests alike. `compact` is the small
- * mobile-header variant; the full variant shows the avatar and name (desktop sidebar).
+ * The signed-in user's own menu (spec 019): account settings (display name, password, and passkeys once US2 lands) and
+ * sign out. Open to every authenticated user — admins and guests alike. `compact` is the small mobile-header variant;
+ * the full variant shows the avatar and name (desktop sidebar).
  */
 @Component({
   selector: 'lib-user-menu',
@@ -47,15 +48,8 @@ import { AuthService } from './auth.service';
         cdkMenu
         class="min-w-48 rounded-xl border border-input bg-card p-1 text-sm text-foreground shadow-modal"
       >
-        <button type="button" cdkMenuItem data-testid="user-menu-password" [class]="itemClass" (cdkMenuItemTriggered)="onChangePassword()">
-          Change password
-        </button>
-        <button type="button" cdkMenuItem data-testid="user-menu-profile" [class]="itemClass" (cdkMenuItemTriggered)="onEditProfile()">
-          Edit name
-        </button>
-        <!-- Email is the username here, so Keycloak changes it through its own re-authenticated UPDATE_EMAIL action. -->
-        <button type="button" cdkMenuItem data-testid="user-menu-email" [class]="itemClass" (cdkMenuItemTriggered)="onChangeEmail()">
-          Change email
+        <button type="button" cdkMenuItem data-testid="user-menu-account" [class]="itemClass" (cdkMenuItemTriggered)="onAccount()">
+          Account settings
         </button>
         <div class="my-1 h-px bg-border" role="separator"></div>
         <button type="button" cdkMenuItem data-testid="user-menu-sign-out" [class]="itemClass" (cdkMenuItemTriggered)="signOut.emit()">
@@ -67,6 +61,7 @@ import { AuthService } from './auth.service';
 })
 export class UserMenuComponent {
   readonly #auth = inject(AuthService);
+  readonly #router = inject(Router);
 
   readonly compact = input(false);
   /** The shell owns sign-out. */
@@ -83,15 +78,7 @@ export class UserMenuComponent {
   protected readonly itemClass =
     'flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left hover:bg-secondary focus:bg-secondary focus:outline-none';
 
-  onChangePassword(): void {
-    void this.#auth.requestAction('UPDATE_PASSWORD');
-  }
-
-  onEditProfile(): void {
-    void this.#auth.requestAction('UPDATE_PROFILE');
-  }
-
-  onChangeEmail(): void {
-    void this.#auth.requestAction('UPDATE_EMAIL');
+  onAccount(): void {
+    void this.#router.navigateByUrl('/account');
   }
 }

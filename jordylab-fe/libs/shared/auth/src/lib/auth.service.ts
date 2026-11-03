@@ -1,182 +1,173 @@
-import { computed, inject, Injectable, signal, Signal } from '@angular/core';
-import Keycloak, { KeycloakInstance, KeycloakTokenParsed } from 'keycloak-js';
-import { AUTH_CONFIG } from './auth-config';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { computed, inject, Injectable, Signal, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 
-/**
- * How long start-up waits for Keycloak's silent check before carrying on signed out. Without a limit an unreachable (or
- * frame-blocked) Keycloak left the whole app on a blank page: `keycloak.init` never settles.
- */
-const KEYCLOAK_INIT_TIMEOUT_MS = 8000;
-
-/** The two application roles the realm grants. Self-registered users hold neither until approved. */
+/** The two application roles (spec 019 FR-003). Self-registered users hold neither until approved. */
 export type AppRole = 'admin' | 'guest';
 
-/**
- * Per-app grant roles (spec 014). Holding one is not approval: the person also needs `guest`.
- * The Game Catalog is the first app that can be granted per person.
- */
-export type AccessRole = 'app-gamecatalog';
+/** Per-app grant authorities (spec 014), spelled as the backend authorities: `app-gamecatalog`. */
+export type AccessRole = `app-${string}`;
+
+export type UserStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
+
+/** The signed-in user as the identity API returns it (spec 019 contracts/identity-api.md). */
+export interface CurrentUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  role: AppRole | null;
+  status: UserStatus;
+  /** App keys such as `gamecatalog` (spec 014's per-app grants). */
+  appGrants: string[];
+}
 
 const APP_ROLES: readonly AppRole[] = ['admin', 'guest'];
 
-function realmRolesFrom(tokenParsed: KeycloakTokenParsed | undefined): string[] {
-  const realmAccess = tokenParsed?.['realm_access'] as { roles?: unknown } | undefined;
-  const roles = realmAccess?.roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-
-  return roles.filter((role): role is string => typeof role === 'string');
-}
-
-/** Keycloak application-initiated actions a user may start on their own account (006 US5). */
-export type AccountAction = 'UPDATE_PASSWORD' | 'UPDATE_PROFILE' | 'UPDATE_EMAIL';
-
 /**
- * Wraps the official `keycloak-js` SDK behind Angular signals. Every deployable app (`jordylab`, and the
- * `fna`/`gamecatalog` standalone dev harnesses) provides its own {@link AUTH_CONFIG} and uses this same service, so each
- * authenticates against the real Keycloak realm independently rather than relying on a host shell to hold the only
- * session.
- *
- * <p>Everything runs in the page itself — the standard browser redirect flow. The native app's system-browser login and
- * manual token exchange were removed with the native wrapper (spec 018 US4).
+ * Session authentication against the backend (spec 019): the browser holds an HttpOnly session cookie, so the app
+ * sends no bearer header and CSRF rides on Angular's built-in XSRF interceptor. The user profile comes from
+ * `GET /api/identity/me` on start-up; login, logout, password and display-name changes are ordinary API calls.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  #config = inject(AUTH_CONFIG);
-  #keycloak: KeycloakInstance | null = null;
+  #http = inject(HttpClient);
   #init: Promise<boolean> | null = null;
-  #authenticated = signal(false);
-  #username = signal<string | null>(null);
-  #token = signal<string | null>(null);
-  #roles = signal<string[]>([]);
-  /** True once a session really existed (sign-in or silent SSO); only then can one "die". */
-  #hadSession = false;
+  #csrf: Promise<void> | null = null;
+  #user = signal<CurrentUser | null>(null);
 
-  readonly isAuthenticated = this.#authenticated.asReadonly();
-  readonly username: Signal<string | null> = this.#username.asReadonly();
-  readonly token: Signal<string | null> = this.#token.asReadonly();
-  readonly roles: Signal<string[]> = this.#roles.asReadonly();
-  readonly isAdmin = computed(() => this.#roles().includes('admin'));
-  readonly isGuest = computed(() => this.#roles().includes('guest'));
-  readonly hasAppRole = computed(() =>
-    APP_ROLES.some((role) => this.#roles().includes(role)),
-  );
+  readonly user = this.#user.asReadonly();
+  readonly isAuthenticated = computed(() => this.#user() !== null);
+  readonly username: Signal<string | null> = computed(() => this.#user()?.username ?? null);
+  readonly displayName = computed(() => this.#user()?.displayName ?? null);
+  /** The person's role plus their app-grant authorities (`app-gamecatalog`), matching the backend names. */
+  readonly roles = computed<string[]>(() => {
+    const user = this.#user();
+    if (!user) {
+      return [];
+    }
+    const grants = user.appGrants.map((grant) => `app-${grant}`);
+
+    return user.role ? [user.role, ...grants] : grants;
+  });
+  readonly isAdmin = computed(() => this.#user()?.role === 'admin');
+  readonly isGuest = computed(() => this.#user()?.role === 'guest');
+  readonly hasAppRole = computed(() => APP_ROLES.some((role) => this.roles().includes(role)));
   /** Admin, or an approved person the admin granted the Game Catalog to (spec 014). */
   readonly hasGameCatalogAccess = computed(
-    () => this.isAdmin() || this.#roles().includes('app-gamecatalog'),
+    () => this.isAdmin() || (this.#user()?.appGrants ?? []).includes('gamecatalog'),
   );
 
   /**
-   * Idempotent and concurrency-safe: route guards run in parallel and may call this
-   * simultaneously (e.g. `authGuard` and `roleGuard` on the same route while a sign-in
-   * callback is still being exchanged), so every caller shares one in-flight Keycloak
-   * initialization instead of one caller reading half-initialized state.
+   * Idempotent and concurrency-safe: route guards run in parallel and may call this simultaneously, so every caller
+   * shares one in-flight `/me` request instead of one caller reading half-initialized state.
    */
   async init(): Promise<boolean> {
-    this.#init ??= this.#initializeKeycloak();
+    this.#init ??= this.#loadCurrentUser();
 
     return this.#init;
   }
 
-  async login(redirectPath?: string): Promise<void> {
-    if (!this.#keycloak) {
-      await this.init();
-    }
-    // A share that arrived while signed out must return to the share screen (spec 018 FR-008): the login page forwards
-    // its sanitised returnUrl here, so Keycloak's redirect lands back on that in-app path instead of the bare origin.
-    const redirectUri = redirectPath
-      ? new URL(redirectPath, window.location.origin).toString()
-      : window.location.origin;
-    await this.#keycloak?.login({ redirectUri });
+  async login(username: string, password: string): Promise<CurrentUser> {
+    await this.#ensureCsrfToken();
+    const user = await firstValueFrom(
+      this.#http.post<CurrentUser>('/api/identity/auth/login', { username, password }),
+    );
+    this.#user.set(user);
+    this.#init = Promise.resolve(true);
+
+    return user;
   }
 
-  /**
-   * Lets the signed-in user change their own password or profile (name, email) on Keycloak's own pages, then come
-   * back here — Keycloak application-initiated actions, no admin needed (006 US5, FR-008).
-   */
-  async requestAction(action: AccountAction): Promise<void> {
-    if (!this.#keycloak) {
-      await this.init();
-    }
-    await this.#keycloak?.login({ redirectUri: window.location.href, action });
+  /** Registers a pending account; the caller usually signs in right after to reach the awaiting-approval screen. */
+  async register(username: string, password: string, displayName?: string): Promise<void> {
+    await this.#ensureCsrfToken();
+    await firstValueFrom(
+      this.#http.post<{ id: string }>('/api/identity/auth/register', {
+        username,
+        password,
+        displayName: displayName ?? null,
+      }),
+    );
   }
 
   async logout(): Promise<void> {
-    await this.#keycloak?.logout({ redirectUri: window.location.origin });
+    await this.#ensureCsrfToken();
+    await firstValueFrom(this.#http.post<void>('/api/identity/auth/logout', {}));
+    this.#user.set(null);
+    this.#init = Promise.resolve(false);
   }
 
-  async getToken(): Promise<string | null> {
-    if (!this.#keycloak) {
-      return null;
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.#ensureCsrfToken();
+    await firstValueFrom(
+      this.#http.post<void>('/api/identity/auth/change-password', { currentPassword, newPassword }),
+    );
+  }
+
+  async updateDisplayName(displayName: string): Promise<void> {
+    await this.#ensureCsrfToken();
+    await firstValueFrom(this.#http.patch<void>('/api/identity/me', { displayName }));
+    const user = this.#user();
+    if (user) {
+      this.#user.set({ ...user, displayName });
     }
-    if (!this.#hadSession) {
-      // Nobody has signed in yet: there is no session to refresh, so there is nothing to fail.
-      return null;
-    }
+  }
+
+  /** Re-reads the profile (for example after an admin approved the account in another tab). */
+  async refresh(): Promise<boolean> {
+    this.#init = this.#loadCurrentUser();
+
+    return this.#init;
+  }
+
+  async #loadCurrentUser(): Promise<boolean> {
     try {
-      await this.#keycloak.updateToken(30);
-    } catch (error) {
-      console.error('Token refresh failed', error);
-      await this.login();
+      await this.#ensureCsrfToken();
+      const user = await firstValueFrom(this.#http.get<CurrentUser>('/api/identity/me'));
+      this.#user.set(user);
 
-      return null;
-    }
-    this.#applyToken();
-
-    return this.#token();
-  }
-
-  #applyToken(): void {
-    const tokenParsed = this.#keycloak?.tokenParsed;
-    this.#token.set(this.#keycloak?.token ?? null);
-    this.#username.set(tokenParsed?.['preferred_username'] ?? null);
-    this.#roles.set(realmRolesFrom(tokenParsed));
-  }
-
-  async #initializeKeycloak(): Promise<boolean> {
-    const keycloak = new Keycloak({
-      url: this.#config.keycloakUrl,
-      realm: this.#config.keycloakRealm,
-      clientId: this.#config.keycloakClientId,
-    });
-    this.#keycloak = keycloak;
-    try {
-      const initialization = keycloak.init({
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-        silentCheckSsoFallback: false,
-        pkceMethod: 'S256',
-        checkLoginIframe: false,
-      });
-      const authenticated = await this.#settleWithin(initialization, KEYCLOAK_INIT_TIMEOUT_MS);
-      this.#authenticated.set(authenticated);
-      if (authenticated) {
-        this.#hadSession = true;
-        this.#applyToken();
-      }
-
-      return authenticated;
-    } catch (error) {
-      console.error('Keycloak init failed', error);
+      return true;
+    } catch {
+      this.#user.set(null);
 
       return false;
     }
   }
 
-  /** The result of `work`, or `false` (signed out) when it has not settled after `milliseconds`. */
-  async #settleWithin(work: Promise<boolean>, milliseconds: number): Promise<boolean> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => {
-        console.error(`Keycloak did not answer within ${milliseconds / 1000} s; continuing signed out`);
-        resolve(false);
-      }, milliseconds);
-    });
-    try {
-      return await Promise.race([work, timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
+  /**
+   * The backend writes the `XSRF-TOKEN` cookie on this endpoint; Angular's default XSRF interceptor then sends it as
+   * `X-XSRF-TOKEN` on every same-origin mutating request.
+   */
+  #ensureCsrfToken(): Promise<void> {
+    this.#csrf ??= firstValueFrom(this.#http.get<void>('/api/identity/auth/csrf'))
+      .then(() => undefined)
+      .catch(() => undefined);
+
+    return this.#csrf;
+  }
+}
+
+/** A human message for a failed auth call, based on the backend's stable reason codes. */
+export function authErrorMessage(error: unknown): string {
+  if (!(error instanceof HttpErrorResponse)) {
+    return 'Something went wrong. Try again.';
+  }
+  const body = error.error as { reason?: string; message?: string } | null;
+  switch (body?.reason) {
+    case 'INVALID_CREDENTIALS':
+      return 'Invalid username or password.';
+    case 'ACCOUNT_LOCKED':
+      return 'Too many failed attempts. Try again in a few minutes.';
+    case 'ACCOUNT_REJECTED':
+      return 'This account was rejected.';
+    case 'ACCOUNT_REVOKED':
+      return 'This account no longer has access.';
+    case 'USERNAME_TAKEN':
+      return 'That username is already taken.';
+    case 'WEAK_PASSWORD':
+    case 'INVALID_USERNAME':
+      return body.message ?? 'Check the form and try again.';
+    default:
+      return 'Something went wrong. Try again.';
   }
 }

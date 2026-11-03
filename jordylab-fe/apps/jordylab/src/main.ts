@@ -1,8 +1,6 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
-import { createPreBootstrapAuth } from './app/pre-bootstrap-auth';
-import { environment } from './environments/environment';
 
 /**
  * Registers the installability-only service worker (spec 018 FR-002). Chrome's automatic install prompt still requires a
@@ -17,8 +15,6 @@ function registerServiceWorker(): void {
   });
 }
 
-createPreBootstrapAuth(environment)
-  .init()
-  .then(() => bootstrapApplication(App, appConfig))
+bootstrapApplication(App, appConfig)
   .then(registerServiceWorker)
   .catch((err) => console.error(err));
