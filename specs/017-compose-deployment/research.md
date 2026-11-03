@@ -31,7 +31,7 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
 
 ## R3. Postgres image and pgBackRest
 
-- **Decision**: a small image built `FROM pgvector/pgvector:pg16` at a pinned tag (the same major version and extension as production, and the same image family as local development's `jordylab-be/compose.yaml`), with the Debian `pgbackrest` package added. The version is pinned by image tag (FR-015). The Compose service runs `archive_mode=on` with `archive_command = pgbackrest --stanza=jordylab archive-push %p`.
+- **Decision**: a small image built `FROM pgvector/pgvector:pg16` pinned by digest (the same major version and extension as production, and the same image family as local development's `jordylab-be/compose.yaml`), with the Debian `pgbackrest` package added. The base image is pinned by digest and the pgBackRest package by version (FR-015), so a rebuild cannot change the production Postgres or pgBackRest. The Compose service runs `archive_mode=on` with `archive_command = pgbackrest --stanza=jordylab archive-push %p`.
 - **Why not the CloudNativePG image** (a correction made during planning): the CloudNativePG image is built for the operator. It does not read the `POSTGRES_*` variables that a standalone container uses to create the superuser and the database, so it would not start the way `env-contract.md` assumes. The official pgvector image does. Data moves as a logical dump, so the base image change does not affect the restore.
 - **pgBackRest configuration** (`deploy/compose/pgbackrest/pgbackrest.conf`):
 
