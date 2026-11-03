@@ -7,6 +7,11 @@ name: Tailscale SSH smoke
 
 on:
   workflow_dispatch:
+  # Bootstrap trigger: GitHub only registers workflow_dispatch for files on the default branch, so
+  # until this workflow merges to main it can only run from this branch. Scoped to this branch on
+  # purpose; drop it when the workflow reaches main.
+  push:
+    branches: [jordyswinnen/jor-31-compose-cutover-continue]
 
 jobs:
   ssh-smoke:
