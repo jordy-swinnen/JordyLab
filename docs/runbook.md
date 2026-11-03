@@ -435,7 +435,7 @@ signed in (sign in before the deploy, reload after it).
 | 2 (`ef9dcd7`, run 41644801911) | 13:29:37 → 13:51:09 UTC: 21 min 32 s (Build 13:29–13:41, deploy job 9 min 51 s) | about 9 min: the drill's failed rollout, then the rollback (`Recreate`) | not measured | **drill**: the rollout timed out, the rollback restored `09f8f23`, the post-rollback smoke check passed, the run ended red |
 | 3 (`6088af8`, run 41648404964) | 13:53:24 → 14:08:31 UTC: 15 min 7 s (the Build waited behind the newer one, deploy job 1 min 59 s) | about 74 s | not measured | two merges within three minutes: both deploys ran, in order, and neither was skipped |
 | 4 (`cca388d`, run 41648908792) | 13:56:46 → 14:11:11 UTC: 14 min 25 s (Build 13:56–14:09, deploy job 1 min 46 s) | about 70 s | not measured | `main` head; `/actuator/info` reports it |
-| 5 (automatic, the merge of PR #195) | to be recorded: the next automatic deploy after `cca388d` | | | this table is for automatic deploys; the manual runs are in the drill table below |
+| 5 (`14f97f0`, run 41653928431) | 14:27:52 → 14:42:06 UTC: 14 min 14 s (Build 14:27–14:39, deploy job 1 min 53 s) | about 70 s | not measured | `main` head at the time; `/actuator/info` reports it. After five deploys: all green, no run needed a manual rollback except the drill's deliberate one |
 
 The rollback drill above also proved the manual path (T057): a dispatch to `09f8f230` put that commit live with green smoke checks, and a second dispatch to `cca388d` restored the head of `main`, about 2 minutes each.
 
