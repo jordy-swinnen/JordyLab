@@ -202,19 +202,21 @@ renames a column that the previous release still reads, and direct the change to
 
 ### User Story 7 - Release builds leave the merge path (Priority: P2)
 
-As Jordy, the Android APK is built, signed and published only when I ask for it, and the end-to-end Android suite runs on
-demand, so merges do not build an APK.
+As Jordy, the release pipeline is only the deploy: a merge builds and deploys the web app, and no APK is built, signed or
+published by any workflow. Spec 018 removed the native app; this feature removes the tag-triggered release workflow that
+was left, because it created release drafts and retagged images that the deploy no longer uses.
 
-**Why this priority**: an APK on every merge is slow, uses the signing key on every change, and is not needed for a web
-deploy.
+**Why this priority**: a release step that runs on tags would be a second, unused path to production, with its own
+versioning. One deploy path is easier to trust.
 
-**Independent Test**: after a week of merges with no release started by hand, the APK workflow has zero runs.
+**Independent Test**: after a week of merges and tags, no workflow other than `build.yml` and `deploy-prod.yml` has run
+for a tag, and `.github/workflows/` has no release workflow.
 
 **Acceptance Scenarios**:
 
-1. **Given** a merge to `main`, **When** its deploy runs, **Then** no APK build or signing step runs.
-2. **Given** the APK workflow is started by hand with a release tag, **When** it finishes, **Then** the APK is published
-   as it is today.
+1. **Given** a merge to `main`, **When** its deploy runs, **Then** no APK build or signing step exists anywhere in the run.
+2. **Given** a release tag is pushed, **When** nothing else is done, **Then** no workflow runs and production does not
+   change; a tag is deployed only by a manual run of *Deploy to Production* with that tag as the target.
 
 ---
 
@@ -347,10 +349,9 @@ finds nothing.
 
 **APK and end-to-end Android**
 
-- **FR-022**: The APK build, signing and upload MUST run only from a separate workflow that is started by hand. No push,
-  merge or deploy starts it.
-- **FR-023**: `e2e-android` MUST run on demand and on the pull-request path trigger it already has. It MUST NOT run after a
-  release.
+- **FR-022**: No workflow builds, signs or publishes an APK. Spec 018 (the PWA) removed the native app and its workflow
+  before this feature; this feature keeps it that way and does not reintroduce a release step.
+- **FR-023**: `e2e-android` does not run. Spec 018 removed it with the native app; no workflow runs after a release.
 - **FR-024**: Deploys MUST NOT create or depend on GitHub Release drafts or on tag triggers. Existing tags stay as history
   and stay usable as manual targets (FR-014).
 
@@ -410,8 +411,7 @@ finds nothing.
 - Automatic deploys stay paused (FR-027) until a dry run (FR-028) has passed against production.
 - The smoke check uses the public home page and an unauthenticated `/api` call. It does not use `/actuator/health`, which
   the public gateway does not route.
-- Release tags stay as history. The APK pipeline may disappear entirely if `pwa-replaces-capacitor` proceeds; FR-022 and
-  FR-023 still hold until then.
+- Release tags stay as history. The APK pipeline is already gone (spec 018), so FR-022 and FR-023 hold.
 - Build pushes images for every commit on `main`, and no workflow in the repository deletes images, so a commit whose Build
   pushed images stays a rollback target. Whether the registry itself prunes old images is not configured in the repo and
   is to be checked before the first rollback drill.
@@ -422,7 +422,7 @@ finds nothing.
 - Canary or blue-green rollouts on the single node.
 - Changes to the build and test stages themselves.
 - Product feature flags. The deploy pause switch in FR-027 is an operational kill switch, not a feature flag.
-- Deciding whether the APK pipeline survives (`pwa-replaces-capacitor` decides that).
+- Any APK or Android release pipeline (removed by spec 018).
 
 ## Dependencies
 
@@ -432,4 +432,4 @@ finds nothing.
 - `ai-ingestion-pipeline` (draft): not a precondition. Deploys go ahead and may interrupt background work (FR-021). That
   draft is meant to make such interruptions safe (transaction boundaries and durability); this spec does not depend on it.
 - `auth-without-keycloak` (draft): affects the session note in Assumptions.
-- `pwa-replaces-capacitor` (draft): may remove the APK pipeline (FR-022, FR-023).
+- `018-pwa-replaces-capacitor` (merged to main, all tasks done): removed the native app, the APK job and `e2e-android` (FR-022, FR-023).

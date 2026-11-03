@@ -186,9 +186,9 @@ its own. Setup and Foundational come first; Polish and the operational rollout c
 
 **Purpose**: static checks, the local test runs, the doc sweep, and the commit and pull-request gate
 
-- [ ] T049 Run `actionlint .github/workflows/*.yml` and `shellcheck deploy/scripts/*.sh deploy/scripts/tests/*.sh`; fix every finding in the files this feature touched.
-- [ ] T050 [P] Run the checks from quickstart Q1: `bash deploy/scripts/tests/deploy-decision-cases.sh`, `bash deploy/scripts/tests/backup-freshness-cases.sh`, and `cd jordylab-be && ./gradlew test --tests '*ApplicationInfoEndpointTest*' --no-daemon` (set the Podman variables first on a Podman host). Only the changed test is run (root AGENTS.md: no full suite unless asked).
-- [ ] T051 Doc sweep (quickstart Q9): `grep -rn -i "approve the production\|git tag v0\|reviewer Jordy\|release.yml"` across `docs/runbook.md`, `AGENTS.md`, `.claude/skills/jordylab-ops/SKILL.md`, `.claude/agents`, `.opencode/agents`, `docs/learn/10-cicd.md`, `jordylab-fe/e2e/run.sh`, `.github/workflows`. Fix any line that describes the old flow. Historical mentions in `specs/0xx-*` and `docs/testing/` stay.
+- [X] T049 Run `actionlint .github/workflows/*.yml` and `shellcheck deploy/scripts/*.sh deploy/scripts/tests/*.sh`; fix every finding in the files this feature touched.
+- [X] T050 [P] Run the checks from quickstart Q1: `bash deploy/scripts/tests/deploy-decision-cases.sh`, `bash deploy/scripts/tests/backup-freshness-cases.sh`, and `cd jordylab-be && ./gradlew test --tests '*ApplicationInfoEndpointTest*' --no-daemon` (set the Podman variables first on a Podman host). Only the changed test is run (root AGENTS.md: no full suite unless asked).
+- [X] T051 Doc sweep (quickstart Q9): `grep -rn -i "approve the production\|git tag v0\|reviewer Jordy\|release.yml"` across `docs/runbook.md`, `AGENTS.md`, `.claude/skills/jordylab-ops/SKILL.md`, `.claude/agents`, `.opencode/agents`, `docs/learn/10-cicd.md`, `jordylab-fe/e2e/run.sh`, `.github/workflows`. Fix any line that describes the old flow. Historical mentions in `specs/0xx-*` and `docs/testing/` stay.
 - [ ] T052 Commit and open the pull request only after Jordy confirms (AGENTS: do not push or merge unless asked). Commit per phase: subject `JOR-32: <summary>`, last paragraph `Refs: 019/T0xx …` naming the tasks in that commit; body says how it was verified and what was not. The PR uses `.github/pull_request_template.md` and `Part of JOR-32` (the PR that finishes the ticket uses `Fixes JOR-32`).
 
 ---
