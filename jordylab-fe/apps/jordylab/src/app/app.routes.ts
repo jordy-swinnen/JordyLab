@@ -4,7 +4,7 @@ import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { settingsAdminRoutes } from '@jordylab-fe/settings/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
-import { settingsHomeGuard } from './settings-home.guard';
+import { SettingsHomeComponent } from './settings-home/settings-home.component';
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
@@ -44,7 +44,7 @@ export const appRoutes: Route[] = [
     path: 'settings',
     canActivate: [authGuard, roleGuard('admin', 'guest')],
     children: [
-      { path: '', pathMatch: 'full', canActivate: [settingsHomeGuard] },
+      { path: '', pathMatch: 'full', component: SettingsHomeComponent },
       ...settingsAdminRoutes,
       {
         path: 'feedback',
