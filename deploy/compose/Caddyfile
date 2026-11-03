@@ -7,8 +7,19 @@
 
 jordylab.be {
 	# A Caddy path matcher is exact unless it ends in *, so each prefix route lists the bare path and /*.
-	@backend path /api /api/* /.well-known/assetlinks.json
+	@backend path /api /api/*
 	handle @backend {
+		reverse_proxy backend:8080
+	}
+
+	# The Claude connector (spec 021, research R4): the MCP endpoint and the protected resource metadata Claude reads first.
+	@mcp path /mcp /mcp/*
+	handle @mcp {
+		reverse_proxy backend:8080
+	}
+
+	@protected_resource path /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*
+	handle @protected_resource {
 		reverse_proxy backend:8080
 	}
 

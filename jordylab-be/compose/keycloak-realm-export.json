@@ -86,6 +86,48 @@
   },
   "clients": [
     {
+      "clientId": "jordylab-mcp-connector",
+      "name": "JordyLab MCP connector (Claude)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://claude.ai/api/mcp/auth_callback"
+      ],
+      "webOrigins": [],
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "revoke.refresh.token": "true",
+        "refresh.token.max.reuse": "0",
+        "oauth2.device.authorization.grant.enabled": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "jordylab-mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": []
+    },
+    {
       "clientId": "jordylab-host",
       "publicClient": true,
       "directAccessGrantsEnabled": false,

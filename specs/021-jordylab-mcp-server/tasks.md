@@ -34,7 +34,7 @@ Paths are relative to the repository root. The backend root is `jordylab-be/`.
   therefore runs before the merge that ships the endpoint, so the endpoint works on its first deploy. The Compose deploy job
   is being rewritten in a separate session, outside this feature.
 - [x] T003 **DECIDED** (OI-3, 2026-11-03): title only, for now. `search_articles` matches titles only (spec change S2).
-- [ ] T004 Add `org.springframework.ai:spring-ai-starter-mcp-server-webmvc` (version from the Spring AI BOM) and the
+- [x] T004 Add `org.springframework.ai:spring-ai-starter-mcp-server-webmvc` (version from the Spring AI BOM) and the
   AspectJ runtime for Spring AOP to `jordylab-be/build.gradle.kts`, then confirm both resolve with
   `cd jordylab-be && ./gradlew dependencies --configuration runtimeClasspath | grep -i "mcp\|aspectj"`.
 
@@ -52,23 +52,23 @@ rest of this phase does not depend on the host.
 
 ### Configuration and module skeleton
 
-- [ ] T005 Add MCP settings to `jordylab-be/src/main/resources/application.yaml`: `spring.ai.mcp.server` with
+- [x] T005 Add MCP settings to `jordylab-be/src/main/resources/application.yaml`: `spring.ai.mcp.server` with
   `protocol: STATELESS`, `type: SYNC`, `name: jordylab`, and capabilities limited to tools (exact keys confirmed in T025);
   and `jordylab.mcp` with `public-base-url: ${JORDYLAB_APP_BASE_URL:}`, `audience: jordylab-mcp`,
   `tool-calls-per-minute: 60`. Leave `spring.ai.model.chat` unset (AGENTS.md).
-- [ ] T006 [P] Create `McpProperties` as a record annotated `@ConfigurationProperties("jordylab.mcp")` in
+- [x] T006 [P] Create `McpProperties` as a record annotated `@ConfigurationProperties("jordylab.mcp")` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/McpProperties.java` (fields: `publicBaseUrl`, `audience`,
   `toolCallsPerMinute`).
-- [ ] T007 [P] Create the public envelope record `McpToolPage<T>` in
+- [x] T007 [P] Create the public envelope record `McpToolPage<T>` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/McpToolPage.java`: `items`, `returned`, `totalMatching`, `hasMore`,
   a factory that takes the items, the total and the offset, and a static `clampLimit(int)` that bounds the page size to
   1–50 (data-model.md, validation rules).
 
 ### Discovery
 
-- [ ] T008 [P] Create the record `ProtectedResourceMetadata` with snake_case JSON names in
+- [x] T008 [P] Create the record `ProtectedResourceMetadata` with snake_case JSON names in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/rest/controller/model/ProtectedResourceMetadata.java` (contracts/mcp-endpoint.md, section 1a).
-- [ ] T009 Create `ProtectedResourceMetadataController` in
+- [x] T009 Create `ProtectedResourceMetadataController` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/rest/controller/ProtectedResourceMetadataController.java`. It serves
   `/.well-known/oauth-protected-resource/mcp` and `/.well-known/oauth-protected-resource`. `resource` is
   `${publicBaseUrl}/mcp`; `authorization_servers` holds the configured issuer
@@ -77,15 +77,15 @@ rest of this phase does not depend on the host.
 
 ### Authentication
 
-- [ ] T010 [P] Create `McpJwtDecoderFactory` in
+- [x] T010 [P] Create `McpJwtDecoderFactory` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpJwtDecoderFactory.java`. It builds a lazy
   `NimbusJwtDecoder.withIssuerLocation(issuer)` with the default issuer validator and an audience validator for
   `McpProperties.audience` (research R2, R3). Depends on T006.
-- [ ] T011 [P] Create `McpAuthenticationEntryPoint` in
+- [x] T011 [P] Create `McpAuthenticationEntryPoint` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpAuthenticationEntryPoint.java`. It answers `401` with
   `WWW-Authenticate: Bearer resource_metadata="<publicBaseUrl>/.well-known/oauth-protected-resource/mcp"` and no data
   (contracts/mcp-endpoint.md, section 2a). Depends on T006.
-- [ ] T012 Create `McpConfiguration` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/McpConfiguration.java`. It
+- [x] T012 Create `McpConfiguration` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/McpConfiguration.java`. It
   defines a `SecurityFilterChain` annotated `@Order(Ordered.HIGHEST_PRECEDENCE)` with a `securityMatcher` for `/mcp` and
   `/.well-known/oauth-protected-resource/**`: the metadata path is `permitAll`, `/mcp` requires `hasRole("admin")`, the
   resource server uses the decoder from T010 and the entry point from T011, and CSRF is disabled for this chain. If
@@ -93,10 +93,10 @@ rest of this phase does not depend on the host.
 
 ### Guardrails
 
-- [ ] T013 [P] Create `McpRateLimiter` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpRateLimiter.java`.
+- [x] T013 [P] Create `McpRateLimiter` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpRateLimiter.java`.
   It keeps one fixed one-minute window per admin subject, with the limit from `McpProperties.toolCallsPerMinute`, a
   `Clock` injected for tests, and the rules in data-model.md ("In-memory state"). Expired windows are removed. Depends on T006.
-- [ ] T014 Create `McpToolCallAdvice` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpToolCallAdvice.java`.
+- [x] T014 Create `McpToolCallAdvice` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpToolCallAdvice.java`.
   It is an `@Around` advice on `@McpTool` methods. For each call it reads the admin's `sub` from the security context and
   asks T013. Over the limit, it returns the tool error "Too many requests in one minute. Try again shortly." and does
   not run the method. Otherwise it runs the method and writes one line on the logger `dev.jordy.jordylab.mcp.audit`:
@@ -106,15 +106,15 @@ rest of this phase does not depend on the host.
 
 ### Keycloak and gateway
 
-- [ ] T015 [P] Add the connector client `jordylab-mcp-connector` to `jordylab-be/compose/keycloak-realm-export.json`
+- [x] T015 [P] Add the connector client `jordylab-mcp-connector` to `jordylab-be/compose/keycloak-realm-export.json`
   exactly as in `specs/021-jordylab-mcp-server/contracts/keycloak-connector-client.md`: public, standard flow only, PKCE
   `S256`, redirect `https://claude.ai/api/mcp/auth_callback`, the Audience mapper `mcp-audience` for `jordylab-mcp`,
   default scopes including `roles`, no `offline_access`, refresh rotation on. Validate with
   `python3 -m json.tool jordylab-be/compose/keycloak-realm-export.json > /dev/null`.
-- [ ] T016 [P] Add the same client to `deploy/keycloak/realm-prod.json` for fresh production imports. The redirect has no
+- [x] T016 [P] Add the same client to `deploy/keycloak/realm-prod.json` for fresh production imports. The redirect has no
   `${PRODUCTION_DOMAIN}` placeholder because the callback is Claude's fixed URL. Validate with
   `python3 -m json.tool deploy/keycloak/realm-prod.json > /dev/null`.
-- [ ] T017 Add the two routes to the live public Caddyfile `deploy/compose/Caddyfile`. Add `@mcp path /mcp /mcp/*` and
+- [x] T017 Add the two routes to the live public Caddyfile `deploy/compose/Caddyfile`. Add `@mcp path /mcp /mcp/*` and
   `@protected_resource path /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*`, each with
   `handle` and `reverse_proxy backend:8080`, following the file's existing pattern. Remove `/.well-known/assetlinks.json` from
   the `@backend` matcher (spec 018 removed that endpoint). The retired k3s `deploy/k8s/base/gateway.yaml` is not edited
@@ -122,27 +122,27 @@ rest of this phase does not depend on the host.
 
 ### Foundational tests
 
-- [ ] T018 [P] Test `McpRateLimiter` in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpRateLimiterTest.java`:
+- [x] T018 [P] Test `McpRateLimiter` in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpRateLimiterTest.java`:
   60 calls are accepted and the 61st refused; the window resets after one minute; two admins are counted separately.
   Use a fixed `Clock`, AssertJ `assertSoftly`, and no `any()`.
-- [ ] T019 [P] Test the metadata endpoint in
+- [x] T019 [P] Test the metadata endpoint in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/rest/controller/ProtectedResourceMetadataControllerTest.java`: both
   paths return `200` with the exact snake_case fields and need no token.
-- [ ] T020 Test the chain in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpSecurityTest.java` with MockMvc:
+- [x] T020 Test the chain in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpSecurityTest.java` with MockMvc:
   `POST /mcp` without a token returns `401` with the exact `WWW-Authenticate` pointer; an admin token passes the chain;
   a guest-only token returns `403` with no data. Build the tokens with `McpJwtTestBuilder` (created in T021) and the `jwt()`
   post-processor, with `@Language("JSON")` bodies. The audience check is covered by T021.
-- [ ] T021 [P] Test the audience validator in
+- [x] T021 [P] Test the audience validator in
   `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpJwtDecoderFactoryTest.java`: a token without `jordylab-mcp`
   is rejected and one with it is accepted. Create
   `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpJwtTestBuilder.java` (`@UtilityClass`, `DEFAULT_*` constants,
   `aDefaultJwt()` and `aJwt()` builder methods, the canonical TestBuilder structure; constitution IV). Build every `Jwt`
   in the MCP tests with it.
-- [ ] T022 [P] Test the advice in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpToolCallAdviceTest.java`:
+- [x] T022 [P] Test the advice in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/service/McpToolCallAdviceTest.java`:
   the audit line names the admin, tool, outcome and duration and contains no arguments (captured log);
   a rate-limited call does not run the tool (a counting fake, asserted by value); an exception returns the sanitised
   message and its log line has no exception message text.
-- [ ] T023 [P] Test the protocol path in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpRateLimitIntegrationTest.java`:
+- [x] T023 [P] Test the protocol path in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpRateLimitIntegrationTest.java`:
   sixty-one `tools/call` JSON-RPC requests from one admin through MockMvc. The 61st returns an error result with the limit
   text, and the tool's service method is never invoked (`verify(never())`). This proves the advice applies to beans the
   framework calls (plan K2). Use a stub tool bean that counts calls.
@@ -177,7 +177,7 @@ from `search_games`.
 
 ### Tests for User Story 1
 
-- [ ] T026 [P] [US1] Test the catalog tools in
+- [x] T026 [P] [US1] Test the catalog tools in
   `jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpToolsTest.java` with Testcontainers
   Postgres and fixtures built with the existing `GameTestBuilder`, `GameInstallationTestBuilder`, `GameMarkTestBuilder` and
   `ScanSourceTestBuilder` (constitution IV): `search_games` respects platform, local multiplayer and
@@ -186,24 +186,24 @@ from `search_games`.
 
 ### Implementation for User Story 1
 
-- [ ] T027 [P] [US1] Create the catalog result records in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/model/`:
+- [x] T027 [P] [US1] Create the catalog result records in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/model/`:
   `GameSearchItem.java`, `GameDetail.java`, `PlaceRef.java`, `PlaceSummary.java`, `SourceSummary.java`, `LibraryStatus.java`,
   with the fields in data-model.md. No artwork, voter, path or machine fields.
-- [ ] T028 [US1] Create `GameCatalogMcpTools` in
+- [x] T028 [US1] Create `GameCatalogMcpTools` in
   `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java` with `search_games`.
   It maps the arguments onto the existing `GameFilter` builder, calls `GameQueryService.getGames`, and wraps the page with
   `McpToolPage` (research R9). Depends on T007, T027.
-- [ ] T029 [US1] Add `get_game` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the service behind `GET /games/{id}` (confirm its name
+- [x] T029 [US1] Add `get_game` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the service behind `GET /games/{id}` (confirm its name
   in the code), mapped to `GameDetail`. An unknown id returns the not-found tool error. Depends on T028.
-- [ ] T030 [US1] Add `list_places` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the services behind `GET /places` and
+- [x] T030 [US1] Add `list_places` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the services behind `GET /places` and
   `GET /platforms`, mapped to `PlaceSummary`.
-- [ ] T031 [US1] Add `list_sources` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the scan-source list behind `GET /sources`,
+- [x] T031 [US1] Add `list_sources` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the scan-source list behind `GET /sources`,
   mapped to `SourceSummary` with paths and machine identifiers left out.
-- [ ] T032 [US1] Add `get_library_status` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the service behind `GET /library/status`,
+- [x] T032 [US1] Add `get_library_status` to `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, using the service behind `GET /library/status`,
   mapped to `LibraryStatus` with `refreshRunning`.
-- [ ] T033 [US1] In `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, map the argument enums (`sources`, `mark`, `romStatus`, `sort`,
+- [x] T033 [US1] In `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`, map the argument enums (`sources`, `mark`, `romStatus`, `sort`,
   `installStatus`) onto the existing enums. An unknown value returns a clear tool error that lists the accepted values.
-- [ ] T034 [US1] Give each catalog tool a description that says what it returns and ends with "Read-only.", as FR-017
+- [x] T034 [US1] Give each catalog tool a description that says what it returns and ends with "Read-only.", as FR-017
   requires, and the read-only hint on each `@McpTool` method in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`.
 
 **Checkpoint**: User Story 1 works through MCP Inspector. Claude Desktop and mobile checks run in Phase 8.
@@ -220,7 +220,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 ### Tests for User Story 2
 
-- [ ] T035 [P] [US2] Test the finance tools in
+- [x] T035 [P] [US2] Test the finance tools in
   `jordylab-be/src/test/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpToolsTest.java` with Testcontainers Postgres and the existing
   fixtures `ArticleTestBuilder`, `PortfolioPositionTestBuilder`, `BriefingTestBuilder` and `WishlistItemDtoTestBuilder`
   (constitution IV):
@@ -231,23 +231,23 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 ### Implementation for User Story 2
 
-- [ ] T036 [US2] Add the title search to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/domain/repository/ArticleRepository.java`
+- [x] T036 [US2] Add the title search to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/domain/repository/ArticleRepository.java`
   as a `Pageable` method, `Page<Article> findByTitleContainingIgnoreCaseOrderByPublishedAtDesc(String title, Pageable pageable)`,
   so `offset` works. This replaces the `Top50` name in research R9.
-- [ ] T037 [US2] Add `searchArticles(String text, int offset, int limit)` to
+- [x] T037 [US2] Add `searchArticles(String text, int offset, int limit)` to
   `jordylab-be/src/main/java/dev/jordy/jordylab/fna/service/FnaService.java`. Empty text returns the newest articles.
   Depends on T036.
-- [ ] T038 [P] [US2] Create the finance result records in `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/model/`:
+- [x] T038 [P] [US2] Create the finance result records in `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/model/`:
   `ArticleItem.java`, `PortfolioItem.java`, `PortfolioSummary.java`, `WishlistItem.java`, `BriefingView.java`
   (data-model.md).
-- [ ] T039 [US2] Create `FnaMcpTools` in `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`
+- [x] T039 [US2] Create `FnaMcpTools` in `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`
   with `search_articles`, mapping `FnaService.searchArticles` to `McpToolPage<ArticleItem>`. Depends on T037, T038.
-- [ ] T040 [US2] Add `get_portfolio` to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: `FnaService.getPortfolioPositions` mapped to
+- [x] T040 [US2] Add `get_portfolio` to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: `FnaService.getPortfolioPositions` mapped to
   `PortfolioSummary`, with `value` per position and the total of the priced positions.
-- [ ] T041 [US2] Add `get_wishlist` to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: `FnaService.getWishlistItems` mapped to `McpToolPage<WishlistItem>`.
-- [ ] T042 [US2] Add `get_latest_briefing` to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: `FnaService.getLatestBriefing` mapped to `BriefingView`,
+- [x] T041 [US2] Add `get_wishlist` to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: `FnaService.getWishlistItems` mapped to `McpToolPage<WishlistItem>`.
+- [x] T042 [US2] Add `get_latest_briefing` to `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: `FnaService.getLatestBriefing` mapped to `BriefingView`,
   with `NO_BRIEFING_YET` when empty. The tool must not call `triggerBriefing`.
-- [ ] T043 [US2] Give each finance tool a description per FR-017 and the read-only hint. The `search_articles` description
+- [x] T043 [US2] Give each finance tool a description per FR-017 and the read-only hint. The `search_articles` description
   says it matches titles only (spec change S2).
 
 **Checkpoint**: User Story 2 works through MCP Inspector.
@@ -263,18 +263,18 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 ### Tests for User Story 3
 
-- [ ] T044 [P] [US3] Test the tool surface in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`:
+- [x] T044 [P] [US3] Test the tool surface in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`:
   the registered names are exactly the nine in `specs/021-jordylab-mcp-server/contracts/tools.md`; each has the read-only
   hint; no name contains a write verb (create, update, delete, approve, reject, scan, refresh, sync, generate, post,
   send, trigger, reset, end); each description contains "Read-only.".
 - [ ] T045 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
   unknown name such as `create_game` or `trigger_briefing` returns the protocol's error and writes no `ok` audit line.
-- [ ] T046 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
+- [x] T046 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
   existing tool with an out-of-range `limit` (for example 500) returns at most 50 items and a correct `hasMore` (FR-009).
 
 ### Implementation for User Story 3
 
-- [ ] T047 [US3] Review every `@McpTool` method in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`
+- [x] T047 [US3] Review every `@McpTool` method in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/rest/controller/GameCatalogMcpTools.java`
   and `jordylab-be/src/main/java/dev/jordy/jordylab/fna/rest/controller/FnaMcpTools.java`: each has the read-only hint, and
   none calls a `save`, `delete`, `trigger`, `refresh`, `scan` or `generate` method. Record the review in the commit body.
 

@@ -18,15 +18,14 @@ Searches the game catalog with the same filters as the web app's grid.
 | `platforms` | string[]? | none | Platform names |
 | `installStatus` | `INSTALLED` \| `NOT_INSTALLED` \| `ALL` | `INSTALLED` | Same default as the grid |
 | `sources` | enum[]? | none | `STEAM_OWNED`, `STEAM_FAMILY`, `EMULATED`, `CONSOLE` |
-| `localMultiplayer` | boolean? | none | `true` filters to confirmed local multiplayer |
 | `minLocalPlayers` | int? | none | 1–`MAX_LOCAL_PLAYERS`; only confirmed counts match (FR-010) |
 | `mark` | enum[]? | none | `WANT_TO_PLAY`, `PLAYED_LIKED`, `PLAYED_DISLIKED`, from the admin's own marks |
 | `romStatus` | enum[]? | none | `UNKNOWN`, `VALIDATED`, `BROKEN` |
 | `sort` | enum? | server default | The grid's sort values |
-| `offset` | int | 0 | Page start |
+| `page` | int | 0 | Zero-based page index (the web app's page model) |
 | `limit` | int | 50 | Clamped to 1–50 |
 
-Returns `McpToolPage<GameSearchItem>`. Calls the same `GameQueryService.getGames` path as the web app.
+Returns `McpToolPage<GameSearchItem>`. Calls the same `GameQueryService.getGames` path as the web app. The local multiplayer narrowing is `minLocalPlayers` only; the result still reports each game's `localMultiplayer` (null when unknown).
 
 FR: 001 (catalog questions), 007 (same access), 009 (bounds), 010 (unknown facts), 015 (explicit fields).
 
@@ -68,7 +67,7 @@ no ticker tags, so this is a title match (research R9, spec change S2).
 | Argument | Type | Default | Notes |
 |---|---|---|---|
 | `text` | string? | none | Case-insensitive title match. Omitted returns the newest articles |
-| `offset` | int | 0 | |
+| `page` | int | 0 | Zero-based page index |
 | `limit` | int | 50 | Clamped to 1–50 |
 
 Returns `McpToolPage<ArticleItem>`, newest first. FR: 001, 009.
