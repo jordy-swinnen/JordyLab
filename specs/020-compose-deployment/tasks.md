@@ -40,16 +40,16 @@
 **Purpose**: prepare the VPS and prove the backup before anything is removed (plan phase A).
 
 - [ ] T013 **OWNER APPROVAL**: add `POSTGRES_SUPERUSER_PASSWORD` to the SOPS file in IntelliJ with `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`. The agent never opens or writes the value
-- [ ] T014 **OWNER APPROVAL**: in the Tailscale admin console (not a repo file), grant `tag:ci` `tcp:22` to `jordylab-vps`, in addition to the existing `tcp:6443`
+- [x] T014 **OWNER APPROVAL**: in the Tailscale admin console (not a repo file), grant `tag:ci` `tcp:22` to `jordylab-vps`, in addition to the existing `tcp:6443`. Done by the agent at the owner's request (2026-11-03, HANDOFF-41): the grant became `"ip": ["tcp:22", "tcp:6443"]` and the policy test moved `tag:jordylab-vps:22` from `deny` to `accept`; the save passed the test
 - [x] T015 **OWNER APPROVAL**: create a dedicated deploy user on the host and its SSH key; store the private key as the production environment secret with `gh secret set DEPLOY_SSH_KEY --env production --repo jordy-swinnen/JordyLab`, piped and never echoed
 - [x] T016 **OWNER APPROVAL**: install Docker Engine and the Compose plugin on the host (`ssh ubuntu@57.129.163.110`). Publish no ports; k3s keeps running
 - [ ] T017 Run the external port scan before cutover (FR-014), with the same command as T054: `nmap -Pn -p- 57.129.163.110` from outside the tailnet. Record every open port in the quickstart log (quickstart step 10, before cutover), including the two extra ports found earlier (31460 and 32531), so T054 can show whether they are gone. Depends on T016
 - [x] T018 **OWNER APPROVAL**: create `/opt/jordylab/env` (mode 700), `/opt/jordylab/state` and `/opt/jordylab/staging` on the host, owned by the deploy user
-- [ ] T019 Record host and pod memory before the window: `kubectl -n jordylab top pods` and `free -m` on the host (quickstart step 13, before)
+- [x] T019 Record host and pod memory before the window: `kubectl -n jordylab top pods` and `free -m` on the host (quickstart step 13, before). Done 2026-11-03 15:35 UTC, recorded in the quickstart log
 - [ ] T020 Check the timer calendar on the host: `systemd-analyze calendar 'Mon..Sat *-*-* 03:00:00'` and `systemd-analyze calendar 'Sun *-*-* 04:00:00'`. Depends on T006, T007
 - [x] T021 **OWNER APPROVAL**: copy the artwork volume to `/opt/jordylab/staging/artwork` while k3s still runs. Find its host path with `kubectl -n jordylab get pvc gamecatalog-artwork -o jsonpath='{.spec.volumeName}'`, then copy from the k3s storage folder on the host
 - [ ] T022 **OWNER APPROVAL**: run the old-chain point-in-time restore drill with the kept CloudNativePG manifests, to a time inside the 30-day window, then delete the drill cluster and its volume (quickstart step 1a, plan step 6a)
-- [ ] T023 Tailnet SSH check: from the owner's Mac and from a CI test job, `ssh` to the host's tailnet address works (quickstart step 11, first half). Depends on T014, T015
+- [ ] T023 Tailnet SSH check: from the owner's Mac and from a CI test job, `ssh` to the host's tailnet address works (quickstart step 11, first half). Depends on T014, T015. Mac half done 2026-11-03 (`ssh ubuntu@100.93.81.41` connects key-only, host key verified against the public-IP anchor); the CI half still needs a workflow that connects with `DEPLOY_SSH_KEY` (none exists yet — see T047)
 - [ ] T024 Phase A exit check: T002, T010, T016, T017, T021, T022 and T023 are done, and the results are recorded in the quickstart log. Depends on T002, T010, T016, T017, T021, T022, T023
 
 **Checkpoint**: foundation ready. No user story work starts before this.
