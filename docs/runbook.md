@@ -441,7 +441,7 @@ signed in (sign in before the deploy, reload after it).
 
 | Date | Broken commit | Rolled back to | Time from start to previous commit serving | Manual rollback result |
 |------|---------------|----------------|---------------------------------------------|------------------------|
-| | | | | |
+| 2026-11-03 (run 41644801911) | `ef9dcd7`, readiness path `/actuator/health/does-not-exist` (PR #192) | `09f8f23`, with its own images and manifests | 9.8 min from the start of the deploy job to the previous commit serving; the rollout waited the full 8 min; the backend was down about 9 min (`Recreate`) | pending (T057) |
 
 ### Deploy or roll back to any version
 
