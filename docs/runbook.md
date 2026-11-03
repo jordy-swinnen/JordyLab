@@ -235,6 +235,21 @@ kubectl -n jordylab rollout undo deploy/keycloak
 ```
 Both should restore a healthy previous version within 5 minutes (SC-002).
 
+### Rollback and the database
+
+A rollback returns the code to the previous commit. It does not return the database schema: a migration that was applied
+stays applied (spec 019, FR-020). A release is only rolled back safely when its migrations work with the previous release,
+which is why a migration that removes or renames something is split into an expand step now and a contract step in a later
+release (`.claude/skills/flyway-migration/SKILL.md`).
+
+After a rollback, check:
+
+- the latest Flyway history rows:
+  `kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "select version, description, success from flyway_schema_history order by installed_rank desc limit 3"`;
+- the backend logs for schema or migration errors:
+  `kubectl -n jordylab logs deploy/backend --since=15m | grep -i -E "flyway|migration|schema"`;
+- the row counts of any table the failed release changed.
+
 ## 12. Logs
 
 ```
