@@ -7,6 +7,7 @@ import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshAlreadyActiveExcep
 import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshRunNotFoundException;
 import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshRunNotRunningException;
 import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshRunService;
+import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,14 +42,14 @@ class RefreshRunControllerTest {
     private RefreshRunService refreshRunService;
 
     private RefreshRun aRun(RefreshRunKind kind, int total) {
-        return RefreshRun.builder().id(RUN_ID).kind(kind).total(total).startedBy("admin-subject").startedAt(STARTED).build();
+        return RefreshRun.builder().id(RUN_ID).kind(kind).total(total).startedBy(IdentityTestAuthentication.ADMIN_SUBJECT).startedAt(STARTED).build();
     }
 
     @Test
     void startingARunAnswers201WithItsProgress() throws Exception {
-        when(refreshRunService.start(RefreshRunKind.DATA, "admin-subject", false)).thenReturn(aRun(RefreshRunKind.DATA, 228));
+        when(refreshRunService.start(RefreshRunKind.DATA, IdentityTestAuthentication.ADMIN_SUBJECT, false)).thenReturn(aRun(RefreshRunKind.DATA, 228));
 
-        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(jwt().jwt(token -> token.subject("admin-subject")))
+        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"DATA\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(RUN_ID.toString()))
@@ -60,9 +61,9 @@ class RefreshRunControllerTest {
 
     @Test
     void theAiRunPassesTheConfirmationOn() throws Exception {
-        when(refreshRunService.start(RefreshRunKind.AI, "admin-subject", true)).thenReturn(aRun(RefreshRunKind.AI, 12));
+        when(refreshRunService.start(RefreshRunKind.AI, IdentityTestAuthentication.ADMIN_SUBJECT, true)).thenReturn(aRun(RefreshRunKind.AI, 12));
 
-        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(jwt().jwt(token -> token.subject("admin-subject")))
+        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"AI\",\"confirmCost\":true}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.kind").value("AI"));
@@ -70,10 +71,10 @@ class RefreshRunControllerTest {
 
     @Test
     void withoutTheCostConfirmationTheAiRunAnswers400WithTheGameCount() throws Exception {
-        when(refreshRunService.start(RefreshRunKind.AI, "admin-subject", false))
+        when(refreshRunService.start(RefreshRunKind.AI, IdentityTestAuthentication.ADMIN_SUBJECT, false))
                 .thenThrow(new CostConfirmationRequiredException(228));
 
-        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(jwt().jwt(token -> token.subject("admin-subject")))
+        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"AI\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.reason").value("COST_CONFIRMATION_REQUIRED"))
@@ -82,9 +83,9 @@ class RefreshRunControllerTest {
 
     @Test
     void aSecondStartWhileRunningIsAConflict() throws Exception {
-        when(refreshRunService.start(RefreshRunKind.DATA, "admin-subject", false)).thenThrow(new RefreshAlreadyActiveException());
+        when(refreshRunService.start(RefreshRunKind.DATA, IdentityTestAuthentication.ADMIN_SUBJECT, false)).thenThrow(new RefreshAlreadyActiveException());
 
-        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(jwt().jwt(token -> token.subject("admin-subject")))
+        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"DATA\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.reason").value("RUN_ALREADY_ACTIVE"));
@@ -92,7 +93,7 @@ class RefreshRunControllerTest {
 
     @Test
     void anUnknownKindIsABadRequest() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(jwt().jwt(token -> token.subject("admin-subject")))
+        mockMvc.perform(post("/api/gamecatalog/refresh-runs").with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"EVERYTHING\"}"))
                 .andExpect(status().isBadRequest());
     }

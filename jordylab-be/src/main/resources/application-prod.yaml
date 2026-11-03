@@ -13,6 +13,11 @@ server:
   # Required behind Traefik so redirect-to-HTTPS, the client's real scheme, and the real remote
   # address are honoured, instead of Spring seeing plain HTTP from the in-cluster proxy hop.
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        # The public origin is HTTPS; the session cookie never travels over plain HTTP (spec 019).
+        secure: true
 
 management:
   endpoint:
@@ -30,11 +35,6 @@ management:
         include: health, info
 
 jordylab:
-  settings:
-    keycloak:
-      # Admin REST calls stay inside the cluster: the public Gateway deliberately does not route
-      # /auth/admin (spec 008 FR-009), so the public ${KEYCLOAK_URL} answers with the SPA's HTML.
-      server-url: ${KEYCLOAK_INTERNAL_URL}
   script:
     # The downloadable scan client logs in from the user's own machine, so it needs the public URL.
     keycloak-url: ${KEYCLOAK_URL}

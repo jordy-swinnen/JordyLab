@@ -4,14 +4,12 @@ import dev.jordy.jordylab.settings.rest.controller.model.SavePersonalChatLimitRe
 import dev.jordy.jordylab.settings.service.AdminAccountProtectedException;
 import dev.jordy.jordylab.settings.service.CannotChangeOwnAccountException;
 import dev.jordy.jordylab.settings.service.InvalidLimitException;
-import dev.jordy.jordylab.settings.rest.client.KeycloakUnavailableException;
 import dev.jordy.jordylab.settings.service.UserChatLimitService;
 import dev.jordy.jordylab.settings.service.UserNotFoundException;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,18 +30,19 @@ import java.util.UUID;
 public class SettingsUserChatLimitController {
 
     private final UserChatLimitService userChatLimitService;
+    private final CurrentUserResolver currentUserResolver;
 
     @PutMapping
-    public ResponseEntity<Void> setPersonal(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+    public ResponseEntity<Void> setPersonal(@PathVariable UUID id,
             @RequestBody SavePersonalChatLimitRequest request) {
-        userChatLimitService.setPersonal(callerId(jwt), id, request.dailyLimit());
+        userChatLimitService.setPersonal(callerId(), id, request.dailyLimit());
 
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> clearPersonal(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        userChatLimitService.clearPersonal(callerId(jwt), id);
+    public ResponseEntity<Void> clearPersonal(@PathVariable UUID id) {
+        userChatLimitService.clearPersonal(callerId(), id);
 
         return ResponseEntity.noContent().build();
     }
@@ -68,13 +67,8 @@ public class SettingsUserChatLimitController {
         return ResponseEntity.badRequest().body(new ErrorBody("ADMIN_PROTECTED"));
     }
 
-    @ExceptionHandler(KeycloakUnavailableException.class)
-    public ResponseEntity<ErrorBody> handleKeycloakUnavailable(KeycloakUnavailableException exception) {
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorBody("KEYCLOAK_UNAVAILABLE"));
-    }
-
-    private UUID callerId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+    private UUID callerId() {
+        return UUID.fromString(currentUserResolver.requireCurrentUserSubject());
     }
 
     private record ErrorBody(String reason) {

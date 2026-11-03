@@ -1,6 +1,8 @@
 package dev.jordy.jordylab.settings.rest.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jordy.jordylab.identity.AuthenticatedUser;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.settings.SettingsProperties;
 import dev.jordy.jordylab.settings.domain.GuestChatUsage;
 import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
@@ -13,9 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -23,6 +22,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 
 /**
  * Pre-checks the guest daily LibBot limit (FR-009, spec 013 research A8) on {@code POST /api/gamecatalog/libbot/ask}:
@@ -43,6 +43,7 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
 
     private final GuestChatUsageRepository guestChatUsageRepository;
     private final GuestChatLimitService guestChatLimitService;
+    private final CurrentUserResolver currentUserResolver;
     private final SettingsProperties settingsProperties;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -55,14 +56,14 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof JwtAuthenticationToken jwtAuthentication) || isAdmin(jwtAuthentication)) {
+        Optional<AuthenticatedUser> currentUser = currentUserResolver.currentUser();
+        if (currentUser.isEmpty() || "admin".equals(currentUser.get().role())) {
             chain.doFilter(request, response);
 
             return;
         }
 
-        String subject = jwtAuthentication.getToken().getSubject();
+        String subject = currentUser.get().id().toString();
         ZoneId zone = ZoneId.of(settingsProperties.guestChat().zone());
         LocalDate today = LocalDate.now(clock.withZone(zone));
         int currentCount = guestChatUsageRepository.findByUserSubjectAndUsageDate(subject, today)
@@ -77,11 +78,6 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
-    }
-
-    private boolean isAdmin(JwtAuthenticationToken authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(authority -> ADMIN_AUTHORITY.equals(authority.getAuthority()));
     }
 
     private void writeLimitReached(HttpServletResponse response, LocalDate today, ZoneId zone, int limit)

@@ -1,6 +1,7 @@
 package dev.jordy.jordylab.settings;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
 import dev.jordy.jordylab.settings.rest.controller.GuestChatLimitFilter;
 import dev.jordy.jordylab.settings.service.GuestChatLimitService;
@@ -11,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Clock;
 
 @Configuration
-@EnableConfigurationProperties({SettingsProperties.class, KeycloakAdminProperties.class})
+@EnableConfigurationProperties(SettingsProperties.class)
 class SettingsConfiguration {
 
     /**
@@ -26,9 +27,9 @@ class SettingsConfiguration {
      */
     @Bean
     GuestChatLimitFilter guestChatLimitFilter(GuestChatUsageRepository guestChatUsageRepository,
-            GuestChatLimitService guestChatLimitService, SettingsProperties settingsProperties,
-            ObjectMapper objectMapper, Clock clock) {
-        return new GuestChatLimitFilter(guestChatUsageRepository, guestChatLimitService, settingsProperties,
-                objectMapper, clock);
+            GuestChatLimitService guestChatLimitService, CurrentUserResolver currentUserResolver,
+            SettingsProperties settingsProperties, ObjectMapper objectMapper, Clock clock) {
+        return new GuestChatLimitFilter(guestChatUsageRepository, guestChatLimitService, currentUserResolver,
+                settingsProperties, objectMapper, clock);
     }
 }

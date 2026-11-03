@@ -1,11 +1,11 @@
 package dev.jordy.jordylab.settings.rest.controller;
 
-import dev.jordy.jordylab.settings.rest.client.KeycloakUnavailableException;
 import dev.jordy.jordylab.settings.service.AdminAccountProtectedException;
 import dev.jordy.jordylab.settings.service.CannotChangeOwnAccountException;
 import dev.jordy.jordylab.settings.service.InvalidLimitException;
 import dev.jordy.jordylab.settings.service.UserChatLimitService;
 import dev.jordy.jordylab.settings.service.UserNotFoundException;
+import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SettingsUserChatLimitController.class)
 class SettingsUserChatLimitControllerTest {
 
-    private static final UUID ADMIN_ID = UUID.fromString("00000000-0000-0000-0000-00000000000a");
+    private static final UUID ADMIN_ID = IdentityTestAuthentication.ADMIN_ID;
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
 
     @Autowired
@@ -84,19 +84,6 @@ class SettingsUserChatLimitControllerTest {
     }
 
     @Test
-    void aKeycloakFailureIsAServiceUnavailable() throws Exception {
-        doThrow(new KeycloakUnavailableException("down", null)).when(userChatLimitService)
-                .setPersonal(ADMIN_ID, USER_ID, 10);
-
-        mockMvc.perform(put("/api/settings/users/{id}/chat-limit", USER_ID)
-                        .with(adminJwt())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{ \"dailyLimit\": 10 }"))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.reason").value("KEYCLOAK_UNAVAILABLE"));
-    }
-
-    @Test
     void anUnknownPersonIsNotFound() throws Exception {
         doThrow(new UserNotFoundException(USER_ID)).when(userChatLimitService)
                 .setPersonal(ADMIN_ID, USER_ID, 10);
@@ -123,6 +110,6 @@ class SettingsUserChatLimitControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor adminJwt() {
-        return jwt().jwt(jwt -> jwt.subject(ADMIN_ID.toString()));
+        return IdentityTestAuthentication.asAdmin();
     }
 }

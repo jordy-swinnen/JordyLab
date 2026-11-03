@@ -182,6 +182,12 @@ class GameCatalogModuleTest {
         Clock clock() {
             return Clock.systemUTC();
         }
+
+        /** The controllers inject this; the module slice excludes the identity module's beans (spec 019). */
+        @Bean
+        dev.jordy.jordylab.identity.CurrentUserResolver currentUserResolver() {
+            return new dev.jordy.jordylab.identity.CurrentUserResolver();
+        }
     }
 
     @MockitoBean

@@ -14,13 +14,12 @@ import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
 import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,6 +48,7 @@ public class GameCatalogController {
     private final GameQueryService gameQueryService;
     private final ArtworkService artworkService;
     private final CatalogRefreshService catalogRefreshService;
+    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping("/games")
     public GamesPageResponse getGames(@RequestParam(required = false) String search,
@@ -62,8 +62,7 @@ public class GameCatalogController {
             @RequestParam(required = false) GameFilter.MarkScope markScope,
             @RequestParam(required = false) GameFilter.Sort sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "60") int size,
-            @AuthenticationPrincipal Jwt jwt) {
+            @RequestParam(defaultValue = "60") int size) {
         GameFilter filter = GameFilter.builder()
                 .search(normalizeText(search))
                 .platforms(platform)
@@ -74,7 +73,7 @@ public class GameCatalogController {
                 .romStatuses(romStatus)
                 .marks(mark)
                 .markScope(markScope)
-                .userSubject(subjectOf(jwt))
+                .userSubject(currentUserResolver.currentUserSubject().orElse(null))
                 .sort(sort)
                 .build();
 
@@ -92,29 +91,29 @@ public class GameCatalogController {
     }
 
     @GetMapping("/games/{id}")
-    public ResponseEntity<GameDetailResponse> getGameDetail(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        return gameQueryService.getGameDetail(id, subjectOf(jwt))
+    public ResponseEntity<GameDetailResponse> getGameDetail(@PathVariable UUID id) {
+        return gameQueryService.getGameDetail(id, currentUserResolver.currentUserSubject().orElse(null))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/games/{id}/metadata/refresh")
-    public ResponseEntity<GameDetailResponse> refreshMetadata(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        return catalogRefreshService.refreshMetadata(id, subjectOf(jwt))
+    public ResponseEntity<GameDetailResponse> refreshMetadata(@PathVariable UUID id) {
+        return catalogRefreshService.refreshMetadata(id, currentUserResolver.currentUserSubject().orElse(null))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/games/{id}/enrichment/refresh")
-    public ResponseEntity<GameDetailResponse> refreshEnrichment(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        return catalogRefreshService.refreshEnrichment(id, subjectOf(jwt))
+    public ResponseEntity<GameDetailResponse> refreshEnrichment(@PathVariable UUID id) {
+        return catalogRefreshService.refreshEnrichment(id, currentUserResolver.currentUserSubject().orElse(null))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/games/{id}/multiplayer/refresh")
-    public ResponseEntity<GameDetailResponse> refreshMultiplayer(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        return catalogRefreshService.refreshMultiplayer(id, subjectOf(jwt))
+    public ResponseEntity<GameDetailResponse> refreshMultiplayer(@PathVariable UUID id) {
+        return catalogRefreshService.refreshMultiplayer(id, currentUserResolver.currentUserSubject().orElse(null))
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -133,10 +132,6 @@ public class GameCatalogController {
     @ExceptionHandler(MetadataNotSupportedException.class)
     public ResponseEntity<ErrorBody> handleMetadataNotSupported(MetadataNotSupportedException exception) {
         return ResponseEntity.badRequest().body(new ErrorBody("METADATA_NOT_SUPPORTED"));
-    }
-
-    private String subjectOf(Jwt jwt) {
-        return jwt == null ? null : jwt.getSubject();
     }
 
     private String normalizeText(String text) {

@@ -5,6 +5,7 @@ import dev.jordy.jordylab.settings.rest.client.ModelCatalogUnavailableException;
 import dev.jordy.jordylab.settings.rest.client.OpenRouterModelCatalogClient;
 import dev.jordy.jordylab.settings.service.AiModelSettingsService;
 import dev.jordy.jordylab.shared.ai.AiFeature;
+import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,7 +97,7 @@ class SettingsAiModelsControllerTest {
     @Test
     void savesTheChoiceAsTheSignedInAdmin() throws Exception {
         mockMvc.perform(put("/api/settings/ai-models/{featureKey}", "gamecatalog.enrichment")
-                        .with(jwt().jwt(token -> token.subject("keycloak-subject-admin")))
+                        .with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"modelId": "deepseek/deepseek-v4.1-flash"}
@@ -104,17 +105,17 @@ class SettingsAiModelsControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(settingsService).saveModel("gamecatalog.enrichment", "deepseek/deepseek-v4.1-flash",
-                "keycloak-subject-admin");
+                IdentityTestAuthentication.ADMIN_SUBJECT);
     }
 
     @Test
     void mapsEachRejectionToItsReason() throws Exception {
         doThrow(new AiModelSettingsService.UnknownAiFeatureException())
-                .when(settingsService).saveModel("nope", "a/b", "admin");
+                .when(settingsService).saveModel("nope", "a/b", IdentityTestAuthentication.ADMIN_SUBJECT);
         doThrow(new AiModelSettingsService.BlankModelException())
-                .when(settingsService).saveModel("fna.briefing", " ", "admin");
+                .when(settingsService).saveModel("fna.briefing", " ", IdentityTestAuthentication.ADMIN_SUBJECT);
         doThrow(new AiModelSettingsService.ModelUnavailableException())
-                .when(settingsService).saveModel("fna.briefing", "gone/model", "admin");
+                .when(settingsService).saveModel("fna.briefing", "gone/model", IdentityTestAuthentication.ADMIN_SUBJECT);
 
         expectRejection("nope", "a/b", "UNKNOWN_FEATURE");
         expectRejection("fna.briefing", " ", "BLANK_MODEL");
@@ -123,7 +124,7 @@ class SettingsAiModelsControllerTest {
 
     private void expectRejection(String featureKey, String modelId, String reason) throws Exception {
         mockMvc.perform(put("/api/settings/ai-models/{featureKey}", featureKey)
-                        .with(jwt().jwt(token -> token.subject("admin")))
+                        .with(IdentityTestAuthentication.asAdmin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"modelId\": \"" + modelId + "\"}"))
                 .andExpect(status().isBadRequest())

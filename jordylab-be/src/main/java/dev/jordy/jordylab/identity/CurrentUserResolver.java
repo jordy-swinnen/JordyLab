@@ -26,4 +26,14 @@ public class CurrentUserResolver {
 
         return Optional.empty();
     }
+
+    /** The current user's id as the owner-column string ({@code user_subject} and friends). */
+    public Optional<String> currentUserSubject() {
+        return currentUser().map(user -> user.id().toString());
+    }
+
+    /** Fails loudly when a controller that requires a person is reached without one — a security-config bug. */
+    public String requireCurrentUserSubject() {
+        return currentUserSubject().orElseThrow(() -> new IllegalStateException("No authenticated user"));
+    }
 }

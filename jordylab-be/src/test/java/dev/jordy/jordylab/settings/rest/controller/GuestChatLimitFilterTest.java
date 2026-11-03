@@ -19,10 +19,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import dev.jordy.jordylab.identity.AuthenticatedUser;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimNames;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -32,6 +32,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
@@ -48,7 +49,8 @@ class GuestChatLimitFilterTest {
     private static final Instant NOW = Instant.parse("2026-09-27T12:00:00Z");
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final LocalDate TODAY = LocalDate.parse("2026-09-27");
-    private static final String GUEST_SUBJECT = "guest-subject-1";
+    private static final String GUEST_SUBJECT = "44444444-4444-4444-8444-444444444444";
+    private static final String ADMIN_SUBJECT = "55555555-5555-4555-8555-555555555555";
 
     @Mock
     private GuestChatUsageRepository guestChatUsageRepository;
@@ -77,8 +79,8 @@ class GuestChatLimitFilterTest {
         lenient().when(guestChatLimitService.effectiveFor(GUEST_SUBJECT))
                 .thenReturn(new GuestChatLimitService.EffectiveGuestChatLimit(3,
                         GuestChatLimitService.LimitSource.ENVIRONMENT));
-        filter = new GuestChatLimitFilter(guestChatUsageRepository, guestChatLimitService, properties, objectMapper,
-                CLOCK);
+        filter = new GuestChatLimitFilter(guestChatUsageRepository, guestChatLimitService, new CurrentUserResolver(),
+                properties, objectMapper, CLOCK);
 
         when(request.getMethod()).thenReturn("POST");
         when(request.getRequestURI()).thenReturn("/api/gamecatalog/libbot/ask");
@@ -91,7 +93,7 @@ class GuestChatLimitFilterTest {
 
     @Test
     void adminIsExemptFromTheLimitAndNeverCounted() throws Exception {
-        authenticateAs("admin-subject", "ROLE_admin");
+        authenticateAs(ADMIN_SUBJECT, "ROLE_admin");
 
         filter.doFilter(request, response, chain);
 
@@ -166,13 +168,10 @@ class GuestChatLimitFilterTest {
     }
 
     private void authenticateAs(String subject, String authority) {
-        Jwt jwt = Jwt.withTokenValue("test-token")
-                .header("alg", "none")
-                .claim(JwtClaimNames.SUB, subject)
-                .issuedAt(Instant.EPOCH)
-                .expiresAt(Instant.EPOCH.plusSeconds(3600))
-                .build();
+        String role = "ROLE_admin".equals(authority) ? "admin" : "guest";
+        AuthenticatedUser user = new AuthenticatedUser(UUID.fromString(subject), "user-" + role, role, Set.of());
         List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(authority));
-        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt, authorities));
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(user, null, authorities));
     }
 }
