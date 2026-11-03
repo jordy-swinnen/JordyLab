@@ -402,6 +402,10 @@ without approval; the Compose cutover (spec 020), later the same day, retired it
 started by hand, and take a commit sha or a release tag (§10, §11). The measurement tables below are the record of the k3s
 pipeline, not of the Compose deploys, which time themselves in their own runs.
 
+The first deploy through the Compose workflow (T049) was run 41728815560 on 2026-11-03: target `76f38366` (a commit sha),
+every step green, `current-release` set to it, and the public smoke checks 200/401/200. Later deploys are read the same way:
+the run's own timings, and `/opt/jordylab/state/current-release` for what is live.
+
 ### The flow
 
 1. Merge to `main`: the Build publishes the three `sha-<commit>` images and deploys nothing.
