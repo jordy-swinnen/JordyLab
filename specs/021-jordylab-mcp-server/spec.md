@@ -1,6 +1,6 @@
 # Feature Specification: JordyLab MCP Server (read-only)
 
-**Feature Branch**: `020-jordylab-mcp-server`
+**Feature Branch**: `021-jordylab-mcp-server`
 
 **Created**: 2026-11-03
 

@@ -1,6 +1,6 @@
 # Tasks: JordyLab MCP Server (read-only)
 
-**Input**: Design documents from `specs/020-jordylab-mcp-server/` (plan.md, spec.md, research.md, data-model.md,
+**Input**: Design documents from `specs/021-jordylab-mcp-server/` (plan.md, spec.md, research.md, data-model.md,
 contracts/, quickstart.md)
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/,
@@ -29,11 +29,11 @@ Paths are relative to the repository root. The backend root is `jordylab-be/`.
 **Purpose**: settle the open items and add the libraries. Nothing else starts until T001 to T003 are answered.
 
 - [x] T001 **DECIDED** (OI-1, 2026-11-03): option A. Connector tokens are accepted on `/api` in v1. Recorded in
-  `specs/020-jordylab-mcp-server/research.md` R3 and `spec.md` Assumptions. Option B is not planned.
-- [ ] T002 **OWNER DECISION** (OI-2, premise changed by I1): confirm in `specs/020-jordylab-mcp-server/plan.md` (Open items)
+  `specs/021-jordylab-mcp-server/research.md` R3 and `spec.md` Assumptions. Option B is not planned.
+- [ ] T002 **OWNER DECISION** (OI-2, premise changed by I1): confirm in `specs/021-jordylab-mcp-server/plan.md` (Open items)
   that the production Keycloak apply in T057 runs before the release. Also confirm whether a merge still deploys: Compose
   decision 4 says deploys run on release tags only (T2).
-- [ ] T003 **OWNER DECISION** (OI-3): confirm in `specs/020-jordylab-mcp-server/spec.md` (User Story 2, scenario 1) that
+- [ ] T003 **OWNER DECISION** (OI-3): confirm in `specs/021-jordylab-mcp-server/spec.md` (User Story 2, scenario 1) that
   `search_articles` matches titles only (spec change S2).
 - [ ] T004 Add `org.springframework.ai:spring-ai-starter-mcp-server-webmvc` (version from the Spring AI BOM) and the
   AspectJ runtime for Spring AOP to `jordylab-be/build.gradle.kts`, then confirm both resolve with
@@ -108,7 +108,7 @@ rest of this phase does not depend on the host.
 ### Keycloak and gateway
 
 - [ ] T015 [P] Add the connector client `jordylab-mcp-connector` to `jordylab-be/compose/keycloak-realm-export.json`
-  exactly as in `specs/020-jordylab-mcp-server/contracts/keycloak-connector-client.md`: public, standard flow only, PKCE
+  exactly as in `specs/021-jordylab-mcp-server/contracts/keycloak-connector-client.md`: public, standard flow only, PKCE
   `S256`, redirect `https://claude.ai/api/mcp/auth_callback`, the Audience mapper `mcp-audience` for `jordylab-mcp`,
   default scopes including `roles`, no `offline_access`, refresh rotation on. Validate with
   `python3 -m json.tool jordylab-be/compose/keycloak-realm-export.json > /dev/null`.
@@ -154,12 +154,12 @@ rest of this phase does not depend on the host.
   Inspector's OAuth flow for `jordylab-mcp-connector`. `initialize` and `tools/list` complete
   over Streamable HTTP in stateless mode, with no session header required. Claude connects from Anthropic's cloud and
   cannot reach localhost, so Claude's own check is in Phase 8. If the exchange fails, change the protocol in T005 to
-  `STREAMABLE` and repeat. Record the result in `specs/020-jordylab-mcp-server/research.md` R1.
+  `STREAMABLE` and repeat. Record the result in `specs/021-jordylab-mcp-server/research.md` R1.
 - [ ] T025 Token gate, against the local Keycloak after T059 (I2) created the client live (the realm import runs only once):
   a token for `jordylab-mcp-connector` carries `aud`
   containing `jordylab-mcp`, `realm_access.roles` with `admin`, a refresh token, and no offline token. Confirm the exact
   names of "Revoke Refresh Token" and "Refresh Token Max Reuse" in the admin console, and record them in
-  `specs/020-jordylab-mcp-server/contracts/keycloak-connector-client.md` (Verification). Also confirm the
+  `specs/021-jordylab-mcp-server/contracts/keycloak-connector-client.md` (Verification). Also confirm the
   `tool-calls-per-minute` and capability property keys used in T005. Confirm that the realm refuses anonymous client
   registration (anonymous access to Client Registration off) and record the setting (FR-002, G1).
 
@@ -265,7 +265,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 ### Tests for User Story 3
 
 - [ ] T044 [P] [US3] Test the tool surface in `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`:
-  the registered names are exactly the nine in `specs/020-jordylab-mcp-server/contracts/tools.md`; each has the read-only
+  the registered names are exactly the nine in `specs/021-jordylab-mcp-server/contracts/tools.md`; each has the read-only
   hint; no name contains a write verb (create, update, delete, approve, reject, scan, refresh, sync, generate, post,
   send, trigger, reset, end); each description contains "Read-only.".
 - [ ] T045 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
@@ -302,7 +302,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
   `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Confirm the two new routes are present and the stale
   assetlinks route is absent.
 - [ ] T055 Record the spike outcomes (T024, T025) and the Keycloak setting names in
-  `specs/020-jordylab-mcp-server/research.md` R1 and R5.
+  `specs/021-jordylab-mcp-server/research.md` R1 and R5.
 - [ ] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web` (SC-011: the web app is unchanged),
   `app-boot`, `refs`, `secret-scan`.
 

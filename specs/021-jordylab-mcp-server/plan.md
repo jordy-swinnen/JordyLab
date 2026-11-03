@@ -1,8 +1,8 @@
 # Implementation Plan: JordyLab MCP Server (read-only)
 
-**Branch**: `020-jordylab-mcp-server` (git branch `jordyswinnen/jor-79-add-a-jordylab-mcp-server-so-admins-can-ask-claude-about`) | **Date**: 2026-11-03 | **Spec**: [spec.md](spec.md)
+**Branch**: `021-jordylab-mcp-server` (git branch `jordyswinnen/jor-79-add-a-jordylab-mcp-server-so-admins-can-ask-claude-about`) | **Date**: 2026-11-03 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/020-jordylab-mcp-server/spec.md`
+**Input**: Feature specification from `/specs/021-jordylab-mcp-server/spec.md`
 
 **Note**: This plan was produced by `/speckit-plan`. Its clarifications were answered in the spec (five answers, Q1 to
 Q5). The decisions are in [research.md](research.md) (R1–R12).
@@ -79,7 +79,7 @@ frontend change.
 ### Documentation (this feature)
 
 ```text
-specs/020-jordylab-mcp-server/
+specs/021-jordylab-mcp-server/
 ├── spec.md                       # /speckit-specify + /speckit-clarify (+ planning edits, see "Spec changes from planning")
 ├── checklists/requirements.md
 ├── plan.md                       # this file
