@@ -168,7 +168,7 @@ jobs:
         run: bash deploy/scripts/tests/deploy-decision-cases.sh
       - name: Run the backup freshness fixtures
         run: bash deploy/scripts/tests/backup-freshness-cases.sh
-      # actionlint 1.7.12 does not know concurrency.queue (GitHub supports it; deploy-prod.yml needs queue: max).
+      # actionlint 1.7.12 does not know concurrency.queue (GitHub supports it; deploy-prod-compose.yml needs queue: max).
       - name: Lint the workflows
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -ignore 'unexpected key "queue" for "concurrency" section'
 
@@ -215,17 +215,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  # Deploys the images this run just published (spec 019, research D1). Runs only while the repository variable
-  # AUTO_DEPLOY is 'true' (research D11); the reviewer on the production environment is removed by the owner (FR-002).
-  deploy:
-    needs: [build-and-push]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTO_DEPLOY == 'true'
-    permissions:
-      contents: read
-      packages: read
-    uses: ./.github/workflows/deploy-prod.yml
-    with:
-      target: ${{ github.sha }}
-      automatic: true
-    secrets: inherit

@@ -1,7 +1,7 @@
 # Production stack on the VPS (spec 020, research R1, R2, R7, R8). Only caddy publishes ports.
 # Every value comes from the environment file (names in env/prod.env.example). No value is written here.
 # The host runs it as: docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml ...
-# JORDYLAB_RELEASE (the release tag) is exported by scripts/deploy-release.sh before each run.
+# JORDYLAB_RELEASE (the release: a tag, or sha-<commit>) is exported by scripts/deploy-release.sh before each run.
 name: jordylab
 
 x-logging: &logging

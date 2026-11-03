@@ -150,7 +150,8 @@ Runbook section 9.
    with a tag; Jordy copies the secret himself).
 2. Apply `ci-deploy-rbac.yaml`, mint the namespace-scoped token, and **JORDY** stores it as `KUBE_TOKEN`, with
    `KUBE_SERVER` (Tailscale address) and `KUBE_CA_CERT` (Cowork may set the non-secret two).
-3. Confirm the workflows reference the same secret names (`.github/workflows/deploy-prod.yml`).
+3. Confirm the deploy workflow references the same secret names
+   (`.github/workflows/deploy-prod-compose.yml`: `DEPLOY_SSH_KEY`, `SOPS_AGE_KEY` and the `TS_OAUTH_*` pair).
 
 ## Phase 9. First deploy and validation
 
