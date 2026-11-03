@@ -39,7 +39,7 @@
 
 **Purpose**: prepare the VPS and prove the backup before anything is removed (plan phase A).
 
-- [ ] T013 **OWNER APPROVAL**: add `POSTGRES_SUPERUSER_PASSWORD` to the SOPS file in IntelliJ with `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`. The agent never opens or writes the value
+- [x] T013 **OWNER APPROVAL**: add `POSTGRES_SUPERUSER_PASSWORD` to the SOPS file in IntelliJ with `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`. The agent never opens or writes the value. Done by the owner 2026-11-03; committed with their approval (HANDOFF-40) the same day: the decrypt integrity check passes and the key name is present under `jordylab-secrets` stringData. Note: merging it to main triggers a Build and an automatic k3s deploy, which applies the new key to the `jordylab-secrets` Secret (unused by the backend until the Compose stack needs it)
 - [x] T014 **OWNER APPROVAL**: in the Tailscale admin console (not a repo file), grant `tag:ci` `tcp:22` to `jordylab-vps`, in addition to the existing `tcp:6443`. Done by the agent at the owner's request (2026-11-03, HANDOFF-41): the grant became `"ip": ["tcp:22", "tcp:6443"]` and the policy test moved `tag:jordylab-vps:22` from `deny` to `accept`; the save passed the test
 - [x] T015 **OWNER APPROVAL**: create a dedicated deploy user on the host and its SSH key; store the private key as the production environment secret with `gh secret set DEPLOY_SSH_KEY --env production --repo jordy-swinnen/JordyLab`, piped and never echoed
 - [x] T016 **OWNER APPROVAL**: install Docker Engine and the Compose plugin on the host (`ssh ubuntu@57.129.163.110`). Publish no ports; k3s keeps running
