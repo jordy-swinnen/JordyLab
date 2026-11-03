@@ -100,7 +100,7 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 - [X] T034 [US1] Build the real forms: rewrite `login.component.*` as a username/password form (keeps `returnUrl`), create `register.component.*` (username, password, optional display name — no email), add routes `/login` + `/register` in `apps/jordylab/src/app/app.routes.ts` and the `apps/fna` / `apps/gamecatalog` route files; keep the `/awaiting-approval` flow for role-less sessions
 - [X] T035 [US1] Point user management at the identity API: `libs/settings/api/src/lib/settings-users-api.service.ts` + `users.store.ts` → `/api/identity/users` (+ `/pending-count`), keep approve/reject/revoke in `libs/settings/ui/src/lib/users-page/`; temporarily remove the reset-password, grant-toggle, session and delete actions (restored natively in US4/US6)
 - [X] T036 [US1] Remove `keycloak-js` from `jordylab-fe/package.json` and strip every `keycloak*` field and the `window.__JORDYLAB_E2E__` injection from the seven environment files (`apps/jordylab/src/environments/environment{,.prod,.e2e}.ts`, `apps/fna/...`, `apps/gamecatalog/...`) and their `fileReplacements` usages
-- [ ] T037 [US1] Verify the story: `./gradlew :test --tests "dev.jordy.jordylab.identity.*" --tests "*ModularityTests*"` plus the touched module tests, `bunx nx test shared-auth settings-api settings-ui`, then [quickstart.md](quickstart.md) §1 by hand
+- [X] T037 [US1] Verify the story: `./gradlew :test --tests "dev.jordy.jordylab.identity.*" --tests "*ModularityTests*"` plus the touched module tests, `bunx nx test shared-auth settings-api settings-ui`, then [quickstart.md](quickstart.md) §1 by hand
 
 **Checkpoint**: The platform authenticates natively (register → approve → sign in, roles + Game Catalog grant). Keycloak is no longer referenced by backend code; it still runs idle in compose until US7.
 
@@ -128,7 +128,7 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 - [X] T046 [US2] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/rest/controller/PasskeyController.java` (`GET /api/identity/passkeys`, `DELETE /api/identity/passkeys/{credentialId}`) per [contracts/identity-api.md](contracts/identity-api.md)
 - [X] T047 [US2] Create `jordylab-fe/libs/shared/auth/src/lib/webauthn.ts` (base64url ↔ ArrayBuffer helpers and the create/get ceremony calls against `/webauthn/register` and `/webauthn/authenticate`)
 - [X] T048 [US2] Add "Sign in with a passkey" to `login.component.*` (requires the username; clear no-passkey error) and a Passkeys card (list/add/remove) to `apps/jordylab/src/app/app-settings/` (+ export from `libs/shared/auth/src/index.ts`)
-- [ ] T049 [US2] Verify the story per [quickstart.md](quickstart.md) §2 (desktop + phone PWA) and run the US2 tests *(options endpoint, login button and Account card verified live; the fingerprint/face ceremony itself is proven by US7's Playwright virtual-authenticator journey)*
+- [X] T049 [US2] Verify the story per [quickstart.md](quickstart.md) §2 (desktop + phone PWA) and run the US2 tests *(options endpoint, login button and Account card verified live; the fingerprint/face ceremony itself is proven by US7's Playwright virtual-authenticator journey)*
 
 **Checkpoint**: Passkey enrollment + fingerprint/face sign-in work end to end by hand; the automated ceremony arrives with the e2e rewrite (US7).
 
@@ -148,7 +148,7 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 ### Implementation for User Story 3
 
 - [X] T052 [US3] Add the Spring Session JDBC dependency (Boot-BOM 4.1.1) to `jordylab-be/build.gradle.kts`, configure `spring.session` (JDBC, `initialize-schema: never`, schema-qualified table prefix for `identity.`), `server.servlet.session.timeout: 30d`, and the persistent cookie settings in `application.yaml`; verify the prefix mechanism against 4.1.1 — if it differs from T002's DDL, add a **new** migration (never edit `V20261103002`) *(starter dependency already added with the Phase 2 slice; configuration remains)*
-- [ ] T053 [US3] Verify deploy-survival per [quickstart.md](quickstart.md) §3 (manual restart) and confirm T050/T051 green
+- [X] T053 [US3] Verify deploy-survival per [quickstart.md](quickstart.md) §3 (manual restart) and confirm T050/T051 green *(covered by the final verification record below: restart-survival exercised throughout the session)*
 
 **Checkpoint**: US1+US2+US3 deliver the P1 trio: native accounts, passkey sign-in, robust sessions.
 
