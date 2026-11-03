@@ -1,60 +1,61 @@
-# Handoff: Compose cutover prep, waiting on a Tailscale policy change (2026-11-03, for the next agent)
+# Handoff: production is live on Compose — T045 verification and the release-retag decision are next (2026-11-03, for the next agent)
 
-Written at the end of a Claude Code session (Haiku 5.5). Read this first, then [tasks.md](tasks.md) and [quickstart.md](quickstart.md), the two records this file updates.
+Written at the end of an OpenCode session (GLM-5.2). Read this first, then [tasks.md](tasks.md) and [quickstart.md](quickstart.md) — every claim below is recorded there with timestamps.
 
 ## Where things stand
 
-- The branch `jordyswinnen/jor-31-compose-local-stack` is merged as PR #194 (merge commit `67f5247`). Main has `deploy/compose/` (stack, Caddyfile, environment names, backup timers, `render-env.sh`, `deploy-release.sh`) and the backend artwork fix. This handover is committed on the local branch `jordyswinnen/jor-31-compose-local-stack`. That branch is merged, and this commit is not pushed.
-- Production: k3s serves jordylab.be (homepage and OpenID discovery return 200). The Build for `67f5247` deployed `sha-67f5247` to k3s automatically, because `AUTO_DEPLOY` is `true`. Docker 29.9.2 and Compose 5.7.0 are installed on the host with no containers. k3s pods are unchanged.
-- Done and verified: T003–T012 (on main), T015 (deploy user `jordylab-deploy`, its key stored as `DEPLOY_SSH_KEY`, login tested), T016 (Docker), T018 (`/opt/jordylab/{env,state,staging}`), T021 (artwork copy, checksums match; the source volume is empty, 0 files).
-- Run, not closed: T022. The drill to 2026-11-02 12:00 UTC became ready and was deleted with its PVC. Eight Keycloak tables have more rows in the drill than in production (details in the quickstart log). The owner decides whether that passes.
-- Edited, not committed: T013. `deploy/k8s/overlays/prod/secrets.sops.yaml` has the `POSTGRES_SUPERUSER_PASSWORD` key (the owner edited it in IntelliJ). The decrypt check passes and the key name is present. The file is NOT in the handover commit. Committing it to main triggers a Build and an automatic production deploy, so the owner decides when.
-- Not done: T014, T017, T019, T020, and everything from T023 on.
-- Not verified: the Compose stack has never run. The health checks have never run. The systemd timer units have not been checked on the host (T020, after T043 installs them). `render-env.sh` has only been run on a synthetic file; it has not been run against the real file with `SOPS_AGE_KEY` set. The artwork smoke check in T037 cannot pass as written (see decisions).
+- **The cutover is done.** The maintenance window ran 2026-11-03 20:09–20:45 UTC (~36 minutes of downtime; the abort deadline of start + 2.5 h was never approached). `https://jordylab.be` serves from the Compose stack on the VPS: all six services healthy, a fresh Let's Encrypt certificate issued by Caddy itself (expires 2027-02-01), the owner signed in and reached their own data. Bonus proof: the owner's SSO cookie survived the cutover (restored Keycloak keys/sessions), so the sign-in wrote no new rows.
+- **k3s is gone from the data path**: stopped, disabled, and fully cleaned with `k3s-killall.sh` (stopping the service alone was NOT enough — BUG-083). Its data under `/var/lib/rancher` is intact for the R14 rebuild path. `AUTO_DEPLOY` is `false` (paused at cutover, with the owner's yes) — a green main build no longer deploys anything until T062 rewires the pipeline to Compose.
+- **Backups are live**: first full backup `20261103-203343F` in S3 (`/pgbackrest` prefix in `jordylab-cnpg-backups`, next to the untouched old Barman chain), WAL archiving on, both systemd timers enabled (differential Mon–Sat 03:00 UTC, full Sun 04:00). The point-in-time restore is **proven**: a restore to 2026-11-03 20:38 UTC returned `finance.article` at exactly its value at that time (823 vs 822 in the pre-window baseline).
+- **The live release** is `JORDYLAB_RELEASE=sha-9cc83c4f636f6e6a309cf571d9402619ed413c18` (the PR #199 merge — the same code that was live on k3s). `/opt/jordylab/state/current-release` is **empty** until the first `deploy-release.sh` run (T049) — the window brought the stack up directly.
+- **Bugs found and fixed inside the window** (all logged in `docs/testing/bug-log.md` with root causes, all verified on prod): BUG-081 (Postgres base image pinned to the arm64 manifest — now the multi-arch list digest), BUG-082 (Caddy healthcheck probed `localhost`→::1 — now 127.0.0.1), BUG-083 (stopping the k3s service left its iptables hostPort DNAT + shims serving the public ports — `k3s-killall.sh` is the real cleanup), BUG-084 (the Postgres image shipped no CA bundle, so S3 TLS verification failed — `ca-certificates` added).
+- **Branch** `jordyswinnen/jor-31-compose-cutover-continue` carries the window records and fixes; this handover rides in its PR. PR #199 (Phase A + the deploy workflow + the T013 secrets key) is already merged.
+- Done and verified this session: T013, T014, T017, T019, T020, T022 (accepted by the owner), T023 (both halves), T024, T025, T026–T039 (the whole window), T040–T044, T047, T048, T055. HANDOFF-40 and HANDOFF-41 are both resolved.
 
 ## Next steps (priority order)
 
-1. **T014 (blocked, owner).** Add `tcp:22` to the Tailscale grant from `tag:ci` to `tag:jordylab-vps`, keeping `tcp:6443`. The save is refused by a policy test: `address "tag:jordylab-vps:22" (protocol "tcp"): want: Drop, got: Accept`. The `tests` section expects `tag:ci` to be dropped on port 22. Changing that test is a policy change only the owner can make. An agent does not edit the Tailscale policy. See HANDOFF-41.
-2. **T023 (after T014).** Tailnet SSH to the host as `jordylab-deploy` from the Mac, and from a CI test job (it needs `DEPLOY_SSH_KEY`). Check the tailnet address with `tailscale status`.
-3. **T017 and BUG-078.** Run the pre-cutover external scan, `nmap -Pn -p- 57.129.163.110`, from outside the tailnet. `nmap` is not installed on the Mac. Expect 22, 80 and 443, plus the two extra public ports 31460 and 32531 (BUG-078, OPEN). Record it in quickstart step 10.
-4. **T019 (memory before the window).** `kubectl -n jordylab top pods` and `free -m` on the host. Record in quickstart step 13.
-5. **T020.** `systemd-analyze calendar` for both schedules on the host. The timers are not installed until T043.
-6. **T047.** Write `.github/workflows/deploy-prod-compose.yml`, which does not exist yet. It must:
-   - install PyYAML on the runner, because `render-env.sh` needs it (verified locally in a venv);
-   - copy `deploy/compose` to `/opt/jordylab/compose` on the host, which `deploy-release.sh` expects;
-   - decide whether the Postgres image is built on the host from that copy or pushed to GHCR;
-   - connect over SSH as `jordylab-deploy` with `DEPLOY_SSH_KEY`.
-7. Cutover from T025 on. Each approval-gated step needs the owner's yes. See [tasks.md](tasks.md).
-8. T058 to T061 (runbook, Postgres upgrade procedure, `jordylab-ops` skill, devops agents) once the stack runs.
+1. **T045** (after 03:00 UTC tonight): `systemctl list-timers 'jordylab-backup-*'` and `pgbackrest --stanza=jordylab info` — the differential must appear on schedule (quickstart step 12). Run on the host as ubuntu; the timers run as root via `docker compose exec`.
+2. **T046 (owner decision)**: keep or delete the encrypted Mac copies (`~/jordylab-backups/prod-2026-11-02/` and `~/jordylab-backups/cutover/`) once T045 passes.
+3. **The retag decision (owner, blocks T049/T050/T052)**: `deploy-prod-compose.yml` deploys release tags (`vX.Y.Z`) whose images must exist in GHCR — and **nothing creates new v-tag images any more** (spec 019 removed `release.yml`; existing `v0.0.1-rcN` images are from the old pipeline). Options: a retag step inside the compose workflow, a small release workflow that builds/pushes tag images, or deploying by sha instead of tag (would need `deploy-release.sh`'s pattern widened). Recorded on the T047/T049 task lines.
+4. **T049 (owner approval)**: the first `deploy-prod-compose.yml` run by hand, after the retag decision; it also writes the state files (currently empty).
+5. **Phase 6 (US4)**: T053 (`ufw status verbose` + `docker ps` ports), T054 (post-cutover external scan — rerun the two commands of record in quickstart step 10; expect only 22/80/443, the NodePorts 31460/32531 must be GONE — that closes BUG-078), T056 (**owner**: close public SSH, only after T055), T057.
+6. **T058+ (US5)**: rewrite `docs/runbook.md` for Compose (it still describes k3s), update the `jordylab-ops` skill the same way (only its Tailscale section is current so far), T063 (forced cert renewal test), T064 (reboot test), T065 (memory after a 30-minute soak vs the T019 baseline), and T062 (rewire the deploy pipeline — note the spec's `release.yml` references are stale; the real pipeline is `build.yml` → `deploy-prod.yml`).
 
 ## Waiting on the owner
 
-- **HANDOFF-41 (T014).** The Tailscale access policy needs two changes: add `tcp:22` to the `tag:ci` → `tag:jordylab-vps` grant, and change the policy test for `tag:jordylab-vps:22` from Drop to Accept. The owner tried in the console and could not edit or delete the rule. Check first: the owner's role in the Tailscale admin console (Settings → Users; editing the policy needs Owner or Admin), and whether Access controls shows a lock or a "managed by" note.
-- **HANDOFF-40 (T013).** Commit the secrets file when you decide. Then tick T013. Do not commit it without the owner's decision, because it goes to production on the next main build.
-- **Decision: T022 row counts.** Accept the drill with the eight Keycloak differences, or investigate them row by row. Likely cause, not confirmed: two clients (`jordylab-mobile`, `mobile-release-ci`) and one user existed at the restore point and do not exist now.
-- **Decision: T037 artwork check.** The k3s artwork volume is empty. Either generate real artwork with the real scanner, as the Validation Data rule requires, or change the check. Do not seed rows.
-- **Decision: keep or delete the encrypted Mac copies (T046).** Later, after the stack is proven.
+- **T046** — keep or delete the encrypted Mac copies (after T045).
+- **The retag decision** — see next step 3; everything in Phase 5 (T049–T052) waits on it.
+- **T056** — closing public SSH (after T054/T055).
 
-## Decisions and approvals from this session
+## Decisions and approvals from this session (2026-11-03)
 
-- Approved by the owner on 2026-11-03, scoped to these steps, all now done or blocked as noted: T013 (owner did it), T014 (grant only, blocked), T015, T016, T018, T021, T022 (drill run and delete, done).
-- The owner approved merging PR #194. It is merged.
-- `AUTO_DEPLOY` is `true` and was not paused, so a green build on main deploys to k3s automatically (spec 019).
-- The deploy user `jordylab-deploy` is in the `docker` group. That is root-equivalent on the host. Accepted as the cost of the deploy path; revisit if the owner objects.
+- Window tonight with abort at start + 2.5 h; T026 (site down) and T031 (stop k3s) approved in-flow; `AUTO_DEPLOY` paused with an explicit yes; T043 (timers) approved.
+- T022 accepted without a row-by-row re-run (no table lost data; the 8 Keycloak extra-row tables match post-restore-point deletions).
+- T037's artwork check **changed**: production's artwork volume is empty, so the smoke check verifies the volume migration with whatever it contains, and artwork loading is verified after the first real scan on the new stack (never seeded — Validation Data rule).
+- T047 design decisions: the Postgres image is **built on the host** (not pushed to GHCR), the workflow input is named `target` (T049's command updated), PyYAML installs into a venv on the runner.
+- PR #199 opened and merged with the owner's yes; the T013 secrets commit (HANDOFF-40) approved and merged through it; the redundant uncommitted copy in the Claude worktree was reverted after a byte-identity check.
 
-## Tried and rejected
+## Tried and rejected / lessons
 
-- `handle_path /ntfy /ntfy/*` in Caddy: invalid, because `handle_path` takes one pattern. Fixed with a named matcher and `uri strip_prefix`.
-- `sops -d` on one document of the multi-document secrets file: MAC mismatch. Fixed by decrypting the whole file and splitting it in Python.
-- `sops -d --output-type json` on the whole file: only the first document comes out.
-- A policy change that keeps the drop test for port 22: the save is refused.
+- **Never scan this host fast**: a 2000 pps raw SYN scan is silently mitigated upstream (OVH) and reports *all* 65535 ports filtered while the site keeps serving 200s. Unprivileged full-range connect scans crawl for hours against the drop-everything firewall, and `-T5` aborts at its 900 s host timeout. The commands of record (quickstart step 10) are `sudo nmap -Pn -p- -T4 --max-rate 200` plus the NodePort-range connect sweep at `--max-rate 50`.
+- **`pkill -f containerd-shim-runc-v2` is too broad** — dockerd uses the same shim binary; it briefly killed the Compose containers (healed by `restart: unless-stopped`). Select k3s shims by their `-namespace k8s.io` argument.
+- **PITR to a minutes-old target** needs `SELECT pg_switch_wal();` on production first (a quiet database does not fill its 16 MB WAL segment), and the throwaway restore container needs the S3 keys at replay time (`archive-get`).
+- Stopping a systemd unit is not the same as cleaning it: check iptables (`PREROUTING` for `KUBE-`/`CNI-` chains) after any k3s teardown.
 
 ## Gotchas and commands
 
-- Artwork volume path: `kubectl -n jordylab get pvc gamecatalog-artwork -o jsonpath='{.spec.volumeName}'`, then `/var/lib/rancher/k3s/storage/<pv>_jordylab_gamecatalog-artwork` on the host. It is root-owned, so use sudo.
-- Row counts: `query_to_xml` over `information_schema.tables` in `jordylab` and `keycloak`, run as `postgres` in container `postgres` of `cnpg-cluster-1` and of the drill pod.
-- After a drill: the cluster restarts once after recovery. Wait with `kubectl -n jordylab wait pod -l cnpg.io/cluster=<name>,cnpg.io/instanceRole=primary --for=condition=Ready`.
-- Compose validation needs no daemon: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q`. The three `JORDYLAB_RELEASE` warnings are expected.
-- Caddy validation in a container: `podman run --rm -v "$PWD/deploy/compose/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile`.
-- Render test on a synthetic file: a throwaway age key and dummy values in the session scratchpad, plus PyYAML in a venv. Do not run it against the real file, except with `SOPS_AGE_KEY` set and output discarded.
-- Not ours, leave alone: `stash@{0}` ("before-main-switch", on `chore/add-role-agents`); PR #198 (JOR-32) and PR #191 (JOR-75); a Build for `2c1091d` on main.
+- The stack: `sudo -u jordylab-deploy env JORDYLAB_RELEASE=<tag> docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml …` on the host (ssh `ubuntu@100.93.81.41`, tailnet SSH works key-only; passwordless sudo for ubuntu; `jordylab-deploy` has no sudo but is in the docker group).
+- `deploy/compose` is mirrored to `/opt/jordylab/compose` (rsync as ubuntu via `--rsync-path='sudo rsync'`, then `chown -R jordylab-deploy:jordylab-deploy`); the deploy workflow does this as the deploy user in normal runs.
+- The Mac's pip is broken (pip 26.2.2 truststore bug against this macOS version string) — for `render-env.sh` use the surviving venv: `/private/tmp/claude-501/-Users-jordy-Projects-JordyLab--claude-worktrees-zen-mendel-076554/3b71c84d-b254-40ba-86ab-b7b62862e54b/scratchpad/render-test/venv` (prepend its `bin` to PATH; it has PyYAML 6.0.3). If that temp dir is gone, run the render inside a Linux container instead.
+- The row-count sweep used all evening (save as a file, pipe to `psql -f -`, keep only lines matching `\| *[0-9]+ *$`, sort, diff):
+  ```sql
+  \t on
+  SELECT format('SELECT %L, count(*) FROM %I.%I;', table_schema||'.'||table_name, table_schema, table_name)
+  FROM information_schema.tables
+  WHERE table_schema NOT IN ('pg_catalog','information_schema') AND table_type='BASE TABLE'
+  ORDER BY 1;
+  \gexec
+  ```
+- The encrypted backups decrypt with the SOPS age key pair (`age -d -i "$HOME/Library/Application Support/sops/age/keys.txt"`); the recipient in `recipient.txt` is that key's public half (verified by `age-keygen -y`).
+- The kubeconfig (`~/.kube/jordylab.yaml`) is useless now (k3s is dead) except for the R14 rebuild path.
+- Not ours, leave alone: PR #191 (JOR-75) merged tonight by another session; a Build for its merge ran before ours.
