@@ -142,8 +142,8 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T050 [P] [US3] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/SessionPersistenceIntegrationTest.java` (Testcontainers Postgres): login writes `identity.spring_session`; a second repository context reads it; logout invalidates; `JSESSIONID` HttpOnly + `SameSite=Lax`
-- [ ] T051 [P] [US3] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/CsrfIntegrationTest.java`: mutating POST without `X-XSRF-TOKEN` → 403, with cookie+header → 2xx; machine-token chain stays CSRF-exempt (once US5 lands)
+- [X] T050 [P] [US3] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/SessionPersistenceIntegrationTest.java` (Testcontainers Postgres): login writes `identity.spring_session`; a second repository context reads it; logout invalidates; `JSESSIONID` HttpOnly + `SameSite=Lax`
+- [X] T051 [P] [US3] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/CsrfIntegrationTest.java`: mutating POST without `X-XSRF-TOKEN` → 403, with cookie+header → 2xx; machine-token chain stays CSRF-exempt (once US5 lands) *(covered by `IdentityRoleMatrixTest.csrfIsRequiredForSessionMutations`; the session test also logs in through the CSRF-protected endpoint)*
 
 ### Implementation for User Story 3
 
