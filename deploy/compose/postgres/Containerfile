@@ -3,8 +3,10 @@
 # Built with the deploy/compose folder as the context, so the config below can be copied in.
 # Pinned: the base image by digest (Postgres 16.15 with pgvector) and the pgBackRest package by version,
 # so a rebuild cannot change the production Postgres or pgBackRest. To upgrade, change both values
-# deliberately and rebuild.
-FROM pgvector/pgvector:pg16@sha256:016a18f2a5269b23ca05de83826094011cc4e1a9e9cb28c186a3ba9f079ef1d9
+# deliberately and rebuild. The digest is the MULTI-ARCH MANIFEST LIST (amd64 + arm64), so the same pin
+# builds on the VPS (amd64) and the Mac (arm64); pinning a single-platform manifest broke the VPS build
+# with `exec format error` (BUG-081, found in the cutover window 2026-11-03).
+FROM pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
 USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends pgbackrest=2.60.0-1.pgdg12+1 \

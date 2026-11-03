@@ -1243,3 +1243,18 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): none yet.
 - Regression test added: none yet.
 - Verified on prod: pending
+
+### BUG-081: The Postgres base image was pinned to the arm64 manifest digest, so the image cannot build on the amd64 VPS
+- Status: FIXED-LOCAL (found and fixed during the cutover window 2026-11-03; verification is the window's T032 build on the VPS)
+- Severity: S2 (blocked the Compose cutover: the Postgres image build failed on the production host)
+- Area/spec: prod Postgres image / 020 (T001, T032)
+- Env found: prod VPS (amd64), 2026-11-03, `docker compose up -d postgres` in the cutover window; the local analogue (quickstart step 1) had passed because the Mac is arm64
+- Steps to reproduce:
+  1. On an amd64 host, build `deploy/compose/postgres/Containerfile` with the old pin, or `docker run` the pinned digest: it resolves to the linux/arm64 manifest and fails with `exec format error` (exit 255).
+  2. Registry proof: the `pgvector/pgvector:pg16` manifest list holds amd64 `sha256:c0cd736f…` and arm64 `sha256:016a18f2…`; the Containerfile pinned the arm64 one.
+- Expected (cite spec/story): 020 T001 — the base image "pinned by digest … so a rebuild cannot change the production Postgres"; the pin must identify the image that the production host actually builds.
+- Actual: the digest was taken on the arm64 Mac without a platform qualifier, pinning the arm64 manifest (the VPS run of the digest warns "platform (linux/arm64) does not match the detected host platform (linux/amd64)" and exits 255).
+- Root cause: platform-blind digest pinning — `FROM image@sha256:…` used a single-platform manifest digest instead of the multi-arch manifest-list digest.
+- Fix (PR / commit / tag): pin the manifest-list digest `sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f` (amd64 + arm64; the same file still builds on the Mac). The caddy pin in compose.yaml was already a list digest, which is why it was fine. Committed on the cutover-continue branch during the window.
+- Regression test added: none in CI (no amd64 runner builds this image before deploy); the cutover window's own T032 build is the verification, and the Containerfile comment documents the rule.
+- Verified on prod: pending (T032)
