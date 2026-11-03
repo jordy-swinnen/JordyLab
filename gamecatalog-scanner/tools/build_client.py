@@ -47,18 +47,12 @@ MODULE_ORDER = [
 
 HEADER_TEMPLATE = (
     "# Rendered by jordylab-be ClientService. Do not edit by hand.\n"
-    'KEYCLOAK_URL = "${KEYCLOAK_URL}"\n'
-    'REALM = "${REALM}"\n'
-    'CLIENT_ID = "${CLIENT_ID}"\n'
     'BACKEND_URL = "${BACKEND_URL}"\n'
     'SCAN_ENDPOINT = "${SCAN_ENDPOINT}"\n'
     'LIBRARY_TYPE = "${LIBRARY_TYPE}"\n'
 )
 
 LOCAL_DEFAULTS = {
-    "KEYCLOAK_URL": "http://localhost:8180",
-    "REALM": "jordylab",
-    "CLIENT_ID": "gamecatalog-script",
     "BACKEND_URL": "http://localhost:8080",
     "SCAN_ENDPOINT": "/api/gamecatalog/ingest/scan",
     "LIBRARY_TYPE": "EMUDECK",

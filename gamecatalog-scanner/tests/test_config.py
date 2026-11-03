@@ -23,25 +23,26 @@ def test_configured_roots_handles_bad_json(tmp_path):
 
 
 def test_resolve_service_precedence():
-    constants = {"KEYCLOAK_URL": "http://kc", "REALM": "realm", "LIBRARY_TYPE": "STEAM"}
-    data = {"service": {"keycloak_url": "http://other", "client_id": "from-config"}}
-    env = {"JORDYLAB_SCAN_CLIENT_ID": "from-env", "JORDYLAB_SCAN_BACKEND_URL": "http://env"}
+    constants = {"BACKEND_URL": "http://constant", "LIBRARY_TYPE": "STEAM"}
+    data = {"service": {"backend_url": "http://other"}}
+    env = {"JORDYLAB_SCAN_BACKEND_URL": "http://env", "JORDYLAB_SCAN_ENDPOINT": "/custom/scan"}
 
     resolved = config.resolve_service("STEAM", constants=constants, config_data=data, env=env)
 
-    assert resolved.keycloak_url == "http://kc"
-    assert resolved.realm == "realm"
-    assert resolved.client_id == "from-config"
-    assert resolved.backend_url == "http://env"
-    assert resolved.scan_endpoint == config.DEFAULT_SCAN_ENDPOINT
+    assert resolved.backend_url == "http://constant"
+    assert resolved.scan_endpoint == "/custom/scan"
+    # No Keycloak settings exist any more (spec 019 US5).
+    assert not hasattr(resolved, "keycloak_url")
+    assert not hasattr(resolved, "realm")
+    assert not hasattr(resolved, "client_id")
 
 
 def test_resolve_service_treats_placeholders_as_absent():
     resolved = config.resolve_service(
-        "EMUDECK", constants={"KEYCLOAK_URL": "${KEYCLOAK_URL}"}, config_data={}, env={}
+        "EMUDECK", constants={"BACKEND_URL": "${BACKEND_URL}"}, config_data={}, env={}
     )
 
-    assert resolved.keycloak_url == config.DEFAULT_KEYCLOAK_URL
+    assert resolved.backend_url == config.DEFAULT_BACKEND_URL
 
 
 def test_check_endpoint_derived_from_scan_endpoint():

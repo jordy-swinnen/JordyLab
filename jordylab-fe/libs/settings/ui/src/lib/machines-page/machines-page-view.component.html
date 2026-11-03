@@ -1,0 +1,104 @@
+<lib-page-header
+  title="Machines"
+  subtitle="Tokens the game catalog scanner uses on each device. A token is shown once, at creation."
+/>
+
+@if (error()) {
+  <div class="mt-6">
+    <lib-error-state [message]="error() ?? ''" (retry)="reload.emit()" />
+  </div>
+}
+
+<section class="panel mt-8 px-6 py-5" data-testid="add-machine">
+  <h3 class="section-title">Add a machine</h3>
+  <p class="mt-1 text-sm text-muted-foreground">
+    Name the device, then paste its token into the client when it asks. Tokens grant scan ingestion only.
+  </p>
+  <div class="mt-4 flex flex-wrap items-center gap-3">
+    <input
+      hlmInput
+      class="h-11 w-full max-w-xs"
+      placeholder="JordyBox, MacBook, …"
+      [value]="name()"
+      (input)="name.set($any($event.target).value)"
+      (keydown.enter)="onCreate()"
+      data-testid="machine-name"
+    />
+    <button
+      hlmBtn
+      class="h-11"
+      [disabled]="creating() || !name().trim()"
+      (click)="onCreate()"
+      data-testid="create-machine"
+    >
+      {{ creating() ? 'Creating…' : 'Add machine' }}
+    </button>
+  </div>
+</section>
+
+@if (created(); as machine) {
+  <section class="panel mt-6 border-primary/40 px-6 py-5" data-testid="created-machine">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="section-title">Token for {{ machine.name }}</h3>
+      <button hlmBtn variant="outline" class="h-9" (click)="dismiss()" data-testid="dismiss-created">
+        Done
+      </button>
+    </div>
+    <p class="mt-2 text-sm text-muted-foreground">
+      Copy it now — it will not be shown again. On the device, run the scan client and paste it when prompted, or set
+      <code class="text-foreground">JORDYLAB_SCAN_TOKEN</code>.
+    </p>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <code
+        class="min-w-0 flex-1 overflow-x-auto rounded-[10px] border border-border bg-muted px-3 py-2 text-[13px]"
+        data-testid="created-token"
+        >{{ machine.token }}</code
+      >
+      <button hlmBtn class="h-10" (click)="copyToken(machine.token)" data-testid="copy-token">
+        {{ copied() ? 'Copied' : 'Copy' }}
+      </button>
+    </div>
+  </section>
+}
+
+@if (loading()) {
+  <div class="mt-10">
+    <lib-skeleton-rows [count]="2" [height]="72" />
+  </div>
+} @else if (machines().length === 0) {
+  <p class="mt-8 text-sm text-muted-foreground">No machines yet. Add one when you set up a new device.</p>
+} @else {
+  <ul class="mt-8 flex flex-col gap-3">
+    @for (machine of machines(); track machine.id) {
+      <li class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5" data-testid="machine-row">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="text-base text-foreground">{{ machine.name }}</p>
+            @if (machine.revokedAt) {
+              <span hlmBadge variant="secondary" data-testid="machine-revoked">Revoked</span>
+            }
+          </div>
+          <p class="mt-1 text-[13px] text-muted-foreground">
+            {{ machine.scope }} · added {{ machine.createdAt | date: 'MMM d, y' }}
+            @if (machine.lastUsedAt) {
+              · last used {{ machine.lastUsedAt | date: 'MMM d, h:mm a' }}
+            } @else {
+              · never used
+            }
+          </p>
+        </div>
+        @if (!machine.revokedAt) {
+          <button
+            hlmBtn
+            variant="outline"
+            class="h-11"
+            (click)="onRevoke(machine.id)"
+            data-testid="revoke-machine"
+          >
+            {{ confirmingRevokeId() === machine.id ? 'Confirm revoke' : 'Revoke' }}
+          </button>
+        }
+      </li>
+    }
+  </ul>
+}

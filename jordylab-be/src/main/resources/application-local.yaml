@@ -7,8 +7,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/jordylab
 
 jordylab:
-  script:
-    keycloak-url: http://localhost:8180
   # Identity module (spec 019): first-boot admin only while the account table is empty.
   identity:
     bootstrap:

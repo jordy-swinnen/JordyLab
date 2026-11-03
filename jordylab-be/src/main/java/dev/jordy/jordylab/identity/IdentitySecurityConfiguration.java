@@ -1,5 +1,6 @@
 package dev.jordy.jordylab.identity;
 
+import dev.jordy.jordylab.identity.rest.controller.MachineTokenAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
@@ -40,11 +42,16 @@ public class IdentitySecurityConfiguration {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain machineTokenFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain machineTokenFilterChain(HttpSecurity http,
+            MachineTokenAuthenticationFilter machineTokenAuthenticationFilter) throws Exception {
         http
                 .securityMatcher("/api/gamecatalog/ingest/scan", "/api/gamecatalog/ingest/check")
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.POST, "/api/gamecatalog/ingest/check",
+                                "/api/gamecatalog/ingest/scan")
+                        .hasRole("gamecatalog-scanner")
                         .anyRequest().denyAll())
+                .addFilterBefore(machineTokenAuthenticationFilter, AuthorizationFilter.class)
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

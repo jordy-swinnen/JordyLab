@@ -10,6 +10,8 @@ import dev.jordy.jordylab.identity.service.InvalidCredentialsException;
 import dev.jordy.jordylab.identity.service.InvalidRequestException;
 import dev.jordy.jordylab.identity.service.InvalidUsernameException;
 import dev.jordy.jordylab.identity.service.LastAdminProtectedException;
+import dev.jordy.jordylab.identity.service.MachineTokenAlreadyRevokedException;
+import dev.jordy.jordylab.identity.service.MachineTokenNotFoundException;
 import dev.jordy.jordylab.identity.service.OwnAccountOperationException;
 import dev.jordy.jordylab.identity.service.PasskeyNotFoundException;
 import dev.jordy.jordylab.identity.service.SessionNotFoundException;
@@ -86,6 +88,18 @@ public class IdentityExceptionHandler {
     public ResponseEntity<ErrorBody> handleAdminProtected(AdminAccountProtectedException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorBody("ADMIN_PROTECTED", "Admin accounts cannot be deleted"));
+    }
+
+    @ExceptionHandler(MachineTokenNotFoundException.class)
+    public ResponseEntity<ErrorBody> handleMachineNotFound(MachineTokenNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorBody("MACHINE_NOT_FOUND", "That machine no longer exists"));
+    }
+
+    @ExceptionHandler(MachineTokenAlreadyRevokedException.class)
+    public ResponseEntity<ErrorBody> handleMachineAlreadyRevoked(MachineTokenAlreadyRevokedException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorBody("ALREADY_REVOKED", "That machine token is already revoked"));
     }
 
     @ExceptionHandler(PasskeyNotFoundException.class)

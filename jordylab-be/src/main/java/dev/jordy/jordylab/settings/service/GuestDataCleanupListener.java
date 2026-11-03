@@ -6,7 +6,6 @@ import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Clears a removed account's guest chat data (spec 019 D17): the personal limit and the usage rows. The identity module
@@ -21,13 +20,11 @@ public class GuestDataCleanupListener {
     private final GuestChatUsageRepository guestChatUsageRepository;
 
     @ApplicationModuleListener
-    @Transactional
     void onUserAccessRemoved(UserAccessRemoved event) {
         clear(event.userSubject());
     }
 
     @ApplicationModuleListener
-    @Transactional
     void onUserDeleted(UserDeleted event) {
         clear(event.userSubject());
     }

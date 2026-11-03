@@ -79,6 +79,7 @@ describe('App', () => {
       'Briefing',
       'Users',
       'AI Models',
+      'Machines',
       'App',
     ]);
   });
@@ -102,6 +103,7 @@ describe('App', () => {
       '/fna/briefing',
       '/settings/users',
       '/settings/ai-models',
+      '/settings/machines',
       '/settings/app',
     ]);
   });

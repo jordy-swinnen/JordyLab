@@ -188,19 +188,19 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T064 [P] [US5] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/service/MachineTokenServiceTest.java`: `jlmt_` + ≥256 bits, returned once, only SHA-256 persisted, revoke, `last_used_at` ≤ once/minute
-- [ ] T065 [P] [US5] Extend `IdentityRoleMatrixTest.java` (or `MachineTokenAuthenticationFilterTest.java`): valid token → `ROLE_gamecatalog-scanner` on check/scan; wrong path → 403/deny; revoked/unknown/malformed → 401; `last_used_at` advances
-- [ ] T066 [P] [US5] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/rest/controller/MachineTokenControllerTest.java`: admin-only, create returns the one-time token, list, revoke (`409 ALREADY_REVOKED`)
-- [ ] T067 [P] [US5] Rewrite `gamecatalog-scanner/tests/test_auth.py` (env/prompt, cache 0600, 401 clears), `test_config.py` (no Keycloak defaults), `test_build_client.py` (new constants)
-- [ ] T068 [P] [US5] Create `jordylab-fe/libs/settings/api/src/lib/machines.store.spec.ts` + machines-page specs (list, add → one-time token panel, revoke)
+- [X] T064 [P] [US5] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/service/MachineTokenServiceTest.java`: `jlmt_` + ≥256 bits, returned once, only SHA-256 persisted, revoke, `last_used_at` ≤ once/minute
+- [X] T065 [P] [US5] Extend `IdentityRoleMatrixTest.java` (or `MachineTokenAuthenticationFilterTest.java`): valid token → `ROLE_gamecatalog-scanner` on check/scan; wrong path → 403/deny; revoked/unknown/malformed → 401; `last_used_at` advances
+- [X] T066 [P] [US5] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/rest/controller/MachineTokenControllerTest.java`: admin-only, create returns the one-time token, list, revoke (`409 ALREADY_REVOKED`)
+- [X] T067 [P] [US5] Rewrite `gamecatalog-scanner/tests/test_auth.py` (env/prompt, cache 0600, 401 clears), `test_config.py` (no Keycloak defaults), `test_build_client.py` (new constants)
+- [X] T068 [P] [US5] Create `jordylab-fe/libs/settings/api/src/lib/machines.store.spec.ts` + machines-page specs (list, add → one-time token panel, revoke)
 
 ### Implementation for User Story 5
 
-- [ ] T069 [US5] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/MachineTokenService.java` and `identity/rest/controller/MachineTokenController.java`
-- [ ] T070 [US5] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/rest/controller/MachineTokenAuthenticationFilter.java` and activate chain 1 in `IdentitySecurityConfiguration.java` (ingest works again)
-- [ ] T071 [US5] Rewrite the scan client: `gamecatalog-scanner/src/jordylab_scan/auth.py` + `config.py` + `__main__.py`; regenerate `jordylab-be/src/main/resources/scripts/jordylab-scan-template.py` via `gamecatalog-scanner/tools/build_client.py` (BACKEND_URL/SCAN_ENDPOINT/LIBRARY_TYPE, no Keycloak constants); update `gamecatalog/service/ClientService.java` (+ `ClientServiceTest`) and remove `jordylab.script.keycloak-url` from the three yaml files
-- [ ] T072 [US5] Build the Machines admin UI: `MachinesStore` + API in `libs/settings/api/src/lib/`, Container–Presentation machines page in `libs/settings/ui/src/lib/machines-page/`, route `/settings/machines` + admin nav item
-- [ ] T073 [US5] Verify [quickstart.md](quickstart.md) §5 with the real scan client and revocation; run the US5 tests
+- [X] T069 [US5] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/MachineTokenService.java` and `identity/rest/controller/MachineTokenController.java`
+- [X] T070 [US5] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/rest/controller/MachineTokenAuthenticationFilter.java` and activate chain 1 in `IdentitySecurityConfiguration.java` (ingest works again)
+- [X] T071 [US5] Rewrite the scan client: `gamecatalog-scanner/src/jordylab_scan/auth.py` + `config.py` + `__main__.py`; regenerate `jordylab-be/src/main/resources/scripts/jordylab-scan-template.py` via `gamecatalog-scanner/tools/build_client.py` (BACKEND_URL/SCAN_ENDPOINT/LIBRARY_TYPE, no Keycloak constants); update `gamecatalog/service/ClientService.java` (+ `ClientServiceTest`) and remove `jordylab.script.keycloak-url` from the three yaml files
+- [X] T072 [US5] Build the Machines admin UI: `MachinesStore` + API in `libs/settings/api/src/lib/`, Container–Presentation machines page in `libs/settings/ui/src/lib/machines-page/`, route `/settings/machines` + admin nav item
+- [X] T073 [US5] Verify [quickstart.md](quickstart.md) §5 with the real scan client and revocation; run the US5 tests
 
 **Checkpoint**: Scanning works without any Keycloak token.
 

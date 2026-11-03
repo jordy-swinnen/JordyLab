@@ -31,15 +31,6 @@ public class ClientService {
 
     private static final String TEMPLATE_PATH = "scripts/jordylab-scan-template.py";
 
-    @Value("${jordylab.script.keycloak-url:http://localhost:8180}")
-    String keycloakUrl;
-
-    @Value("${jordylab.script.realm:jordylab}")
-    String realm;
-
-    @Value("${jordylab.script.client-id:gamecatalog-script}")
-    String clientId;
-
     private String scriptTemplate;
 
     @PostConstruct
@@ -54,9 +45,6 @@ public class ClientService {
         }
 
         Map<String, String> vars = new HashMap<>();
-        vars.put("KEYCLOAK_URL", stripTrailingSlash(keycloakUrl));
-        vars.put("REALM", realm);
-        vars.put("CLIENT_ID", clientId);
         vars.put("BACKEND_URL", resolveBackendUrl(httpRequest));
         vars.put("LIBRARY_TYPE", normalized.toUpperCase(Locale.ROOT));
         vars.put("SCAN_ENDPOINT", "/api/gamecatalog/ingest/scan");
