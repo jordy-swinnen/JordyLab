@@ -1,5 +1,12 @@
 # Handoff: production is live on Compose — T045 verification and the release-retag decision are next (2026-11-03, for the next agent)
 
+> **Update, later on 2026-11-03.** The retag decision below is resolved: `deploy-prod-compose.yml` now accepts a full
+> commit sha as well as a release tag and maps it to the `sha-<sha>` images Build already publishes, so T049 can run with
+> a main commit and no tag. The dead k3s pipeline is removed (`deploy-prod.yml` and the `build.yml` deploy job);
+> `deploy-prod-compose.yml` is the only deploy path and automatic deploys stay off (`AUTO_DEPLOY` is no longer read by any
+> workflow). `docs/runbook.md` §9–§11 and §20 and `.claude/skills/jordylab-ops/SKILL.md`'s deploy sections now describe
+> the Compose flow; the rest of the runbook and skill still needs the T058+ rewrite.
+
 Written at the end of an OpenCode session (GLM-5.2). Read this first, then [tasks.md](tasks.md) and [quickstart.md](quickstart.md) — every claim below is recorded there with timestamps.
 
 ## Where things stand

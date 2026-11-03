@@ -23,10 +23,9 @@ depth than this file gives.
 2. **Mutations need Jordy's explicit yes**: anything that runs `kubectl apply/delete/patch/set/rollout
    restart/exec … kcadm (write)`, `helm install/upgrade/uninstall`, `ssh` commands that change the
    server, `ufw`, Tailscale policy changes, GitHub environment/secret/variable changes, or changing what a deploy
-   does. Deploys are automatic on a green `main` build (spec 019): there is no approval step and no delegated
-   approval any more. Show the exact command and what it changes, then wait. A config change (manifests,
-   ConfigMaps, secrets) still needs Jordy's yes, even when it reaches production through a merge, and so does a
-   Flyway migration or a realm change.
+   does. A deploy is started by hand with a target (spec 020) and has no approval step. Show the exact command and
+   what it changes, then wait. A config change (compose.yaml, Caddyfile, prod.env, secrets) still needs Jordy's yes,
+   even when it reaches production through a merge, and so does a Flyway migration or a realm change.
 3. **Secrets never pass through the conversation.** Never print, echo, `cat`, or decrypt secret values
    to the screen. Pipe values (`… | gh secret set …`), run `kcadm` inside the Keycloak pod using the
    env vars already there, use `gitleaks --redact`, and filter logs with
@@ -55,7 +54,7 @@ depth than this file gives.
 | App namespace    | `jordylab`                                                                                                            |
 | Backups          | OVH Object Storage, bucket `jordylab-cnpg-backups`, Gravelines (GRA), `https://s3.gra.io.cloud.ovh.net`               |
 | Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:sha-<full-commit-sha>` (Build; the deploy uses these, no retag) |
-| CI/CD            | `Build` on every push; a green `main` build → `deploy` job → `Deploy to Production` (environment `production`, no reviewer; repository variable `AUTO_DEPLOY` pauses) |
+| CI/CD            | `Build` on every push; deploy by hand with `Deploy to Production (Compose)` and a commit sha or release tag (environment `production`, no reviewer; automatic deploys off until spec 020 T062) |
 | TLS              | cert-manager + Let's Encrypt (`letsencrypt-prod`, account e-mail jordy.swinnen@pm.me)                                 |
 | Secrets          | SOPS + age; private key at `~/Library/Application Support/sops/age/keys.txt` (+ password manager + GitHub env secret) |
 
@@ -94,7 +93,7 @@ Laptop / CI ──Tailscale──► :6443 k3s API (CI node tag:ci may reach tcp
 | `deploy/containers/{backend,frontend,keycloak}/Containerfile` | Image builds                                                                                             | Build workflow                                                             |
 | `deploy/keycloak/realm-prod.json`                             | Realm, baked into the Keycloak image, imported on first start                                            | Keycloak `--import-realm`                                                  |
 | `.sops.yaml`                                                  | age public key + `encrypted_regex: ^(data\|stringData)$`                                                 | sops                                                                       |
-| `.github/workflows/build.yml`, `deploy-prod.yml`              | CI/CD                                                                                                    | GitHub                                                                     |
+| `.github/workflows/build.yml`, `deploy-prod-compose.yml`      | CI/CD                                                                                                    | GitHub                                                                     |
 
 Secrets in `secrets.sops.yaml`: `jordylab-secrets` (Keycloak bootstrap admin, `KEYCLOAK_BACKEND_CLIENT_SECRET`,
 Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app` and
@@ -131,8 +130,10 @@ Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app
 - **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll` in `SecurityConfig`.
 - **Frontend image** copies `dist/apps/jordylab/browser` (Angular application builder output) into nginx.
 - **ntfy has no `NTFY_BASE_URL`** (sub-path hosting unsupported); a subdomain is needed for attachments/web push.
-- **Deploy workflow**: `deploy-prod.yml`, called by `build.yml` for a green `main` build while `AUTO_DEPLOY` is `true`, or run by hand with a commit sha or a release tag (`target`; `dry_run` to check); checks out the target; pinned
-  sops 3.13.3 / age 1.3.2 / kustomize 5.8.1 / kubectl 1.36.4 (keep kubectl within ±1 minor of k3s).
+- **Deploy workflow**: `deploy-prod-compose.yml`, run by hand with a commit sha or a release tag (`target`). It resolves
+  the target with `deploy/scripts/deploy-decision.sh` (`sha-<sha>` or the tag, refused if the images are missing), renders
+  `prod.env` from SOPS on the runner, and over Tailscale SSH runs `deploy/compose/scripts/deploy-release.sh` on the host;
+  pinned sops 3.13.3 / age 1.3.2. Automatic deploys are off since the cutover (spec 020 T062).
 - **Build workflow**: images only on push to `main`; image matrix `fail-fast: false`.
 
 ## Command reference
@@ -207,18 +208,14 @@ gh run list --repo jordy-swinnen/JordyLab --branch main --limit 5
 gh run view <run-id> --repo jordy-swinnen/JordyLab --json status,headSha,event
 gh run view <run-id> --repo jordy-swinnen/JordyLab --log-failed | tail -40
 gh run rerun <run-id> --repo jordy-swinnen/JordyLab --failed
-# Deploy: automatic on a green main build. The last build and its deploy run:
-gh run list --repo jordy-swinnen/JordyLab --workflow build.yml --branch main --limit 5
-# Dry run of a target (changes nothing; reads the cluster and runs the smoke checks):
-gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag> -f dry_run=true
-# Rollback or redeploy any commit or release tag (manual runs are never superseded):
-gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag>
-# Pause automatic deploys (resume with --body true):
-gh variable set AUTO_DEPLOY --repo jordy-swinnen/JordyLab --body false
+# Deploy a commit sha or a release tag; an older target is a rollback:
+gh workflow run deploy-prod-compose.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag>
+# The last deploys and what they reported:
+gh run list --repo jordy-swinnen/JordyLab --workflow deploy-prod-compose.yml --limit 5
 gh pr create --base main --fill
 ```
 
-No approval is needed: a green `main` build deploys (spec 019). The run's job summary in *Deploy to Production* states the outcome, the previously live commit and the backup time.
+No approval is needed: the Compose workflow runs without one (spec 020). Its job summary names the target, the image tag and the live release on the host.
 
 Check images exist and are public (anonymous pull):
 

@@ -105,8 +105,9 @@ SSH in as the image's default user, then:
 
 **(operator step — do not run these commands yourself)**
 
-So the CI deploy job (§9, `deploy-prod.yml`) can reach the firewalled k3s API on port 6443 without exposing
-it publicly (FR-019, `research.md` §8):
+The CI deploy used to reach the firewalled k3s API on port 6443 through the tailnet. Since the Compose cutover
+(spec 020) the deploy workflow reaches the host over Tailscale SSH as `jordylab-deploy` instead, so `tag:ci` needs TCP 22
+and no longer port 6443:
 
 1. On the VPS:
    ```
@@ -193,48 +194,49 @@ kubectl apply -f deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml
 
 **(operator step — do not create these yourself)**
 
-1. In the GitHub repo settings, create a `production` Environment for its secrets. It has **no** required reviewer: a green
-   `main` deploys without an approval (spec 019, FR-002). If a reviewer is still set, remove it: Settings → Environments →
-   `production`.
-2. Add these Environment secrets:
-   - `SOPS_AGE_KEY` — the private key from §7.
-   - `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` (or `TS_AUTHKEY`) — a Tailscale OAuth client / auth key
-     scoped to join this tailnet as an ephemeral node (`tailscale/github-action@v4`).
-3. Mint the namespace-scoped ServiceAccount token defined in `deploy/k8s/bootstrap/ci-deploy-rbac.yaml`:
-   ```
-   kubectl apply -f deploy/k8s/bootstrap/ci-deploy-rbac.yaml
-   kubectl -n jordylab create token ci-deploy --duration=8760h
-   ```
-   Add the result as the `KUBE_TOKEN` Environment secret, and the cluster's CA + API server address
-   (reachable over the tailnet from §4) as `KUBE_SERVER` / `KUBE_CA_CERT`.
-4. Never use `/etc/rancher/k3s/k3s.yaml` (the cluster-admin kubeconfig) in CI.
-5. Repository variable `AUTO_DEPLOY` (Settings → Secrets and variables → Actions → Variables): `true` lets a green `main`
-   deploy; any other value pauses automatic deploys (spec 019, FR-027). Manual runs ignore it.
+1. In the GitHub repo settings, create a `production` Environment for its secrets. It has **no** required reviewer:
+   deploys are started by hand and run without an approval (spec 019 FR-002, spec 020).
+2. Environment secrets the Compose deploy workflow needs:
+   - `SOPS_AGE_KEY` — the private key from §7. It renders `prod.env` on the runner, never on the host.
+   - `DEPLOY_SSH_KEY` — the private key of the `jordylab-deploy` user on the VPS (spec 020 T023; the public half is in
+     that user's `authorized_keys`).
+   - `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` — a Tailscale OAuth client for ephemeral `tag:ci` nodes
+     (`tailscale/github-action@v4`). The tailnet policy must let `tag:ci` reach the host on TCP 22.
+3. The workflow pins the host's ed25519 fingerprint (`EXPECTED_ED25519_FP` in `deploy-prod-compose.yml`) and fails on a
+   mismatch before it connects.
+4. No k3s credential is used any more. Production runs on Docker Compose (spec 020), k3s is stopped and disabled, and the
+   `KUBE_*` secrets and the `ci-deploy` token belong to the retired pipeline; remove them when convenient.
+5. There is no automatic deploy since the cutover: the repository variable `AUTO_DEPLOY` is `false` and no workflow reads
+   it. Whether automatic deploys return is spec 020's T062, an owner decision.
 
 ## 10. Deploy
 
-A green build on `main` deploys by itself (spec 019). No approval and no tag is needed.
+Production is the Docker Compose stack on the VPS (spec 020); k3s is retired. A deploy is started by hand and runs without
+an approval. The automatic k3s pipeline of spec 019 could not reach anything after the cutover and was removed.
 
-1. Merge to `main`. `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`, then calls
-   `deploy-prod.yml` with that commit (only while `AUTO_DEPLOY` is `true`).
-2. The deploy checks that the three images exist for the commit, reads the live images, and skips the commit when it is
-   older than the live one (superseded, FR-006). It checks the newest backup (a warning, never a block), applies the
-   commit's images and manifests, waits on `kubectl rollout status`, and smoke-checks `https://jordylab.be` (the home page
-   answers 200, an unauthenticated `/api` call answers 401, Keycloak's discovery answers 200). It then reads the commit
-   the running backend reports and warns if it is not the commit deployed (FR-017).
-3. A failed rollout or smoke check rolls back to the previously live commit (§11). The run is red, and that failure is
-   the report (FR-011).
-4. Deploys never overlap: queued deploys run in order and none is dropped (`queue: max`). Every run's job summary states
-   the outcome, the previously live commit, the commit live at the end and the backup time.
-5. Confirm: `kubectl -n jordylab get pods`, then the `quickstart.md` checks.
+1. Merge to `main`. `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`; it does not
+   deploy anything.
+2. Deploy a target: GitHub → Actions → *Deploy to Production (Compose)* → *Run workflow*, or from a terminal:
+   ```
+   gh workflow run deploy-prod-compose.yml --repo jordy-swinnen/JordyLab -f target=<full-sha>
+   ```
+   The target is a full commit sha or a release tag `vX.Y.Z` / `vX.Y.Z-rcN`. It maps to the image tag `sha-<sha>` or the
+   tag itself, so a sha deploy runs exactly the images its Build published: nothing is rebuilt and nothing is retagged.
+3. Before the host is touched, a target that cannot be resolved is refused: a sha that is not in the history, a tag that
+   does not exist, or any of the three images missing from GHCR (FR-014).
+4. The workflow mirrors `deploy/compose` to `/opt/jordylab/compose`, renders `prod.env` from the SOPS secrets on the runner,
+   writes it on the host (mode 600, the file it replaces kept as `prod.env.previous`), and runs
+   `/opt/jordylab/compose/scripts/deploy-release.sh deploy <release>`. That script pulls and restarts **only** backend,
+   frontend and keycloak, then checks the site through Caddy on the host. Postgres, ntfy and Caddy are not restarted by a
+   release.
+5. From the runner it smoke-checks `https://jordylab.be`: the home page answers 200, an unauthenticated `/api` call
+   answers 401, and Keycloak's discovery document answers 200.
+6. If anything fails from the environment file onwards, the workflow runs `deploy-release.sh rollback <release>`. It acts
+   only when that release is still the live one: it restores `prod.env.previous` and the previous release, and the job
+   ends red. The state files are `/opt/jordylab/state/current-release` and `previous-release`.
+7. Confirm: `ssh ubuntu@100.93.81.41 'sudo docker ps'` (six services healthy), then the `quickstart.md` checks.
 
-**Pause automatic deploys** (an incident, or a change to the deploy path): set `AUTO_DEPLOY` to anything but `true`. Manual
-runs still work. **Check a change first:** *Deploy to Production* → *Run workflow* with the commit and `dry_run` ticked
-validates the target, reads the live state, runs a server-side apply dry run and the smoke checks, and changes nothing
-(FR-028).
-
-**Each deploy restarts the three pods.** The backend uses `strategy: Recreate`, so it is down from the moment the old pod
-stops until the new one is ready. Keycloak restarts too. The outage is measured in §20.
+**Outage**: a release restarts three services, so expect seconds rather than minutes. There is one host and no blue/green.
 
 **Background work a deploy can interrupt** (FR-021). A restart stops whatever is running, and each job catches up on its own:
 
@@ -247,31 +249,29 @@ stops until the new one is ready. Keycloak restarts too. The outage is measured 
 
 ## 11. Rollback
 
-Automatic: a failed rollout or smoke check rolls back to the previously live commit, with its images and manifests
-(spec 019, FR-010). The run ends red, and the job summary names the outcome (`rolled-back`, `rollback-failed` or
-`no-previous`).
+Automatic: when a Compose deploy fails after the host was touched, the workflow asks the host script to restore the
+previous release and `prod.env.previous`, and the run ends red with the outcome in its summary.
 
-By hand, to any commit or release tag (this is also how you redeploy): GitHub → Actions → *Deploy to Production* →
-*Run workflow* → enter the full commit sha, or a release tag such as `v0.0.9`. Or from a terminal:
+By hand, to any commit or release tag (this is also how you redeploy): *Deploy to Production (Compose)* → *Run workflow*
+with the full commit sha, or from a terminal:
 ```
-gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f target=v0.0.9
+gh workflow run deploy-prod-compose.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag>
 ```
-A manual run is never superseded, so an older target is applied. Check it first with `dry_run` (§10).
+An older target is allowed, which is what makes that a rollback.
+
+Emergency path (no pipeline), on the host:
+```
+ssh ubuntu@100.93.81.41 'sudo -u jordylab-deploy /opt/jordylab/compose/scripts/deploy-release.sh deploy <release>'
+```
+The script pulls, restarts and checks the site, and restores the live release itself if that fails.
 
 Three things to know before you roll back:
 
-- **A rollback is temporary.** The next green merge to `main` deploys the newest commit again. To keep the rollback,
-  revert the bad commit on `main` and merge the revert.
-- **A rollback re-applies the previous secrets file.** If a secret changed after that commit, the run warns and the old
-  value comes back. For a secret rotation (§13), roll forward instead: fix the value and deploy a newer commit.
+- **A rollback stays live until the next deploy.** Automatic deploys are off (T062), so nothing overwrites it by itself.
+  Revert the bad commit on `main` so the next deploy does not put it back.
+- **A rollback restores the environment file that was live before the last deploy** (`prod.env.previous`). A secret changed
+  in the failed deploy therefore goes back too; for a secret rotation (§13), roll forward instead.
 - **The database is not rolled back.** See the subsection below.
-Emergency path (no pipeline):
-```
-kubectl -n jordylab rollout undo deploy/backend
-kubectl -n jordylab rollout undo deploy/frontend
-kubectl -n jordylab rollout undo deploy/keycloak
-```
-Both should restore a healthy previous version within 5 minutes (SC-002).
 
 ### Rollback and the database
 
@@ -409,17 +409,18 @@ df -h /var/lib/rancher/k3s
 
 ## 20. Deploys, releases and the APK
 
-**Status: automatic deploys from 2026-11-03** (spec 019). A green build on `main` deploys; release tags are no longer part
-of the deploy. Tags stay as history and remain valid manual targets (§11). Before this, production changed only on a tag
-(spec 011 BUG-008); the release workflow with its GitHub Release drafts is removed.
+**Status: the deploy platform changed on 2026-11-03.** The automatic k3s pipeline (spec 019) deployed a green `main` build
+without approval; the Compose cutover (spec 020), later the same day, retired it. Deploys now run on Docker Compose, are
+started by hand, and take a commit sha or a release tag (§10, §11). The measurement tables below are the record of the k3s
+pipeline, not of the Compose deploys, which time themselves in their own runs.
 
 ### The flow
 
-1. Merge to `main`. `build.yml` tests, scans and publishes the three images tagged `sha-<full-sha>`, then deploys that
-   commit (§10). Nothing else is needed.
-2. A tag is only a label now: `git tag v0.1.0 <sha>` and `git push origin v0.1.0`. Pushing a tag deploys nothing. To put a
-   tagged release live, run *Deploy to Production* with the tag as the target (§11).
-3. Tags are `vX.Y.Z` or `vX.Y.Z-rcN`. Minor and patch ≤ 99, rc ≤ 98.
+1. Merge to `main`: the Build publishes the three `sha-<commit>` images and deploys nothing.
+2. Deploy a target by hand: a full commit sha, or a release tag (§10). A sha needs no tag and no retag.
+3. A tag is only a label: `git tag v0.1.0 <sha>` and `git push origin v0.1.0` deploys nothing by itself. Tags are `vX.Y.Z`
+   or `vX.Y.Z-rcN`; minor and patch ≤ 99, rc ≤ 98.
+4. The Android APK is gone with the native app (spec 018); no workflow builds one.
 
 ### Measurements (FR-026)
 
@@ -441,7 +442,7 @@ The rollback drill above also proved the manual path (T057): a dispatch to `09f8
 
 **Not yet observed live:** the superseded skip (FR-006). The two merges that landed close together (rows 3 and 4) both deployed, in order, because the newer commit's build finished last. The skip is covered by the fixtures in `deploy/scripts/tests/deploy-decision-cases.sh`; watch for it the next time a slow build finishes after a newer one is live.
 
-**Spec 019 is live (2026-11-03).** Six automatic deploys, all green: `09f8f23`, `ef9dcd7` (the drill), `6088af8`, `cca388d`, `14f97f0` and `2c1091d`. The only rollbacks were the drill's and the manual ones it proved. No APK or release workflow exists any more, so no merge can build one (SC-005). The superseded skip has fixture coverage only until a slow build finishes after a newer commit is live; page that in as soon as it happens.
+**Spec 019 is live (2026-11-03), then the platform moved.** Six automatic deploys, all green: `09f8f23`, `ef9dcd7` (the drill), `6088af8`, `cca388d`, `14f97f0` and `2c1091d`. The only rollbacks were the drill's and the manual ones it proved. No APK or release workflow exists any more, so no merge can build one (SC-005). The superseded skip has fixture coverage only until a slow build finishes after a newer commit is live; page that in as soon as it happens. Later the same day the Compose cutover (spec 020) retired the k3s pipeline; see the status at the top of §20.
 
 ### Broken-image drill and manual rollback (quickstart Q5, Q6)
 
@@ -451,8 +452,10 @@ The rollback drill above also proved the manual path (T057): a dispatch to `09f8
 
 ### Deploy or roll back to any version
 
-See §11: *Deploy to Production* → *Run workflow* with a commit sha or a release tag. `deploy-prod.yml` accepts a full commit
-sha that has images, or a tag `vX.Y.Z[-rcN]` that exists, and deploys that commit's images and manifests.
+See §11: *Deploy to Production (Compose)* → *Run workflow* with a commit sha or a release tag.
+`deploy-prod-compose.yml` accepts a full commit sha that has images, or a tag `vX.Y.Z[-rcN]` that exists, and runs that
+release's images on the Compose stack. The superseded skip (`deploy-decision.sh`) is wired for automatic runs; the Compose
+workflow is manual-only until T062, so it always proceeds.
 
 ### Removing the Android app stack (one-time cutover, after the first release with spec 018)
 
