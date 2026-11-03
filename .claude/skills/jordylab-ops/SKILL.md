@@ -79,7 +79,7 @@ Internet ──► VPS :80/:443 (ufw: only 22, 80, 443 public)
                         db `jordylab` (owner jordylab) + schema `keycloak` (owner keycloak)
                         └─ Barman Cloud plugin → S3 GRA (WAL continuous, base daily 03:00 UTC
                            + weekly Sun 04:00 UTC, retention 30d)
-Laptop / CI ──Tailscale──► :6443 k3s API (CI node tag:ci may reach only tcp:6443 on the server)
+Laptop / CI ──Tailscale──► :6443 k3s API (CI node tag:ci may reach tcp:22 and tcp:6443 on the server)
 ```
 
 ## Repo map (deployment)
@@ -353,7 +353,8 @@ ufw rules in place: default deny incoming; allow OpenSSH, 80/tcp, 443/tcp; allow
 when changing it.
 
 Tailscale policy: `tagOwners` for `tag:jordylab-vps` and `tag:ci`; grants: members → everything,
-`tag:ci` → `tag:jordylab-vps` `tcp:6443` only; a `tests` block enforces it on save.
+`tag:ci` → `tag:jordylab-vps` `tcp:22,6443` (22 added 2026-11-03 for the Compose deploy path, spec 020 T014);
+a `tests` block enforces it on save.
 
 ### DNS and external checks
 
