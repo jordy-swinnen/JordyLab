@@ -14,6 +14,31 @@
   </div>
 }
 
+@if (resetResult(); as reset) {
+  <section class="panel mt-6 border-primary/40 px-6 py-5" data-testid="reset-result">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="section-title">Temporary password</h3>
+      <button hlmBtn variant="outline" class="h-9" (click)="dismissReset()" data-testid="dismiss-reset">
+        Done
+      </button>
+    </div>
+    <p class="mt-2 text-sm text-muted-foreground">
+      Give this to the person once, over a channel you trust. It will not be shown again; they should change it after
+      signing in.
+    </p>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <code
+        class="min-w-0 flex-1 overflow-x-auto rounded-[10px] border border-border bg-muted px-3 py-2 text-[13px]"
+        data-testid="temporary-password"
+        >{{ reset.temporaryPassword }}</code
+      >
+      <button hlmBtn class="h-10" (click)="copyTemporaryPassword(reset.temporaryPassword)" data-testid="copy-temporary-password">
+        {{ copied() ? 'Copied' : 'Copy' }}
+      </button>
+    </div>
+  </section>
+}
+
 @if (loading()) {
   <div class="mt-10">
     <lib-skeleton-rows [count]="3" [height]="80" />
@@ -111,6 +136,15 @@
                   <button
                     hlmBtn class="h-11"
                     variant="outline"
+                    [disabled]="actioningId() === user.id"
+                    (click)="resetPassword.emit(user.id)"
+                    data-testid="reset-password"
+                  >
+                    Reset password
+                  </button>
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
                     (click)="toggleSessions.emit(user.id)"
                     data-testid="toggle-sessions"
                   >
@@ -137,6 +171,35 @@
                 }
               </div>
             </div>
+
+            @if (user.pendingResetRequest; as request) {
+              <div class="mt-4 rounded-[10px] border border-primary/40 bg-secondary px-4 py-3" data-testid="reset-request">
+                <p class="text-sm text-foreground">
+                  Password reset requested {{ request.requestedAt | date: 'MMM d, h:mm a' }}
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button
+                    hlmBtn
+                    class="h-9"
+                    [disabled]="actioningId() === user.id"
+                    (click)="approveResetRequest.emit({ userId: user.id, requestId: request.requestId })"
+                    data-testid="approve-reset"
+                  >
+                    Approve reset
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    class="h-9"
+                    [disabled]="actioningId() === user.id"
+                    (click)="rejectResetRequest.emit({ userId: user.id, requestId: request.requestId })"
+                    data-testid="reject-reset"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            }
 
             @if (sessionsUserId() === user.id) {
               <div class="panel mt-3 px-6 py-4" data-testid="sessions-panel">

@@ -25,9 +25,14 @@ import { UsersPageViewComponent } from './users-page-view.component';
       (endSession)="onEndSession($event)"
       (endAllSessions)="onEndAllSessions()"
       (deletePerson)="onDeletePerson($event)"
+      (resetPassword)="onResetPassword($event)"
+      (approveResetRequest)="onApproveResetRequest($event)"
+      (rejectResetRequest)="onRejectResetRequest($event)"
+      (dismissResetResult)="onDismissResetResult()"
       [sessionsUserId]="sessionsUserId()"
       [sessions]="sessions()"
       [sessionsLoading]="sessionsLoading()"
+      [resetResult]="resetResult()"
       [guestLimit]="guestLimit()"
       [guestLimitLoading]="guestLimitLoading()"
       [guestLimitSaving]="guestLimitSaving()"
@@ -49,6 +54,7 @@ export class UsersPageComponent {
   readonly sessionsUserId = this.#store.sessionsUserId;
   readonly sessions = this.#store.sessions;
   readonly sessionsLoading = this.#store.sessionsLoading;
+  readonly resetResult = this.#store.resetResult;
   readonly guestLimit = this.#guestChatLimit.limit;
   readonly guestLimitLoading = this.#guestChatLimit.loading;
   readonly guestLimitSaving = this.#guestChatLimit.saving;
@@ -98,6 +104,22 @@ export class UsersPageComponent {
 
   onDeletePerson(id: string): void {
     this.#store.deletePerson(id);
+  }
+
+  onResetPassword(id: string): void {
+    this.#store.resetPassword(id);
+  }
+
+  onApproveResetRequest(request: { userId: string; requestId: string }): void {
+    this.#store.approveResetRequest(request.userId, request.requestId);
+  }
+
+  onRejectResetRequest(request: { userId: string; requestId: string }): void {
+    this.#store.rejectResetRequest(request.userId, request.requestId);
+  }
+
+  onDismissResetResult(): void {
+    this.#store.dismissResetResult();
   }
 
   onSaveGuestLimit(dailyLimit: number): void {

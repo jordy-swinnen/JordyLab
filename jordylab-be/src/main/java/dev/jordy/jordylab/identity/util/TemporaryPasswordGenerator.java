@@ -1,13 +1,13 @@
-package dev.jordy.jordylab.settings.util;
+package dev.jordy.jordylab.identity.util;
 
 import lombok.experimental.UtilityClass;
 
 import java.security.SecureRandom;
 
 /**
- * Generates a random temporary password that satisfies the realm's password policy
- * ({@code length(12) and notUsername and notEmail}, research D10) regardless of who it is
- * assigned to — a 20-character random string cannot coincidentally equal a username or email.
+ * Generates a random temporary password that satisfies the password policy (at least 12 characters and not equal to
+ * the username, spec 019 D15) regardless of who it is assigned to — a 20-character random string cannot coincidentally
+ * equal a username.
  */
 @UtilityClass
 public class TemporaryPasswordGenerator {

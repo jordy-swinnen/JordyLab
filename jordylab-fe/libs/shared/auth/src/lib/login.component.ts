@@ -97,6 +97,14 @@ import { canUsePasskeys } from './webauthn';
         }
 
         <p class="mt-5 text-sm text-muted-foreground">
+          <a
+            class="text-accent-text underline-offset-2 hover:underline"
+            routerLink="/forgot-password"
+            data-testid="forgot-password-link"
+            >Forgot your password?</a
+          >
+        </p>
+        <p class="mt-2 text-sm text-muted-foreground">
           No account yet?
           <a class="text-accent-text underline-offset-2 hover:underline" routerLink="/register">Register</a>
         </p>

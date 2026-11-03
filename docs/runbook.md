@@ -466,3 +466,34 @@ Rehearsal: after `kubectl apply -f deploy/k8s/drills/restore-drill-cluster.yaml`
   - **A paused source.** The Sources page says until when and why: the key was refused or the monthly allowance (1,000 lookups) is used up (paused at least an hour, or until the allowance timer runs out), the allowance is almost used up (20 left), or the service could not be reached (15 minutes). Games are not charged a failed attempt while it is paused. The key is regenerated on the service's own API key page; then update the secret (§13) and restart the backend.
   - **Never paste a response.** TheGamesDB echoes the full request address, key included, in the `pages` field of every answer. The backend never logs addresses or bodies; do not paste raw answers into chat, tickets or files either.
 - **Search index.** `game_embedding` is rebuilt by the auto-fill sweep when a game changes or the embedding model changes. If it is empty, LibBot still answers (by structure and words), only without meaning-based ranking.
+
+---
+
+## 24. Break-glass: an admin locked out
+
+There is no email recovery. A normal user's reset goes through Settings → Users (the person requests it, the admin
+approves). When the **only admin** cannot sign in, the operator restores the admin password directly in the database —
+this is the documented last resort (spec 019 US6, D15). Do it from a machine with Tailscale access, never over a public
+port.
+
+1. Generate a BCrypt hash of a temporary password (12+ characters, not the username). `htpasswd` ships with macOS
+   (`/usr/sbin/htpasswd`) and `apache2-utils` on Linux; the `$2y$` prefix is accepted by Spring Security's BCrypt
+   encoder.
+   ```bash
+   htpasswd -bnBC 10 "" 'choose-a-temporary-password' | tr -d ':\n'
+   ```
+2. Update the admin row in the production database. The password column also resets lockout state so the next sign-in
+   is not refused:
+   ```bash
+   export KUBECONFIG=~/.kube/jordylab.yaml
+   kubectl -n jordylab exec -it cnpg-cluster-1 -c postgres -- \
+     psql -U postgres -d jordylab -c \
+     "UPDATE identity.user_account SET password_hash = '\$2y\$10\$…', failed_attempts = 0, locked_until = NULL WHERE username = 'jordy';"
+   ```
+   Quote the hash in single quotes; escape `$` when the shell would expand it (as above) or use `psql` interactively.
+3. Sign in with the temporary password and immediately change it in Account settings, then enroll or verify a passkey.
+4. No restart is needed: Spring Security reads the hash on the next sign-in.
+
+Rehearse on the dev database with a throwaway account, never with the real admin: register a user through the app,
+replace its hash with the one-liner, sign in, then delete the account from Settings → Users. The dev Postgres container
+is `jordylab-be-pgvector-1` (`podman exec -it jordylab-be-pgvector-1 psql -U postgres -d jordylab …`).

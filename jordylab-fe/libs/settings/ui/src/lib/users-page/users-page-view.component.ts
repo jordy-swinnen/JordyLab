@@ -42,14 +42,34 @@ export class UsersPageViewComponent {
   endSession = output<UserSession>();
   endAllSessions = output<string>();
   deletePerson = output<string>();
+  resetPassword = output<string>();
+  approveResetRequest = output<{ userId: string; requestId: string }>();
+  rejectResetRequest = output<{ userId: string; requestId: string }>();
+  dismissResetResult = output<void>();
   reload = output<void>();
   saveGuestLimit = output<number>();
 
   sessionsUserId = input.required<string | null>();
   sessions = input.required<UserSession[]>();
   sessionsLoading = input.required<boolean>();
+  resetResult = input.required<{ userId: string; temporaryPassword: string } | null>();
 
   protected readonly confirmingDeleteId = signal<string | null>(null);
+  protected readonly copied = signal(false);
+
+  async copyTemporaryPassword(password: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(password);
+      this.copied.set(true);
+    } catch {
+      this.copied.set(false);
+    }
+  }
+
+  dismissReset(): void {
+    this.copied.set(false);
+    this.dismissResetResult.emit();
+  }
 
   onDelete(id: string): void {
     if (this.confirmingDeleteId() === id) {

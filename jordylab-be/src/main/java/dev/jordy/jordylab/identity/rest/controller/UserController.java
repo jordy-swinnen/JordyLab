@@ -2,16 +2,20 @@ package dev.jordy.jordylab.identity.rest.controller;
 
 import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.identity.ManagedApp;
+import dev.jordy.jordylab.identity.domain.PasswordResetRequest;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.domain.UserRole;
 import dev.jordy.jordylab.identity.domain.UserStatus;
 import dev.jordy.jordylab.identity.rest.controller.model.ApproveRequest;
 import dev.jordy.jordylab.identity.rest.controller.model.PendingCountResponse;
+import dev.jordy.jordylab.identity.rest.controller.model.PendingResetRequestView;
+import dev.jordy.jordylab.identity.rest.controller.model.ResetPasswordResponse;
 import dev.jordy.jordylab.identity.rest.controller.model.UserView;
 import dev.jordy.jordylab.identity.rest.controller.model.SessionView;
 import dev.jordy.jordylab.identity.rest.controller.model.SessionsResponse;
 import dev.jordy.jordylab.identity.rest.controller.model.UsersResponse;
 import dev.jordy.jordylab.identity.service.InvalidRequestException;
+import dev.jordy.jordylab.identity.service.PasswordResetService;
 import dev.jordy.jordylab.identity.service.UserAccountService;
 import dev.jordy.jordylab.identity.service.UserDeletionService;
 import dev.jordy.jordylab.identity.service.UserSessionService;
@@ -43,12 +47,15 @@ public class UserController {
     private final UserAccountService userAccountService;
     private final UserSessionService userSessionService;
     private final UserDeletionService userDeletionService;
+    private final PasswordResetService passwordResetService;
     private final CurrentUserResolver currentUserResolver;
 
     @GetMapping
     public UsersResponse getUsers(@RequestParam(required = false, defaultValue = "ALL") String status) {
+        java.util.Map<UUID, PasswordResetRequest> pending = passwordResetService.pendingByUser();
+
         return new UsersResponse(userAccountService.listUsers(parseStatus(status)).stream()
-                .map(UserView::from)
+                .map(account -> UserView.from(account, pendingRequest(pending, account)))
                 .toList());
     }
 
@@ -118,6 +125,32 @@ public class UserController {
         userDeletionService.delete(callerId(), id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/reset-password")
+    public ResetPasswordResponse resetPassword(@PathVariable UUID id) {
+        return new ResetPasswordResponse(passwordResetService.resetDirectly(id));
+    }
+
+    @PostMapping("/{id}/reset-requests/{requestId}/approve")
+    public ResponseEntity<Void> approveResetRequest(@PathVariable UUID id, @PathVariable UUID requestId) {
+        passwordResetService.approve(callerId(), id, requestId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/reset-requests/{requestId}/reject")
+    public ResponseEntity<Void> rejectResetRequest(@PathVariable UUID id, @PathVariable UUID requestId) {
+        passwordResetService.reject(callerId(), id, requestId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private static PendingResetRequestView pendingRequest(
+            java.util.Map<UUID, PasswordResetRequest> pending, UserAccount account) {
+        PasswordResetRequest request = pending.get(account.getId());
+
+        return request == null ? null : new PendingResetRequestView(request.getId(), request.getCreatedDate());
     }
 
     private UUID callerId() {

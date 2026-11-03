@@ -37,6 +37,27 @@ export class SettingsUsersApiService {
     return this.#http.post<void>(`/api/identity/users/${id}/revoke`, {});
   }
 
+  resetPassword(id: string): Observable<{ temporaryPassword: string }> {
+    return this.#http.post<{ temporaryPassword: string }>(
+      `/api/identity/users/${id}/reset-password`,
+      {},
+    );
+  }
+
+  approveResetRequest(id: string, requestId: string): Observable<void> {
+    return this.#http.post<void>(
+      `/api/identity/users/${id}/reset-requests/${requestId}/approve`,
+      {},
+    );
+  }
+
+  rejectResetRequest(id: string, requestId: string): Observable<void> {
+    return this.#http.post<void>(
+      `/api/identity/users/${id}/reset-requests/${requestId}/reject`,
+      {},
+    );
+  }
+
   grantApp(id: string, appKey: string): Observable<void> {
     return this.#http.put<void>(`/api/identity/users/${id}/apps/${appKey}`, {});
   }

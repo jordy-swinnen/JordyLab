@@ -4,6 +4,7 @@ import dev.jordy.jordylab.identity.AuthenticatedUser;
 import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.identity.IdentitySecurityConfiguration;
 import dev.jordy.jordylab.identity.service.IdentityUserDetailsService;
+import dev.jordy.jordylab.identity.service.MachineTokenService;
 import dev.jordy.jordylab.identity.service.UserCredentialStore;
 import dev.jordy.jordylab.identity.util.IdentityIds;
 import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
@@ -47,6 +48,9 @@ class PasskeyControllerTest {
 
     @MockitoBean
     private IdentityUserDetailsService identityUserDetailsService;
+
+    @MockitoBean
+    private MachineTokenService machineTokenService;
 
     @MockitoBean
     private UserCredentialStore userCredentialStore;

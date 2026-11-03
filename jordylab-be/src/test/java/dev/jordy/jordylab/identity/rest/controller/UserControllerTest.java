@@ -4,6 +4,7 @@ import dev.jordy.jordylab.identity.IdentitySecurityConfiguration;
 import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.service.IdentityUserDetailsService;
+import dev.jordy.jordylab.identity.service.MachineTokenService;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.domain.UserRole;
@@ -11,6 +12,9 @@ import dev.jordy.jordylab.identity.domain.UserStatus;
 import dev.jordy.jordylab.identity.service.InvalidRequestException;
 import dev.jordy.jordylab.identity.service.LastAdminProtectedException;
 import dev.jordy.jordylab.identity.service.OwnAccountOperationException;
+import dev.jordy.jordylab.identity.service.PasswordResetService;
+import dev.jordy.jordylab.identity.service.ResetRequestNotFoundException;
+import dev.jordy.jordylab.identity.service.ResetRequestNotPendingException;
 import dev.jordy.jordylab.identity.service.UserAccountService;
 import dev.jordy.jordylab.identity.service.UserDeletionService;
 import dev.jordy.jordylab.identity.service.UserSessionService;
@@ -33,6 +37,7 @@ import java.util.UUID;
 import static dev.jordy.jordylab.shared.config.IdentityTestAuthentication.ADMIN_ID;
 import static dev.jordy.jordylab.shared.config.IdentityTestAuthentication.asAdmin;
 import static dev.jordy.jordylab.shared.config.IdentityTestAuthentication.asGuest;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -48,12 +53,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UserControllerTest {
 
     private static final UUID USER_ID = UUID.fromString("e6b2c9f1-3a4d-4f5e-8a9b-1c2d3e4f5a6b");
+    private static final UUID REQUEST_ID = UUID.fromString("33333333-3333-4333-8333-333333333333");
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private IdentityUserDetailsService identityUserDetailsService;
+
+    @MockitoBean
+    private MachineTokenService machineTokenService;
 
     @MockitoBean
     private UserAccountService userAccountService;
@@ -63,6 +72,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserDeletionService userDeletionService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     @MockitoBean
     private CurrentUserResolver currentUserResolver;
@@ -206,6 +218,50 @@ class UserControllerTest {
                         .with(asAdmin()).with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.reason").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void aDirectResetReturnsTheTemporaryPasswordOnce() throws Exception {
+        when(passwordResetService.resetDirectly(USER_ID)).thenReturn("temporary-password-20ch");
+
+        mockMvc.perform(post("/api/identity/users/{id}/reset-password", USER_ID).with(asAdmin()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.temporaryPassword").value("temporary-password-20ch"));
+    }
+
+    @Test
+    void approvesAndRejectsResetRequests() throws Exception {
+        mockMvc.perform(post("/api/identity/users/{id}/reset-requests/{requestId}/approve", USER_ID, REQUEST_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/identity/users/{id}/reset-requests/{requestId}/reject", USER_ID, REQUEST_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(passwordResetService).approve(ADMIN_ID, USER_ID, REQUEST_ID);
+        verify(passwordResetService).reject(ADMIN_ID, USER_ID, REQUEST_ID);
+    }
+
+    @Test
+    void mapsAMissingResetRequest() throws Exception {
+        doThrow(new ResetRequestNotFoundException()).when(passwordResetService)
+                .approve(ADMIN_ID, USER_ID, REQUEST_ID);
+
+        mockMvc.perform(post("/api/identity/users/{id}/reset-requests/{requestId}/approve", USER_ID, REQUEST_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.reason").value("REQUEST_NOT_FOUND"));
+    }
+
+    @Test
+    void mapsAnAlreadyDecidedResetRequest() throws Exception {
+        doThrow(new ResetRequestNotPendingException()).when(passwordResetService)
+                .reject(ADMIN_ID, USER_ID, REQUEST_ID);
+
+        mockMvc.perform(post("/api/identity/users/{id}/reset-requests/{requestId}/reject", USER_ID, REQUEST_ID)
+                        .with(asAdmin()).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.reason").value("REQUEST_NOT_PENDING"));
     }
 
     @Test

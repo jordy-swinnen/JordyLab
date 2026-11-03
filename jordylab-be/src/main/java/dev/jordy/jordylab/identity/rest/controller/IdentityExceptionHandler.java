@@ -13,6 +13,8 @@ import dev.jordy.jordylab.identity.service.LastAdminProtectedException;
 import dev.jordy.jordylab.identity.service.MachineTokenAlreadyRevokedException;
 import dev.jordy.jordylab.identity.service.MachineTokenNotFoundException;
 import dev.jordy.jordylab.identity.service.OwnAccountOperationException;
+import dev.jordy.jordylab.identity.service.ResetRequestNotFoundException;
+import dev.jordy.jordylab.identity.service.ResetRequestNotPendingException;
 import dev.jordy.jordylab.identity.service.PasskeyNotFoundException;
 import dev.jordy.jordylab.identity.service.SessionNotFoundException;
 import dev.jordy.jordylab.identity.service.UserNotFoundException;
@@ -76,6 +78,18 @@ public class IdentityExceptionHandler {
     public ResponseEntity<ErrorBody> handleOwnAccount(OwnAccountOperationException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorBody("OWN_ACCOUNT", "You cannot change your own account from here"));
+    }
+
+    @ExceptionHandler(ResetRequestNotFoundException.class)
+    public ResponseEntity<ErrorBody> handleResetRequestNotFound(ResetRequestNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorBody("REQUEST_NOT_FOUND", "That reset request no longer exists"));
+    }
+
+    @ExceptionHandler(ResetRequestNotPendingException.class)
+    public ResponseEntity<ErrorBody> handleResetRequestNotPending(ResetRequestNotPendingException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorBody("REQUEST_NOT_PENDING", "That reset request was already decided"));
     }
 
     @ExceptionHandler(SessionNotFoundException.class)

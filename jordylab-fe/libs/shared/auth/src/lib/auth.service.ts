@@ -124,6 +124,17 @@ export class AuthService {
     );
   }
 
+  /**
+   * A locked-out user asks the admin for a reset (spec 019 US6). The backend answers the same for unknown
+   * usernames, so the caller shows one generic confirmation either way.
+   */
+  async requestPasswordReset(username: string, newPassword: string): Promise<void> {
+    await this.#ensureCsrfToken();
+    await firstValueFrom(
+      this.#http.post<void>('/api/identity/auth/reset-requests', { username, newPassword }),
+    );
+  }
+
   async updateDisplayName(displayName: string): Promise<void> {
     await this.#ensureCsrfToken();
     await firstValueFrom(this.#http.patch<void>('/api/identity/me', { displayName }));

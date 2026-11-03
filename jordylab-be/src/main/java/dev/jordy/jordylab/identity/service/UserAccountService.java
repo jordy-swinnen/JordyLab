@@ -4,7 +4,9 @@ import dev.jordy.jordylab.identity.IdentityProperties;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserRole;
+import dev.jordy.jordylab.identity.domain.ResetRequestStatus;
 import dev.jordy.jordylab.identity.domain.UserStatus;
+import dev.jordy.jordylab.identity.domain.repository.PasswordResetRequestRepository;
 import dev.jordy.jordylab.identity.domain.repository.UserAccountRepository;
 import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class UserAccountService {
     private static final String USERS_SCREEN_PATH = "/settings/users";
 
     private final UserAccountRepository userAccountRepository;
+    private final PasswordResetRequestRepository passwordResetRequestRepository;
     private final PasswordEncoder passwordEncoder;
     private final IdentityProperties properties;
     private final NtfyClient ntfyClient;
@@ -134,6 +137,7 @@ public class UserAccountService {
         validatePassword(newPassword, account.getUsername());
         account.applyPassword(passwordEncoder.encode(newPassword));
         userAccountRepository.save(account);
+        passwordResetRequestRepository.deleteByUserAccountIdAndStatus(userId, ResetRequestStatus.PENDING);
     }
 
     @Transactional
@@ -153,7 +157,8 @@ public class UserAccountService {
     }
 
     public long pendingCount() {
-        return userAccountRepository.findByStatusOrderByCreatedDateDesc(UserStatus.PENDING).size();
+        return userAccountRepository.findByStatusOrderByCreatedDateDesc(UserStatus.PENDING).size()
+                + passwordResetRequestRepository.countByStatus(ResetRequestStatus.PENDING);
     }
 
     private UserAccount require(UUID userId) {

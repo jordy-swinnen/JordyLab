@@ -16,6 +16,7 @@ export class UsersStore {
   readonly #sessionsUserId = signal<string | null>(null);
   readonly #sessions = signal<UserSession[]>([]);
   readonly #sessionsLoading = signal(false);
+  readonly #resetResult = signal<{ userId: string; temporaryPassword: string } | null>(null);
 
   readonly users = this.#users.asReadonly();
   readonly loading = this.#loading.asReadonly();
@@ -25,6 +26,7 @@ export class UsersStore {
   readonly sessionsUserId = this.#sessionsUserId.asReadonly();
   readonly sessions = this.#sessions.asReadonly();
   readonly sessionsLoading = this.#sessionsLoading.asReadonly();
+  readonly resetResult = this.#resetResult.asReadonly();
 
   readonly pendingUsers = computed(() => this.#users().filter((user) => user.status === 'PENDING'));
   readonly approvedUsers = computed(() => this.#users().filter((user) => user.status === 'APPROVED'));
@@ -85,6 +87,47 @@ export class UsersStore {
 
   deletePerson(id: string): void {
     this.#runAction(id, () => this.#api.deletePerson(id), 'Failed to delete the person.');
+  }
+
+  approveResetRequest(userId: string, requestId: string): void {
+    this.#runAction(userId, () => this.#api.approveResetRequest(userId, requestId),
+      'Failed to approve the reset request.');
+  }
+
+  rejectResetRequest(userId: string, requestId: string): void {
+    this.#runAction(userId, () => this.#api.rejectResetRequest(userId, requestId),
+      'Failed to reject the reset request.');
+  }
+
+  /** Issues a one-time temporary password; the result stays until dismissed (spec 019 US6). */
+  resetPassword(id: string): void {
+    if (this.#actioningId()) {
+      return;
+    }
+    this.#actioningId.set(id);
+    this.#error.set(null);
+    this.#resetResult.set(null);
+    this.#api
+      .resetPassword(id)
+      .pipe(
+        catchError((error: unknown) => {
+          this.#error.set(this.#reasonMessage(error, 'Failed to reset the password.'));
+
+          return of<{ temporaryPassword: string } | null>(null);
+        }),
+      )
+      .subscribe((result) => {
+        this.#actioningId.set(null);
+        if (result) {
+          this.#resetResult.set({ userId: id, temporaryPassword: result.temporaryPassword });
+          this.load();
+          this.loadPendingCount();
+        }
+      });
+  }
+
+  dismissResetResult(): void {
+    this.#resetResult.set(null);
   }
 
   toggleSessions(userId: string): void {
@@ -162,6 +205,10 @@ export class UsersStore {
         return 'This user is already approved.';
       case 'USER_NOT_FOUND':
         return 'This user no longer exists.';
+      case 'REQUEST_NOT_FOUND':
+        return 'That reset request no longer exists.';
+      case 'REQUEST_NOT_PENDING':
+        return 'That reset request was already decided.';
       default:
         return fallback;
     }

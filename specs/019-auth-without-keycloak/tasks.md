@@ -214,17 +214,17 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 
 ### Tests for User Story 6 ⚠️
 
-- [ ] T074 [P] [US6] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/service/PasswordResetServiceTest.java`: hash-only storage, one `PENDING` (newer replaces), unknown usernames create nothing, approve applies + closes, reject keeps, own-change/admin-reset supersede
-- [ ] T075 [P] [US6] Extend `AuthenticationControllerTest.java` + `UserControllerTest.java`: reset-requests always-202 (`400 WEAK_PASSWORD`), decision endpoints (`404 REQUEST_NOT_FOUND`, `409 REQUEST_NOT_PENDING`), `reset-password` returns `temporaryPassword` once
-- [ ] T076 [P] [US6] Frontend specs: `forgot-password.component.spec.ts`, user-menu change-password + display-name dialogs, users-page reset-request panels + reset-password reveal
+- [X] T074 [P] [US6] Create `jordylab-be/src/test/java/dev/jordy/jordylab/identity/service/PasswordResetServiceTest.java`: hash-only storage, one `PENDING` (newer replaces), unknown usernames create nothing, approve applies + closes, reject keeps, own-change/admin-reset supersede
+- [X] T075 [P] [US6] Extend `AuthenticationControllerTest.java` + `UserControllerTest.java`: reset-requests always-202 (`400 WEAK_PASSWORD`), decision endpoints (`404 REQUEST_NOT_FOUND`, `409 REQUEST_NOT_PENDING`), `reset-password` returns `temporaryPassword` once
+- [X] T076 [P] [US6] Frontend specs: `forgot-password.component.spec.ts`, user-menu change-password + display-name dialogs, users-page reset-request panels + reset-password reveal
 
 ### Implementation for User Story 6
 
-- [ ] T077 [US6] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/PasswordResetService.java`, move `TemporaryPasswordGenerator.java` from `settings/util/` to `identity/util/`, and add the admin `reset-password` endpoint to `UserController.java`
-- [ ] T078 [US6] Add the reset-request endpoints: `POST /api/identity/auth/reset-requests` (generic 202), approve/reject decisions + `pendingResetRequest` in user views + reset requests in `pending-count` (`UserController.java`)
-- [ ] T079 [US6] Add `POST /api/identity/auth/change-password` (current required, supersedes pending, other sessions stay) — display-name `PATCH /me` already landed in US1
-- [ ] T080 [US6] Frontend: `forgot-password.component.*` + `/forgot-password` route; users-page reset-request panels + restored reset-password action; `UserMenuComponent` change-password + edit-display-name dialogs (replacing the Keycloak AIA actions)
-- [ ] T081 [US6] Document break-glass in `docs/runbook.md` (BCrypt one-liner + `UPDATE identity.user_account SET password_hash = …` against CNPG, operator-only) and rehearse it on dev per [quickstart.md](quickstart.md) §6.5
+- [X] T077 [US6] Create `jordylab-be/src/main/java/dev/jordy/jordylab/identity/service/PasswordResetService.java`, move `TemporaryPasswordGenerator.java` from `settings/util/` to `identity/util/`, and add the admin `reset-password` endpoint to `UserController.java`
+- [X] T078 [US6] Add the reset-request endpoints: `POST /api/identity/auth/reset-requests` (generic 202), approve/reject decisions + `pendingResetRequest` in user views + reset requests in `pending-count` (`UserController.java`)
+- [X] T079 [US6] Add `POST /api/identity/auth/change-password` (current required, supersedes pending, other sessions stay) — display-name `PATCH /me` already landed in US1
+- [X] T080 [US6] Frontend: `forgot-password.component.*` + `/forgot-password` route; users-page reset-request panels + restored reset-password action; `UserMenuComponent` change-password + edit-display-name dialogs (replacing the Keycloak AIA actions) *(the menu links to `/account`, which already hosts both forms from US1 — no duplicate dialogs)*
+- [X] T081 [US6] Document break-glass in `docs/runbook.md` (BCrypt one-liner + `UPDATE identity.user_account SET password_hash = …` against CNPG, operator-only) and rehearse it on dev per [quickstart.md](quickstart.md) §6.5
 
 **Checkpoint**: Every account state is recoverable without email or links.
 

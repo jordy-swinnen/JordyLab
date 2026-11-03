@@ -16,6 +16,9 @@ describe('UsersStore', () => {
   const removeApp = vi.fn<SettingsUsersApiService['removeApp']>();
   const deletePerson = vi.fn<SettingsUsersApiService['deletePerson']>();
   const getSessions = vi.fn<SettingsUsersApiService['getSessions']>();
+  const resetPassword = vi.fn<SettingsUsersApiService['resetPassword']>();
+  const approveResetRequest = vi.fn<SettingsUsersApiService['approveResetRequest']>();
+  const rejectResetRequest = vi.fn<SettingsUsersApiService['rejectResetRequest']>();
 
   let store: UsersStore;
 
@@ -35,6 +38,9 @@ describe('UsersStore', () => {
     removeApp.mockReturnValue(of(undefined));
     deletePerson.mockReturnValue(of(undefined));
     getSessions.mockReturnValue(of([]));
+    resetPassword.mockReturnValue(of({ temporaryPassword: 'temporary-password-20ch' }));
+    approveResetRequest.mockReturnValue(of(undefined));
+    rejectResetRequest.mockReturnValue(of(undefined));
 
     TestBed.configureTestingModule({
       providers: [
@@ -51,6 +57,9 @@ describe('UsersStore', () => {
             removeApp,
             deletePerson,
             getSessions,
+            resetPassword,
+            approveResetRequest,
+            rejectResetRequest,
           },
         },
       ],
@@ -99,6 +108,40 @@ describe('UsersStore', () => {
     store.toggleSessions('a1');
 
     expect(store.sessionsUserId()).toBeNull();
+  });
+
+  it('approves and rejects a reset request', () => {
+    store.approveResetRequest('a1', 'r1');
+    store.rejectResetRequest('a1', 'r1');
+
+    expect(approveResetRequest).toHaveBeenCalledWith('a1', 'r1');
+    expect(rejectResetRequest).toHaveBeenCalledWith('a1', 'r1');
+  });
+
+  it('reveals the temporary password once and clears it on dismiss', () => {
+    store.resetPassword('a1');
+
+    expect(resetPassword).toHaveBeenCalledWith('a1');
+    expect(store.resetResult()).toEqual({
+      userId: 'a1',
+      temporaryPassword: 'temporary-password-20ch',
+    });
+
+    store.dismissResetResult();
+
+    expect(store.resetResult()).toBeNull();
+  });
+
+  it('maps an already-decided reset request', () => {
+    approveResetRequest.mockReturnValue(
+      throwError(
+        () => new HttpErrorResponse({ status: 409, error: { reason: 'REQUEST_NOT_PENDING' } }),
+      ),
+    );
+
+    store.approveResetRequest('a1', 'r1');
+
+    expect(store.error()).toBe('That reset request was already decided.');
   });
 
   it('maps the last-admin rejection to a message', () => {

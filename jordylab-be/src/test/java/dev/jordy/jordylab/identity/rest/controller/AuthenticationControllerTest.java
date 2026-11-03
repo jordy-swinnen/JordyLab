@@ -4,6 +4,7 @@ import dev.jordy.jordylab.identity.AuthenticatedUser;
 import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.identity.IdentitySecurityConfiguration;
 import dev.jordy.jordylab.identity.service.IdentityUserDetailsService;
+import dev.jordy.jordylab.identity.service.MachineTokenService;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.domain.UserStatus;
@@ -11,6 +12,7 @@ import dev.jordy.jordylab.identity.domain.repository.UserAccountRepository;
 import dev.jordy.jordylab.identity.service.AccountLockedException;
 import dev.jordy.jordylab.identity.service.AccountRejectedException;
 import dev.jordy.jordylab.identity.service.InvalidCredentialsException;
+import dev.jordy.jordylab.identity.service.PasswordResetService;
 import dev.jordy.jordylab.identity.service.SessionSignInService;
 import dev.jordy.jordylab.identity.service.UserAccountService;
 import dev.jordy.jordylab.identity.service.WeakPasswordException;
@@ -35,6 +37,7 @@ import java.util.UUID;
 import static dev.jordy.jordylab.shared.config.IdentityTestAuthentication.ADMIN_ID;
 import static dev.jordy.jordylab.shared.config.IdentityTestAuthentication.ADMIN_SUBJECT;
 import static dev.jordy.jordylab.shared.config.IdentityTestAuthentication.asAdmin;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -67,10 +70,16 @@ class AuthenticationControllerTest {
     private IdentityUserDetailsService identityUserDetailsService;
 
     @MockitoBean
+    private MachineTokenService machineTokenService;
+
+    @MockitoBean
     private SessionSignInService sessionSignInService;
 
     @MockitoBean
     private UserAccountService userAccountService;
+
+    @MockitoBean
+    private PasswordResetService passwordResetService;
 
     @MockitoBean
     private CurrentUserResolver currentUserResolver;
@@ -208,6 +217,27 @@ class AuthenticationControllerTest {
                         .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"another password 12\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.reason").value("INVALID_CREDENTIALS"));
+    }
+
+    @Test
+    void aResetRequestIsAcceptedAnonymously() throws Exception {
+        mockMvc.perform(post("/api/identity/auth/reset-requests").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"jordy\",\"newPassword\":\"a much better password\"}"))
+                .andExpect(status().isAccepted());
+        verify(passwordResetService).request("jordy", "a much better password");
+    }
+
+    @Test
+    void aResetRequestWithAWeakPasswordIsRefused() throws Exception {
+        doThrow(new WeakPasswordException("The password must be at least 12 characters"))
+                .when(passwordResetService).request("jordy", "short");
+
+        mockMvc.perform(post("/api/identity/auth/reset-requests").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"jordy\",\"newPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.reason").value("WEAK_PASSWORD"));
     }
 
     private static UserAccount pendingAccount() {

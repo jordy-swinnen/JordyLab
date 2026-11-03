@@ -21,6 +21,7 @@ describe('UsersPageComponent', () => {
   const sessionsUserId = signal<string | null>(null);
   const sessions = signal<UserSession[]>([]);
   const sessionsLoading = signal(false);
+  const resetResult = signal<{ userId: string; temporaryPassword: string } | null>(null);
 
   const approve = vi.fn<UsersStore['approve']>();
   const reject = vi.fn<UsersStore['reject']>();
@@ -36,6 +37,7 @@ describe('UsersPageComponent', () => {
     sessionsUserId: sessionsUserId.asReadonly(),
     sessions: sessions.asReadonly(),
     sessionsLoading: sessionsLoading.asReadonly(),
+    resetResult: resetResult.asReadonly(),
     approve,
     reject,
     revoke,
@@ -45,6 +47,10 @@ describe('UsersPageComponent', () => {
     endSession: vi.fn(),
     endAllSessions: vi.fn(),
     deletePerson: vi.fn(),
+    resetPassword: vi.fn(),
+    approveResetRequest: vi.fn(),
+    rejectResetRequest: vi.fn(),
+    dismissResetResult: vi.fn(),
   };
 
   const guestLimit = signal<GuestChatLimit | null>(aGuestChatLimitMock());

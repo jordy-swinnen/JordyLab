@@ -9,8 +9,10 @@ import dev.jordy.jordylab.identity.rest.controller.model.CurrentUserResponse;
 import dev.jordy.jordylab.identity.rest.controller.model.LoginRequest;
 import dev.jordy.jordylab.identity.rest.controller.model.RegisterRequest;
 import dev.jordy.jordylab.identity.rest.controller.model.RegisterResponse;
+import dev.jordy.jordylab.identity.rest.controller.model.ResetRequestSubmission;
 import dev.jordy.jordylab.identity.rest.controller.model.UpdateDisplayNameRequest;
 import dev.jordy.jordylab.identity.service.InvalidCredentialsException;
+import dev.jordy.jordylab.identity.service.PasswordResetService;
 import dev.jordy.jordylab.identity.service.SessionSignInService;
 import dev.jordy.jordylab.identity.service.UserAccountService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,6 +49,7 @@ import java.util.UUID;
 public class AuthenticationController {
 
     private final SessionSignInService sessionSignInService;
+    private final PasswordResetService passwordResetService;
     private final UserAccountService userAccountService;
     private final CurrentUserResolver currentUserResolver;
     private final UserAccountRepository userAccountRepository;
@@ -97,6 +100,16 @@ public class AuthenticationController {
         userAccountService.changeOwnDisplayName(requireUserId(), request.displayName());
 
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * A locked-out user asks for a reset (spec 019 US6). The reply is the same for unknown usernames and always
+     * {@code 202}; only a weak new password is refused.
+     */
+    @PostMapping("/auth/reset-requests")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void requestPasswordReset(@RequestBody ResetRequestSubmission request) {
+        passwordResetService.request(request.username(), request.newPassword());
     }
 
     @PostMapping("/auth/change-password")

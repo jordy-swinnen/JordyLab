@@ -5,6 +5,7 @@ import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.domain.UserRole;
 import dev.jordy.jordylab.identity.domain.UserStatus;
+import dev.jordy.jordylab.identity.domain.repository.PasswordResetRequestRepository;
 import dev.jordy.jordylab.identity.domain.repository.UserAccountRepository;
 import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,10 +33,13 @@ class UserAccountServiceTest {
     private static final String ENCODED = "{bcrypt}$2a$10$encoded";
 
     private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
+    private final PasswordResetRequestRepository passwordResetRequestRepository =
+            mock(PasswordResetRequestRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final NtfyClient ntfyClient = mock(NtfyClient.class);
 
-    private final UserAccountService service = new UserAccountService(userAccountRepository, passwordEncoder,
+    private final UserAccountService service = new UserAccountService(userAccountRepository,
+            passwordResetRequestRepository, passwordEncoder,
             new IdentityProperties(
                     new IdentityProperties.Password(12),
                     new IdentityProperties.Lockout(5, 15),
@@ -241,6 +245,10 @@ class UserAccountServiceTest {
         service.changeOwnPassword(USER_ID, PASSWORD, "another password 12");
 
         assertThat(guest.getPasswordHash()).isEqualTo("{bcrypt}$2a$10$new");
+        // A pending reset request is superseded by the self-service change (spec 019 D15).
+        org.mockito.Mockito.verify(passwordResetRequestRepository)
+                .deleteByUserAccountIdAndStatus(USER_ID,
+                        dev.jordy.jordylab.identity.domain.ResetRequestStatus.PENDING);
     }
 
     @Test
