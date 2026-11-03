@@ -35,6 +35,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    # Deploys never overlap. queue: max keeps every waiting deploy: with the default (single), a newer deploy would cancel
+    # a queued manual rollback. Superseded automatic deploys are skipped by the decision instead (research D2, D5).
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+      queue: max
     permissions:
       contents: read
       packages: read

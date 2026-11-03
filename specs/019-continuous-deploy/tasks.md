@@ -111,8 +111,8 @@ its own. Setup and Foundational come first; Polish and the operational rollout c
 
 **Independent Test**: push two commits within five minutes. The second run waits; the older commit is skipped with a notice when its turn comes after a newer commit is live; the newer commit is the one live at the end (quickstart Q4).
 
-- [ ] T026 [US4] In `.github/workflows/deploy-prod.yml`, add the job-level block `concurrency: { group: deploy-production, cancel-in-progress: false, queue: max }`. Add one short comment giving the reason (with the default queue, a newer deploy would cancel a queued manual rollback; research D2).
-- [ ] T027 [US4] In `.github/workflows/deploy-prod.yml`, handle `decision=superseded`: write `::notice::` and a summary line stating that the target is older than the live commit and was not applied; the job ends green. Every cluster-changing step is already gated on `proceed` (T013, T014, T018), so this step only reports (FR-006).
+- [X] T026 [US4] In `.github/workflows/deploy-prod.yml`, add the job-level block `concurrency: { group: deploy-production, cancel-in-progress: false, queue: max }`. Add one short comment giving the reason (with the default queue, a newer deploy would cancel a queued manual rollback; research D2).
+- [X] T027 [US4] In `.github/workflows/deploy-prod.yml`, handle `decision=superseded`: write `::notice::` and a summary line stating that the target is older than the live commit and was not applied; the job ends green. Every cluster-changing step is already gated on `proceed` (T013, T014, T018), so this step only reports (FR-006).
 
 ---
 
@@ -149,8 +149,8 @@ its own. Setup and Foundational come first; Polish and the operational rollout c
 
 **Independent Test**: after a week of merges, the APK workflow has no runs started by a push (quickstart Q8).
 
-- [ ] T037 [US7] Rename `.github/workflows/release.yml` to `.github/workflows/apk-release.yml` with `git mv`, then rewrite it per `contracts/apk-release-workflow.md`: `on: workflow_dispatch` with a required `tag` input validated against `^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$`; the `verify` job keeps its rules (tag exists, on `main`, successful Build push for its commit, version code, the `minor`/`patch`/`rc` limits) but reads the input instead of `github.ref_name`; the `apk` job keeps its steps; the publish step takes its release notes from `git log --no-merges --format='- %s' <previous tag>..<tag>` (previous tag = the tag before the chosen one in `git tag --list 'v*' --sort=v:refname`), cut to 4000 bytes. Delete the `retag`, `release`, `deploy` and `publish` jobs and the `contents: write` permission. Replace the header comment.
-- [ ] T038 [P] [US7] In `.github/workflows/e2e-android.yml`, remove the `workflow_run` trigger and the job's `if:` on it; set `ref:` to `${{ github.sha }}`; update the header (on demand and on the pull-request path only, FR-023) and the comment on line 40 that names `release.yml` (now `apk-release.yml`).
+- [X] T037 [US7] Delete `.github/workflows/release.yml` (refinement: the APK job was already removed on main by spec 018-pwa-replaces-capacitor, so nothing is left to rename; the rest of the file is the tag-based deploy that FR-024 retires, and manual rollback to a release goes through the tag input of `deploy-prod.yml`).
+- [X] T038 [US7] Already done on main: spec 018-pwa-replaces-capacitor removed `e2e-android.yml` with the native app, so there is no `workflow_run` trigger left to remove.
 - [ ] T039 [P] [US7] Update the comments that name `release.yml` in `jordylab-fe/apps/jordylab-mobile/android/app/build.gradle` (lines near 10 and 24) and in `jordylab-fe/e2e/run.sh` (line 161) to `apk-release.yml`. Comments only.
 
 ---
