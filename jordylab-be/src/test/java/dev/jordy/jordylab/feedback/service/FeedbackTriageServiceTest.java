@@ -113,6 +113,20 @@ class FeedbackTriageServiceTest {
     }
 
     @Test
+    void refusesMissingOrOverlongAdminTexts() {
+        String overlong = "x".repeat(FeedbackTicket.MAX_TEXT_LENGTH + 1);
+
+        assertThatThrownBy(() -> service.updateTexts(FeedbackTicketTestBuilder.DEFAULT_ID, null, "note"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.updateTexts(FeedbackTicketTestBuilder.DEFAULT_ID, "reply", null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.updateTexts(FeedbackTicketTestBuilder.DEFAULT_ID, overlong, "note"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.updateTexts(FeedbackTicketTestBuilder.DEFAULT_ID, "reply", overlong))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void anUnknownTicketIsNotFound() {
         when(ticketRepository.findById(FeedbackTicketTestBuilder.DEFAULT_ID)).thenReturn(Optional.empty());
 

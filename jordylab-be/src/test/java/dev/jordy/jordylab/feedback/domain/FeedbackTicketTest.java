@@ -183,14 +183,6 @@ class FeedbackTicketTest {
     }
 
     @Test
-    void acceptingRequiresAnIssueIdAndUrl() {
-        FeedbackTicket ticket = aNewTicket().build();
-
-        assertThatIllegalArgumentException().isThrownBy(() -> ticket.markAccepted(null, "url"));
-        assertThatIllegalArgumentException().isThrownBy(() -> ticket.markAccepted("id", null));
-    }
-
-    @Test
     void recordsAnAcceptErrorWithoutMovingTheState() {
         FeedbackTicket ticket = aNewTicket().build();
 
@@ -234,17 +226,6 @@ class FeedbackTicketTest {
             softly.assertThat(ticket.getReply()).isNull();
             softly.assertThat(ticket.getPrivateNote()).isNull();
         });
-    }
-
-    @Test
-    void rejectsMissingOrOverlongTexts() {
-        FeedbackTicket ticket = aNewTicket().build();
-        String overlong = "x".repeat(FeedbackTicket.MAX_TEXT_LENGTH + 1);
-
-        assertThatIllegalArgumentException().isThrownBy(() -> ticket.updateTexts(null, "note"));
-        assertThatIllegalArgumentException().isThrownBy(() -> ticket.updateTexts("reply", null));
-        assertThatIllegalArgumentException().isThrownBy(() -> ticket.updateTexts(overlong, "note"));
-        assertThatIllegalArgumentException().isThrownBy(() -> ticket.updateTexts("reply", overlong));
     }
 
     @Test

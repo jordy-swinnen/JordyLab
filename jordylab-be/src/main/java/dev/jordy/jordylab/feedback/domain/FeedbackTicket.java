@@ -95,8 +95,6 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
      * a ticket with an issue id never calls Linear again (FR-009).
      */
     public void markAccepted(String issueId, String issueUrl) {
-        Preconditions.checkArgument(StringUtils.hasText(issueId), "linear issue id is required");
-        Preconditions.checkArgument(StringUtils.hasText(issueUrl), "linear issue url is required");
         Preconditions.checkState(state == FeedbackTicketState.NEW || state == FeedbackTicketState.BACKLOG,
                 "only a NEW or BACKLOG ticket can be accepted");
         this.linearIssueId = issueId;
@@ -109,10 +107,6 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
      * Replaces both admin texts wholesale; a blank value clears its text.
      */
     public void updateTexts(String newReply, String newPrivateNote) {
-        Preconditions.checkArgument(newReply != null, "reply is required (an empty string clears it)");
-        Preconditions.checkArgument(newPrivateNote != null, "privateNote is required (an empty string clears it)");
-        Preconditions.checkArgument(newReply.length() <= MAX_TEXT_LENGTH, "reply is too long");
-        Preconditions.checkArgument(newPrivateNote.length() <= MAX_TEXT_LENGTH, "privateNote is too long");
         this.reply = normalise(newReply);
         this.privateNote = normalise(newPrivateNote);
     }

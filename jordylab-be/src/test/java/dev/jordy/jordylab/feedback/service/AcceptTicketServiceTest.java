@@ -77,6 +77,18 @@ class AcceptTicketServiceTest {
     }
 
     @Test
+    void refusesAnOverlongAcceptNoteBeforeTouchingLinear() {
+        FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
+        when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
+                .thenReturn(Optional.of(ticket));
+        String overlong = "x".repeat(FeedbackTicket.MAX_TEXT_LENGTH + 1);
+
+        assertThatThrownBy(() -> service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, overlong))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(linearClient);
+    }
+
+    @Test
     void anUnknownTicketIsNotFound() {
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID)).thenReturn(Optional.empty());
 

@@ -45,10 +45,19 @@ public class FeedbackTriageService {
 
     @Transactional
     public FeedbackTicket updateTexts(UUID id, String reply, String privateNote) {
+        validateTexts(reply, privateNote);
         FeedbackTicket ticket = require(id);
         ticket.updateTexts(reply, privateNote);
 
         return ticket;
+    }
+
+    private void validateTexts(String reply, String privateNote) {
+        if (reply == null || privateNote == null
+                || reply.length() > FeedbackTicket.MAX_TEXT_LENGTH
+                || privateNote.length() > FeedbackTicket.MAX_TEXT_LENGTH) {
+            throw new IllegalArgumentException("reply and privateNote are required and bounded by the text limit");
+        }
     }
 
     private FeedbackTicket require(UUID id) {

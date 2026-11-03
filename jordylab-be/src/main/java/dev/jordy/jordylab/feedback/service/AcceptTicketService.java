@@ -42,6 +42,9 @@ public class AcceptTicketService {
             throw new IllegalStateException("only a NEW or BACKLOG ticket can be accepted");
         }
         if (privateNote != null) {
+            if (privateNote.length() > FeedbackTicket.MAX_TEXT_LENGTH) {
+                throw new IllegalArgumentException("privateNote is too long");
+            }
             ticket.updateTexts(ticket.getReply() == null ? "" : ticket.getReply(), privateNote);
         }
         try {
