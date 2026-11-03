@@ -144,8 +144,8 @@ change, no approval is asked, and the run log names the restored release.
 
 ### User Story 4 - Deploys never overlap and never go backwards (Priority: P2)
 
-As Jordy, when two merges land close together, the deploys run one at a time, only the newest waiting one runs, and a
-build of an older commit that finishes late cannot replace a newer commit that is already live.
+As Jordy, when two merges land close together, the deploys run one at a time, in the order they were queued, and a build
+of an older commit that finishes late cannot replace a newer commit that is already live.
 
 **Why this priority**: without it, a slow older build can silently undo a newer fix.
 
@@ -154,7 +154,8 @@ no older commit was deployed after it.
 
 **Acceptance Scenarios**:
 
-1. **Given** a deploy is running, **When** two more deploys are queued, **Then** only the newer of the two runs next.
+1. **Given** a deploy is running, **When** two more deploys are queued, **Then** they run one after the other, in the order
+   they were queued, and neither is dropped.
 2. **Given** the newest commit is live, **When** the Build of an older commit finishes, **Then** its deploy is skipped
    and the log says it was superseded.
 3. **Given** a manual deploy of an older commit (a rollback), **When** it is requested, **Then** it is allowed, because it
@@ -256,7 +257,8 @@ finds nothing.
 
 ### Edge Cases
 
-- **Two merges close together**: the older waiting deploy is replaced by the newer one (FR-005).
+- **Two merges close together**: both deploys run in order; the older one is skipped if a newer commit is already live
+  when its turn comes (FR-005, FR-006).
 - **An older Build finishes after a newer deploy is live**: its deploy is skipped and logged as superseded (FR-006).
 - **A Build for a commit whose images were never pushed**: no deploy starts, because `build-and-push` must succeed (FR-004).
 - **A manual run with a sha or tag that has no images**: rejected before the cluster is touched (FR-014).
@@ -267,6 +269,10 @@ finds nothing.
 - **No previously live commit** (the first deploy after a cluster rebuild): nothing is rolled back; the run fails and is
   reported (FR-012).
 - **The rollback itself fails**: the run fails and says so; the emergency path in the runbook (§11) applies (FR-013).
+- **A rollback is temporary**: the next green merge deploys the newest commit again. The revert of the bad commit is what
+  makes the rollback permanent.
+- **A rollback reverts secrets**: it applies the previous commit's secrets file, so a secret value changed after that
+  commit goes back to its old value. The run warns when the secrets file differs; for a secret rotation, roll forward.
 - **A docs-only merge**: it still deploys and restarts the three pods. Accepted (see Assumptions).
 - **A deploy while a manual deploy is running**: it queues like any other (FR-005, FR-007).
 - **Restart during a scheduled background job**: the job is interrupted and catches up as FR-021 describes.
@@ -290,8 +296,8 @@ finds nothing.
 
 **Ordering and concurrency**
 
-- **FR-005**: Production deploys MUST NOT overlap. At most one runs at a time, and at most one waits behind it. A newer
-  waiting deploy replaces an older waiting one.
+- **FR-005**: Production deploys MUST NOT overlap. At most one runs at a time. Queued deploys run in the order they were
+  queued, and a later deploy never drops an earlier queued one, so a queued manual rollback always runs.
 - **FR-006**: An automatic deploy MUST NOT replace a live commit that is newer than its own commit on `main`. Such a deploy
   is skipped, and the log says it was superseded.
 - **FR-007**: Manual deploys MUST follow the same single-queue rule as automatic ones.
@@ -351,8 +357,13 @@ finds nothing.
 **Documentation**
 
 - **FR-025**: The following MUST describe the new flow in the same change: `docs/runbook.md` (§9 for the environment, §10,
-  §11 and §20), the root `AGENTS.md` (Infrastructure section), the `jordylab-ops` skill, and the `jordylab-devops` agent.
+  §11 and §20), the root `AGENTS.md` (Infrastructure section), the `jordylab-ops` skill, the `jordylab-devops` agent, and
+  `docs/learn/10-cicd.md`.
 - **FR-026**: The merge-to-live time of the first five automatic deploys MUST be recorded in `docs/runbook.md`.
+- **FR-027**: An automatic deploy MUST be pausable without a code change, through a repository variable (`AUTO_DEPLOY`).
+  Manual runs are not affected by the pause.
+- **FR-028**: A manual run MUST accept a dry-run mode that validates the target, reads the live state and the newest backup,
+  decides, runs a server-side dry run of the apply and the smoke checks, and changes nothing in the cluster.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -366,8 +377,8 @@ finds nothing.
 
 - **SC-001**: A merged change is live without any click. The time from merge to live is measured over the first five
   automatic deploys and recorded in the runbook. The target is under 30 minutes.
-- **SC-002**: In a drill with a deliberately broken image, the previous commit is serving again within 10 minutes of the
-  failed readiness check, the run is red, and the failure is reported (FR-011).
+- **SC-002**: In a drill with a deliberately broken image, the previous commit is serving again within 15 minutes of the
+  start of the failed deploy, the run is red, and the failure is reported (FR-011).
 - **SC-003**: A manual rollback to a chosen commit or tag changes only that commit's images and manifests, which the deploy
   log shows.
 - **SC-004**: Two merges within five minutes leave the newer commit live, and no older commit is deployed after it.
@@ -392,6 +403,11 @@ finds nothing.
   found no server-side session store configured, so this is checked, not assumed: the first automatic deploy records
   whether users stay signed in. The answer decides whether `auth-without-keycloak` must come first.
 - Ntfy stays in-cluster (spec 007 FR-013) and this feature does not use it (FR-011).
+- The backend uses the `Recreate` strategy, so each deploy stops the old pod before the new one starts. Each deploy has an
+  outage equal to the new pod's start-up time (Flyway included), measured with SC-001. A failed rollout keeps the backend
+  down until its timeout and the rollback finish.
+- Keycloak is redeployed on every deploy as well, so its restart is part of each deploy's outage.
+- Automatic deploys stay paused (FR-027) until a dry run (FR-028) has passed against production.
 - The smoke check uses the public home page and an unauthenticated `/api` call. It does not use `/actuator/health`, which
   the public gateway does not route.
 - Release tags stay as history. The APK pipeline may disappear entirely if `pwa-replaces-capacitor` proceeds; FR-022 and
@@ -405,7 +421,7 @@ finds nothing.
 - A staging environment (the project has exactly `local` and `prod`).
 - Canary or blue-green rollouts on the single node.
 - Changes to the build and test stages themselves.
-- Feature flags.
+- Product feature flags. The deploy pause switch in FR-027 is an operational kill switch, not a feature flag.
 - Deciding whether the APK pipeline survives (`pwa-replaces-capacitor` decides that).
 
 ## Dependencies

@@ -37,6 +37,8 @@
   items pass. The corrections to the draft (the root `AGENTS.md` claim, the reusability of `deploy-prod.yml`, the missing
   commit concurrency group, the unrouted health endpoint, and the 33 release-candidate tags against the 19 in the issue)
   are recorded in the spec's Background. The draft's session claim is recorded as unverified in Assumptions.
+- Planning (2026-11-03): the plan changed the spec in eight places (plan, "Spec changes from planning", S1–S8). FR-027 (pause
+  switch) and FR-028 (dry run) were added. The checklist still passes; every FR referenced in the planning artefacts is defined.
 - Owner action before the first automatic deploy (not a spec gap, a settings change): remove the required reviewer from
   the `production` environment. See Assumptions.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
