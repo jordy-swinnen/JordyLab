@@ -431,7 +431,7 @@ signed in (sign in before the deploy, reload after it).
 
 | Deploy (commit) | Merge to live | Backend outage | Users stayed signed in | Notes |
 |-----------------|---------------|----------------|------------------------|-------|
-| 1 | | | | |
+| 1 (`09f8f23`, run 41640471104) | 13:00:16 → 13:15:50 UTC: 15 min 34 s (Build 13:00–13:13, deploy job 2 min 3 s) | about 74 s: the rollout step; the old pod stops when the new one is applied (`Recreate`) | not measured: needs a signed-in browser session | all three images `sha-09f8f23`; `/actuator/info` reports the merge commit; smoke checks passed |
 | 2 | | | | |
 | 3 | | | | |
 | 4 | | | | |

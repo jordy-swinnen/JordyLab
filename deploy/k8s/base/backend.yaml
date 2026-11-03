@@ -51,7 +51,7 @@ spec:
                 name: jordylab-secrets
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /actuator/health/does-not-exist
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10
