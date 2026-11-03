@@ -1,6 +1,6 @@
 # Tasks: Production on Docker Compose
 
-**Input**: Design documents from `/specs/017-compose-deployment/`
+**Input**: Design documents from `/specs/019-compose-deployment/`
 
 **Prerequisites**: [plan.md](plan.md) (required), [spec.md](spec.md) (required), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 
@@ -19,14 +19,14 @@
 **Purpose**: write the Compose stack and its scripts on this Mac; nothing touches the VPS.
 
 - [x] T001 Postgres base image pinned by digest and pgBackRest pinned to 2.60.0 in `deploy/compose/postgres/Containerfile`, with the config in `deploy/compose/pgbackrest/pgbackrest.conf` (merged in PR #183 and PR #186)
-- [x] T002 Local point-in-time restore and backup checks recorded in `specs/017-compose-deployment/quickstart.md` (step 1, local analogue, 2026-11-02)
-- [ ] T003 [P] Write `deploy/compose/env/prod.env.example` with every variable name from `specs/017-compose-deployment/contracts/env-contract.md`, values empty, no secret values
+- [x] T002 Local point-in-time restore and backup checks recorded in `specs/019-compose-deployment/quickstart.md` (step 1, local analogue, 2026-11-02)
+- [ ] T003 [P] Write `deploy/compose/env/prod.env.example` with every variable name from `specs/019-compose-deployment/contracts/env-contract.md`, values empty, no secret values
 - [ ] T004 [P] Write `deploy/compose/compose.yaml` with six services (caddy, frontend, backend, keycloak, ntfy, postgres), `restart: unless-stopped`, health checks (backend with a 150 s start period), log limits of 10 MB by 3 files, memory limits from research R7, named volumes `postgres-data`, `artwork`, `ntfy-cache`, `caddy-data`, network `172.28.0.0/16`, and only caddy publishing 80 and 443
-- [ ] T005 [P] Write `deploy/compose/Caddyfile` with the matchers in `specs/017-compose-deployment/contracts/public-routes.md` (bare path and `/*` for prefix rows, `handle_path` for `/ntfy`, HTTP to HTTPS redirect, ACME e-mail from the existing cert-manager issuer)
-- [ ] T006 [P] Write `deploy/compose/host/jordylab-backup-full.service` and `deploy/compose/host/jordylab-backup-full.timer` for the Sunday 04:00 UTC full backup, per `specs/017-compose-deployment/contracts/backup-contract.md`
+- [ ] T005 [P] Write `deploy/compose/Caddyfile` with the matchers in `specs/019-compose-deployment/contracts/public-routes.md` (bare path and `/*` for prefix rows, `handle_path` for `/ntfy`, HTTP to HTTPS redirect, ACME e-mail from the existing cert-manager issuer)
+- [ ] T006 [P] Write `deploy/compose/host/jordylab-backup-full.service` and `deploy/compose/host/jordylab-backup-full.timer` for the Sunday 04:00 UTC full backup, per `specs/019-compose-deployment/contracts/backup-contract.md`
 - [ ] T007 [P] Write `deploy/compose/host/jordylab-backup-diff.service` and `deploy/compose/host/jordylab-backup-diff.timer` for the Monday to Saturday 03:00 UTC differential backup
 - [ ] T008 [P] Write `deploy/compose/scripts/render-env.sh`: decrypts `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_AGE_KEY` and writes `prod.env` to standard output, failing on a missing key; `set -euo pipefail`; never prints a value
-- [ ] T009 [P] Write `deploy/compose/scripts/deploy-release.sh` with the `deploy <tag>` and `rollback` modes in `specs/017-compose-deployment/contracts/deploy-workflow.md`, `set -euo pipefail`
+- [ ] T009 [P] Write `deploy/compose/scripts/deploy-release.sh` with the `deploy <tag>` and `rollback` modes in `specs/019-compose-deployment/contracts/deploy-workflow.md`, `set -euo pipefail`
 - [ ] T010 Validate the Compose file: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q`; only `caddy` may publish ports (quickstart step 2). Depends on T003, T004
 - [ ] T011 [P] Validate the Caddyfile: `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Depends on T005
 - [ ] T012 [P] Lint the scripts: `shellcheck deploy/compose/scripts/render-env.sh deploy/compose/scripts/deploy-release.sh`. Depends on T008, T009
@@ -104,7 +104,7 @@
 
 **Independent Test**: deploy a release candidate, deploy an earlier tag, and force a failing deploy. Each finishes with the state file naming the live tag (quickstart step 9).
 
-- [ ] T045 [US3] Write `.github/workflows/deploy-prod-compose.yml` with steps 1 to 8 of `specs/017-compose-deployment/contracts/deploy-workflow.md`. It is not wired into `release.yml` until T059. Depends on T009
+- [ ] T045 [US3] Write `.github/workflows/deploy-prod-compose.yml` with steps 1 to 8 of `specs/019-compose-deployment/contracts/deploy-workflow.md`. It is not wired into `release.yml` until T059. Depends on T009
 - [ ] T046 [US3] **OWNER APPROVAL**: store the deploy key as the production secret (see T015) and check it with `gh secret list --env production --repo jordy-swinnen/JordyLab`. Depends on T015, T045
 - [ ] T047 [US3] **OWNER APPROVAL**: run the workflow by hand with a release candidate tag: `gh workflow run deploy-prod-compose.yml --repo jordy-swinnen/JordyLab -f version=<rc tag>`, then approve it in the production environment. Depends on T034, T046
 - [ ] T048 [US3] Check the state file on the host: `/opt/jordylab/state/current-release` names the new tag, and the external check passes (quickstart step 9, first check). Depends on T047

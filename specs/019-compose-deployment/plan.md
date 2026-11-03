@@ -2,7 +2,7 @@
 
 **Branch**: `jordyswinnen/jor-31-production-on-docker-compose-instead-of-k3s` | **Date**: 2026-11-02 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/017-compose-deployment/spec.md`
+**Input**: Feature specification from `specs/019-compose-deployment/spec.md`
 
 ## Summary
 
@@ -136,7 +136,7 @@ Named volumes: `postgres-data`, `artwork`, `ntfy-cache`, `caddy-data`. One Compo
 ### Documentation (this feature)
 
 ```text
-specs/017-compose-deployment/
+specs/019-compose-deployment/
 ├── spec.md
 ├── plan.md              # this file
 ├── research.md          # Phase 0 output
