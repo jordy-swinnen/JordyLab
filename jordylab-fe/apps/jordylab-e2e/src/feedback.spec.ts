@@ -11,7 +11,7 @@ test.describe('Guest feedback and admin triage', () => {
 
     // The guest's Settings area holds exactly one tab: Feedback.
     await guestPage.goto('/settings');
-    await expect(guestPage.getByRole('heading', { name: 'Feedback' })).toBeVisible();
+    await expect(guestPage.getByRole('heading', { name: 'Feedback', exact: true })).toBeVisible();
     await expect(guestPage.getByRole('link', { name: 'Users' })).toHaveCount(0);
 
     const title = `E2E feedback ${Date.now().toString(36)}`;
