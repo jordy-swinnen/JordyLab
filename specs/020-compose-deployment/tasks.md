@@ -20,16 +20,16 @@
 
 - [x] T001 Postgres base image pinned by digest and pgBackRest pinned to 2.60.0 in `deploy/compose/postgres/Containerfile`, with the config in `deploy/compose/pgbackrest/pgbackrest.conf` (merged in PR #183 and PR #186)
 - [x] T002 Local point-in-time restore and backup checks recorded in `specs/020-compose-deployment/quickstart.md` (step 1, local analogue, 2026-11-02)
-- [ ] T003 [P] Write `deploy/compose/env/prod.env.example` with every variable name from `specs/020-compose-deployment/contracts/env-contract.md`, values empty, no secret values
-- [ ] T004 [P] Write `deploy/compose/compose.yaml` with six services (caddy, frontend, backend, keycloak, ntfy, postgres), `restart: unless-stopped`, health checks (backend with a 150 s start period), log limits of 10 MB by 3 files, memory limits from research R7, named volumes `postgres-data`, `artwork`, `ntfy-cache`, `caddy-data`, network `172.28.0.0/16`, and only caddy publishing 80 and 443
-- [ ] T005 [P] Write `deploy/compose/Caddyfile` with the matchers in `specs/020-compose-deployment/contracts/public-routes.md` (bare path and `/*` for prefix rows, `handle_path` for `/ntfy`, HTTP to HTTPS redirect, ACME e-mail from the existing cert-manager issuer)
-- [ ] T006 [P] Write `deploy/compose/host/jordylab-backup-full.service` and `deploy/compose/host/jordylab-backup-full.timer` for the Sunday 04:00 UTC full backup, per `specs/020-compose-deployment/contracts/backup-contract.md`
-- [ ] T007 [P] Write `deploy/compose/host/jordylab-backup-diff.service` and `deploy/compose/host/jordylab-backup-diff.timer` for the Monday to Saturday 03:00 UTC differential backup
-- [ ] T008 [P] Write `deploy/compose/scripts/render-env.sh`: decrypts `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_AGE_KEY` and writes `prod.env` to standard output, failing on a missing key; `set -euo pipefail`; never prints a value
-- [ ] T009 [P] Write `deploy/compose/scripts/deploy-release.sh` with the `deploy <tag>` and `rollback` modes in `specs/020-compose-deployment/contracts/deploy-workflow.md`, `set -euo pipefail`
-- [ ] T010 Validate the Compose file: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q`; only `caddy` may publish ports (quickstart step 2). Depends on T003, T004
-- [ ] T011 [P] Validate the Caddyfile: `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Depends on T005
-- [ ] T012 [P] Lint the scripts: `shellcheck deploy/compose/scripts/render-env.sh deploy/compose/scripts/deploy-release.sh`. Depends on T008, T009
+- [x] T003 [P] Write `deploy/compose/env/prod.env.example` with every variable name from `specs/020-compose-deployment/contracts/env-contract.md`, values empty, no secret values
+- [x] T004 [P] Write `deploy/compose/compose.yaml` with six services (caddy, frontend, backend, keycloak, ntfy, postgres), `restart: unless-stopped`, health checks (backend with a 150 s start period), log limits of 10 MB by 3 files, memory limits from research R7, named volumes `postgres-data`, `artwork`, `ntfy-cache`, `caddy-data`, network `172.28.0.0/16`, and only caddy publishing 80 and 443
+- [x] T005 [P] Write `deploy/compose/Caddyfile` with the matchers in `specs/020-compose-deployment/contracts/public-routes.md` (bare path and `/*` for prefix rows, `handle_path` for `/ntfy`, HTTP to HTTPS redirect, ACME e-mail from the existing cert-manager issuer)
+- [x] T006 [P] Write `deploy/compose/host/jordylab-backup-full.service` and `deploy/compose/host/jordylab-backup-full.timer` for the Sunday 04:00 UTC full backup, per `specs/020-compose-deployment/contracts/backup-contract.md`
+- [x] T007 [P] Write `deploy/compose/host/jordylab-backup-diff.service` and `deploy/compose/host/jordylab-backup-diff.timer` for the Monday to Saturday 03:00 UTC differential backup
+- [x] T008 [P] Write `deploy/compose/scripts/render-env.sh`: decrypts `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_AGE_KEY` and writes `prod.env` to standard output, failing on a missing key; `set -euo pipefail`; never prints a value
+- [x] T009 [P] Write `deploy/compose/scripts/deploy-release.sh` with the `deploy <tag>` and `rollback` modes in `specs/020-compose-deployment/contracts/deploy-workflow.md`, `set -euo pipefail`
+- [x] T010 Validate the Compose file: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q`; only `caddy` may publish ports (quickstart step 2). Depends on T003, T004
+- [x] T011 [P] Validate the Caddyfile: `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Depends on T005
+- [x] T012 [P] Lint the scripts: `shellcheck deploy/compose/scripts/render-env.sh deploy/compose/scripts/deploy-release.sh`. Depends on T008, T009
 
 **Checkpoint**: the stack and scripts validate locally with dummy values.
 
@@ -41,13 +41,13 @@
 
 - [ ] T013 **OWNER APPROVAL**: add `POSTGRES_SUPERUSER_PASSWORD` to the SOPS file in IntelliJ with `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml`. The agent never opens or writes the value
 - [ ] T014 **OWNER APPROVAL**: in the Tailscale admin console (not a repo file), grant `tag:ci` `tcp:22` to `jordylab-vps`, in addition to the existing `tcp:6443`
-- [ ] T015 **OWNER APPROVAL**: create a dedicated deploy user on the host and its SSH key; store the private key as the production environment secret with `gh secret set DEPLOY_SSH_KEY --env production --repo jordy-swinnen/JordyLab`, piped and never echoed
-- [ ] T016 **OWNER APPROVAL**: install Docker Engine and the Compose plugin on the host (`ssh ubuntu@57.129.163.110`). Publish no ports; k3s keeps running
+- [x] T015 **OWNER APPROVAL**: create a dedicated deploy user on the host and its SSH key; store the private key as the production environment secret with `gh secret set DEPLOY_SSH_KEY --env production --repo jordy-swinnen/JordyLab`, piped and never echoed
+- [x] T016 **OWNER APPROVAL**: install Docker Engine and the Compose plugin on the host (`ssh ubuntu@57.129.163.110`). Publish no ports; k3s keeps running
 - [ ] T017 Run the external port scan before cutover (FR-014), with the same command as T054: `nmap -Pn -p- 57.129.163.110` from outside the tailnet. Record every open port in the quickstart log (quickstart step 10, before cutover), including the two extra ports found earlier (31460 and 32531), so T054 can show whether they are gone. Depends on T016
-- [ ] T018 **OWNER APPROVAL**: create `/opt/jordylab/env` (mode 700), `/opt/jordylab/state` and `/opt/jordylab/staging` on the host, owned by the deploy user
+- [x] T018 **OWNER APPROVAL**: create `/opt/jordylab/env` (mode 700), `/opt/jordylab/state` and `/opt/jordylab/staging` on the host, owned by the deploy user
 - [ ] T019 Record host and pod memory before the window: `kubectl -n jordylab top pods` and `free -m` on the host (quickstart step 13, before)
 - [ ] T020 Check the timer calendar on the host: `systemd-analyze calendar 'Mon..Sat *-*-* 03:00:00'` and `systemd-analyze calendar 'Sun *-*-* 04:00:00'`. Depends on T006, T007
-- [ ] T021 **OWNER APPROVAL**: copy the artwork volume to `/opt/jordylab/staging/artwork` while k3s still runs. Find its host path with `kubectl -n jordylab get pvc gamecatalog-artwork -o jsonpath='{.spec.volumeName}'`, then copy from the k3s storage folder on the host
+- [x] T021 **OWNER APPROVAL**: copy the artwork volume to `/opt/jordylab/staging/artwork` while k3s still runs. Find its host path with `kubectl -n jordylab get pvc gamecatalog-artwork -o jsonpath='{.spec.volumeName}'`, then copy from the k3s storage folder on the host
 - [ ] T022 **OWNER APPROVAL**: run the old-chain point-in-time restore drill with the kept CloudNativePG manifests, to a time inside the 30-day window, then delete the drill cluster and its volume (quickstart step 1a, plan step 6a)
 - [ ] T023 Tailnet SSH check: from the owner's Mac and from a CI test job, `ssh` to the host's tailnet address works (quickstart step 11, first half). Depends on T014, T015
 - [ ] T024 Phase A exit check: T002, T010, T016, T017, T021, T022 and T023 are done, and the results are recorded in the quickstart log. Depends on T002, T010, T016, T017, T021, T022, T023
