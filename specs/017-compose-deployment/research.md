@@ -25,7 +25,7 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
   | `/ntfy*` | `ntfy` | the prefix is removed before forwarding (Gateway `ReplacePrefixMatch: /`) |
 
   Caddy uses `handle_path /ntfy/*` to strip the prefix. HTTP redirects to HTTPS by default.
-- **Rationale**: the same URLs keep the mobile app's links, the Keycloak redirect URIs and the Android app-links file working (spec FR-002).
+- **Rationale**: the same URLs keep the Keycloak redirect URIs, the notification path and the Android app-links file working (spec FR-002).
 - **Certificates**: Caddy obtains a new certificate for `jordylab.be` at cutover, through the HTTP-01 challenge on port 80. The existing cert-manager secret is not reused, because copying a private key is an unnecessary secret move. Let's Encrypt limits duplicate certificates, and one new issuance is well within them. Certificate data lives in a named volume, so renewal survives restarts (FR-003).
 - **Alternatives considered**: Traefik with its Docker provider (rejected by the owner's decision, Caddy); copying the cert-manager key (rejected: unnecessary secret handling).
 
@@ -58,7 +58,7 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
 - **Schedule (FR-004)**: a weekly full backup and differential backups Monday to Saturday together satisfy "daily and weekly base backups". Both run from host systemd timers (R13).
 - **Restore**: point-in-time restore uses `pgbackrest --stanza=jordylab --type=time --target=<UTC time> restore` against an empty data directory.
 - **Alternatives considered**: WAL-G (rejected by the owner's decision, pgBackRest); keeping the Barman plugin outside Kubernetes (rejected: the plugin needs the CNPG operator).
-- **To confirm during the build** (not decided here): that the `pgbackrest` package exists for Debian trixie at the version the build pulls. The restore test in quickstart covers the result either way.
+- **Confirmed locally on 2026-11-02**: the `pgbackrest` package installs on the `pgvector/pgvector:pg16` base (pgBackRest 2.60.0, PostgreSQL 16.15, Debian bookworm). The S3 connection is not yet confirmed; see the quickstart log.
 
 ## R4. Ownership and dump format at cutover
 
@@ -80,7 +80,7 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
 
 ## R7. Healthchecks, restarts, logs and memory
 
-- **Health checks**: Postgres `pg_isready`; backend `/actuator/health/readiness` (its probe today); Keycloak `http://localhost:9000/health/ready` (the management port, its probe today); ntfy `/v1/health`; frontend `curl -f http://localhost:8080/`; Caddy its admin endpoint. `docker compose up -d --wait` waits for these.
+- **Health checks**: Postgres `pg_isready`; backend `/actuator/health/readiness` (its probe today); Keycloak `http://localhost:9000/health/ready` (the management port, its probe today); ntfy `/v1/health`; frontend `curl -f http://localhost:8080/`; Caddy its admin endpoint. `docker compose up -d --wait` waits for these. The backend has a start period of 150 s, matching the startup probe on main (JOR-76: a cold start can take about 70 s), so failures in that window do not count.
 - **Restart**: `restart: unless-stopped` on every service, and Docker enabled at boot (FR-009).
 - **Logs**: `json-file` driver with `max-size: 10m` and `max-file: 3` per container (FR-010).
 - **Memory limits** (from today's manifests, `deploy/k8s/base/`): backend 1536 MiB, Keycloak 1024 MiB, Postgres 1024 MiB, ntfy 128 MiB, frontend 64 MiB, Caddy 128 MiB. The limits total 3904 MiB, under the 8 GB host with room for the operating system and Docker. Current k3s use is measured before cutover (SC-007).
@@ -93,8 +93,8 @@ This file resolves the technical choices the plan needs. The owner's Fixed Decis
 
 ## R9. Volumes and data
 
-- **Decision**: named volumes for `postgres-data`, `artwork`, `mobile-releases`, `ntfy-cache` and `caddy-data`, and a host folder for the pgBackRest spool. Data moves at cutover by a `tar` stream from the k3s volumes into the new volumes, after a first bulk copy before the window (only the delta moves inside the window).
-- **Rationale**: the same data shape as today's PVCs. The mobile release files are about 291 MB and the artwork folder is about 4 KB (measured 2026-11-02), so the copy is small.
+- **Decision**: named volumes for `postgres-data`, `artwork`, `ntfy-cache` and `caddy-data`, and a host folder for the pgBackRest spool. Data moves at cutover by a `tar` stream from the k3s volumes into the new volumes, after a first bulk copy before the window (only the delta moves inside the window).
+- **Rationale**: the same data shape as today's PVCs. The artwork folder is about 4 KB (measured 2026-11-02), so the copy is small. The APK volume was removed on main with the native app (spec 018), so it is not copied.
 
 ## R10. Cutover order (summary; full steps in plan.md)
 

@@ -33,7 +33,7 @@ Proves: every service starts healthy and the dependency order holds (FR-009).
 
 - `docker compose --env-file /opt/jordylab/env/prod.env up -d --wait`
 - `docker compose ps`: every service `healthy` (or `running` for ntfy and Caddy if they have no check).
-- Pass: exit code 0 within the wait timeout.
+- Pass: exit code 0 within the wait timeout. The backend's health check waits out its 150 s start period first.
 
 ## 4. Public routes
 
@@ -52,7 +52,6 @@ Proves: existing accounts and data work after cutover (User Story 1).
 
 - Sign in at `https://jordylab.be` as an existing user. Pass: the user reaches their own data.
 - Open a game with artwork. Pass: the artwork loads.
-- Download a mobile release from the public link. Pass: the file matches its size before the move.
 - Row counts for the `jordylab` database against the final dump. Pass: identical.
 
 ## 6. Point-in-time restore
@@ -127,4 +126,7 @@ Proves: the downtime and the window length are recorded (SC-007).
 | Step | Date (UTC) | Commit | Result | Notes |
 |------|------------|--------|--------|-------|
 | 1 | 2026-11-02 | `2627044` | the Mac copy restored, row counts identical (122 tables), volume archive listed | this was the 2026-11-02 copy with no owners |
-| 2–14 | | | not yet run | |
+| 1 (local analogue) | 2026-11-02 (UTC) | branch tip | pgBackRest 2.60.0 installs on `pgvector/pgvector:pg16` (PostgreSQL 16.15). On a local repository: stanza created, `check` passes, full and differential backups run, and a point-in-time restore to a time between two batches returns batches A and B (20 rows) and no batch C. The restored copy is not in recovery. | The S3 repository was not exercised. With placeholder keys, pgBackRest reached `s3.gra.io.cloud.ovh.net`, so the config parses, but TLS verification failed (self-signed certificate in the chain, from this Mac's network). Verify the S3 connection on the host. |
+| 2 (local) | 2026-11-02 (UTC) | branch tip | not run: `deploy/compose/compose.yaml` does not exist yet | |
+| 1a, 6a (old chain) | | | not run: needs the owner's yes, since it creates a drill cluster on the live cluster | |
+| 3–14 | | | not yet run | |

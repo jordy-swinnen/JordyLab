@@ -19,9 +19,7 @@ Sources:
 | `KEYCLOAK_INTERNAL_URL` | `http://keycloak:8080/auth` | no (the service name is the same) |
 | `KEYCLOAK_BACKEND_SECRET` | `jordylab-secrets` → `KEYCLOAK_BACKEND_CLIENT_SECRET` | no |
 | `JORDYLAB_CORS_ALLOWED_ORIGINS` | `https://jordylab.be,https://localhost` | no |
-| `MOBILE_PRODUCTION_DOMAIN` | `jordylab.be` | no |
-| `MOBILE_APPLICATION_ID` | `be.jordylab.app` | no |
-| `MOBILE_RELEASE_SIGNING_CERT_SHA256` | the public certificate hash in the overlay | no |
+| `JORDYLAB_APP_BASE_URL` | `https://jordylab.be` | **new on main**: literal in `backend-config` |
 | `NTFY_BASE_URL` | `https://jordylab.be/ntfy` | no |
 | `NTFY_TOPIC` | `jordylab-secrets` → `NTFY_TOPIC` | no |
 | `LANGFUSE_ENVIRONMENT` | `production` | no |
@@ -40,7 +38,6 @@ Sources:
 | `KC_DB_PASSWORD` | `jordylab-db-keycloak` → `password` | no |
 | `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` | `jordylab-secrets` (`KEYCLOAK_ADMIN_BOOTSTRAP_*`) | no (first boot only) |
 | `KEYCLOAK_BACKEND_CLIENT_SECRET` | `jordylab-secrets` | no |
-| `MOBILE_RELEASE_CI_CLIENT_SECRET` | `jordylab-secrets` | no |
 | `KC_HOSTNAME` | `https://jordylab.be/auth` | no |
 | `KC_HTTP_RELATIVE_PATH` | `/auth` (must match the image) | no |
 | `KC_PROXY_HEADERS` | `xforwarded` | no |

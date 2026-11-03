@@ -10,7 +10,7 @@ A copy of production that can be restored.
 
 | Field | Meaning |
 |-------|---------|
-| `kind` | `mac-dump` (encrypted `pg_dump`), `mac-volumes` (encrypted tar of artwork and APKs), `repo-full` or `repo-diff` (pgBackRest backups), `repo-wal` (archived change logs) |
+| `kind` | `mac-dump` (encrypted `pg_dump`), `mac-volumes` (encrypted tar of the artwork volume), `repo-full` or `repo-diff` (pgBackRest backups), `repo-wal` (archived change logs) |
 | `taken_at` | UTC time the copy was taken |
 | `contents` | `database`, `volumes` or `both` |
 | `format_owners` | whether ownership is included (`yes` for the cutover dump, `no` for the 2026-11-02 Mac copy) |
