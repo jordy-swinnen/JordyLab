@@ -3,13 +3,19 @@
 **Status**: Draft, direction leaning (Jordy: "maybe we should"; extracted apps will have their own separate accounts)
 **Target path**: `specs/_drafts/auth-without-keycloak/spec.md`
 **Amends**: the settings spec (users, AI models), the game catalog scanner spec (device-code login), the OVH k3s deployment spec (Keycloak in prod)
-**Depends on**: `pwa-replaces-capacitor` first (the Capacitor WebView origin complicates cookie sessions). Interacts with `continuous-deploy` (sessions must survive deploys).
+**Builds on**: `pwa-replaces-capacitor` (spec 018, done — the installable web app runs on the site's own origin and the native app, with its in-app biometric unlock, is gone). Interacts with `continuous-deploy` (sessions must survive deploys).
 
 > Written without repo access. The Keycloak inventory comes from `jordylab-infrastructure-guide.md`. Never hand-roll password storage: this draft uses no passwords at all.
 
 ## Problem
 
 Keycloak is a second JVM, a realm file, a schema in the shared Postgres, a public `/auth` route and four clients to maintain for a handful of users. Extracted apps will have their own accounts, so a shared identity provider buys no cross-app sign-in. Spring Security 7 (shipped with Boot 4) includes passkey (WebAuthn) support with JDBC persistence and one-time-token login, which cover this audience.
+
+> **Owner expectation (recorded 2026-11-03):** the native app's "Unlock with fingerprint" was removed with the
+> PWA replacement (spec 018) — an installed web app cannot ask the OS for a biometric check itself. The owner
+> expects fingerprint sign-in to come back with this feature: signing in uses the phone's fingerprint or face
+> through a passkey. A per-launch biometric gate is not a PWA capability; the browser session and the phone's
+> own lock cover that.
 
 ## What exists today to replace
 
