@@ -13,6 +13,19 @@ name: Deploy to Production (Compose)
 # to a registry: it changes rarely and deliberately, and compose.yaml already declares the build.
 
 on:
+  # Called by build.yml for a green main build when the repository variable AUTO_DEPLOY is 'true' (spec 020 T062).
+  # The automatic path skips a target older than the live release; a manual run never does (see deploy-decision.sh).
+  workflow_call:
+    inputs:
+      target:
+        description: "Commit sha to deploy (build.yml passes github.sha)"
+        required: true
+        type: string
+      automatic:
+        description: "true when called from build.yml; enables the superseded skip"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       target:
@@ -34,6 +47,7 @@ jobs:
       packages: read
     env:
       TARGET: ${{ inputs.target }}
+      AUTOMATIC: ${{ inputs.automatic || false }}
       DEPLOY_HOST: 100.93.81.41
       DEPLOY_USER: jordylab-deploy
       # The host's ed25519 fingerprint, cross-verified against the trusted public-IP anchor on
@@ -134,11 +148,33 @@ jobs:
           chmod 600 ~/.ssh/config
           ssh jordylab-vps 'echo SSH_OK as $(whoami) on $(hostname)'
 
+      - name: Read the live release
+        id: read_live
+        run: |
+          live_release="$(ssh jordylab-vps 'cat /opt/jordylab/state/current-release 2>/dev/null' || true)"
+          echo "live_release=$live_release" >> "$GITHUB_OUTPUT"
+          echo "live release: ${live_release:-none}"
+
+      # Only an automatic run can be superseded: a slow build finishing after a newer release went live. A manual run
+      # always proceeds, which is what makes an older target a rollback (spec 019 FR-006, FR-015).
+      - name: Decide whether to apply
+        id: decide
+        env:
+          LIVE_RELEASE: ${{ steps.read_live.outputs.live_release }}
+        run: |
+          decision_output="$(workflow-src/deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "$LIVE_RELEASE" --automatic "$AUTOMATIC")"
+          printf '%s\n' "$decision_output" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$decision_output"
+          if printf '%s\n' "$decision_output" | grep -qx 'decision=superseded'; then
+            echo "::notice::$TARGET is older than the live release $LIVE_RELEASE; it was not applied"
+          fi
+
       # Mirrors deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the running stack read.
       # The target supplies the release files (compose.yaml, the Caddyfile, the timers, the Postgres build);
       # scripts/ comes from the workflow's own commit, so a rollback cannot restore older tooling.
       # --delete keeps each side an exact mirror; nothing host-side writes there.
       - name: Copy deploy/compose to the host
+        if: steps.decide.outputs.decision != 'superseded'
         run: |
           rsync -az --delete --exclude 'scripts/' deploy/compose/ jordylab-vps:/opt/jordylab/compose/
           rsync -az --delete workflow-src/deploy/compose/scripts/ jordylab-vps:/opt/jordylab/compose/scripts/
@@ -156,6 +192,7 @@ jobs:
       # The rendered output is checked before it replaces anything, so a failed render leaves prod.env alone.
       - name: Write the environment file on the host
         id: write_env
+        if: steps.decide.outputs.decision != 'superseded'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
@@ -178,6 +215,7 @@ jobs:
       # exits non-zero; the state files only change on success.
       - name: Deploy the release on the host
         id: deploy
+        if: steps.decide.outputs.decision != 'superseded'
         env:
           IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
@@ -189,6 +227,7 @@ jobs:
       # Contract step 7: external check from the runner (deploy/scripts/smoke-check.sh, written for spec 019).
       - name: Smoke-check the public site
         id: smoke
+        if: steps.decide.outputs.decision != 'superseded'
         run: workflow-src/deploy/scripts/smoke-check.sh --base-url https://jordylab.be
 
       # Contract step 8: automatic rollback, only after the host was touched. deploy-release.sh acts only
@@ -207,6 +246,9 @@ jobs:
 
       - name: Summarise the run
         if: always()
+        env:
+          DECISION: ${{ steps.decide.outputs.decision }}
+          PREVIOUS_LIVE_RELEASE: ${{ steps.read_live.outputs.live_release }}
         run: |
           live="unknown"
           if [ -f ~/.ssh/config ]; then
@@ -219,6 +261,8 @@ jobs:
             echo "|---|---|"
             echo "| Target | $TARGET |"
             echo "| Image tag | ${{ steps.resolve_target.outputs.image_tag }} |"
+            echo "| Decision | ${DECISION:-not run} |"
+            echo "| Live release before | ${PREVIOUS_LIVE_RELEASE:-none} |"
             echo "| Deploy on the host | ${{ steps.deploy.outcome }} |"
             echo "| Smoke check | ${{ steps.smoke.outcome }} |"
             echo "| Automatic rollback | ${{ steps.rollback.outcome }} |"
