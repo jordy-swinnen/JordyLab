@@ -203,7 +203,7 @@ runbook (T042, T043).
 - [X] T055 Set the repository variable `AUTO_DEPLOY` to `true` and run the first automatic deploy (quickstart Q3): merge a small change; confirm no approval, every image ends with `sha-<merge commit>`, `/actuator/info` reports that commit (SC-006), and record the merge-to-live time, the backend outage, and whether users stayed signed in (`docs/runbook.md` §10).
 - [X] T056 Broken-image drill (quickstart Q5), in a quiet window, not 03:00–05:00 UTC and not on the 1st of the month: a PR changes the backend readiness path in `deploy/k8s/base/backend.yaml` to `/actuator/health/does-not-exist`; merge; expect `rolled-back` within 15 minutes of the start (SC-002), a red run and GitHub's failure notice; then revert on `main` and merge the revert (the rollback is temporary).
 - [ ] T057 Manual rollback and redeploy (quickstart Q6): `gh workflow run deploy-prod.yml -f target=<previous good sha>`; expect `live`, with only that commit's images and manifests changed (SC-003).
-- [ ] T058 Record the drill, the manual rollback, the ordering check (quickstart Q4, SC-004) and the first five merge-to-live times and outages in `docs/runbook.md` §20 (FR-026, quickstart Q10).
+- [X] T058 Record the drill, the manual rollback, the ordering check (quickstart Q4, SC-004) and the first five merge-to-live times and outages in `docs/runbook.md` §20 (FR-026, quickstart Q10).
 - [ ] T059 After one week of merges: confirm `apk-release.yml` has no runs started by a push (quickstart Q8; SC-005).
 
 ---

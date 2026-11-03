@@ -432,16 +432,20 @@ signed in (sign in before the deploy, reload after it).
 | Deploy (commit) | Merge to live | Backend outage | Users stayed signed in | Notes |
 |-----------------|---------------|----------------|------------------------|-------|
 | 1 (`09f8f23`, run 41640471104) | 13:00:16 → 13:15:50 UTC: 15 min 34 s (Build 13:00–13:13, deploy job 2 min 3 s) | about 74 s: the rollout step; the old pod stops when the new one is applied (`Recreate`) | not measured: needs a signed-in browser session | all three images `sha-09f8f23`; `/actuator/info` reports the merge commit; smoke checks passed |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 2 (`ef9dcd7`, run 41644801911) | 13:29:37 → 13:51:09 UTC: 21 min 32 s (Build 13:29–13:41, deploy job 9 min 51 s) | about 9 min: the drill's failed rollout, then the rollback (`Recreate`) | not measured | **drill**: the rollout timed out, the rollback restored `09f8f23`, the post-rollback smoke check passed, the run ended red |
+| 3 (`6088af8`, run 41648404964) | 13:53:24 → 14:08:31 UTC: 15 min 7 s (the Build waited behind the newer one, deploy job 1 min 59 s) | about 74 s | not measured | two merges within three minutes: both deploys ran, in order, and neither was skipped |
+| 4 (`cca388d`, run 41648908792) | 13:56:46 → 14:11:11 UTC: 14 min 25 s (Build 13:56–14:09, deploy job 1 min 46 s) | about 70 s | not measured | `main` head; `/actuator/info` reports it |
+| 5 (automatic, the merge of PR #195) | to be recorded: the next automatic deploy after `cca388d` | | | this table is for automatic deploys; the manual runs are in the drill table below |
+
+The rollback drill above also proved the manual path (T057): a dispatch to `09f8f230` put that commit live with green smoke checks, and a second dispatch to `cca388d` restored the head of `main`, about 2 minutes each.
+
+**Not yet observed live:** the superseded skip (FR-006). The two merges that landed close together (rows 3 and 4) both deployed, in order, because the newer commit's build finished last. The skip is covered by the fixtures in `deploy/scripts/tests/deploy-decision-cases.sh`; watch for it the next time a slow build finishes after a newer one is live.
 
 ### Broken-image drill and manual rollback (quickstart Q5, Q6)
 
 | Date | Broken commit | Rolled back to | Time from start to previous commit serving | Manual rollback result |
 |------|---------------|----------------|---------------------------------------------|------------------------|
-| 2026-11-03 (run 41644801911) | `ef9dcd7`, readiness path `/actuator/health/does-not-exist` (PR #192) | `09f8f23`, with its own images and manifests | 9.8 min from the start of the deploy job to the previous commit serving; the rollout waited the full 8 min; the backend was down about 9 min (`Recreate`) | pending (T057) |
+| 2026-11-03 (run 41644801911) | `ef9dcd7`, readiness path `/actuator/health/does-not-exist` (PR #192) | `09f8f23`, with its own images and manifests | 9.8 min from the start of the deploy job to the previous commit serving; the rollout waited the full 8 min; the backend was down about 9 min (`Recreate`) | manual dispatch to `09f8f230` (run 41651288462): live in 1 min 49 s with green smoke checks; then a dispatch to `cca388d` (run 41651600183) restored the head of `main` in 1 min 44 s |
 
 ### Deploy or roll back to any version
 
