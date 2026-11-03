@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Linear**: JOR-31 (the commits from the renumber on carry `Refs: 019`; earlier commits carry `Refs: 017`, the number before the rename)
+**Linear**: JOR-31 (commits from the latest renumber carry `Refs: 020`; earlier commits carry `Refs: 017` or `Refs: 019`)
 
 **Input**: User description: "Specify the draft in specs/_drafts/compose-deployment/ (spec-draft.md and research.md). Production moves from k3s to Docker Compose on the same VPS, with a local encrypted backup on the owner's Mac as the safety net. Decisions recorded in the draft are fixed inputs, not open questions."
 

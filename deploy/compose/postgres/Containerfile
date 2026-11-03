@@ -1,5 +1,5 @@
 # Production Postgres for the Compose stack: the same Postgres 16 and pgvector image family as local
-# development, plus pgBackRest for continuous archiving and point-in-time restore (spec 019, research R3).
+# development, plus pgBackRest for continuous archiving and point-in-time restore (spec 020, research R3).
 # Built with the deploy/compose folder as the context, so the config below can be copied in.
 # Pinned: the base image by digest (Postgres 16.15 with pgvector) and the pgBackRest package by version,
 # so a rebuild cannot change the production Postgres or pgBackRest. To upgrade, change both values
