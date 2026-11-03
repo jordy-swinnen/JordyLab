@@ -44,7 +44,7 @@
     "reviewer": {
       "mode": "primary",
       "description": "SpecKit: analyze, converge. Different model creator than the planner for an independent review.",
-      "model": "opencode-go/mimo-v2.6-pro"
+      "model": "opencode-go/mimo-v2.6-flash"
     },
     "worker": {
       "mode": "primary",
