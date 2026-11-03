@@ -427,6 +427,8 @@ Record the first five automatic deploys: the time from merge to live (from the `
 end), the backend outage (the old pod stops before the new one is ready: `strategy: Recreate`), and whether users stayed
 signed in (sign in before the deploy, reload after it).
 
+**Dry run, 2026-11-03** (run 41638441811, target `8e21ec9`, the merge of PR #188): validation, the live read (production ran `e3ca834`), the newest backup, the server-side apply dry run and the three smoke checks passed, and nothing changed in the cluster. The two negative targets (`v9.9.9` and an all-zero sha) failed at the checkout step, before the cluster was read: git cannot check out a ref that does not exist, so the refusal comes from the checkout, not from the decision script. The server dry run reports the three secret objects as `configured`; the first automatic deploy shows whether that is a real change.
+
 | Deploy (commit) | Merge to live | Backend outage | Users stayed signed in | Notes |
 |-----------------|---------------|----------------|------------------------|-------|
 | 1 | | | | |
