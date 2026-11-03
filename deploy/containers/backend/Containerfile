@@ -18,7 +18,9 @@ RUN ./gradlew bootJar --no-daemon -x test
 
 # --- Runtime stage ---
 FROM eclipse-temurin:25-jre-noble AS runtime
-RUN useradd --create-home --shell /usr/sbin/nologin jordylab
+RUN useradd --create-home --shell /usr/sbin/nologin jordylab \
+ && mkdir -p /var/jordylab/artwork \
+ && chown jordylab:jordylab /var/jordylab/artwork
 USER jordylab
 WORKDIR /home/jordylab
 

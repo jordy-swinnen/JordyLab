@@ -22,6 +22,7 @@ Sources:
 | `JORDYLAB_APP_BASE_URL` | `https://jordylab.be` | **new on main**: literal in `backend-config` |
 | `NTFY_BASE_URL` | `https://jordylab.be/ntfy` | no |
 | `NTFY_TOPIC` | `jordylab-secrets` → `NTFY_TOPIC` | no |
+| `NTFY_TOKEN`, `LINEAR_API_KEY`, `LANGFUSE_BASE_URL` | `jordylab-secrets` (same key names) | no (optional; the k3s backend read them through its `envFrom`, so the first draft of this table missed them) |
 | `LANGFUSE_ENVIRONMENT` | `production` | no |
 | `LANGFUSE_CAPTURE_CONTENT` | `true` | no |
 | `SPRINGDOC_API_DOCS_ENABLED` | `false` | no |
@@ -52,7 +53,7 @@ Keycloak's build-time options (`KC_DB`, `KC_HEALTH_ENABLED`, `KC_METRICS_ENABLED
 | Variable | Source | Changes? |
 |----------|--------|----------|
 | `POSTGRES_DB` | `jordylab` | no |
-| `POSTGRES_PASSWORD` | **new** secret key `POSTGRES_SUPERUSER_PASSWORD` | **new**: the superuser password for the image's first start |
+| `POSTGRES_PASSWORD` (the container) | `POSTGRES_SUPERUSER_PASSWORD` in `prod.env` (from the **new** secret key `POSTGRES_SUPERUSER_PASSWORD`) | **new**: `compose.yaml` maps it to the container's `POSTGRES_PASSWORD`. The name differs in `prod.env` because the backend's `POSTGRES_PASSWORD` is the application password, and one file holds both |
 | `PGBACKREST_REPO1_S3_KEY` | `jordylab-secrets` → `S3_ACCESS_KEY` | renamed source only |
 | `PGBACKREST_REPO1_S3_KEY_SECRET` | `jordylab-secrets` → `S3_SECRET_KEY` | renamed source only |
 
@@ -68,5 +69,7 @@ Keycloak's build-time options (`KC_DB`, `KC_HEALTH_ENABLED`, `KC_METRICS_ENABLED
 ## Rules
 
 - Names only in git. `deploy/compose/env/prod.env.example` lists the names with empty values.
+- Settings that are not secret and have one fixed value (for example `POSTGRES_URL`, `KC_PROXY_TRUSTED_ADDRESSES`) are written by `scripts/render-env.sh` from its own list, so a change is reviewed in git. The secret-backed names come from the SOPS file.
+- `JORDYLAB_RELEASE` is not in this file. `scripts/deploy-release.sh` exports it for the GHCR image tags.
 - The file on the host is mode 600 and is never echoed in a log or a job summary.
 - A variable that is absent from the render fails `render-env.sh`; an empty value fails it too, except where the table above says a value is optional (for example the API keys, which the application already treats as unset).
