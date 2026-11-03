@@ -30,11 +30,10 @@ Paths are relative to the repository root. The backend root is `jordylab-be/`.
 
 - [x] T001 **DECIDED** (OI-1, 2026-11-03): option A. Connector tokens are accepted on `/api` in v1. Recorded in
   `specs/021-jordylab-mcp-server/research.md` R3 and `spec.md` Assumptions. Option B is not planned.
-- [ ] T002 **OWNER DECISION** (OI-2, premise changed by I1): confirm in `specs/021-jordylab-mcp-server/plan.md` (Open items)
-  that the production Keycloak apply in T057 runs before the release. Also confirm whether a merge still deploys: Compose
-  decision 4 says deploys run on release tags only (T2).
-- [ ] T003 **OWNER DECISION** (OI-3): confirm in `specs/021-jordylab-mcp-server/spec.md` (User Story 2, scenario 1) that
-  `search_articles` matches titles only (spec change S2).
+- [x] T002 **DECIDED** (OI-2, 2026-11-03): merges to `main` go straight to production. The production Keycloak apply (T057)
+  therefore runs before the merge that ships the endpoint, so the endpoint works on its first deploy. The Compose deploy job
+  is being rewritten in a separate session, outside this feature.
+- [x] T003 **DECIDED** (OI-3, 2026-11-03): title only, for now. `search_articles` matches titles only (spec change S2).
 - [ ] T004 Add `org.springframework.ai:spring-ai-starter-mcp-server-webmvc` (version from the Spring AI BOM) and the
   AspectJ runtime for Spring AOP to `jordylab-be/build.gradle.kts`, then confirm both resolve with
   `cd jordylab-be && ./gradlew dependencies --configuration runtimeClasspath | grep -i "mcp\|aspectj"`.

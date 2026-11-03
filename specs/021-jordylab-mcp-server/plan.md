@@ -197,7 +197,7 @@ These follow from the research. They are applied to `spec.md` in the same change
 | K11 | Claude mobile needs a separate connector setup | Unknown / low | Quickstart step 6 verifies it; a documentation change if it does |
 | K12 | The stale assetlinks rule is removed while something still needs it | Very low / low | Spec 018 removed the endpoint; the SecurityConfig comment confirms it |
 
-## Open items (need Jordy)
+## Open items (decided 2026-11-03: OI-1 option A, OI-2 merge straight to prod, OI-3 title only)
 
 1. **OI-1: connector tokens and `/api`. Decided 2026-11-03: option A.** A connector token carries the admin's rights on `/api` as well, so a leaked
    token could call a write endpoint. Options: (A) accept it for v1, as the browser session already carries the same

@@ -289,8 +289,8 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
   signs in to the connector again. The connector does not hold a long-lived offline token.
 - The rate-limit count is kept by the running instance. There is one instance, so a restart (including a deploy) resets
   the count, which is accepted.
-- The feature is released after the production move to Docker Compose (`specs/020-compose-deployment/`). Until then it
-  is built and tested on its branch and not released.
+- The feature is released when its pull request merges to `main`. Merges go straight to production (owner decision,
+  2026-11-03), and the Compose deploy job that does this is being rewritten in a separate session.
 - A connector token is also accepted by the `/api` routes in v1. Those routes check the issuer and the admin role, not
   the audience, so the admin's rights there equal the browser session's. The read-only promise rests on the connector's
   tool list. A later spec may require the audience on `/api` (owner decision OI-1, 2026-11-03).
