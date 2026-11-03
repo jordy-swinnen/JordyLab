@@ -57,10 +57,6 @@
     },
     "plan": {
       "model": "opencode-go/glm-5.2"
-    },
-    "speckit": {
-      "mode": "primary",
-      "model": "opencode-go/mimo-v2.6-pro"
     }
   }
 }
