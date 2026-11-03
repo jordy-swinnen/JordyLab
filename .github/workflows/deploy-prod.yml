@@ -5,6 +5,7 @@ name: Deploy to Production
 #   AUTO_DEPLOY is 'true'; a superseded target (older than the live commit) is skipped, not applied.
 # - Run by hand (Actions → Deploy to Production → Run workflow): a commit sha or a release tag, for a redeploy or a
 #   rollback. Older commits are allowed, so manual runs are never superseded.
+# A failed rollout or smoke check rolls back to the previously live commit, with its images and manifests (FR-010).
 
 on:
   workflow_call:
@@ -125,6 +126,7 @@ jobs:
             ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${IMAGE_TAG}" \
             ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${IMAGE_TAG}" \
             ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${IMAGE_TAG}"
+          # Recorded before the apply: from here on a failure may roll back (see the rollback step).
           echo "started=true" >> "$GITHUB_OUTPUT"
           kustomize build . | kubectl apply -f -
 
@@ -136,32 +138,114 @@ jobs:
           kubectl -n jordylab rollout status deploy/frontend --timeout=5m
           kubectl -n jordylab rollout status deploy/keycloak --timeout=8m
 
+      - name: Smoke-check the public site
+        id: smoke
+        if: steps.decide.outputs.decision == 'proceed'
+        run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+
+      - name: Roll back to the previously live commit
+        id: rollback
+        # Only after the cluster was changed, with a known previous commit (FR-010, FR-012); never for a refused or superseded target.
+        if: failure() && steps.apply.outputs.started == 'true' && steps.decide.outputs.live_commit != 'unknown'
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          PREVIOUS_COMMIT: ${{ steps.decide.outputs.live_commit }}
+          TARGET_COMMIT: ${{ steps.resolve_target.outputs.target_commit }}
+          PREVIOUS_BACKEND_IMAGE: ${{ steps.read_live_state.outputs.live_backend_image }}
+          PREVIOUS_FRONTEND_IMAGE: ${{ steps.read_live_state.outputs.live_frontend_image }}
+          PREVIOUS_KEYCLOAK_IMAGE: ${{ steps.read_live_state.outputs.live_keycloak_image }}
+        run: |
+          set -o pipefail
+          if ! git diff --quiet "$PREVIOUS_COMMIT" "$TARGET_COMMIT" -- deploy/k8s/overlays/prod/secrets.sops.yaml; then
+            echo "secrets_changed=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::the secrets file differs between $PREVIOUS_COMMIT and $TARGET_COMMIT: the rollback re-applies the previous values (runbook §11: roll forward for secret rotations)"
+          fi
+          git worktree add --detach "$RUNNER_TEMP/previous" "$PREVIOUS_COMMIT"
+          cd "$RUNNER_TEMP/previous/deploy/k8s/overlays/prod"
+          sops --output secrets.sops.yaml -d secrets.sops.yaml
+          kustomize edit set image \
+            ghcr.io/jordy-swinnen/jordylab-backend="ghcr.io/jordy-swinnen/jordylab-backend:${PREVIOUS_BACKEND_IMAGE##*:}" \
+            ghcr.io/jordy-swinnen/jordylab-frontend="ghcr.io/jordy-swinnen/jordylab-frontend:${PREVIOUS_FRONTEND_IMAGE##*:}" \
+            ghcr.io/jordy-swinnen/jordylab-keycloak="ghcr.io/jordy-swinnen/jordylab-keycloak:${PREVIOUS_KEYCLOAK_IMAGE##*:}"
+          kustomize build . | kubectl apply -f -
+          kubectl -n jordylab rollout status deploy/backend --timeout=8m
+          kubectl -n jordylab rollout status deploy/frontend --timeout=5m
+          kubectl -n jordylab rollout status deploy/keycloak --timeout=8m
+
+      - name: Smoke-check after the rollback
+        id: rollback_smoke
+        if: always() && steps.rollback.outcome == 'success'
+        run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+
+      - name: Remove the rollback worktree
+        if: always() && steps.rollback.outcome != 'skipped'
+        run: git worktree remove --force "$RUNNER_TEMP/previous" || true
+
       - name: Summarise the run
         if: always()
         env:
+          RESOLVE_DECISION: ${{ steps.resolve_target.outputs.decision }}
           TARGET_COMMIT: ${{ steps.resolve_target.outputs.target_commit }}
           DECISION: ${{ steps.decide.outputs.decision }}
           PREVIOUS_LIVE_COMMIT: ${{ steps.decide.outputs.live_commit }}
+          APPLY_STARTED: ${{ steps.apply.outputs.started }}
           ROLLOUT_OUTCOME: ${{ steps.rollout.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          ROLLBACK_OUTCOME: ${{ steps.rollback.outcome }}
+          ROLLBACK_SMOKE_OUTCOME: ${{ steps.rollback_smoke.outcome }}
+          SECRETS_CHANGED: ${{ steps.rollback.outputs.secrets_changed }}
           BACKUP_NEWEST: ${{ steps.backup.outputs.newest_completed_at }}
           BACKUP_AGE_HOURS: ${{ steps.backup.outputs.age_hours }}
-          BACKUP_WARNING: ${{ steps.backup.outputs.warning }}
           BACKUP_REASON: ${{ steps.backup.outputs.reason }}
         run: |
-          if [ "$ROLLOUT_OUTCOME" = "success" ]; then
+          if [ "$RESOLVE_DECISION" = "refused" ]; then
+            outcome="refused"
+            live_after="unchanged"
+          elif [ "$DECISION" = "superseded" ]; then
+            outcome="superseded"
+            live_after="unchanged"
+          elif [ "$ROLLOUT_OUTCOME" = "success" ] && [ "$SMOKE_OUTCOME" = "success" ]; then
+            outcome="live"
             live_after="$TARGET_COMMIT"
+          elif [ "$ROLLBACK_OUTCOME" = "success" ] && [ "$ROLLBACK_SMOKE_OUTCOME" = "success" ]; then
+            outcome="rolled-back"
+            live_after="$PREVIOUS_LIVE_COMMIT"
+          elif [ "$ROLLBACK_OUTCOME" = "failure" ] || [ "$ROLLBACK_SMOKE_OUTCOME" = "failure" ]; then
+            outcome="rollback-failed"
+            live_after="unknown: the cluster state is not confirmed"
+          elif [ "$APPLY_STARTED" != "true" ]; then
+            outcome="failed before the cluster was changed"
+            live_after="$PREVIOUS_LIVE_COMMIT"
+          elif [ "$PREVIOUS_LIVE_COMMIT" = "unknown" ]; then
+            outcome="no-previous"
+            live_after="$TARGET_COMMIT, not confirmed healthy"
           else
-            live_after="not confirmed (rollout: ${ROLLOUT_OUTCOME:-not run})"
+            outcome="failed"
+            live_after="unknown"
           fi
+
+          if [ "$outcome" = "rolled-back" ]; then
+            echo "::error::the release failed and production was rolled back to $PREVIOUS_LIVE_COMMIT"
+          elif [ "$outcome" = "rollback-failed" ]; then
+            echo "::error::the rollback failed: follow docs/runbook.md §11 (emergency path)"
+          elif [ "$outcome" = "no-previous" ]; then
+            echo "::error::no previously live commit is known, so nothing was rolled back (FR-012)"
+          elif [ "$outcome" = "superseded" ]; then
+            echo "::notice::$TARGET_COMMIT is older than the live commit; it was not applied"
+          fi
+
           {
             echo "## Deploy to Production"
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| Decision | $DECISION |"
+            echo "| Outcome | $outcome |"
             echo "| Target commit | $TARGET_COMMIT |"
             echo "| Previously live commit | $PREVIOUS_LIVE_COMMIT |"
             echo "| Live after the run | $live_after |"
+            if [ "$SECRETS_CHANGED" = "true" ]; then
+              echo "| Warning | the secrets file differs from the previous commit; a rollback re-applies the old values |"
+            fi
             if [ -n "$BACKUP_NEWEST" ]; then
               echo "| Newest completed backup | $BACKUP_NEWEST (${BACKUP_AGE_HOURS} h old) |"
             else
