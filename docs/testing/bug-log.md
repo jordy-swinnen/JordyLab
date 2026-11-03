@@ -1258,3 +1258,16 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Fix (PR / commit / tag): pin the manifest-list digest `sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f` (amd64 + arm64; the same file still builds on the Mac). The caddy pin in compose.yaml was already a list digest, which is why it was fine. Committed on the cutover-continue branch during the window.
 - Regression test added: none in CI (no amd64 runner builds this image before deploy); the cutover window's own T032 build is the verification, and the Containerfile comment documents the rule.
 - Verified on prod: pending (T032)
+
+### BUG-082: The Caddy healthcheck probes localhost:2019, which resolves to ::1 while Caddy binds 127.0.0.1 only - the container can never report healthy
+- Status: FIXED-LOCAL (found and fixed during the cutover window 2026-11-03)
+- Severity: S3 (the service serves correctly; the false unhealthy status blocks `docker compose up --wait` and health-gated automation)
+- Area/spec: prod Compose stack / 020 (T004 compose.yaml, T036)
+- Env found: prod VPS, 2026-11-03, the first `up -d --wait` of the stack (T036): every service healthy except caddy, while the site answered 200 over HTTPS with a valid Let's Encrypt certificate
+- Steps to reproduce: `docker exec jordylab-caddy-1 wget -q -O /dev/null http://localhost:2019/config/` fails with "Connection refused"; the same with `http://127.0.0.1:2019/config/` succeeds; netstat inside the container shows 127.0.0.1:2019 only
+- Expected (cite spec/story): 020 T004/T036 - the healthcheck must pass when Caddy serves; `up -d --wait` must complete
+- Actual: busybox wget in caddy:2.11.7-alpine resolves `localhost` to ::1 first; Caddy's default admin endpoint binds 127.0.0.1 only, so the check is always refused
+- Root cause: a hostname in the healthcheck URL instead of the explicit IPv4 loopback
+- Fix (PR / commit / tag): `http://127.0.0.1:2019/config/` in deploy/compose/compose.yaml, committed on the cutover-continue branch during the window; `up -d caddy` recreates the container with the fixed check
+- Regression test added: none in CI (this stack is not run in CI); the quickstart step 3 `up -d --wait` is the check
+- Verified on prod: pending (the recreate immediately after this entry)
