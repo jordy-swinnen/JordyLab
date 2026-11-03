@@ -193,7 +193,9 @@ kubectl apply -f deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml
 
 **(operator step — do not create these yourself)**
 
-1. In the GitHub repo settings, create a `production` Environment with **Jordy** as the required reviewer.
+1. In the GitHub repo settings, create a `production` Environment for its secrets. It has **no** required reviewer: a green
+   `main` deploys without an approval (spec 019, FR-002). If a reviewer is still set, remove it: Settings → Environments →
+   `production`.
 2. Add these Environment secrets:
    - `SOPS_AGE_KEY` — the private key from §7.
    - `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` (or `TS_AUTHKEY`) — a Tailscale OAuth client / auth key
@@ -206,27 +208,63 @@ kubectl apply -f deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml
    Add the result as the `KUBE_TOKEN` Environment secret, and the cluster's CA + API server address
    (reachable over the tailnet from §4) as `KUBE_SERVER` / `KUBE_CA_CERT`.
 4. Never use `/etc/rancher/k3s/k3s.yaml` (the cluster-admin kubeconfig) in CI.
+5. Repository variable `AUTO_DEPLOY` (Settings → Secrets and variables → Actions → Variables): `true` lets a green `main`
+   deploy; any other value pauses automatic deploys (spec 019, FR-027). Manual runs ignore it.
 
 ## 10. Deploy
 
-Production changes only on a **release** (§20): merging to `main` builds and tests the images but deploys
-nothing.
+A green build on `main` deploys by itself (spec 019). No approval and no tag is needed.
 
-1. Merge to `main`; `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`.
-2. When `main` is green, tag it: `git tag v0.1.0 && git push origin v0.1.0` (or GitHub → Releases → *Draft a new
-   release*). `release.yml` verifies, retags, creates the Release and calls `deploy-prod.yml`.
-3. Approve the `production` deployment in that run (required reviewer, §9). The job joins Tailscale, decrypts
-   secrets, applies the prod overlay with the release's images, and waits on `kubectl rollout status` — a failed
-   rollout fails the job loudly.
-4. Confirm: `kubectl -n jordylab get pods`, then the `quickstart.md` US1 checks.
+1. Merge to `main`. `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`, then calls
+   `deploy-prod.yml` with that commit (only while `AUTO_DEPLOY` is `true`).
+2. The deploy checks that the three images exist for the commit, reads the live images, and skips the commit when it is
+   older than the live one (superseded, FR-006). It checks the newest backup (a warning, never a block), applies the
+   commit's images and manifests, waits on `kubectl rollout status`, and smoke-checks `https://jordylab.be` (the home page
+   answers 200, an unauthenticated `/api` call answers 401, Keycloak's discovery answers 200). It then reads the commit
+   the running backend reports and warns if it is not the commit deployed (FR-017).
+3. A failed rollout or smoke check rolls back to the previously live commit (§11). The run is red, and that failure is
+   the report (FR-011).
+4. Deploys never overlap: queued deploys run in order and none is dropped (`queue: max`). Every run's job summary states
+   the outcome, the previously live commit, the commit live at the end and the backup time.
+5. Confirm: `kubectl -n jordylab get pods`, then the `quickstart.md` checks.
+
+**Pause automatic deploys** (an incident, or a change to the deploy path): set `AUTO_DEPLOY` to anything but `true`. Manual
+runs still work. **Check a change first:** *Deploy to Production* → *Run workflow* with the commit and `dry_run` ticked
+validates the target, reads the live state, runs a server-side apply dry run and the smoke checks, and changes nothing
+(FR-028).
+
+**Each deploy restarts the three pods.** The backend uses `strategy: Recreate`, so it is down from the moment the old pod
+stops until the new one is ready. Keycloak restarts too. The outage is measured in §20.
+
+**Background work a deploy can interrupt** (FR-021). A restart stops whatever is running, and each job catches up on its own:
+
+| Job | When | If a deploy interrupts it |
+|-----|------|---------------------------|
+| Feed ingestion | three times a day (cron 06, 12, 18) | catches up on its next run |
+| Auto-fill sweep | daily 04:30 Europe/Brussels | catches up on its next run |
+| Monthly briefing | 06:30 on the 1st | rerun by hand: `POST /api/fna/briefing/trigger` (admin) |
+| Stock prices | every 30 minutes | catches up on its next run |
 
 ## 11. Rollback
 
-Preferred: GitHub → Actions → *Deploy to Production* → *Run workflow* → enter the previous release tag (e.g.
-`v0.0.9`) → approve. Or from a terminal:
+Automatic: a failed rollout or smoke check rolls back to the previously live commit, with its images and manifests
+(spec 019, FR-010). The run ends red, and the job summary names the outcome (`rolled-back`, `rollback-failed` or
+`no-previous`).
+
+By hand, to any commit or release tag (this is also how you redeploy): GitHub → Actions → *Deploy to Production* →
+*Run workflow* → enter the full commit sha, or a release tag such as `v0.0.9`. Or from a terminal:
 ```
-gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f version=v0.0.9
+gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f target=v0.0.9
 ```
+A manual run is never superseded, so an older target is applied. Check it first with `dry_run` (§10).
+
+Three things to know before you roll back:
+
+- **A rollback is temporary.** The next green merge to `main` deploys the newest commit again. To keep the rollback,
+  revert the bad commit on `main` and merge the revert.
+- **A rollback re-applies the previous secrets file.** If a secret changed after that commit, the run warns and the old
+  value comes back. For a secret rotation (§13), roll forward instead: fix the value and deploy a newer commit.
+- **The database is not rolled back.** See the subsection below.
 Emergency path (no pipeline):
 ```
 kubectl -n jordylab rollout undo deploy/backend
@@ -369,37 +407,44 @@ df -h /var/lib/rancher/k3s
    Check `research.md` and the k3s release notes for the current stable tag before bumping the pin.
 3. After either, verify: `kubectl get nodes`, `kubectl -n jordylab get pods`, then the `quickstart.md` checks.
 
-## 20. Release a version (one tag → GitHub Release → deploy)
+## 20. Deploys, releases and the APK
 
-**Status: implemented 2026-09-30** (spec 011 BUG-008). Releasing is one action on GitHub; it covers the web app
-only — the Android APK job was removed with the native app (spec 018 US4).
+**Status: automatic deploys from 2026-11-03** (spec 019). A green build on `main` deploys; release tags are no longer part
+of the deploy. Tags stay as history and remain valid manual targets (§11). Before this, production changed only on a tag
+(spec 011 BUG-008); the release workflow with its GitHub Release drafts is removed.
 
 ### The flow
 
-1. Merge to `main` as usual. `build.yml` tests, scans, and publishes the three images tagged `sha-<full-sha>`.
-   A push to `main` **does not deploy**; production only changes on a release.
-2. Release by pushing a tag on a commit that is on `main` and has a green Build:
-   ```
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
-   (or GitHub → Releases → *Draft a new release* → create the tag there). Tags are `vX.Y.Z` or `vX.Y.Z-rcN`
-   (release candidate → GitHub prerelease). Minor/patch ≤ 99, rc ≤ 98.
-3. `.github/workflows/release.yml` runs on `v*` tags:
-   - **verify** — the tag's commit is on `main` and a Build of a push to `main` succeeded for it (else it fails);
-   - **retag** — the tested images `sha-<sha>` get the tag `vX.Y.Z` (`docker buildx imagetools create`), nothing is
-     rebuilt, so what ships is exactly what was tested;
-   - **release** — a *draft* GitHub Release with generated notes (prerelease for `-rcN`);
-   - **deploy** — calls `deploy-prod.yml` with the tag; it waits for your `production` approval (§9) and deploys
-     `ghcr.io/jordy-swinnen/jordylab-*:vX.Y.Z`;
-   - **publish** — the draft becomes public only once the deploy succeeded (a rejected or failed deploy leaves
-     only a draft, which you can delete).
-4. Verify with the `quickstart.md` US1 checks.
+1. Merge to `main`. `build.yml` tests, scans and publishes the three images tagged `sha-<full-sha>`, then deploys that
+   commit (§10). Nothing else is needed.
+2. A tag is only a label now: `git tag v0.1.0 <sha>` and `git push origin v0.1.0`. Pushing a tag deploys nothing. To put a
+   tagged release live, run *Deploy to Production* with the tag as the target (§11).
+3. Tags are `vX.Y.Z` or `vX.Y.Z-rcN`. Minor and patch ≤ 99, rc ≤ 98.
+
+### Measurements (FR-026)
+
+Record the first five automatic deploys: the time from merge to live (from the `Build` run's start to the deploy job's
+end), the backend outage (the old pod stops before the new one is ready: `strategy: Recreate`), and whether users stayed
+signed in (sign in before the deploy, reload after it).
+
+| Deploy (commit) | Merge to live | Backend outage | Users stayed signed in | Notes |
+|-----------------|---------------|----------------|------------------------|-------|
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+### Broken-image drill and manual rollback (quickstart Q5, Q6)
+
+| Date | Broken commit | Rolled back to | Time from start to previous commit serving | Manual rollback result |
+|------|---------------|----------------|---------------------------------------------|------------------------|
+| | | | | |
 
 ### Deploy or roll back to any version
 
-See §11: *Deploy to Production* → *Run workflow* with the release tag. `deploy-prod.yml` accepts only
-`vX.Y.Z[-rcN]` and deploys that tag's images and manifests.
+See §11: *Deploy to Production* → *Run workflow* with a commit sha or a release tag. `deploy-prod.yml` accepts a full commit
+sha that has images, or a tag `vX.Y.Z[-rcN]` that exists, and deploys that commit's images and manifests.
 
 ### Removing the Android app stack (one-time cutover, after the first release with spec 018)
 
@@ -427,8 +472,8 @@ safe to skip temporarily; none of them changes the web app.
 
 ### GitHub settings (owner only)
 
-Tag ruleset: only Jordy (and the agent acting for him) create `v*` tags. Branch ruleset on `main`: require PRs and
-the Build checks.
+Branch ruleset on `main`: require PRs and the Build checks. The `production` environment has no required reviewer (§9).
+A tag ruleset is only needed if tags are still created as labels; deploys do not depend on tags.
 
 ## 21. Manual tests the E2E campaign could not run
 

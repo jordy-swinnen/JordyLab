@@ -91,6 +91,7 @@ All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeatu
   pipeline, which reaches the firewalled k3s API over Tailscale (never a public port 6443). See
   `deploy/`, `docs/runbook.md` (operational procedures) and `docs/learn/` (the concepts, explained against these
   same files).
+- **Deploys**: a green build on `main` deploys its own `sha-<commit>` images to production with no approval (`build.yml` → `deploy-prod.yml`, spec 019). A failed rollout or smoke check returns production to the previous commit. Release tags are labels, not triggers; a manual redeploy or rollback takes a commit sha or a tag. The repository variable `AUTO_DEPLOY` pauses automatic deploys. Details: `docs/runbook.md` §10, §11 and §20.
 - **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — development machine (macOS/Linux scanner runs)
 - **JordyBox**: i7-9700K, RTX 2070 Super — HTPC/gaming, NFS server for ROMs (where the downloaded scan client walks the libraries)
 - **Keycloak**: `start-dev` in local Podman Compose (port 8180), `start --optimized` in prod (behind Traefik,

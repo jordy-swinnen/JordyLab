@@ -1,6 +1,6 @@
 ---
 name: jordylab-ops
-description: JordyLab production operations — OVH VPS + k3s, Tailscale access, kubectl/helm, GitHub Actions deploys, approvals and rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), Keycloak admin via kcadm, CloudNativePG backups, TLS and Gateway routing. Load before running, proposing or explaining anything that touches the live cluster, the deploy pipeline, prod secrets or the prod Keycloak realm.
+description: JordyLab production operations — OVH VPS + k3s, Tailscale access, kubectl/helm, GitHub Actions deploys (automatic on a green main build), rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), Keycloak admin via kcadm, CloudNativePG backups, TLS and Gateway routing. Load before running, proposing or explaining anything that touches the live cluster, the deploy pipeline, prod secrets or the prod Keycloak realm.
 ---
 
 # JordyLab production operations
@@ -22,15 +22,16 @@ depth than this file gives.
    `kustomize build`). Quote the error you found before proposing a fix.
 2. **Mutations need Jordy's explicit yes**: anything that runs `kubectl apply/delete/patch/set/rollout
    restart/exec … kcadm (write)`, `helm install/upgrade/uninstall`, `ssh` commands that change the
-   server, `ufw`, Tailscale policy changes, GitHub environment/secret changes, or approving a deploy.
-   Show the exact command and what it changes, then wait. Exception: when Jordy has explicitly delegated
-   deploy approval for the current task (e.g. the spec 011 E2E campaign), approve only commits you merged
-   yourself with a green Build, and still pause for Flyway migrations, realm changes and secret/config changes.
+   server, `ufw`, Tailscale policy changes, GitHub environment/secret/variable changes, or changing what a deploy
+   does. Deploys are automatic on a green `main` build (spec 019): there is no approval step and no delegated
+   approval any more. Show the exact command and what it changes, then wait. A config change (manifests,
+   ConfigMaps, secrets) still needs Jordy's yes, even when it reaches production through a merge, and so does a
+   Flyway migration or a realm change.
 3. **Secrets never pass through the conversation.** Never print, echo, `cat`, or decrypt secret values
    to the screen. Pipe values (`… | gh secret set …`), run `kcadm` inside the Keycloak pod using the
    env vars already there, use `gitleaks --redact`, and filter logs with
    `grep -v -i -E 'password|secret'`. `~/.kube/jordylab.yaml` is cluster-admin: never show its content.
-4. **Production changes go through Git** (PR → merge → Build → approved deploy). A live
+4. **Production changes go through Git** (PR → merge → Build → automatic deploy). A live
    `kubectl set env` / `patch` is fine to *test* a fix quickly, but the same change must land in
    the repo, or the next deploy undoes it.
 5. **Verify versions against the live source** (Helm repo, Docker Hub, GHCR, release pages) before
@@ -53,8 +54,8 @@ depth than this file gives.
 | Kubeconfig (Mac) | `~/.kube/jordylab.yaml` → `export KUBECONFIG=~/.kube/jordylab.yaml`                                                   |
 | App namespace    | `jordylab`                                                                                                            |
 | Backups          | OVH Object Storage, bucket `jordylab-cnpg-backups`, Gravelines (GRA), `https://s3.gra.io.cloud.ovh.net`               |
-| Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:sha-<full-commit-sha>` (Build) + `:vX.Y.Z` (release retag) |
-| CI/CD            | `Build` on every push; **`v*` tag** → `Release` → `Deploy to Production` (environment `production`, reviewer Jordy)   |
+| Images           | `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:sha-<full-commit-sha>` (Build; the deploy uses these, no retag) |
+| CI/CD            | `Build` on every push; a green `main` build → `deploy` job → `Deploy to Production` (environment `production`, no reviewer; repository variable `AUTO_DEPLOY` pauses) |
 | TLS              | cert-manager + Let's Encrypt (`letsencrypt-prod`, account e-mail jordy.swinnen@pm.me)                                 |
 | Secrets          | SOPS + age; private key at `~/Library/Application Support/sops/age/keys.txt` (+ password manager + GitHub env secret) |
 
@@ -130,7 +131,7 @@ Anthropic/OpenRouter keys, S3 keys, Steam, IGDB, `NTFY_TOKEN`), `jordylab-db-app
 - **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll` in `SecurityConfig`.
 - **Frontend image** copies `dist/apps/jordylab/browser` (Angular application builder output) into nginx.
 - **ntfy has no `NTFY_BASE_URL`** (sub-path hosting unsupported); a subdomain is needed for attachments/web push.
-- **Deploy workflow**: only via `release.yml` (a `v*` tag) or *Run workflow* with a release tag; checks out the tag; pinned
+- **Deploy workflow**: `deploy-prod.yml`, called by `build.yml` for a green `main` build while `AUTO_DEPLOY` is `true`, or run by hand with a commit sha or a release tag (`target`; `dry_run` to check); checks out the target; pinned
   sops 3.13.3 / age 1.3.2 / kustomize 5.8.1 / kubectl 1.36.4 (keep kubectl within ±1 minor of k3s).
 - **Build workflow**: images only on push to `main`; image matrix `fail-fast: false`.
 
@@ -206,17 +207,18 @@ gh run list --repo jordy-swinnen/JordyLab --branch main --limit 5
 gh run view <run-id> --repo jordy-swinnen/JordyLab --json status,headSha,event
 gh run view <run-id> --repo jordy-swinnen/JordyLab --log-failed | tail -40
 gh run rerun <run-id> --repo jordy-swinnen/JordyLab --failed
-# Release (the only way production changes): tag a green main commit — release.yml verifies, retags, releases, deploys, ships the APK
-git tag v0.1.0 <sha-on-main> && git push origin v0.1.0
-# Rollback / redeploy an earlier release (then approve in Actions); only vX.Y.Z[-rcN] is accepted:
-gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f version=<previous-tag>
-# Approve a pending deploy via the API (only when delegated, see safety rule 2):
-ENV=$(gh api repos/jordy-swinnen/JordyLab/actions/runs/<run-id>/pending_deployments --jq '.[0].environment.id')
-gh api -X POST repos/jordy-swinnen/JordyLab/actions/runs/<run-id>/pending_deployments -F "environment_ids[]=$ENV" -f state=approved -f comment="<why>"
+# Deploy: automatic on a green main build. The last build and its deploy run:
+gh run list --repo jordy-swinnen/JordyLab --workflow build.yml --branch main --limit 5
+# Dry run of a target (changes nothing; reads the cluster and runs the smoke checks):
+gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag> -f dry_run=true
+# Rollback or redeploy any commit or release tag (manual runs are never superseded):
+gh workflow run deploy-prod.yml --repo jordy-swinnen/JordyLab -f target=<full-sha-or-release-tag>
+# Pause automatic deploys (resume with --body true):
+gh variable set AUTO_DEPLOY --repo jordy-swinnen/JordyLab --body false
 gh pr create --base main --fill
 ```
 
-Approve: GitHub → Actions → Deploy to Production → the run → *Review deployments* → `production` → *Approve and deploy*.
+No approval is needed: a green `main` build deploys (spec 019). The run's job summary in *Deploy to Production* states the outcome, the previously live commit and the backup time.
 
 Check images exist and are public (anonymous pull):
 
