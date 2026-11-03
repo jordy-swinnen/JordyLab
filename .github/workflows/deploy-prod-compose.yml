@@ -132,6 +132,13 @@ jobs:
           rsync -az --delete deploy/compose/ jordylab-vps:/opt/jordylab/compose/
           ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
 
+      # The runner needs sops to decrypt; it ships in no image on ubuntu-latest (T049 found this missing).
+      - name: Install sops
+        run: |
+          sudo curl -sSLo /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.13.3/sops-v3.13.3.linux.amd64
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
+
       # Contract steps 4 and 5: render the environment file on the runner (sops + PyYAML; values never
       # reach a log) and write it on the host, keeping the file it replaces as prod.env.previous.
       # The rendered output is checked before it replaces anything, so a failed render leaves prod.env alone.
