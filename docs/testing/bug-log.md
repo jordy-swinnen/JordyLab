@@ -1207,10 +1207,11 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   2. `curl -I http://57.129.163.110:31460/` and `curl -skI https://57.129.163.110:32531/`.
 - Expected (cite spec/story): 008 FR-019 / SC-008 — only 22 (restricted), 80 and 443 are public; `docs/runbook.md` §2 sets `ufw` to deny everything else.
 - Actual (logs/screenshot, secrets redacted): 22, 80, 443, **31460** (HTTP 404, `text/plain`, `X-Content-Type-Options: nosniff`) and **32531** (HTTP/2 404) accept connections. Sending `Host: jordylab.be` (or that SNI) gets the same 404, so no application, Keycloak or actuator content is reachable through them. 6443 is not reachable. UDP (flannel 8472, Tailscale 41641) was not scanned.
-- Root cause: probable, not yet confirmed on the host — the Traefik `LoadBalancer` service is allocated NodePorts (31460/32531 look like its `web`/`websecure` NodePorts) and kube-proxy publishes NodePorts on the node address; `ufw` filters the host's INPUT chain, not forwarded NodePort traffic.
+- Root cause: confirmed 2026-11-03 from the cluster (`kubectl get svc -A`): the `kube-system/traefik` `LoadBalancer` service holds NodePorts 32531→80 (`web`) and 31460→443 (`websecure`), and kube-proxy publishes NodePorts on the node address; `ufw` filters the host's INPUT chain, not forwarded NodePort traffic.
 - Fix (PR / commit / tag): to decide with the owner (cluster change): `allocateLoadBalancerNodePorts: false` on the Traefik service via its HelmChartConfig (k3s ServiceLB does not need them), or a rule that drops the 30000–32767 range from the public interface; then rerun the scan.
 - Regression test added: none yet; the port scan of `specs/008-ovh-k8s-deployment/quickstart.md` ("Security check") is the check, rerun after the fix.
 - Verified on prod: pending
+- Pre-cutover baseline (2026-11-03, spec 020 T017): both ports still open, recorded in `specs/020-compose-deployment/quickstart.md` step 10 with the commands of record; T054 reruns the same commands after the cutover and shows the ports gone with k3s — the move itself is the fix, per the deferral above.
 
 ### BUG-079: LibBot answers take 5 to 18 seconds on production, the spec asks for 10 seconds or less
 - Status: OPEN
