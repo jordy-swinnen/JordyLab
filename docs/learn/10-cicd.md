@@ -11,56 +11,44 @@ that's actually merged produces a publishable image.
 The backend image also receives the commit it was built from as a build argument, and reports it on
 `/actuator/info`. That is how "what is live?" gets an answer that is not a guess (spec 019, FR-017).
 
-A `deploy` job then runs after the images are pushed, but only while the repository variable
-`AUTO_DEPLOY` is `true`. The variable is the pause switch: set it to anything else and a green build
-stops deploying, without a code change.
+The Build publishes images; it deploys nothing. Production is the Docker Compose stack on the VPS (spec 020),
+and k3s was retired at the cutover.
 
-## `deploy-prod.yml` — a green build goes live by itself
+## `deploy-prod-compose.yml` — a deploy you start
 
-Since spec 019 there is no approval step. A green build on `main` calls this workflow with its own
-commit SHA, and the images that passed the tests are the images that run. Nothing is rebuilt and
-nothing is retagged. The job's `environment: production` still gives it the secrets (SOPS key,
-Tailscale credentials, the cluster token); the required reviewer that used to make it wait is gone
-(`docs/runbook.md` §9).
+Deploying is by hand: *Deploy to Production (Compose)* → *Run workflow* with a target. The target is a full
+commit sha or a release tag `vX.Y.Z` / `vX.Y.Z-rcN`, and it maps to the image tag `sha-<sha>` or the tag
+itself, so a sha deploy runs exactly the images its Build published. Nothing is rebuilt and nothing is
+retagged.
 
-The job, in order:
+No approval is needed: the `production` environment is there for its secrets. Deploys are manual because
+automatic deploys were paused at the cutover; spec 020's T062 decides when they return.
 
-1. Checks the target. A commit must be in the history, and its three images must exist in GHCR. A
-   target that fails either check ends the run before the cluster is touched.
-2. Reads the live images from the cluster. If the commit is older than the live one (a slow build
-   that finished late), it is skipped and the run stays green: it would otherwise undo a newer fix.
-3. Checks the newest completed database backup. A stale or missing backup is a warning, never a block.
-4. Decrypts `secrets.sops.yaml` with the age key from GitHub's secrets, only inside this ephemeral runner
-   (Chapter 6), and points Kustomize at the target's images (`kustomize edit set image`). It applies the
-   whole prod overlay.
-5. Waits on `kubectl rollout status` for every Deployment, then smoke-checks the public site: the home
-   page, an unauthenticated API call that must answer 401, and Keycloak's discovery document.
-6. Reads the commit the running backend reports. A mismatch is a warning: the image, not the report, is
-   what the cluster ran.
+Before it touches the host, the workflow resolves the target with `deploy/scripts/deploy-decision.sh` and
+refuses one it cannot resolve: a sha outside the history, a tag that does not exist, or a missing image
+(FR-014). Then it:
 
-A failed rollout or smoke check does not leave the cluster half-changed and report success. It rolls
-back to the commit that was live before, with that commit's own images and manifests, and the run ends
-red.
-
-Deploys never overlap. The concurrency group uses `queue: max`, so waiting deploys run in order and
-none is dropped. A newer deploy does not cancel a queued rollback, which would be the one thing you
-cannot afford to lose.
+1. Joins the tailnet as a temporary `tag:ci` node, checks the host's pinned ed25519 key, and connects over
+   SSH as `jordylab-deploy` (Chapter 3's counterpart: the host has no public SSH for CI).
+2. Mirrors `deploy/compose` to `/opt/jordylab/compose`; renders `prod.env` from `secrets.sops.yaml` on the
+   runner, so the plaintext never reaches a log or your checkout (Chapter 6); writes it on the host, keeping
+   the previous file as `prod.env.previous`.
+3. Runs `deploy-release.sh deploy <release>`: it pulls and restarts only backend, frontend and keycloak,
+   checks the site through Caddy on the host, and records the release in
+   `/opt/jordylab/state/current-release`. Postgres, ntfy and Caddy are not restarted by a release.
+4. Smoke-checks the site from the runner: home 200, an unauthenticated API call 401, Keycloak discovery 200.
+5. If anything after the environment file fails, asks the host script to restore the previous release and
+   `prod.env.previous`. The job ends red, and its summary names what is live.
 
 ## Rollback
 
-A rollback is either automatic (step 5 above) or by hand: *Deploy to Production* → *Run workflow* with a
-commit SHA or a release tag (`docs/runbook.md` §11). A manual run is never skipped as superseded, so you
-can always go back. Two things to remember: a rollback lasts only until the next green merge (revert the
-bad commit to keep it), and it re-applies the previous secrets file (roll forward for a secret rotation).
-
-## Dry run
-
-Before changing anything on the deploy path, run *Deploy to Production* with `dry_run` ticked. It
-validates the target, reads the live state, does a server-side apply dry run and runs the smoke checks,
-and changes nothing.
+By hand: run the workflow with an older commit sha or release tag. An older target is allowed, which is
+what makes it a rollback. A failed deploy rolls back by itself (step 5). A rollback stays live until the
+next deploy, because automatic deploys are off; revert the bad commit so the next deploy does not put it
+back.
 
 ## Hands-on
 
-Push a trivial change, watch `build.yml` run in the GitHub Actions tab, and follow the `deploy` job's
-summary. Then run a dry run of the same commit, and look at the commit the backend reports on its info
-endpoint.
+Push a trivial change, watch `build.yml` publish the images, then run *Deploy to Production (Compose)* with
+the merge commit's sha and follow its steps live. Compare `sudo docker ps` on the host and `/actuator/info`
+before and after.

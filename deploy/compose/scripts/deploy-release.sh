@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Host side of the Compose deploy (spec 020, contracts/deploy-workflow.md). Runs on the VPS as the deploy user.
 #
-#   deploy-release.sh deploy <tag>     roll out <tag>. If it fails, restore the live release and exit 1.
-#   deploy-release.sh rollback <tag>   <tag> was rolled out and then failed the external check. Redeploy the
-#                                      previous release and exit 1. Does nothing unless <tag> is the live release.
+#   deploy-release.sh deploy <release>     roll out <release>. If it fails, restore the live release and exit 1.
+#   deploy-release.sh rollback <release>   <release> was rolled out and then failed the external check. Redeploy
+#                                          the previous release and exit 1. Does nothing unless <release> is the
+#                                          live release.
 #
-# State lives in /opt/jordylab/state: current-release is the live tag, previous-release is the one before it.
+# A release is a release tag (vX.Y.Z or vX.Y.Z-rcN) or a commit's image tag (sha-<40 hex>): a sha deploy runs exactly
+# the images that Build published, with no retag step (spec 019, FR-001).
+# State lives in /opt/jordylab/state: current-release is the live release, previous-release is the one before it.
 # prod.env.previous keeps the environment file that was live before the last deploy, so a rollback can restore it.
 set -euo pipefail
 
@@ -19,16 +22,16 @@ readonly current_file=$state_dir/current-release
 readonly previous_file=$state_dir/previous-release
 readonly public_url=https://jordylab.be/
 readonly openid_url=https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration
-readonly release_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$'
+readonly release_pattern='^(v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?|sha-[0-9a-f]{40})$'
 
 usage() {
-  echo "usage: $0 deploy <tag> | rollback <tag>" >&2
+  echo "usage: $0 deploy <release> | rollback <release>   (release: vX.Y.Z[-rcN] or sha-<40 hex>)" >&2
   exit 2
 }
 
-check_tag() {
+check_release() {
   if [[ ! $1 =~ $release_pattern ]]; then
-    echo "deploy-release: $1 is not a release tag" >&2
+    echo "deploy-release: $1 is not a release (vX.Y.Z[-rcN] or sha-<40 hex>)" >&2
     exit 2
   fi
 }
@@ -72,17 +75,17 @@ restore_previous_environment() {
 }
 
 deploy_release() {
-  local tag=$1 live
+  local release=$1 live
   live=$(read_state "$current_file")
 
-  if start_release "$tag" && check_public_site; then
+  if start_release "$release" && check_public_site; then
     write_state "$previous_file" "${live:-}"
-    write_state "$current_file" "$tag"
-    echo "deployed $tag (previous: ${live:-none})"
+    write_state "$current_file" "$release"
+    echo "deployed $release (previous: ${live:-none})"
     return 0
   fi
 
-  echo "deploy of $tag failed" >&2
+  echo "deploy of $release failed" >&2
   restore_previous_environment
   if [[ -z $live ]]; then
     echo "there is no live release to restore; the owner decides" >&2
@@ -124,7 +127,7 @@ main() {
   if [[ $# -ne 2 ]]; then
     usage
   fi
-  check_tag "$2"
+  check_release "$2"
   case $1 in
     deploy) deploy_release "$2" ;;
     rollback) rollback_release "$2" ;;

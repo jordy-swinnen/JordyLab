@@ -1,17 +1,19 @@
 # Contract: Compose deploy workflow
 
-The new workflow `.github/workflows/deploy-prod-compose.yml` replaces the kubectl steps of `deploy-prod.yml` at cutover (plan step 22). It keeps the trigger, the approval and the release-tag rules, and changes only what runs on the host.
+The workflow `.github/workflows/deploy-prod-compose.yml` replaced the kubectl steps of `deploy-prod.yml` at cutover (plan step 22). It deploys the Compose stack on the VPS.
 
-## Trigger and gates (unchanged)
+**Updated 2026-11-03, after the cutover.** `release.yml` no longer exists (spec 019 removed it), so nothing calls this workflow: it is run by hand. It accepts a full commit sha as well as a release tag, and maps the target to the image tag `sha-<sha>` or the tag itself, so a sha deploy runs exactly the images its Build published and no retag step is needed. `deploy-prod.yml` and the `build.yml` deploy job were removed with k3s. Automatic deploys are off; whether they return is T062.
 
-- Called by `release.yml` after a release tag is verified and its images are retagged, or run by hand with a release tag (`workflow_dispatch`).
-- The tag must match `^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$`, as today.
-- Runs in the `production` environment, so the owner approves each run.
-- Concurrency group `deploy-production`, `cancel-in-progress: false`, as today.
+## Trigger and gates
+
+- Run by hand (`workflow_dispatch`) with a target: a full commit sha, or a release tag `vX.Y.Z` / `vX.Y.Z-rcN`.
+- A target is refused before the host is touched when it cannot be resolved: a sha outside the history, a tag that does not exist, or any of the three images missing from GHCR.
+- Runs in the `production` environment for its secrets. There is no approval step.
+- Concurrency group `deploy-production`, `cancel-in-progress: false`, `queue: max`.
 
 ## Steps
 
-1. **Validate the tag** (same check as today).
+1. **Resolve the target** with `deploy/scripts/deploy-decision.sh` (spec 019): the sha or tag is validated, and the result names the image tag `sha-<sha>` or the tag.
 2. **Join the tailnet** as `tag:ci` (existing step).
 3. **Check out the tag** so the Compose file and scripts match the images.
 4. **Decrypt and render**: `scripts/render-env.sh` decrypts `deploy/k8s/overlays/prod/secrets.sops.yaml` with `SOPS_AGE_KEY` and writes the environment file to standard output. The runner passes that output straight into the SSH session's standard input. Nothing is written to a log.
@@ -26,24 +28,24 @@ Steps 5 to 8 together mean that every failure after the environment file is writ
 
 Two modes. Both keep the state files `/opt/jordylab/state/current-release` (the live tag) and `previous-release` (the tag before it) up to date, and both run with `set -euo pipefail`. The state files change only on success, so during a failed deploy `current-release` still names the release that was live before it.
 
-**`deploy <tag>`**
+**`deploy <release>`**
 - Read the current tag (may be empty on the first deploy).
 - Export `JORDYLAB_RELEASE=<tag>`, run `docker compose pull backend frontend keycloak`, then `docker compose up -d --wait --wait-timeout 600 backend frontend keycloak`. Postgres, ntfy and Caddy are not restarted by a release. Caddy restarts only when `Caddyfile` changed, which is a separate, owner-approved step.
 - Run the host health check: `https://jordylab.be/` and the OpenID discovery URL, requested with `curl --resolve jordylab.be:443:127.0.0.1`, so they go through Caddy and its real certificate and routes.
 - On success: `previous-release` = the old current tag, `current-release` = `<tag>`, exit 0. `prod.env.previous` is kept.
 - On failure of the pull, the `up --wait` or the health check: restore `prod.env` from `prod.env.previous`, redeploy the **live** tag (the old `current-release`) with the same commands and health check, leave the state files unchanged, and exit 1. If there was no live tag (first deploy), exit 1 and change nothing else. The owner decides.
 
-**`rollback <tag>`**
+**`rollback <release>`**
 - Runs after `<tag>` was deployed and then failed the external check (step 7). It acts only when `<tag>` is `current-release`; otherwise it exits 1 and changes nothing.
 - Restore `prod.env` from `prod.env.previous` if that file exists. Redeploy the tag in `previous-release` with the same commands as `deploy`, then run the same health check.
 - On success: `current-release` = the previous tag, exit 1 (the job still failed). On failure, exit 1 and leave the state file naming the tag that was live last.
 - If there is no previous tag, exit 1 and change nothing else. The owner decides.
 
-Every tag is checked against the release pattern before anything runs. The local script `scripts/deploy-release.sh` implements these rules (spec 020, tasks T009).
+Every release is checked against the release pattern (`vX.Y.Z[-rcN]` or `sha-<40 hex>`) before anything runs. The local script `scripts/deploy-release.sh` implements these rules (spec 020, tasks T009).
 
 ## Rollback by hand
 
-Run the workflow with an earlier release tag (`workflow_dispatch`, same approval). The rule is unchanged from today's runbook (§20).
+Run the workflow with an earlier commit sha or release tag (`workflow_dispatch`). An older target is allowed; that is what makes it a rollback.
 
 ## Known limit (recorded, not changed)
 

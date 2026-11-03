@@ -1,10 +1,10 @@
 name: Deploy to Production (Compose)
 
-# Deploys a release tag to the Compose stack on the VPS (spec 020, contracts/deploy-workflow.md, T047).
-# The tag must match ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ and its images must exist in GHCR as
-# ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:<tag>. Not wired into the release flow yet
-# (T062): run it by hand with a release tag. It shares the deploy-production concurrency group with
-# deploy-prod.yml, so a k3s deploy and a Compose deploy can never overlap while both exist.
+# Deploys one target to the Compose stack on the VPS (spec 020, contracts/deploy-workflow.md, T047; spec 019
+# FR-001 and FR-014 for the target rules). The target is a full commit sha or a release tag vX.Y.Z[-rcN]; it maps
+# to the image tag sha-<sha> or <tag>, so a sha deploy runs exactly the images its Build published (no retag), and
+# an older target is how a rollback works. All three images must exist in GHCR before the host is touched.
+# Run it by hand; automatic deploys are off since the k3s to Compose cutover (T062 decides when they return).
 #
 # The host side is scripts/deploy-release.sh (T009): it pulls and starts only backend, frontend and
 # keycloak, checks the site through Caddy on the host, and restores the live release itself when its own
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Release tag to deploy (vX.Y.Z or vX.Y.Z-rcN; older tags are allowed, for rollback)"
+        description: "A full commit sha, or a release tag vX.Y.Z or vX.Y.Z-rcN (older targets are allowed, for rollback)"
         required: true
         type: string
 
@@ -40,23 +40,26 @@ jobs:
       # 2026-11-03 (T023). Host keys are public data; a mismatch fails the job.
       EXPECTED_ED25519_FP: SHA256:a7f59RlxrXwd5RIRZ5G0MphuKqyffsV6SB6RsnyLnm8
     steps:
-      # Contract step 3 first in practice: validating the tag and mirroring the files both need its tree.
-      - name: Check out the tag
+      # Contract step 3 first in practice: the checkout needs the target's tree for the Compose files and scripts.
+      # A target that does not exist fails here, before the host is touched.
+      - name: Check out the target
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target }}
           fetch-depth: 0
 
-      # Contract step 1: validate the tag (pattern, and it must exist in the repository history).
-      - name: Validate the release tag
+      # Contract step 1: resolve the target with the script the k3s pipeline used (spec 019, research D6). A sha must
+      # be in the history, a tag must exist, and the result names the image tag: sha-<sha>, or the tag unchanged.
+      - name: Resolve the target
+        id: resolve_target
         run: |
-          pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$'
-          if ! printf '%s' "$TARGET" | grep -Eq "$pattern"; then
-            echo "::error::$TARGET is not a release tag (vX.Y.Z or vX.Y.Z-rcN)"
+          resolution="$(deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic false)"
+          printf '%s\n' "$resolution" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$resolution"
+          if printf '%s\n' "$resolution" | grep -qx 'decision=refused'; then
+            echo "::error::the target is refused: $(printf '%s\n' "$resolution" | grep '^reason=' | cut -d= -f2-)"
             exit 1
           fi
-          git rev-parse --verify --quiet "refs/tags/$TARGET^{commit}" \
-            || { echo "::error::tag $TARGET does not exist in the repository"; exit 1; }
 
       - name: Set up buildx and log in to the registry
         uses: docker/setup-buildx-action@v3
@@ -68,19 +71,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Same refusal as deploy-prod.yml (FR-014): a tag without images is refused before the host is touched,
-      # so the live release is untouched (this is also the T052 failure path).
+      # FR-014: a target without images is refused before the host is touched, so the live release is untouched
+      # (this is also the T052 failure path).
       - name: Check that the target's images exist
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
           for component in backend frontend keycloak; do
-            image="ghcr.io/jordy-swinnen/jordylab-$component:$TARGET"
+            image="ghcr.io/jordy-swinnen/jordylab-$component:$IMAGE_TAG"
             if ! docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
               echo "::error::the image $image does not exist: the target is refused"
               exit 1
             fi
           done
 
-      # Contract step 2: join the tailnet as tag:ci (same step as deploy-prod.yml).
+      # Contract step 2: join the tailnet as tag:ci.
       - name: Join Tailscale
         uses: tailscale/github-action@v4
         with:
@@ -127,6 +132,13 @@ jobs:
           rsync -az --delete deploy/compose/ jordylab-vps:/opt/jordylab/compose/
           ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
 
+      # The runner needs sops to decrypt; it ships in no image on ubuntu-latest (T049 found this missing).
+      - name: Install sops
+        run: |
+          sudo curl -sSLo /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.13.3/sops-v3.13.3.linux.amd64
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
+
       # Contract steps 4 and 5: render the environment file on the runner (sops + PyYAML; values never
       # reach a log) and write it on the host, keeping the file it replaces as prod.env.previous.
       # The rendered output is checked before it replaces anything, so a failed render leaves prod.env alone.
@@ -154,13 +166,15 @@ jobs:
       # exits non-zero; the state files only change on success.
       - name: Deploy the release on the host
         id: deploy
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
-          # The tag was validated against the release pattern in an earlier step, so expanding it
-          # client-side into a literal remote command is intended.
+          # IMAGE_TAG is a sha or a vX.Y.Z[-rcN] tag resolved by deploy-decision.sh, so expanding it client-side
+          # into a literal remote command is intended.
           # shellcheck disable=SC2029
-          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh deploy "$TARGET"
+          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh deploy "$IMAGE_TAG"
 
-      # Contract step 7: external check from the runner (the same smoke script as deploy-prod.yml).
+      # Contract step 7: external check from the runner (deploy/scripts/smoke-check.sh, written for spec 019).
       - name: Smoke-check the public site
         id: smoke
         run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
@@ -172,10 +186,12 @@ jobs:
       - name: Roll back to the previous release
         id: rollback
         if: failure() && steps.write_env.outputs.host_touched == 'true'
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
-          # Same as the deploy step: the tag is pattern-validated, client-side expansion is intended.
+          # Same as the deploy step: the release value is resolved and checked, client-side expansion is intended.
           # shellcheck disable=SC2029
-          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh rollback "$TARGET"
+          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh rollback "$IMAGE_TAG"
 
       - name: Summarise the run
         if: always()
@@ -189,7 +205,8 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| Target tag | $TARGET |"
+            echo "| Target | $TARGET |"
+            echo "| Image tag | ${{ steps.resolve_target.outputs.image_tag }} |"
             echo "| Deploy on the host | ${{ steps.deploy.outcome }} |"
             echo "| Smoke check | ${{ steps.smoke.outcome }} |"
             echo "| Automatic rollback | ${{ steps.rollback.outcome }} |"
