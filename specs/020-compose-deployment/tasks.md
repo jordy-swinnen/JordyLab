@@ -139,10 +139,10 @@
 
 **Independent Test**: following the rewritten runbook for a reboot and a restore works step by step.
 
-- [ ] T058 [US5] Rewrite `docs/runbook.md` for Compose (install, deploy, rollback, backups, restore, reboot), and state that each release has a downtime of a few seconds (FR-019). Move the k3s sections to `docs/runbooks/vps-k3s-deployment/` as history. Depends on T036
+- [X] T058 [US5] Rewrite `docs/runbook.md` for Compose (install, deploy, rollback, backups, restore, reboot), and state that each release has a downtime of a few seconds (FR-019). Move the k3s sections to `docs/runbooks/vps-k3s-deployment/` as history. Depends on T036
 - [ ] T059 [US5] Write the Postgres major-version upgrade procedure (FR-015) in `docs/runbook.md`: dump and restore into the new major image, how backups start again on the new major, and how to go back to the old image. It must exist before the next major version bump; it does not block the move. Depends on T058
-- [ ] T060 [US5] Rewrite `.claude/skills/jordylab-ops/SKILL.md` for Compose: where it runs, safety rules, and the command reference. Depends on T058
-- [ ] T061 [P] [US5] Update `.claude/agents/jordylab-devops.md` and `.opencode/agents/jordylab-devops.md` so their bodies match (the dual-agent rule). Depends on T058
+- [X] T060 [US5] Rewrite `.claude/skills/jordylab-ops/SKILL.md` for Compose: where it runs, safety rules, and the command reference. Depends on T058
+- [X] T061 [P] [US5] Update `.claude/agents/jordylab-devops.md` and `.opencode/agents/jordylab-devops.md` so their bodies match (the dual-agent rule). Depends on T058
 - [ ] T062 [US5] **OWNER APPROVAL**: decide whether automatic deploys return, and if so add a `deploy` job to `.github/workflows/build.yml` that calls `deploy-prod-compose.yml` with `target: ${{ github.sha }}` (after T049, T051, T052 and T058 pass). The k3s side is already gone: `deploy-prod.yml`, the old `build.yml` deploy job and `release.yml` no longer exist, and `deploy-prod-compose.yml` is the only deploy path, run by hand with a sha or tag. Automatic deploys are off and no workflow reads `AUTO_DEPLOY`. Depends on T049, T051, T052, T058
 
 **Checkpoint**: the runbook matches the running system.

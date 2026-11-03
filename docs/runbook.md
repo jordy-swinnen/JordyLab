@@ -1,8 +1,8 @@
 # JordyLab Production Runbook
 
-Exact, copy-pasteable procedures for operating JordyLab's self-managed k3s cluster on OVH. Written for a Fish
-shell (no bash heredocs). Every section below that touches a live VPS, a billable OVH resource, DNS, or a real
-credential is Jordy's to run himself — nothing in this repository's automation performs these steps.
+Exact, copy-pasteable procedures for operating JordyLab's production Docker Compose stack on its OVH VPS. Every section
+below that touches a live VPS, a billable OVH resource, DNS, or a real credential is Jordy's to run himself — nothing in
+this repository's automation performs these steps.
 
 See `docs/learn/` for the concept explanations behind each procedure here, and `docs/environments.md` for the
 `local`/`prod` settings table.
@@ -11,9 +11,9 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 
 1. [Order the VPS](#1-order-the-vps)
 2. [Harden the OS](#2-harden-the-os)
-3. [Install k3s](#3-install-k3s)
+3. [Install Docker Engine and the Compose plugin](#3-install-docker-engine-and-the-compose-plugin)
 4. [Join the VPS to Tailscale](#4-join-the-vps-to-tailscale)
-5. [Install cluster add-ons](#5-install-cluster-add-ons)
+5. [The host layout and the stack](#5-the-host-layout-and-the-stack)
 6. [DNS & first TLS issuance](#6-dns--first-tls-issuance)
 7. [Generate the age key](#7-generate-the-age-key)
 8. [OVH Object Storage bucket](#8-ovh-object-storage-bucket)
@@ -27,8 +27,8 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 16. [Full VPS rebuild](#16-full-vps-rebuild)
 17. [Certificate troubleshooting](#17-certificate-troubleshooting)
 18. [Disk cleanup](#18-disk-cleanup)
-19. [k3s / OS upgrades](#19-k3s--os-upgrades)
-20. [Release a version (one tag → GitHub Release → deploy)](#20-release-a-version-one-tag--github-release--deploy)
+19. [Docker / OS upgrades](#19-docker--os-upgrades)
+20. [Deploys, releases and the APK](#20-deploys-releases-and-the-apk)
 21. [Manual tests the E2E campaign could not run](#21-manual-tests-the-e2e-campaign-could-not-run)
 22. [Before a release that changes the database: backup and pgvector](#22-before-a-release-that-changes-the-database-backup-and-pgvector)
 23. [LibBot and the auto-fill: what to check](#23-libbot-and-the-auto-fill-what-to-check)
@@ -50,7 +50,6 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 6. Note the VPS's public IPv4 — you'll need it for DNS (§6) and the firewall (§2).
 
 ## 2. Harden the OS
-
 **(operator step — do not run these commands yourself)**
 
 SSH in as the image's default user, then:
@@ -63,109 +62,94 @@ SSH in as the image's default user, then:
    sudo apt-get install -y unattended-upgrades
    sudo dpkg-reconfigure -plow unattended-upgrades
    ```
-3. Firewall (`ufw`), allowing only what FR-019 requires:
+3. Firewall (`ufw`), allowing only what the stack needs:
    ```
    sudo ufw default deny incoming
    sudo ufw default allow outgoing
-   sudo ufw allow 22/tcp
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
+   sudo ufw allow 22/tcp     # public SSH; close it (spec 020 T056) once tailnet SSH works from the Mac and CI
+   sudo ufw allow 80/tcp     # Caddy: Let's Encrypt HTTP-01 and the HTTP to HTTPS redirect
+   sudo ufw allow 443/tcp    # Caddy: the site
    sudo ufw enable
    ```
-   Never open 10250 (kubelet), 8472/udp (flannel VXLAN), or 6443 (k3s API — reached only over
-   Tailscale, §4/§9) to the public internet.
-
-## 3. Install k3s
-
+   Nothing else is public. Only `caddy` publishes ports (`compose.yaml`), and administration goes over Tailscale (§4):
+   no NodePorts, no 6443, no 10250.
+## 3. Install Docker Engine and the Compose plugin
 **(operator step — do not run these commands yourself)**
 
-1. Install k3s at the version pinned in `research.md` §1:
-   ```
-   curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.37.0+k3s1 sh -
-   ```
-2. Copy the kubeconfig to your laptop and point `KUBECONFIG` at it:
-   ```
-   scp your-user@<vps-ip>:/etc/rancher/k3s/k3s.yaml ~/.kube/jordylab.yaml
-   sed -i '' 's/127.0.0.1/<vps-ip>/' ~/.kube/jordylab.yaml   # macOS sed; drop '' on Linux
-   set -x KUBECONFIG ~/.kube/jordylab.yaml
-   ```
-3. Verify the bundled components:
-   ```
-   kubectl get pods -n kube-system
-   ```
-   Expect Traefik, CoreDNS, the `svclb-*` ServiceLB pods, and `local-path-provisioner` running.
-4. Drop `deploy/host/traefik-helmchartconfig.yaml` onto the VPS to enable Traefik's Gateway API provider:
-   ```
-   scp deploy/host/traefik-helmchartconfig.yaml your-user@<vps-ip>:/tmp/
-   ssh your-user@<vps-ip> "sudo mv /tmp/traefik-helmchartconfig.yaml /var/lib/rancher/k3s/server/manifests/traefik-config.yaml"
-   ```
-   k3s picks it up automatically — confirm with `kubectl get gtw,gatewayclass -A` shortly after.
+Production runs the Docker Compose stack in `deploy/compose/`. k3s is not part of it any more: it was retired at the
+Compose cutover (spec 020) and its manifests stay only as a rebuild fallback (§16).
 
+1. Install Docker Engine and the Compose plugin, and note the versions you install:
+   ```
+   docker --version && docker compose version
+   ```
+2. Create the deploy user and the host layout. The deploy workflow connects as `jordylab-deploy` (never root) and
+   mirrors `deploy/compose/` into place:
+   ```
+   sudo adduser --system --group --shell /bin/bash jordylab-deploy
+   sudo usermod -aG docker jordylab-deploy
+   sudo install -d -o jordylab-deploy -g jordylab-deploy /opt/jordylab/compose /opt/jordylab/env /opt/jordylab/state
+   ```
+   Put the CI key's public half in `~jordylab-deploy/.ssh/authorized_keys`; its private half is the `DEPLOY_SSH_KEY`
+   environment secret (§9).
+3. Validate the stack definition against the example environment file (no secrets needed):
+   ```
+   docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q
+   ```
+4. Bring the stack up (a deploy normally does this per release, §10):
+   ```
+   sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env \
+     -f /opt/jordylab/compose/compose.yaml up -d --wait
+   ```
+   Every service must report healthy; the backend's health check waits out its 150 s start period.
 ## 4. Join the VPS to Tailscale
-
 **(operator step — do not run these commands yourself)**
 
-The CI deploy used to reach the firewalled k3s API on port 6443 through the tailnet. Since the Compose cutover
-(spec 020) the deploy workflow reaches the host over Tailscale SSH as `jordylab-deploy` instead, so `tag:ci` needs TCP 22
-and no longer port 6443:
+The deploy workflow reaches the host over Tailscale SSH as `jordylab-deploy`, so a CI node needs TCP 22 to the server
+and nothing else (the k3s API's 6443 is not used any more):
 
 1. On the VPS:
    ```
    curl -fsSL https://tailscale.com/install.sh | sh
    sudo tailscale up --ssh
    ```
-2. In the Tailscale admin console, tag the node (e.g. `tag:jordylab-vps`) and confirm your tailnet's ACLs
-   allow a CI-side ephemeral node to reach it on port 6443 only.
-3. Verify from another tailnet device: `curl -k https://<vps-tailscale-ip>:6443/healthz`.
+2. In the Tailscale admin console, tag the node `tag:jordylab-vps` (key expiry disabled), and let `tag:ci` reach it on
+   `tcp:22` only.
+3. Verify from another tailnet device: `ssh ubuntu@100.93.81.41 'echo TAILNET_SSH_OK'`.
+## 5. The host layout and the stack
+**(reference — check here first when something is not where you expect it)**
 
-## 5. Install cluster add-ons
+| Path | What |
+|------|------|
+| `/opt/jordylab/compose/` | Mirror of `deploy/compose/`: `compose.yaml`, `Caddyfile`, the scripts, the Postgres build, the backup timers |
+| `/opt/jordylab/env/prod.env` | The environment file, rendered from SOPS by the deploy; `prod.env.previous` is the one before |
+| `/opt/jordylab/state/current-release`, `previous-release` | The live release (a tag or `sha-<sha>`) and the one before it |
 
-**(operator step — do not run these commands yourself)**
+- Only `caddy` publishes ports (80, 443). Caddy terminates TLS, redirects HTTP to HTTPS, and routes `/api`, `/auth/...`
+  and `/ntfy` (`Caddyfile`); every other path goes to the Angular app.
+- The other services are `backend`, `frontend`, `keycloak`, `postgres` and `ntfy`, each with `restart: unless-stopped`,
+  a memory limit and capped json-file logs (10 MB × 3).
+- The database is `jordylab-postgres:pg16-pgbackrest`, built on the host from `deploy/compose/postgres/`: pgvector
+  included, base image pinned by digest, pgBackRest pinned by version.
+- Artwork lives in the `jordylab_artwork` volume; PostgreSQL data in `jordylab_postgres-data`; Caddy's certificates in
+  `jordylab_caddy-data`. They survive a `docker compose down`; only a host loss destroys them.
 
-Pinned versions from `research.md`:
+When you are on the host, this is the one command shape used below:
 
+```bash
+export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+$COMPOSE ps
 ```
-helm repo add jetstack https://charts.jetstack.io
-helm repo add cnpg https://cloudnative-pg.github.io/charts
-helm repo update
-
-helm install cert-manager jetstack/cert-manager \
-  --namespace cert-manager --create-namespace \
-  --version v1.21.2 \
-  --set crds.enabled=true \
-  --set config.enableGatewayAPI=true
-
-helm install cnpg cnpg/cloudnative-pg \
-  --namespace cnpg-system --create-namespace \
-  --version 1.30.1
-
-kubectl apply -f https://github.com/cloudnative-pg/plugin-barman-cloud/releases/latest/download/manifest.yaml
-```
-
-Then apply the ClusterIssuer, and once a domain exists, the full prod overlay:
-
-```
-kubectl apply -f deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml
-```
-
 ## 6. DNS & first TLS issuance
-
 **(operator step — do this yourself)**
 
-1. At your domain registrar (OVHcloud), create an `A` record for the domain pointing at the VPS's public
-   IPv4 (from §1).
-2. Wait for propagation (`dig +short <domain>` should return the VPS IP from multiple resolvers).
-3. Deploy the prod overlay (§10) once the domain resolves. cert-manager will complete the HTTP-01 challenge
-   automatically.
-4. Verify:
-   ```
-   kubectl get certificate -n jordylab jordylab-tls
-   curl -Iv https://<domain>/
-   ```
-   Expect `Ready: True` on the Certificate and a valid TLS handshake from curl.
-
+1. At your domain registrar (OVHcloud), create an `A` record for the domain pointing at the VPS's public IPv4 (§1).
+2. Wait for propagation: `dig +short <domain>` returns the VPS IP from multiple resolvers.
+3. Nothing else to install: Caddy issues and renews the certificate itself through the HTTP-01 challenge on port 80
+   (`Caddyfile`, with the Let's Encrypt contact address), so port 80 stays open.
+4. Verify: `curl -sI https://<domain>/` answers 200, and `openssl s_client -connect <domain>:443` shows a valid chain.
+   Caddy keeps the certificate in the `jordylab_caddy-data` volume; a forced renewal test is quickstart step 7.
 ## 7. Generate the age key
-
 **(operator step — do not generate or store a real key yourself)**
 
 1. Install `age` (v1.3.2, `research.md` §7), then:
@@ -177,19 +161,20 @@ kubectl apply -f deploy/k8s/bootstrap/cert-manager-clusterissuer.yaml
 3. Store the **private** key in two places, never a third:
    - Your password manager (the durable offline copy — losing this makes every prod secret
      unrecoverable).
-   - The GitHub `production` environment, as a secret named `SOPS_AGE_KEY` (§9).
+   - The GitHub `production` environment, as a secret named `SOPS_AGE_KEY` (§9). The deploy renders `prod.env` from
+     `deploy/k8s/overlays/prod/secrets.sops.yaml` with it.
 4. Delete the local `jordylab-prod.age.key` file once both copies are stored.
-
 ## 8. OVH Object Storage bucket
-
 **(operator step — billable resource, do not create it yourself)**
 
-1. In the OVHcloud control panel, create an Object Storage container (S3-compatible), ideally in the same
-   region as the VPS (§1).
+1. In the OVHcloud control panel, create an S3-compatible Object Storage container named `jordylab-cnpg-backups` in
+   Gravelines (`s3.gra.io.cloud.ovh.net`, path-style access).
 2. Generate S3 access/secret keys scoped to that container.
-3. Add them to `deploy/k8s/overlays/prod/secrets.sops.yaml` under the S3 keys (§13, `contracts/secrets-schema.md`)
-   — `sops` encrypt, commit, deploy.
-
+3. Add them to `deploy/k8s/overlays/prod/secrets.sops.yaml` as `S3_ACCESS_KEY` and `S3_SECRET_KEY` (§13). The deploy
+   passes them to pgBackRest as `PGBACKREST_REPO1_S3_KEY` / `PGBACKREST_REPO1_S3_KEY_SECRET`.
+4. pgBackRest writes under `/pgbackrest` with 30 days of full backups
+   (`deploy/compose/pgbackrest/pgbackrest.conf`). The old Barman chain under `cnpg-backups` is history and pgBackRest
+   cannot read it (spec 020's backup contract).
 ## 9. First-time CI access setup
 
 **(operator step — do not create these yourself)**
@@ -283,36 +268,32 @@ release (`.claude/skills/flyway-migration/SKILL.md`).
 After a rollback, check:
 
 - the latest Flyway history rows:
-  `kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "select version, description, success from flyway_schema_history order by installed_rank desc limit 3"`;
+  `$COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select version, description, success from flyway_schema_history order by installed_rank desc limit 3"`;
 - the backend logs for schema or migration errors:
-  `kubectl -n jordylab logs deploy/backend --since=15m | grep -i -E "flyway|migration|schema"`;
+  `$COMPOSE logs --since=15m backend | grep -i -E "flyway|migration|schema"`;
 - the row counts of any table the failed release changed.
 
 ## 12. Logs
+The stack's logs are capped json-file logs on the host:
 
+```bash
+ssh ubuntu@100.93.81.41
+export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+$COMPOSE logs -f backend          # also: frontend, keycloak, caddy, postgres, ntfy
+$COMPOSE ps
+sudo docker stats --no-stream
+sudo journalctl -u 'jordylab-backup-*' -n 50    # the backup timers (§15)
 ```
-kubectl -n jordylab logs deploy/backend -f
-kubectl -n jordylab logs deploy/frontend -f
-kubectl -n jordylab logs deploy/keycloak -f
-kubectl -n jordylab logs deploy/ntfy -f
-kubectl -n jordylab logs cnpg-cluster-1 -c postgres -f        # the database (cluster `cnpg-cluster`, namespace `jordylab`)
-kubectl -n cnpg-system logs deploy/cnpg-cloudnative-pg -f   # the CloudNativePG operator itself
-```
-
 ## 13. Rotate a secret
-
 1. `SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml` (from the repo root) — opens the
    decrypted content in a temp file in IntelliJ; edit the value, save, close the tab, and `sops` re-encrypts on
    exit. Without `SOPS_EDITOR`, sops falls back to `$EDITOR`.
 2. Commit and push the updated ciphertext.
-3. Deploy as usual (§10) — the new value reaches the cluster as an updated `Secret`.
-4. (Player-count key: see §23, "Player counts are missing".) Restart the pods that read it so they pick it up:
-   ```
-   kubectl -n jordylab rollout restart deploy/backend deploy/keycloak
-   ```
-
+3. Deploy a commit that contains it (§10): the runner renders `prod.env` from the new ciphertext and writes it on the
+   host. The containers take the new values when that deploy recreates them; there is nothing to restart by hand.
+4. (Player-count key: see §23, "Player counts are missing".) A `docker compose up -d` on the host alone does **not** pick
+   up a new value: it reads the `prod.env` that is already there, which only the deploy writes.
 ## 14. Age key lost (re-keying)
-
 If the private key is gone from **both** the password manager and the GitHub environment secret:
 
 1. Every value in `secrets.sops.yaml` is unrecoverable as ciphertext — you must know the plaintext values
@@ -321,92 +302,97 @@ If the private key is gone from **both** the password manager and the GitHub env
 3. Re-create `secrets.sops.yaml` from scratch with the new key's public half in `.sops.yaml`, and the
    (re-obtained) plaintext values.
 4. Update the GitHub environment secret and your password manager with the new private key.
-5. Deploy (§10) to roll every affected credential.
-
+5. Deploy (§10) to re-render `prod.env` and roll every affected credential.
 ## 15. Restore drill
+The database is backed up with pgBackRest to OVH Object Storage: a full backup every Sunday 04:00 UTC, a differential
+Monday to Saturday 03:00 UTC, and continuous WAL archiving (`deploy/compose/host/`, `pgbackrest.conf`). The contract is
+`specs/020-compose-deployment/contracts/backup-contract.md`. Run the drill quarterly and after any change to the backup
+setup; it takes about 15 minutes.
 
-Mandatory once before go-live, then quarterly (FR-015, `/speckit-clarify`). Takes ~10 minutes; must stay under 30
-(SC-004). The manifest is `deploy/k8s/drills/restore-drill-cluster.yaml` — a separate `cnpg-restore-drill`
-cluster recovered from the same ObjectStore, with no WAL archiving of its own.
-
-```bash
-export KUBECONFIG=~/.kube/jordylab.yaml
-date -u +%FT%TZ                                                    # start time
-kubectl -n jordylab apply -f deploy/k8s/drills/restore-drill-cluster.yaml
-kubectl -n jordylab wait cluster/cnpg-restore-drill --for=condition=Ready --timeout=20m
-date -u +%FT%TZ                                                    # ready time
-```
-
-Compare row counts between production and the restored copy. Run this only after the `wait` above returned
-(the cluster is Ready, so recovery has finished); the queries are read-only, and writes after the last archived
-WAL segment may differ slightly. The drill checks the data, not the app: unlike the earlier plan, no throwaway
-backend is pointed at the restored database. Row counts plus Flyway history show the schemas and data came back,
-which is what FR-015 asks of a backup.
+**Check the chain** (on the host):
 
 ```bash
-Q="select 'gamecatalog.game', count(*) from gamecatalog.game union all select 'keycloak.user_entity', count(*) from keycloak.user_entity union all select 'flyway history', count(*) from flyway_schema_history"
-kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "$Q"
-kubectl -n jordylab exec cnpg-restore-drill-1 -c postgres -- psql -U postgres -d jordylab -At -c "$Q"
+export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+systemctl list-timers 'jordylab-backup-*'
+$COMPOSE exec -T postgres pgbackrest --stanza=jordylab info
 ```
 
-Tear down and log the drill (date, recovery point, duration, result) in the table below:
+The newest backup of either kind must be within 24 hours, and the newest full backup within 7 days.
+
+**Restore to a point in time** into a throwaway container with no published ports and its own volume:
 
 ```bash
-kubectl -n jordylab delete cluster cnpg-restore-drill
-kubectl -n jordylab get pvc | grep restore-drill || echo "drill volume removed"
+sudo docker volume create jordylab-restore-drill
+sudo docker run --rm --name jordylab-restore-drill --env-file /opt/jordylab/env/prod.env \
+  --mount type=volume,src=jordylab-restore-drill,dst=/var/lib/postgresql/data \
+  --entrypoint bash jordylab-postgres:pg16-pgbackrest -c '
+    pgbackrest --stanza=jordylab --type=time "--target=<UTC time>" --target-action=promote restore &&
+    pg_ctl -D /var/lib/postgresql/data -o "-p 5433" -w start &&
+    psql -p 5433 -U postgres -d jordylab -At -c "select count(*) from gamecatalog.game" &&
+    pg_ctl -D /var/lib/postgresql/data stop'
+sudo docker volume rm jordylab-restore-drill
 ```
 
-| Date | Recovered from | Ready after | Row counts match | By | Next due |
-|------|----------------|-------------|------------------|----|----------|
-| 2026-10-01 | base backup `cnpg-daily-backup-20261001030000` (03:00 UTC) + archived WAL up to ~09:53 UTC | 1 min 55 s (09:53:35 → 09:55:30 UTC) | yes — `gamecatalog.game` 128/128, `keycloak.user_entity` 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | 2027-01-01 (quarterly, FR-015) |
+Pick a target time inside the window and after the first full backup, and write it down first. Compare the row counts
+with production, then log the drill below.
 
+| Date | Restored to | Time to restore | Row counts match | By | Next due |
+|------|-------------|-----------------|------------------|----|----------|
+| 2026-10-01 | k3s era: base backup `cnpg-daily-backup-20261001030000` + WAL to ~09:53 UTC | 1 min 55 s | yes — `gamecatalog.game` 128/128, `keycloak.user_entity` 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | replaced by the Compose drill |
+| 2026-11-03 | the cutover window: `finance.article` at exactly its value at 20:38 UTC (823 vs 822 in the pre-window baseline) | inside the window; recorded in the cutover records | yes for the checked row | agent (approved by Jordy), in the cutover window | 2027-02-03 (quarterly) |
+
+Restores to a time **before** the cutover use the old CloudNativePG chain and the kept k3s manifests (backup contract,
+"The old chain"); pgBackRest cannot read it.
 ## 16. Full VPS rebuild
-
 If the VPS is lost entirely:
 
 1. Order and harden a new VPS (§1–§2).
-2. Install k3s at the same pinned version (§3), join Tailscale (§4), install the same add-on versions (§5).
-3. Re-create `.sops.yaml`'s age key relationship: use the offline private key copy (§7) — it doesn't change.
-4. `kubectl apply -k deploy/k8s/overlays/prod` from a clean checkout of `main`.
-5. Restore the database from the latest Object Storage backup (§15's recovery procedure, targeting "now"
-   instead of a specific point in time).
-6. Re-point DNS at the new VPS's IP (§6) and wait for a fresh certificate to issue.
-7. Everything else (game artwork, APKs) was only ever on the old VPS's local-path disk — it does **not**
-   survive a full VPS loss; only the database survives, via Object Storage (spec.md edge case).
+2. Install Docker and the Compose plugin, create the deploy user and the layout, and join Tailscale (§3–§4).
+3. From a clean checkout of `main`: mirror `deploy/compose/` to `/opt/jordylab/compose` and render `prod.env` from the
+   SOPS secrets (the deploy workflow does both; §10), then bring the stack up (§3 step 4).
+4. Restore the database from the latest pgBackRest backup (§15) into the `jordylab_postgres-data` volume.
+5. Re-point DNS at the new VPS's IP (§6); Caddy issues a fresh certificate.
+6. Here is what does **not** survive a full host loss: the `artwork` volume and the Caddy certificate volume. The
+   database does, via Object Storage. Artwork is regenerated by the auto-fill after the next scan (never seed it by hand).
 
+Fallback: the k3s material is kept under `deploy/k8s/` and `docs/runbooks/vps-k3s-deployment/` (spec 020, research R14)
+in case the Compose path itself cannot be rebuilt. It is history, not a live path.
 ## 17. Certificate troubleshooting
-
+```bash
+ssh ubuntu@100.93.81.41
+export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+$COMPOSE logs caddy | grep -i -E "certificate|challenge|error"
+$COMPOSE ps caddy
+curl -sI https://jordylab.be/
 ```
-kubectl get certificate -n jordylab jordylab-tls -o wide
-kubectl describe certificate -n jordylab jordylab-tls
-kubectl get challenges -n jordylab
-kubectl logs -n cert-manager deploy/cert-manager -f
-```
-Common causes: DNS not yet propagated (§6), the `Gateway`'s HTTP listener not reachable on port 80
-(firewall, §2), or `letsencrypt-prod`'s rate limits after repeated failed attempts — switch temporarily to
-Let's Encrypt's staging `ClusterIssuer` server while debugging to avoid burning production rate limits.
 
+Common causes: DNS not propagated (§6), port 80 not reachable from outside (firewall, §2 — HTTP-01 needs it), or
+Let's Encrypt rate limits after repeated failures. For a renewal test, use a staging hostname (quickstart step 7)
+rather than burning production attempts. Caddy stores its data in the `jordylab_caddy-data` volume; deleting the
+certificate directory forces a re-issue.
 ## 18. Disk cleanup
+75 GB total, shared by images, volumes and logs. Check and reclaim:
 
-75 GB total (images + `local-path` volumes). Check and reclaim:
+```bash
+df -h / /var/lib/docker
+sudo docker system df
+sudo docker image prune            # dangling images only; running and previous-release images are kept
+sudo docker builder prune
+du -sh /var/lib/docker/volumes/*
 ```
-sudo k3s crictl images
-sudo k3s crictl rmi --prune
-du -sh /var/lib/rancher/k3s/storage/*
-df -h /var/lib/rancher/k3s
-```
 
-## 19. k3s / OS upgrades
-
-1. OS: `sudo apt-get update && sudo apt-get upgrade -y`, reboot if a kernel update requires it. A single-node
-   reboot causes brief documented downtime (spec.md edge case) — everything comes back without manual steps.
-2. k3s: re-run the install script with a newer pinned version:
-   ```
-   curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=<new-version> sh -
-   ```
-   Check `research.md` and the k3s release notes for the current stable tag before bumping the pin.
-3. After either, verify: `kubectl get nodes`, `kubectl -n jordylab get pods`, then the `quickstart.md` checks.
-
+Keep the current and previous release images: they are the rollback targets named in the state files (§5).
+## 19. Docker / OS upgrades
+1. **OS**: `sudo apt-get update && sudo apt-get upgrade -y`, reboot if the kernel requires it. The stack comes back
+   by itself (`restart: unless-stopped`); verify with `$COMPOSE ps` and the quickstart checks (§12).
+2. **Docker**: upgrade the engine and the Compose plugin deliberately, then `$COMPOSE ps` and one smoke check. A deploy
+   does not upgrade Docker.
+3. **The application**: a release is a deploy (§10). Nothing on the host changes.
+4. **Postgres / pgBackRest**: change the pinned digest or version in `deploy/compose/postgres/Containerfile`
+   deliberately, then `cd /opt/jordylab/compose && sudo -u jordylab-deploy docker compose ... build postgres` and a
+   deploy in a maintenance window — restarting Postgres is downtime, and the image build is not part of a release.
+5. **No k3s to upgrade**: k3s is stopped and disabled since the cutover (spec 020). Its upgrade steps are history in
+   `docs/runbooks/vps-k3s-deployment/`.
 ## 20. Deploys, releases and the APK
 
 **Status: the deploy platform changed on 2026-11-03.** The automatic k3s pipeline (spec 019) deployed a green `main` build
@@ -464,20 +450,23 @@ safe to skip temporarily; none of them changes the web app.
 
 1. Deploy the release (above). The backend boots with `jordylab.notifications.*` and `/.well-known/assetlinks.json`
    now answers 403 (expected — the endpoint is gone).
-2. Delete the APK volume once no pod mounts it: `kubectl -n jordylab delete pvc mobile-releases`.
+2. The APK volume was a k3s PVC (`mobile-releases`) on the old cluster's local disk. k3s is gone (spec 020), so
+   there is nothing to delete, and the data is not needed.
 3. Delete the native identity entries from the live realm (the realm file no longer contains them; a first-boot import
    would not remove them):
    ```bash
-   kubectl -n jordylab exec -it deploy/keycloak -- /opt/keycloak/bin/kcadm.sh config credentials \
+   ssh ubuntu@100.93.81.41
+   export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+   $COMPOSE exec -T keycloak /opt/keycloak/bin/kcadm.sh config credentials \
      --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg
-   kubectl -n jordylab exec -it deploy/keycloak -- /opt/keycloak/bin/kcadm.sh get clients -r jordylab -q clientId=jordylab-mobile --fields id --config /tmp/kc.cfg
+   $COMPOSE exec -T keycloak /opt/keycloak/bin/kcadm.sh get clients -r jordylab -q clientId=jordylab-mobile --fields id --config /tmp/kc.cfg
    ```
    Delete that client's id with `delete clients/<id> -r jordylab`, then the same for `mobile-release-ci`, then
    `delete roles/mobile-release-publisher -r jordylab`. Confirm `get clients -r jordylab` no longer lists them.
 4. Remove the retired CI secret from GitHub (`gh secret remove MOBILE_RELEASE_CI_CLIENT_SECRET --repo jordy-swinnen/JordyLab`
    and, if present, `--env production`).
 5. SOPS: `MOBILE_RELEASE_CI_CLIENT_SECRET` and `MOBILE_DOWNLOAD_LINK_SECRET` are already gone from
-   `deploy/k8s/overlays/prod/secrets.sops.yaml` in the repo; the cluster Secret follows the next deploy.
+   `deploy/k8s/overlays/prod/secrets.sops.yaml`; `prod.env` follows the next deploy (§13).
 6. Verify: a throw-away sign-up produces the ntfy push and its tap opens `/settings/users`; the manifest audit on
    `https://jordylab.be` reports the app installable.
 
@@ -493,47 +482,32 @@ See [`docs/testing/manual-test-runbook.md`](testing/manual-test-runbook.md): a s
 ---
 
 ## 22. Before a release that changes the database: backup and pgvector
+Both are safe to repeat.
 
-Do these in order, the first time a release carrying the game-catalog refinement (spec 013) goes out. Both are safe to repeat.
-
-**1. An on-demand backup first** (the daily one is at 03:00 UTC; this release rewrites game identities, so take a fresh restore point right before it):
-
-```bash
-export KUBECONFIG=~/.kube/jordylab.yaml
-cat <<YAML | kubectl -n jordylab create -f -
-apiVersion: postgresql.cnpg.io/v1
-kind: Backup
-metadata:
-  name: pre-013-$(date -u +%Y%m%d%H%M)
-spec:
-  cluster:
-    name: cnpg-cluster
-  method: plugin
-  pluginConfiguration:
-    name: barman-cloud.cloudnative-pg.io
-YAML
-kubectl -n jordylab get backup -w          # wait for phase: completed
-```
-
-**2. The pgvector `Database` resource.** The backend's migration runs `CREATE EXTENSION IF NOT EXISTS vector` as the app user, which may not create an extension; the CloudNativePG operator does it as a superuser, and the statement is then a no-op. `deploy/k8s/cluster/cnpg-database.yaml` is part of the cluster kustomization, so the normal deploy applies it, but it must exist **before** the backend version that contains the migration starts. Check it and, to rehearse on the restore-drill cluster first (§15), apply the same resource pointing at the drill cluster:
+**1. A fresh backup first.** The full backup is Sunday 04:00 UTC and the differential Monday–Saturday 03:00 UTC (§15).
+For a release that rewrites data, take one now:
 
 ```bash
-kubectl -n jordylab get database jordylab -o jsonpath='{.status.applied}{"\n"}'      # true when reconciled
-kubectl -n jordylab exec cnpg-cluster-1 -c postgres -- psql -U postgres -d jordylab -At -c "select extname, extversion from pg_extension where extname = 'vector'"
+ssh ubuntu@100.93.81.41
+export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+$COMPOSE exec -T postgres pgbackrest --stanza=jordylab --type=full backup
+$COMPOSE exec -T postgres pgbackrest --stanza=jordylab info
 ```
 
-Rehearsal: after `kubectl apply -f deploy/k8s/drills/restore-drill-cluster.yaml` (§15), apply a copy of `cnpg-database.yaml` whose `metadata.name` is `drill-jordylab` and whose `spec.cluster.name` is `cnpg-restore-drill`, run the same `pg_extension` query against `cnpg-restore-drill-1`, then tear the drill down as in §15.
+**2. pgvector.** The production image is `pgvector/pgvector:pg16` (pinned by digest in
+`deploy/compose/postgres/Containerfile`), so the extension is available and the backend's
+`CREATE EXTENSION IF NOT EXISTS vector` succeeds. Check it before a release that depends on it:
 
----
-
+```bash
+$COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select extname, extversion from pg_extension where extname = 'vector'"
+```
 ## 23. LibBot and the auto-fill: what to check
-
-- **Covers or descriptions are missing.** The Sources page shows the library health (games without a cover, without a description, not yet searchable by LibBot) with the games behind each number. The background worker fills them after every scan, at start-up and daily at 04:30 (Europe/Brussels); it logs `Auto-fill handled N game(s)`. If the numbers do not fall: check `kubectl -n jordylab logs deploy/backend | grep -i "auto-fill"`; IGDB needs `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (without them non-Steam games only get libretro art); the AI descriptions need `OPENROUTER_API_KEY` (or `ANTHROPIC_API_KEY`).
+- **Covers or descriptions are missing.** The Sources page shows the library health (games without a cover, without a description, not yet searchable by LibBot) with the games behind each number. The background worker fills them after every scan, at start-up and daily at 04:30 (Europe/Brussels); it logs `Auto-fill handled N game(s)`. If the numbers do not fall: check the backend log with `$COMPOSE logs backend | grep -i "auto-fill"` (§12 sets `$COMPOSE`); IGDB needs `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (without them non-Steam games only get libretro art); the AI descriptions need `OPENROUTER_API_KEY` (or `ANTHROPIC_API_KEY`).
 - **Admin buttons.** "Refresh game data" is free; "Regenerate AI data" asks for confirmation because every game is a paid call. A run shows its progress and can be stopped; five failures in a row with the same cause (credits, a rejected key) end it with the cause shown.
 - **LibBot says it cannot answer.** The model call failed (credits, key, provider down): the message says so and the guest's allowance is not spent. Check the AI call counters (`jordylab.ai.calls`) and Settings → AI Models. Questions in a language other than English or Dutch get a fixed request to rephrase.
 - **Player counts are missing (TheGamesDB).** LibBot's "player count isn't known yet" note counts local-multiplayer games without `max_local_players`. IGDB fills what it can; TheGamesDB (spec 014) adds the count for console games that are flagged local multiplayer, but only when every entry for that title on that console agrees. The Sources page → "Player counts" shows how many each source filled, how many games have no count and why (Steam games, entries disagree, no exact match, count under 2, console not listed, not looked up yet) and the games behind each number. Steam games and games whose local flag is unknown are never looked up there.
   - **Secret.** `THEGAMESDB_API_KEY`: locally in the untracked `jordylab-be/.env`, in production under `stringData` of `jordylab-secrets` in `deploy/k8s/overlays/prod/secrets.sops.yaml` (edit with `SOPS_EDITOR="idea --wait" sops …`, §13). Without it the source is skipped, the log says so once at start-up, and the Sources page shows "not configured".
-  - **Check it works, without printing it.** Presence only: `kubectl -n jordylab exec deploy/backend -- sh -c 'test -n "$THEGAMESDB_API_KEY" && echo SET'`. By behaviour: the Sources page shows the remaining monthly allowance after a refresh, or run `./gradlew theGamesDbCheck` locally (one lookup).
-  - **A paused source.** The Sources page says until when and why: the key was refused or the monthly allowance (1,000 lookups) is used up (paused at least an hour, or until the allowance timer runs out), the allowance is almost used up (20 left), or the service could not be reached (15 minutes). Games are not charged a failed attempt while it is paused. The key is regenerated on the service's own API key page; then update the secret (§13) and restart the backend.
+  - **Check it works, without printing it.** Presence only: `$COMPOSE exec -T backend sh -c 'test -n "$THEGAMESDB_API_KEY" && echo SET'`. By behaviour: the Sources page shows the remaining monthly allowance after a refresh, or run `./gradlew theGamesDbCheck` locally (one lookup).
+  - **A paused source.** The Sources page says until when and why: the key was refused or the monthly allowance (1,000 lookups) is used up (paused at least an hour, or until the allowance timer runs out), the allowance is almost used up (20 left), or the service could not be reached (15 minutes). Games are not charged a failed attempt while it is paused. The key is regenerated on the service's own API key page; then update the secret (§13) and deploy.
   - **Never paste a response.** TheGamesDB echoes the full request address, key included, in the `pages` field of every answer. The backend never logs addresses or bodies; do not paste raw answers into chat, tickets or files either.
 - **Search index.** `game_embedding` is rebuilt by the auto-fill sweep when a game changes or the embedding model changes. If it is empty, LibBot still answers (by structure and words), only without meaning-based ranking.
