@@ -4,16 +4,27 @@ import dev.jordy.jordylab.settings.rest.client.KeycloakUnavailableException;
 import dev.jordy.jordylab.settings.rest.controller.model.PendingCountResponse;
 import dev.jordy.jordylab.settings.rest.controller.model.ResetPasswordResponse;
 import dev.jordy.jordylab.settings.rest.controller.model.UserResponse;
+import dev.jordy.jordylab.settings.rest.controller.model.PersonChatLimit;
 import dev.jordy.jordylab.settings.rest.controller.model.UsersResponse;
+import dev.jordy.jordylab.settings.service.AppUser;
+import dev.jordy.jordylab.settings.service.GuestChatLimitService;
+import dev.jordy.jordylab.settings.service.AdminAccountProtectedException;
+import dev.jordy.jordylab.settings.service.CannotChangeOwnAccountException;
 import dev.jordy.jordylab.settings.service.KeycloakUserAdministrationService;
 import dev.jordy.jordylab.settings.service.LastAdminProtectedException;
+import dev.jordy.jordylab.settings.service.UserDeletionFailedException;
+import dev.jordy.jordylab.settings.service.UserDeletionService;
 import dev.jordy.jordylab.settings.service.UserNotApprovedException;
 import dev.jordy.jordylab.settings.service.UserNotFoundException;
+import dev.jordy.jordylab.settings.service.UserSessionService;
 import dev.jordy.jordylab.settings.service.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,14 +49,25 @@ import java.util.UUID;
 public class SettingsUsersController {
 
     private final KeycloakUserAdministrationService userAdministrationService;
+    private final GuestChatLimitService guestChatLimitService;
+    private final UserDeletionService userDeletionService;
+    private final UserSessionService userSessionService;
 
     @GetMapping
     public UsersResponse getUsers(@RequestParam(required = false, defaultValue = "ALL") String status) {
         List<UserResponse> users = userAdministrationService.listUsers(parseStatus(status)).stream()
-                .map(UserResponse::from)
+                .map(this::toResponse)
                 .toList();
 
         return new UsersResponse(users);
+    }
+
+    private UserResponse toResponse(AppUser user) {
+        PersonChatLimit chatLimit = user.realmRoles().contains("admin")
+                ? null
+                : PersonChatLimit.from(guestChatLimitService.effectiveFor(user.id().toString()));
+
+        return UserResponse.from(user, chatLimit, userSessionService.countFor(user.id()));
     }
 
     @GetMapping("/pending-count")
@@ -77,6 +99,32 @@ public class SettingsUsersController {
     @PostMapping("/{id}/reset-password")
     public ResetPasswordResponse resetPassword(@PathVariable UUID id) {
         return new ResetPasswordResponse(userAdministrationService.resetPassword(id));
+    }
+
+    /** Spec 014 FR-014: the panel asks for confirmation; this endpoint deletes. */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePerson(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        userDeletionService.deletePerson(UUID.fromString(jwt.getSubject()), id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @ExceptionHandler(CannotChangeOwnAccountException.class)
+    public ResponseEntity<ErrorBody> handleCannotChangeOwnAccount(CannotChangeOwnAccountException exception) {
+        return ResponseEntity.badRequest().body(new ErrorBody("CANNOT_CHANGE_OWN_ACCOUNT"));
+    }
+
+    @ExceptionHandler(AdminAccountProtectedException.class)
+    public ResponseEntity<ErrorBody> handleAdminProtected(AdminAccountProtectedException exception) {
+        return ResponseEntity.badRequest().body(new ErrorBody("ADMIN_PROTECTED"));
+    }
+
+    @ExceptionHandler(UserDeletionFailedException.class)
+    public ResponseEntity<DeletionFailureBody> handleDeletionFailed(UserDeletionFailedException exception) {
+        log.warn("Deleting an account failed at {}", exception.stage(), exception);
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new DeletionFailureBody("KEYCLOAK_UNAVAILABLE", exception.stage().name()));
     }
 
     @ExceptionHandler(UserNotFoundException.class)
@@ -111,5 +159,8 @@ public class SettingsUsersController {
     }
 
     private record ErrorBody(String reason) {
+    }
+
+    private record DeletionFailureBody(String reason, String stage) {
     }
 }

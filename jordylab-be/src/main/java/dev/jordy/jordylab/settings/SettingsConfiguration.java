@@ -3,6 +3,7 @@ package dev.jordy.jordylab.settings;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
 import dev.jordy.jordylab.settings.rest.controller.GuestChatLimitFilter;
+import dev.jordy.jordylab.settings.service.GuestChatLimitService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +26,9 @@ class SettingsConfiguration {
      */
     @Bean
     GuestChatLimitFilter guestChatLimitFilter(GuestChatUsageRepository guestChatUsageRepository,
-            SettingsProperties settingsProperties, ObjectMapper objectMapper, Clock clock) {
-        return new GuestChatLimitFilter(guestChatUsageRepository, settingsProperties, objectMapper, clock);
+            GuestChatLimitService guestChatLimitService, SettingsProperties settingsProperties,
+            ObjectMapper objectMapper, Clock clock) {
+        return new GuestChatLimitFilter(guestChatUsageRepository, guestChatLimitService, settingsProperties,
+                objectMapper, clock);
     }
 }

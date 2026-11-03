@@ -14,13 +14,16 @@ describe('UsersStore', () => {
   const reject = vi.fn<SettingsUsersApiService['reject']>();
   const revoke = vi.fn<SettingsUsersApiService['revoke']>();
   const resetPassword = vi.fn<SettingsUsersApiService['resetPassword']>();
+  const grantApp = vi.fn<SettingsUsersApiService['grantApp']>();
+  const removeApp = vi.fn<SettingsUsersApiService['removeApp']>();
+  const deletePerson = vi.fn<SettingsUsersApiService['deletePerson']>();
 
   const createService = createServiceFactory({
     service: UsersStore,
     providers: [
       {
         provide: SettingsUsersApiService,
-        useValue: { getUsers, getPendingCount, approve, reject, revoke, resetPassword },
+        useValue: { getUsers, getPendingCount, approve, reject, revoke, resetPassword, grantApp, removeApp, deletePerson },
       },
     ],
   });
@@ -34,6 +37,118 @@ describe('UsersStore', () => {
     reject.mockReset();
     revoke.mockReset();
     resetPassword.mockReset();
+    grantApp.mockReset();
+    grantApp.mockReturnValue(of(void 0));
+    removeApp.mockReset();
+    removeApp.mockReturnValue(of(void 0));
+    deletePerson.mockReset();
+    deletePerson.mockReturnValue(of(void 0));
+  });
+
+  describe('deletion', () => {
+    it('deletes a person and reloads the list', () => {
+      spectator = createService();
+      getUsers.mockClear();
+
+      spectator.service.deletePerson('user-1');
+
+      expect(deletePerson).toHaveBeenCalledWith('user-1');
+      expect(getUsers).toHaveBeenCalled();
+    });
+
+    it('says nothing changed when the very first deletion step failed', () => {
+      spectator = createService();
+      deletePerson.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 503,
+              error: { reason: 'KEYCLOAK_UNAVAILABLE', stage: 'DISABLE' },
+            }),
+        ),
+      );
+
+      spectator.service.deletePerson('user-1');
+
+      expect(spectator.service.error()).toBe(
+        'Deletion could not start; nothing changed. Try again shortly.',
+      );
+    });
+
+    it('reports where a deletion stopped and that it can be retried', () => {
+      spectator = createService();
+      deletePerson.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 503,
+              error: { reason: 'KEYCLOAK_UNAVAILABLE', stage: 'DELETE_ACCOUNT' },
+            }),
+        ),
+      );
+
+      spectator.service.deletePerson('user-1');
+
+      expect(spectator.service.error()).toBe(
+        'Deletion stopped at DELETE_ACCOUNT. The person is blocked and you can retry.',
+      );
+    });
+  });
+
+  describe('app access', () => {
+    it('grants an app and reloads the list', () => {
+      spectator = createService();
+      getUsers.mockClear();
+
+      spectator.service.grantApp('user-1', 'gamecatalog');
+
+      expect(grantApp).toHaveBeenCalledWith('user-1', 'gamecatalog');
+      expect(getUsers).toHaveBeenCalled();
+    });
+
+    it('removes an app and reloads the list', () => {
+      spectator = createService();
+      getUsers.mockClear();
+
+      spectator.service.removeApp('user-1', 'gamecatalog');
+
+      expect(removeApp).toHaveBeenCalledWith('user-1', 'gamecatalog');
+      expect(getUsers).toHaveBeenCalled();
+    });
+
+    it('explains a refused grant', () => {
+      spectator = createService();
+      grantApp.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { reason: 'APP_NOT_GRANTABLE' },
+            }),
+        ),
+      );
+
+      spectator.service.grantApp('user-1', 'fna');
+
+      expect(spectator.service.error()).toBe('That app cannot be granted.');
+    });
+
+    it('explains a change to the admin own account', () => {
+      spectator = createService();
+      removeApp.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { reason: 'CANNOT_CHANGE_OWN_ACCOUNT' },
+            }),
+        ),
+      );
+
+      spectator.service.removeApp('admin-1', 'gamecatalog');
+
+      expect(spectator.service.error()).toBe('You cannot change your own account from here.');
+    });
   });
 
   describe('load', () => {

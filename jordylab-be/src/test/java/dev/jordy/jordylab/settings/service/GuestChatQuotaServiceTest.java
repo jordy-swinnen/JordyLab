@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -33,12 +34,19 @@ class GuestChatQuotaServiceTest {
     @Mock
     private GuestChatUsageRepository guestChatUsageRepository;
 
+    @Mock
+    private GuestChatLimitService guestChatLimitService;
+
     private GuestChatQuotaService service;
 
     @BeforeEach
     void setUp() {
         SettingsProperties properties = new SettingsProperties(new SettingsProperties.GuestChat(20, "UTC"), null);
-        service = new GuestChatQuotaService(guestChatUsageRepository, properties, Clock.fixed(NOW, ZoneOffset.UTC));
+        lenient().when(guestChatLimitService.effectiveFor("guest"))
+                .thenReturn(new GuestChatLimitService.EffectiveGuestChatLimit(20,
+                        GuestChatLimitService.LimitSource.ENVIRONMENT));
+        service = new GuestChatQuotaService(guestChatUsageRepository, guestChatLimitService, properties,
+                Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test

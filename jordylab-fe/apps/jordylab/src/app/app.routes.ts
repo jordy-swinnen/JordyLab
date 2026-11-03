@@ -1,10 +1,12 @@
 import { Route } from '@angular/router';
 import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
-import { settingsAdminRoutes } from '@jordylab-fe/settings/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
+import { legacyCallbackRedirect, legacyScreenRedirect } from './legacy-mobile-redirect';
+import { NoAppsComponent } from './no-apps/no-apps.component';
 import { SettingsHomeComponent } from './settings-home/settings-home.component';
+import { settingsAdminRoutes } from '@jordylab-fe/settings/ui';
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
@@ -14,21 +16,32 @@ export const appRoutes: Route[] = [
     component: AwaitingApprovalComponent,
   },
   {
-    // Spec US5 — ShareTargetService navigates here on a native shareReceived event.
-    // authGuard (not roleGuard) so a pending/logged-out share still runs login first (US5-4);
-    // the landing screen itself role-filters its destinations.
-    path: 'mobile/share',
+    // Spec 014: approved, but the admin has not granted any app yet. A pending account must still
+    // see "awaiting approval", never the "approved, nothing shared" wording.
+    path: 'no-apps',
+    canActivate: [authGuard, roleGuard('admin', 'guest')],
+    component: NoAppsComponent,
+  },
+  {
+    // The Web Share Target destination (spec 018 US2): the OS share sheet of the installed app lands here with
+    // ?title&text&url. authGuard (not roleGuard) so a signed-out share runs login first and returns here with the
+    // payload intact; the landing screen itself role-filters its destinations.
+    path: 'share',
     canActivate: [authGuard],
     component: ShareLandingComponent,
   },
+  // Legacy links from the retired native app (research D7): old notification taps and the native login callback.
+  { path: 'mobile/open', canActivate: [legacyScreenRedirect], children: [] },
+  { path: 'mobile/callback', canActivate: [legacyCallbackRedirect], children: [] },
   {
     path: 'fna',
     canActivate: [authGuard, roleGuard('admin')],
     loadChildren: () => import('@jordylab-fe/fna/ui').then((m) => m.fnaRoutes),
   },
   {
+    // Spec 014: the Game Catalog needs the per-app grant, not just approval.
     path: 'games',
-    canActivate: [authGuard, roleGuard('admin', 'guest')],
+    canActivate: [authGuard, roleGuard('admin', 'app-gamecatalog')],
     loadChildren: () =>
       import('@jordylab-fe/gamecatalog/ui').then((m) => m.gamecatalogRoutes),
   },

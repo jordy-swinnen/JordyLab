@@ -9,10 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import dev.jordy.jordylab.shared.event.UserAccessRemoved;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.transaction.support.TransactionOperations;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.Instant;
 import java.util.List;
@@ -23,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,13 +37,16 @@ class KeycloakUserAdministrationServiceTest {
     private KeycloakAdminClient keycloakAdminClient;
 
     @Mock
+    private GuestChatLimitService guestChatLimitService;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     private KeycloakUserAdministrationService service;
 
     @BeforeEach
     void setUp() {
-        service = new KeycloakUserAdministrationService(keycloakAdminClient, eventPublisher,
+        service = new KeycloakUserAdministrationService(keycloakAdminClient, guestChatLimitService, eventPublisher,
                 TransactionOperations.withoutTransaction());
     }
 
@@ -129,12 +128,24 @@ class KeycloakUserAdministrationServiceTest {
     @Test
     void approvingAnAlreadyApprovedUserIsANoOp() {
         when(keycloakAdminClient.findUser(GUEST_ID.toString()))
-                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest", "app-gamecatalog"))));
 
         service.approve(GUEST_ID);
 
         verify(keycloakAdminClient, never()).setEnabled(GUEST_ID.toString(), true);
         verify(keycloakAdminClient, never()).grantRealmRole(GUEST_ID.toString(), "guest");
+        verify(keycloakAdminClient, never()).grantRealmRole(GUEST_ID.toString(), "app-gamecatalog");
+    }
+
+    /** Spec 014 FR-008: a first approval, and an approval after a revoke, start from the default grant set. */
+    @Test
+    void approvingAGuestAlsoGrantsTheDefaultApps() {
+        when(keycloakAdminClient.findUser(GUEST_ID.toString()))
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+
+        service.approve(GUEST_ID);
+
+        verify(keycloakAdminClient).grantRealmRole(GUEST_ID.toString(), "app-gamecatalog");
     }
 
     @Test
@@ -172,33 +183,20 @@ class KeycloakUserAdministrationServiceTest {
     }
 
     @Test
-    void revokingAGuestRemovesTheRoleEndsSessionsAndRevokesMobileOfflineConsent() {
+    void revokingAGuestRemovesTheRoleAndEndsSessions() {
         when(keycloakAdminClient.findUser(GUEST_ID.toString()))
-                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
+                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest", "app-gamecatalog"))));
 
         service.revoke(GUEST_ID);
 
+        // Spec 014 FR-008: every app grant goes too, so a later approval starts from the default set.
+        verify(keycloakAdminClient).revokeRealmRole(GUEST_ID.toString(), "app-gamecatalog");
         verify(keycloakAdminClient).revokeRealmRole(GUEST_ID.toString(), "guest");
         verify(keycloakAdminClient).endSessions(GUEST_ID.toString());
-        // spec 007 FR-013 / research D12: a plain session logout does not revoke offline_access
-        // grants, so revoke() must separately kill the mobile app's biometric-unlock consent.
-        verify(keycloakAdminClient).revokeConsent(GUEST_ID.toString(), "jordylab-mobile");
+        // Spec 014 FR-010: a revoke clears the personal limit.
+        verify(guestChatLimitService).clearPersonal(GUEST_ID.toString());
         // Their marks stop counting once the other modules hear that the access is gone (spec 013 FR-046).
         verify(eventPublisher).publishEvent(new UserAccessRemoved(GUEST_ID.toString()));
-    }
-
-    @Test
-    void revokingAGuestWhoNeverUsedTheMobileAppIsNotAnError() {
-        when(keycloakAdminClient.findUser(GUEST_ID.toString()))
-                .thenReturn(Optional.of(keycloakUser(GUEST_ID, true, List.of("guest"))));
-        HttpClientErrorException noSuchConsent = HttpClientErrorException.create(
-                HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, new byte[0], null);
-        doThrow(noSuchConsent).when(keycloakAdminClient).revokeConsent(GUEST_ID.toString(), "jordylab-mobile");
-
-        service.revoke(GUEST_ID);
-
-        verify(keycloakAdminClient).revokeRealmRole(GUEST_ID.toString(), "guest");
-        verify(keycloakAdminClient).endSessions(GUEST_ID.toString());
     }
 
     @Test

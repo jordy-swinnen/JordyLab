@@ -1,6 +1,5 @@
 package dev.jordy.jordylab.fna.service;
 
-import dev.jordy.jordylab.fna.BriefingReady;
 import dev.jordy.jordylab.fna.domain.Article;
 import dev.jordy.jordylab.fna.domain.Briefing;
 import dev.jordy.jordylab.fna.domain.PortfolioPosition;
@@ -10,12 +9,12 @@ import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.shared.ai.AiCallResult;
 import dev.jordy.jordylab.shared.ai.AiFeature;
 import dev.jordy.jordylab.shared.ai.ResilientAiService;
+import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -37,7 +36,7 @@ public class BriefingGeneratorService {
     private final ArticleRepository articleRepository;
     private final PortfolioPositionRepository positionRepository;
     private final BriefingRepository briefingRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final NtfyClient ntfyClient;
 
     @Value("classpath:prompts/fna/briefing-system.st")
     Resource systemPromptResource;
@@ -83,9 +82,11 @@ public class BriefingGeneratorService {
                         .modelUsed(result.model())
                         .build()
         );
-        // spec 007 FR-016 / research D9: mobile listens for this to push an admin notification —
-        // fna publishes a plain fact about what happened, nothing mobile-specific.
-        eventPublisher.publishEvent(new BriefingReady(briefing.getId(), briefing.getGeneratedAt()));
+        // spec 018 US3: the admin gets a push with a click-through to the briefing screen. A delivery failure is
+        // logged and swallowed by NtfyClient — it must never fail the generation that triggered it.
+        ntfyClient.publish("Your monthly briefing is ready",
+                "The FNA monthly briefing generated at " + briefing.getGeneratedAt() + " is ready to read.",
+                "/fna/briefing");
 
         return briefing;
     }

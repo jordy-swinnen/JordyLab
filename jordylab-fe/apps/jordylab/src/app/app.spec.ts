@@ -2,22 +2,21 @@ import { signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { AuthService, BiometricUnlockService } from '@jordylab-fe/shared/auth';
+import { AuthService } from '@jordylab-fe/shared/auth';
 import { UsersStore } from '@jordylab-fe/settings/api';
-import { ApkDownloadService } from '@jordylab-fe/shared/platform/api';
+import { InstallPromptStore } from '@jordylab-fe/shared/platform/api';
 import { App } from './app';
 
 describe('App', () => {
   const logout = vi.fn(() => Promise.resolve());
-  const disableBiometricUnlock = vi.fn(() => Promise.resolve());
   // Real signals back the mock's reactive state so tests can drive shell visibility.
   const hasAppRole = signal(true);
   const isAdmin = signal(false);
+  const isGuest = signal(false);
+  const hasGameCatalogAccess = signal(false);
   const pendingCount = signal(0);
-  const resolveLatestDownloadUrl = vi.fn();
+  const captureInstallPrompt = vi.fn();
   const authInit = vi.fn();
-  const biometricIsEnabled = vi.fn();
-  const biometricUnlock = vi.fn();
   const createComponent = createComponentFactory({
     component: App,
     imports: [RouterModule.forRoot([])],
@@ -31,6 +30,8 @@ describe('App', () => {
           logout,
           hasAppRole: hasAppRole.asReadonly(),
           isAdmin: isAdmin.asReadonly(),
+          isGuest: isGuest.asReadonly(),
+          hasGameCatalogAccess: hasGameCatalogAccess.asReadonly(),
         },
       },
       {
@@ -38,18 +39,13 @@ describe('App', () => {
         useValue: { pendingCount: pendingCount.asReadonly() },
       },
       {
-        provide: ApkDownloadService,
-        useValue: { resolveLatestDownloadUrl },
-      },
-      {
-        provide: BiometricUnlockService,
+        provide: InstallPromptStore,
         useValue: {
-          disable: disableBiometricUnlock,
-          isEnabled: biometricIsEnabled,
-          unlock: biometricUnlock,
-          available: signal(false).asReadonly(),
-          enabled: signal(false).asReadonly(),
-          refresh: () => Promise.resolve(),
+          captureInstallPrompt,
+          promptKind: signal(null).asReadonly(),
+          canPromptInstall: signal(false).asReadonly(),
+          dismiss: vi.fn(),
+          promptInstall: vi.fn(),
         },
       },
     ],
@@ -60,16 +56,16 @@ describe('App', () => {
   beforeEach(() => {
     hasAppRole.set(true);
     isAdmin.set(false);
+    isGuest.set(false);
+    hasGameCatalogAccess.set(false);
     pendingCount.set(0);
-    resolveLatestDownloadUrl.mockReset();
     authInit.mockReset().mockResolvedValue(false);
-    biometricIsEnabled.mockReset().mockResolvedValue(false);
-    biometricUnlock.mockReset().mockResolvedValue(true);
     spectator = createComponent();
   });
 
   it('lists every section grouped by module in the sidebar for an admin', () => {
     isAdmin.set(true);
+    hasGameCatalogAccess.set(true);
     spectator.detectChanges();
 
     const links = spectator
@@ -87,11 +83,13 @@ describe('App', () => {
       'Users',
       'AI Models',
       'App',
+      'Feedback',
     ]);
   });
 
   it('links each section to its domain route for an admin', () => {
     isAdmin.set(true);
+    hasGameCatalogAccess.set(true);
     spectator.detectChanges();
 
     const hrefs = spectator
@@ -109,15 +107,33 @@ describe('App', () => {
       '/settings/users',
       '/settings/ai-models',
       '/settings/app',
+      '/settings/inbox',
     ]);
   });
 
-  it('shows a guest the Game Catalog library and LibBot and App settings, with Sources, Consoles, FNA and the admin settings hidden', () => {
+  it('shows a guest with the app grant the Game Catalog library and LibBot and App settings, with Sources, Consoles, FNA and the admin settings hidden', () => {
+    isGuest.set(true);
+    hasGameCatalogAccess.set(true);
+    spectator.detectChanges();
+
     const links = spectator
       .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.textContent?.trim());
 
-    expect(links).toEqual(['Library', 'LibBot', 'App']);
+    expect(links).toEqual(['Library', 'LibBot', 'App', 'Feedback']);
+  });
+
+  it('hides the Game Catalog from an approved guest without the app grant', () => {
+    isGuest.set(true);
+    spectator.detectChanges();
+
+    const links = spectator
+      .queryAll('nav[aria-label="Primary"] a')
+      .map((link) => link.textContent?.trim());
+
+    // The guest still has the Feedback tab: an approved guest with no app grant can still write
+    // to the admin (its app list is then empty).
+    expect(links).toEqual(['App', 'Feedback']);
   });
 
   it('renders a router outlet for the domain routes', () => {
@@ -134,10 +150,8 @@ describe('App', () => {
     const signOut = document.querySelector<HTMLElement>('[data-testid="user-menu-sign-out"]');
     expect(signOut).not.toBeNull();
     signOut?.click();
-    // onLogout() awaits the (mocked) biometric-unlock wipe before auth.logout() — one microtask hop.
     await Promise.resolve();
 
-    expect(disableBiometricUnlock).toHaveBeenCalled();
     expect(logout).toHaveBeenCalled();
   });
 
@@ -162,6 +176,7 @@ describe('App', () => {
 
     it('is shown to an admin, linked to /settings/users', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       const links = spectator.queryAll('nav[aria-label="Primary"] a');
@@ -174,6 +189,7 @@ describe('App', () => {
 
     it('shows the pending-count badge only once there are pending sign-ups', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       expect(
@@ -189,47 +205,42 @@ describe('App', () => {
     });
   });
 
-  describe('install download', () => {
-    it('reports "started" once the signed download link has been resolved', async () => {
-      resolveLatestDownloadUrl.mockResolvedValue('#apk-download');
-
-      await spectator.component.onInstallDownload();
-
-      expect(spectator.component['installStatus']()).toBe('started');
-    });
-
-    it('reports "failed" when the signed download link cannot be requested', async () => {
-      resolveLatestDownloadUrl.mockRejectedValue(new Error('403'));
-
-      await spectator.component.onInstallDownload();
-
-      expect(spectator.component['installStatus']()).toBe('failed');
-    });
-
-    it('reports "preparing" while the link is being requested', () => {
-      resolveLatestDownloadUrl.mockReturnValue(new Promise<string>(() => undefined));
-
-      void spectator.component.onInstallDownload();
-
-      expect(spectator.component['installStatus']()).toBe('preparing');
+  describe('install prompt', () => {
+    it('captures the browser install event once, from the shell (spec 018 FR-003)', () => {
+      expect(captureInstallPrompt).toHaveBeenCalled();
     });
   });
 
   it('shows the App settings entry on the web to everyone, because the theme choice lives there', () => {
+    isGuest.set(true);
+    spectator.detectChanges();
+
     const settings = spectator.component['visibleGroups']().find((group) => group.label === 'Settings');
 
-    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/app']);
+    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/app', '/settings/feedback']);
   });
 
   describe('phone tab bar', () => {
     const tabLabels = () => spectator.queryAll('lib-tab-bar nav > *').map((tab) => tab.textContent?.trim());
 
-    it('shows Games and Settings to a guest', () => {
+    it('shows Games and Settings to a guest with the app grant', () => {
+      isGuest.set(true);
+      hasGameCatalogAccess.set(true);
+      spectator.detectChanges();
+
       expect(tabLabels()).toEqual(['Games', 'Settings']);
+    });
+
+    it('shows only Settings to an approved guest without the app grant', () => {
+      isGuest.set(true);
+      spectator.detectChanges();
+
+      expect(tabLabels()).toEqual(['Settings']);
     });
 
     it('adds Finance for an administrator', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       expect(tabLabels()).toEqual(['Games', 'Finance', 'Settings']);
@@ -237,6 +248,7 @@ describe('App', () => {
 
     it('lifts the pages of a module out of its tab', () => {
       isAdmin.set(true);
+      hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
       spectator.click(spectator.queryAll('lib-tab-bar nav > button')[0]);
@@ -249,11 +261,19 @@ describe('App', () => {
       ]);
     });
 
-    it('goes straight to the only page of a module', () => {
-      const settingsTab = spectator.queryAll('lib-tab-bar nav > *')[1];
+    it('opens the guest Settings pages, App and Feedback, from its tab', () => {
+      isGuest.set(true);
+      spectator.detectChanges();
+      const settingsTab = spectator.queryAll('lib-tab-bar nav > *')[0];
 
-      expect(settingsTab.tagName).toBe('A');
-      expect(settingsTab.getAttribute('href')).toBe('/settings/app');
+      expect(settingsTab.tagName).toBe('BUTTON');
+
+      spectator.click(settingsTab);
+
+      expect(spectator.queryAll('[data-testid="tab-bar-options"] a').map((link) => link.textContent?.trim())).toEqual([
+        'App',
+        'Feedback',
+      ]);
     });
 
     it('is not shown to an account with no application role', () => {

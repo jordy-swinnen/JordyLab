@@ -131,7 +131,7 @@ const extend = {
 
 const themeBase = plugin(({ addBase, addComponents }) => {
   addBase({
-    // The phone's status bar is drawn over the page (viewport-fit=cover); Capacitor on older WebViews reports its height through the second variable.
+    // The phone's status bar is drawn over the page (viewport-fit=cover); older bundled Android WebViews reported their height through the second variable, so it is still honoured.
     ':root': { '--radius': '0.75rem', '--inset-top': 'max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px))' },
     ...themeBlocks(),
     '*': { borderColor: 'hsl(var(--border))' },

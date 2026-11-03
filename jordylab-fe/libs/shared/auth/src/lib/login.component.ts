@@ -1,7 +1,6 @@
-import { Component, computed, effect, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, effect, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from './auth.service';
-import { BiometricUnlockService } from './biometric-unlock.service';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 
 @Component({
@@ -35,36 +34,17 @@ import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
         <button hlmBtn variant="default" (click)="onLogin()" class="mt-7 h-11 w-full text-[15px] font-semibold">
           Sign in with Keycloak
         </button>
-        @if (failure()) {
-          <p class="mt-4 text-sm font-medium text-destructive" role="alert">{{ failure() }}</p>
-        }
-        @if (biometricEnabled()) {
-          <button
-            hlmBtn
-            variant="outline"
-            (click)="onUnlock()"
-            class="mt-3 h-11 w-full text-[15px] font-semibold"
-          >
-            Unlock with fingerprint
-          </button>
-        }
       </div>
     </div>
   `,
 })
 export class LoginComponent {
   #auth = inject(AuthService);
-  #biometric = inject(BiometricUnlockService);
   #router = inject(Router);
   #returnUrl = safeReturnUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl'));
 
-  protected readonly biometricEnabled = this.#biometric.enabled;
-  protected readonly failure = computed(() => this.#biometric.failure() ?? this.#auth.nativeFailure());
-
   constructor() {
-    void this.#biometric.refresh();
-    // The native login finishes outside the router (an App Link callback), so nothing navigates
-    // away from this page once the tokens arrive: leave it as soon as the session is authenticated.
+    // A silent SSO check can authenticate without the router navigating anywhere: leave as soon as there is a session.
     effect(() => {
       if (this.#auth.isAuthenticated()) {
         void this.#router.navigateByUrl(this.#returnUrl);
@@ -72,12 +52,8 @@ export class LoginComponent {
     });
   }
 
-  protected async onUnlock(): Promise<void> {
-    await this.#biometric.unlock();
-  }
-
   async onLogin(): Promise<void> {
-    await this.#auth.login();
+    await this.#auth.login(this.#returnUrl);
   }
 }
 

@@ -47,11 +47,19 @@ class LibBotSecurityTest {
     private GameQueryService gameQueryService;
 
     @Test
-    void guestsAndAdminsMayForgetTheirConversation() throws Exception {
-        mockMvc.perform(delete("/api/gamecatalog/libbot/conversations/c1").with(role("guest")))
+    void guestsWithTheGameCatalogGrantAndAdminsMayForgetTheirConversation() throws Exception {
+        mockMvc.perform(delete("/api/gamecatalog/libbot/conversations/c1")
+                        .with(role("guest", "app-gamecatalog")))
                 .andExpect(status().isNoContent());
         mockMvc.perform(delete("/api/gamecatalog/libbot/conversations/c1").with(role("admin")))
                 .andExpect(status().isNoContent());
+    }
+
+    /** Spec 014 FR-003: approval alone no longer opens the Game Catalog. */
+    @Test
+    void anApprovedGuestWithoutTheGameCatalogGrantIsRefused() throws Exception {
+        mockMvc.perform(delete("/api/gamecatalog/libbot/conversations/c1").with(role("guest")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -69,8 +77,10 @@ class LibBotSecurityTest {
                 .content("{\"conversationId\":\"c1\",\"message\":\"hi\"}")).andExpect(status().isForbidden());
     }
 
-    private static RequestPostProcessor role(String role) {
-        return jwt().authorities(new SimpleGrantedAuthority("ROLE_" + role));
+    private static RequestPostProcessor role(String... roles) {
+        return jwt().authorities(java.util.Arrays.stream(roles)
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .toArray(org.springframework.security.core.GrantedAuthority[]::new));
     }
 
     @TestConfiguration

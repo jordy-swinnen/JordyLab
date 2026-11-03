@@ -18,6 +18,11 @@ public interface GuestChatUsageRepository extends JpaRepository<GuestChatUsage, 
      * Race-safe increment for concurrent chats on the same day (data-model.md): the candidate
      * id is only used on first insert for the day, ignored on conflict.
      */
+    /** Spec 014 FR-015: a deleted person's usage goes with them. Idempotent when there is none. */
+    @Modifying(flushAutomatically = true)
+    @Query("DELETE FROM GuestChatUsage usage WHERE usage.userSubject = :userSubject")
+    void deleteByUserSubject(@Param("userSubject") String userSubject);
+
     @Modifying(flushAutomatically = true)
     @Query(value = "INSERT INTO settings.guest_chat_usage (id, user_subject, usage_date, message_count, "
             + "created_at, updated_at) VALUES (:id, :userSubject, :usageDate, 1, now(), now()) "

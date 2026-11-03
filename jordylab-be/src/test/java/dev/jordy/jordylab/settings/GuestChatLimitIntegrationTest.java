@@ -27,7 +27,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Proves the settings-owned guest chat limit end to end (FR-009, SC — 429 with {@code resetsAt},
@@ -85,6 +90,56 @@ class GuestChatLimitIntegrationTest extends KeycloakIntegrationTest {
         Optional<GuestChatUsage> usage = guestChatUsageRepository.findByUserSubjectAndUsageDate(subject, today);
         assertThat(usage).isPresent();
         assertThat(usage.get().getMessageCount()).isEqualTo(1);
+    }
+
+    /**
+     * Spec 014 FR-009/FR-010: a default saved in the panel replaces the environment value for everyone without a
+     * personal limit, a personal limit replaces it for that person only, and clearing it returns them to the default.
+     */
+    @Test
+    @Transactional
+    void aSavedDefaultAndAPersonalOverrideApplyTheSameDay() throws Exception {
+        String admin = accessTokenFor("admin-user", "admin-password");
+        String guest = accessTokenFor("guest-user", "guest-password");
+        UUID guestId = UUID.fromString(subjectOf(guest));
+
+        mockMvc.perform(put("/api/settings/guest-chat-limit")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dailyLimit\": 5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dailyLimit").value(5))
+                .andExpect(jsonPath("$.source").value("DEFAULT_SAVED"));
+
+        mockMvc.perform(get("/api/gamecatalog/libbot/quota")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + guest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limit").value(5));
+
+        mockMvc.perform(put("/api/settings/users/{id}/chat-limit", guestId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dailyLimit\": 9}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/gamecatalog/libbot/quota")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + guest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limit").value(9));
+
+        mockMvc.perform(delete("/api/settings/users/{id}/chat-limit", guestId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/gamecatalog/libbot/quota")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + guest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limit").value(5));
+
+        mockMvc.perform(get("/api/gamecatalog/libbot/quota")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exempt").value(true));
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder chatRequest() {

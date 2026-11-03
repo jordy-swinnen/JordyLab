@@ -1,17 +1,13 @@
-import { Component, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { InstallPromptStore } from '@jordylab-fe/shared/platform/api';
-
-export type InstallDownloadStatus = 'idle' | 'preparing' | 'started' | 'failed';
 
 const BUTTON =
   'inline-flex h-12 min-w-0 flex-1 items-center justify-center rounded-xl text-[15px] font-semibold transition-colors';
 
 /**
- * Mounts the Android install dialog or the iOS Add-to-Home-Screen sheet — never both, never on
- * desktop, never inside the native app (spec FR-005, `InstallPromptStore.promptKind`).
- *
- * The parent owns the download itself and reports its progress through `status`, so the dialog
- * always answers a tap: "Preparing…", then "Download started" (or an error), never silence.
+ * The one-time install sheet (spec 018 US1, FR-003/FR-006): Android offers the browser's own install prompt when it is
+ * available (one tap), otherwise the browser-menu instructions; iOS keeps the Add-to-Home-Screen instructions because
+ * Safari has no install event. The store owns prompting and dismissal, so this component only renders its state.
  */
 @Component({
   selector: 'lib-install-prompt',
@@ -23,47 +19,38 @@ const BUTTON =
         <div
           class="jordylab-install-dialog fixed inset-x-0 bottom-0 z-50 rounded-t-[18px] border-t border-input bg-card p-5 shadow-modal"
           role="dialog"
-          aria-label="Get the JordyLab app"
+          aria-label="Install JordyLab"
         >
-          <h2 class="text-xl font-semibold text-foreground">Get the JordyLab app</h2>
-          <p class="mt-1 text-[15px] text-muted-foreground">
-            Install JordyLab as a real app on this phone — no Play Store needed.
-          </p>
-          <ol class="mt-3 list-decimal space-y-1 pl-5 text-[15px] text-foreground">
-            <li>Tap Download below.</li>
-            <li>When your browser asks, allow installs from this browser.</li>
-            <li>Open the downloaded file to install.</li>
-          </ol>
-          @switch (status()) {
-            @case ('preparing') {
-              <p class="mt-3 text-[14px] text-muted-foreground" role="status">Preparing the download…</p>
-            }
-            @case ('started') {
-              <p class="mt-3 text-[14px] text-foreground" role="status">
-                Download requested. When it finishes, open the file from your notifications or your Downloads folder.
-              </p>
-            }
-            @case ('failed') {
-              <p class="mt-3 text-[14px] text-destructive" role="alert">
-                Could not prepare the download. Check your connection and try again.
-              </p>
-            }
+          <h2 class="text-xl font-semibold text-foreground">Install JordyLab</h2>
+          @if (store.canPromptInstall()) {
+            <p class="mt-1 text-[15px] text-muted-foreground">
+              Add JordyLab to this phone's home screen — it opens full-screen, no app store needed.
+            </p>
+          } @else {
+            <p class="mt-1 text-[15px] text-muted-foreground">
+              Open the browser menu and choose "Install app" (or "Add to Home screen") to install JordyLab.
+            </p>
           }
+          <p class="mt-3 text-[14px] text-muted-foreground">
+            Had the old Android app installed? Uninstall it so only one JordyLab icon remains.
+          </p>
           <div class="mt-4 flex gap-3">
-            <button
-              type="button"
-              class="${BUTTON} bg-primary text-primary-foreground disabled:opacity-60"
-              [disabled]="status() === 'preparing'"
-              (click)="download.emit()"
-            >
-              {{ status() === 'failed' ? 'Try again' : 'Download' }}
-            </button>
+            @if (store.canPromptInstall()) {
+              <button
+                type="button"
+                class="${BUTTON} bg-primary text-primary-foreground disabled:opacity-60"
+                [disabled]="installing()"
+                (click)="onInstall()"
+              >
+                Install app
+              </button>
+            }
             <button
               type="button"
               class="${BUTTON} border border-input text-foreground hover:bg-background"
               (click)="store.dismiss()"
             >
-              Not now
+              {{ store.canPromptInstall() ? 'Not now' : 'Got it' }}
             </button>
           </div>
         </div>
@@ -77,6 +64,9 @@ const BUTTON =
           <h2 class="text-xl font-semibold text-foreground">Add JordyLab to your Home Screen</h2>
           <p class="mt-1 text-[15px] text-muted-foreground">
             Tap the Share button, then "Add to Home Screen" — JordyLab will open full-screen, just like an app.
+          </p>
+          <p class="mt-3 text-[14px] text-muted-foreground">
+            Had the old Android app installed? Uninstall it so only one JordyLab icon remains.
           </p>
           <div class="mt-4 flex">
             <button
@@ -94,7 +84,15 @@ const BUTTON =
 })
 export class InstallPromptComponent {
   protected readonly store = inject(InstallPromptStore);
+  /** The OS prompt can take a moment to open; a second tap while it is pending must do nothing. */
+  protected readonly installing = signal(false);
 
-  readonly status = input<InstallDownloadStatus>('idle');
-  readonly download = output<void>();
+  protected async onInstall(): Promise<void> {
+    this.installing.set(true);
+    try {
+      await this.store.promptInstall();
+    } finally {
+      this.installing.set(false);
+    }
+  }
 }

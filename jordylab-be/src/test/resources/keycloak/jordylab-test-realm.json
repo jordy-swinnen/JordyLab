@@ -4,6 +4,7 @@
   "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
+  "accessTokenLifespan": 60,
   "roles": {
     "realm": [
       {
@@ -11,6 +12,9 @@
       },
       {
         "name": "guest"
+      },
+      {
+        "name": "app-gamecatalog"
       },
       {
         "name": "gamecatalog-scanner"
@@ -31,6 +35,17 @@
       ],
       "webOrigins": [
         "*"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles",
+        "web-origins",
+        "acr",
+        "basic"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
       ]
     },
     {
@@ -41,6 +56,29 @@
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "true"
       }
+    },
+    {
+      "clientId": "test-offline",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles",
+        "web-origins",
+        "acr",
+        "basic"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ]
     },
     {
       "clientId": "jordylab-backend",
@@ -82,6 +120,43 @@
         {
           "type": "password",
           "value": "guest-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "guest",
+        "app-gamecatalog"
+      ]
+    },
+    {
+      "username": "guest-no-apps",
+      "enabled": true,
+      "email": "guest-no-apps@jordylab.test",
+      "emailVerified": true,
+      "firstName": "No",
+      "lastName": "Apps",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "guest-no-apps-password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "guest"
+      ]
+    },
+    {
+      "username": "delete-me",
+      "enabled": true,
+      "email": "delete-me@jordylab.test",
+      "emailVerified": true,
+      "firstName": "Delete",
+      "lastName": "Me",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "delete-me-password",
           "temporary": false
         }
       ],

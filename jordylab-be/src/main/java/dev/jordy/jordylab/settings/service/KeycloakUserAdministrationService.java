@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.Comparator;
 import java.util.List;
@@ -27,12 +26,8 @@ public class KeycloakUserAdministrationService {
     private static final String ADMIN_ROLE = "admin";
     private static final String GUEST_ROLE = "guest";
 
-    /** The mobile app's Keycloak client id (spec 007 research D13) — kept as a plain constant
-     * here rather than a dependency on the {@code mobile} module, which {@code settings} must
-     * not depend on. */
-    private static final String MOBILE_CLIENT_ID = "jordylab-mobile";
-
     private final KeycloakAdminClient keycloakAdminClient;
+    private final GuestChatLimitService guestChatLimitService;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionOperations transactions;
 
@@ -48,6 +43,10 @@ public class KeycloakUserAdministrationService {
         return listUsers(UserStatus.PENDING).size();
     }
 
+    /**
+     * Approves a person and gives them the default grants (spec 014 FR-008). A person approved again after a revoke
+     * starts from the same default set: earlier grants are never restored.
+     */
     public void approve(UUID userId) {
         KeycloakAdminClient.KeycloakUser user = requireUser(userId);
         if (!user.enabled()) {
@@ -55,6 +54,12 @@ public class KeycloakUserAdministrationService {
         }
         if (!user.realmRoles().contains(GUEST_ROLE)) {
             keycloakAdminClient.grantRealmRole(user.id(), GUEST_ROLE);
+        }
+        for (ManagedApp app : ManagedApp.defaultGrants()) {
+            String roleName = app.grantRole().orElseThrow(() -> new AppNotGrantableException(app.key()));
+            if (!user.realmRoles().contains(roleName)) {
+                keycloakAdminClient.grantRealmRole(user.id(), roleName);
+            }
         }
     }
 
@@ -71,9 +76,11 @@ public class KeycloakUserAdministrationService {
             throw new UserNotApprovedException(userId);
         }
         guardLastAdmin(user);
+        revokeEveryAppRole(user);
         keycloakAdminClient.revokeRealmRole(user.id(), GUEST_ROLE);
         keycloakAdminClient.endSessions(user.id());
-        revokeMobileOfflineConsent(user.id());
+        // Spec 014 FR-010: a revoke clears the personal limit, so a later approval starts from the default.
+        guestChatLimitService.clearPersonal(user.id());
         publishAccessRemoved(user.id());
     }
 
@@ -84,6 +91,15 @@ public class KeycloakUserAdministrationService {
         keycloakAdminClient.resetPassword(user.id(), temporaryPassword);
 
         return temporaryPassword;
+    }
+
+    /** A revoke removes every app grant too, so a later approval starts again from the default set (FR-008). */
+    private void revokeEveryAppRole(KeycloakAdminClient.KeycloakUser user) {
+        for (ManagedApp app : ManagedApp.values()) {
+            app.grantRole()
+                    .filter(user.realmRoles()::contains)
+                    .ifPresent(roleName -> keycloakAdminClient.revokeRealmRole(user.id(), roleName));
+        }
     }
 
     /** Inside a transaction, because module listeners only run once the publishing transaction commits. */
@@ -101,20 +117,6 @@ public class KeycloakUserAdministrationService {
                 .count();
         if (enabledAdmins <= 1) {
             throw new LastAdminProtectedException();
-        }
-    }
-
-    /**
-     * Kills any biometric-unlock offline token the mobile app holds for this user (spec 007
-     * FR-013, research D12) — a plain session logout above does not revoke {@code offline_access}
-     * grants. Most users never installed the app, so "no consent to revoke" is the common case,
-     * not an error.
-     */
-    private void revokeMobileOfflineConsent(String userId) {
-        try {
-            keycloakAdminClient.revokeConsent(userId, MOBILE_CLIENT_ID);
-        } catch (HttpClientErrorException.NotFound noConsentToRevoke) {
-            // Expected when the user never used the mobile app — nothing to revoke.
         }
     }
 

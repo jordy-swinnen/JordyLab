@@ -1,39 +1,14 @@
-import { Component, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  NavigationEnd,
-  Router,
-  RouterLink,
-  RouterOutlet,
-} from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
-import {
-  AuthService,
-  BiometricUnlockService,
-  UserMenuComponent,
-} from '@jordylab-fe/shared/auth';
-import {
-  BrandMarkComponent,
-  WordmarkComponent,
-} from '@jordylab-fe/shared/brand';
+import { AuthService, UserMenuComponent } from '@jordylab-fe/shared/auth';
+import { BrandMarkComponent, WordmarkComponent } from '@jordylab-fe/shared/brand';
 import { TabBarComponent, TabBarItem } from '@jordylab-fe/shared/layout';
 import { PendingCountBadgeComponent } from '@jordylab-fe/settings/nav';
 import { NAVIGATION_GROUPS, SETTINGS_GROUP_LABEL, NavGroup, visibleNavigationGroups } from './navigation';
-import {
-  ApkDownloadService,
-  AppLinkService,
-  InstallPromptStore,
-  PlatformService,
-  ShareTargetService,
-  UpdateCheckStore,
-} from '@jordylab-fe/shared/platform/api';
-import {
-  AndroidAppQrEntryComponent,
-  InstallDownloadStatus,
-  InstallPromptComponent,
-  UpdateAvailableBannerComponent,
-  UpdateRequiredComponent,
-} from '@jordylab-fe/shared/platform/ui';
+import { InstallPromptStore, PlatformService } from '@jordylab-fe/shared/platform/api';
+import { AndroidAppQrEntryComponent, InstallPromptComponent } from '@jordylab-fe/shared/platform/ui';
 
 @Component({
   selector: 'app-root',
@@ -48,8 +23,6 @@ import {
     TabBarComponent,
     InstallPromptComponent,
     AndroidAppQrEntryComponent,
-    UpdateRequiredComponent,
-    UpdateAvailableBannerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './app.html',
@@ -57,11 +30,6 @@ import {
 export class App {
   #auth = inject(AuthService);
   #router = inject(Router);
-  #apkDownload = inject(ApkDownloadService);
-  #updateCheck = inject(UpdateCheckStore);
-  #appLink = inject(AppLinkService);
-  #shareTarget = inject(ShareTargetService);
-  #biometricUnlock = inject(BiometricUnlockService);
   protected readonly platform = inject(PlatformService);
   protected readonly installPrompt = inject(InstallPromptStore);
 
@@ -71,60 +39,10 @@ export class App {
   isGuest = this.#auth.isGuest;
 
   protected readonly showQrEntry = signal(false);
-  protected readonly installStatus = signal<InstallDownloadStatus>('idle');
-  protected readonly latestRelease = this.#updateCheck.latest;
 
   constructor() {
-    this.installPrompt.suppressBrowserInstallPrompt();
-    this.#updateCheck.listenForResume();
-    // The release endpoint needs a signed-in admin/guest, so ask once the session exists (login, fingerprint
-    // unlock or restored session) — asking at start-up only ever got a 401 on a cold start.
-    effect(() => {
-      if (this.hasAppRole()) {
-        void this.#updateCheck.checkForUpdate();
-      }
-    });
-    this.#appLink.listen();
-    this.#shareTarget.listen();
-    void this.#restoreNativeSession();
-  }
-
-  /**
-   * Native cold start: there is no SSO cookie to restore a session from, so when the user opted into fingerprint
-   * unlock, ask for it straight away instead of leaving them on the login page (spec 007 US4-1).
-   */
-  async #restoreNativeSession(): Promise<void> {
-    if (!this.platform.isNative()) {
-      return;
-    }
-    try {
-      const authenticated = await this.#auth.init();
-      if (!authenticated && (await this.#biometricUnlock.isEnabled())) {
-        await this.#biometricUnlock.unlock();
-      }
-    } catch (error) {
-      // Never leave an unhandled rejection: the login page's own buttons stay available as the fallback.
-      console.error('Restoring the native session failed', error);
-    }
-  }
-
-  async onInstallDownload(): Promise<void> {
-    this.installStatus.set('preparing');
-    try {
-      const downloadUrl = await this.#apkDownload.resolveLatestDownloadUrl();
-      window.location.assign(downloadUrl);
-      this.installStatus.set('started');
-    } catch {
-      this.installStatus.set('failed');
-    }
-  }
-
-  async onUpdateDownload(): Promise<void> {
-    const release = this.latestRelease();
-    if (!release) {
-      return;
-    }
-    window.location.href = await this.#apkDownload.resolveDownloadUrl(release.id);
+    // Captures the browser's install event once; the one-time sheet and Settings → App card both use it (spec 018).
+    this.installPrompt.captureInstallPrompt();
   }
 
   protected readonly isSettingsGroup = (group: NavGroup): boolean =>
@@ -139,7 +57,7 @@ export class App {
   );
 
   protected readonly visibleGroups = computed(() =>
-    visibleNavigationGroups(this.isAdmin(), this.isGuest())
+    visibleNavigationGroups(this.isAdmin(), this.isGuest(), this.#auth.hasGameCatalogAccess()),
   );
 
   protected readonly tabs = computed<TabBarItem[]>(() => {
@@ -167,9 +85,6 @@ export class App {
   });
 
   async onLogout(): Promise<void> {
-    // Explicit wipe, not left to the next failed refresh (FR-012) — a no-op when biometric
-    // unlock was never enabled.
-    await this.#biometricUnlock.disable();
     await this.#auth.logout();
   }
 }

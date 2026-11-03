@@ -16,7 +16,7 @@ Technically: a new Spring Modulith `feedback` module (own `feedback` schema, one
 
 **Primary Dependencies**: Spring Security OAuth2 resource server (Keycloak JWT), Spring Data JPA (existing `BaseEntity`), Flyway, `RestClient` (shared bean + module-private instance for Linear), Lombok; frontend: spartan/ui (brain + helm), Angular signals + Custom Signal Store pattern, `keycloak-js` via `libs/shared/auth`. No AI calls — `ResilientAiService` is not involved. No new dependency is added: Linear's GraphQL is called as JSON over `RestClient` with Jackson, like the existing `IgdbClient`/`KeycloakAdminClient` pattern.
 
-**Storage**: PostgreSQL, new `feedback` schema (Flyway `V20261103001__feedback_create_tables.sql`, `CREATE SCHEMA IF NOT EXISTS` + `SET search_path`), one table `feedback_ticket`.
+**Storage**: PostgreSQL, new `feedback` schema (Flyway `V20261103002__feedback_create_tables.sql`, `CREATE SCHEMA IF NOT EXISTS` + `SET search_path`), one table `feedback_ticket`.
 
 **Testing**: Backend — JUnit 5, AssertJ (`assertSoftly`), Mockito (explicit values / assigned `ArgumentCaptor`), Testcontainers pgvector (`@ApplicationModuleTest`), WireMock for `LinearClient` (next free `999x` port), MockMvc + `@Language("JSON")`, `RoleMatrixTest` (Keycloak container) for the new access matrix, `EqualsVerifier` entity test, canonical `FeedbackTicketTestBuilder`. Frontend — Vitest + `@ngneat/spectator/vitest` (`useValue` + `vi.fn()`, real `signal(...)` for stores, mocks via `aFooMock()` factories), Playwright journey `feedback.spec.ts` (throwaway stack; Accept asserts the graceful "Linear unavailable" state because the throwaway backend has no `LINEAR_API_KEY`).
 
@@ -93,7 +93,7 @@ jordylab-be/src/main/java/dev/jordy/jordylab/
 └── (settings/, gamecatalog/, fna/, mobile/ unchanged apart from the two edits above)
 
 jordylab-be/src/main/resources/
-├── db/migration/V20261103001__feedback_create_tables.sql   # NEW
+├── db/migration/V20261103002__feedback_create_tables.sql   # NEW
 └── application.yaml                                          # EDIT: jordylab.feedback.* block
 
 jordylab-fe/

@@ -47,8 +47,9 @@ class FeedbackTicketControllerTest {
     private static final String SUBJECT = "7b5f2d0c-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
     private static final String TITLE = "Grid loses my scroll position";
     private static final String DESCRIPTION = "When I open a game and go back, the grid jumps to the top.";
-    private static final List<GrantedAuthority> GUEST_AUTHORITIES =
-            List.of(new SimpleGrantedAuthority("ROLE_guest"));
+    private static final List<GrantedAuthority> GUEST_AUTHORITIES = List.of(
+            new SimpleGrantedAuthority("ROLE_guest"),
+            new SimpleGrantedAuthority("ROLE_app-gamecatalog"));
 
     @Autowired
     private MockMvc mockMvc;

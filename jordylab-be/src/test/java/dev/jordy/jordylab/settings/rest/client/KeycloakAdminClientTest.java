@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
@@ -149,27 +150,6 @@ class KeycloakAdminClientTest {
     }
 
     @Test
-    void revokesConsentWithADeleteToTheConsentsEndpoint() {
-        stubToken();
-        stubFor(delete(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile"))
-                .willReturn(aResponse().withStatus(204)));
-
-        client.revokeConsent("u1", "jordylab-mobile");
-
-        verify(deleteRequestedFor(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile")));
-    }
-
-    @Test
-    void revokingAnUnknownConsentPropagatesNotFoundUnwrapped() {
-        stubToken();
-        stubFor(delete(urlPathEqualTo("/admin/realms/jordylab-test/users/u1/consents/jordylab-mobile"))
-                .willReturn(aResponse().withStatus(404)));
-
-        assertThatThrownBy(() -> client.revokeConsent("u1", "jordylab-mobile"))
-                .isInstanceOf(HttpClientErrorException.NotFound.class);
-    }
-
-    @Test
     void aTokenRejectedMidFlightIsRefreshedOnceAndTheCallRetried() {
         stubToken();
         stubFor(get(urlPathEqualTo("/admin/realms/jordylab-test/users/u1"))
@@ -199,6 +179,57 @@ class KeycloakAdminClientTest {
                 .willReturn(aResponse().withStatus(500)));
 
         assertThatThrownBy(() -> client.listUsers()).isInstanceOf(KeycloakUnavailableException.class);
+    }
+
+    @Test
+    void listsRegularAndOfflineSessionsWithTheirClients() {
+        stubToken();
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/users/u1/sessions")).willReturn(json("""
+                [ {"id": "s1", "start": 1000, "lastAccess": 2000, "clients": {"jordylab-host": ""}} ]
+                """)));
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/users/u1/offline-sessions/c1"))
+                .willReturn(json("""
+                        [ {"id": "s2", "start": 3000, "lastAccess": 4000, "clients": {"gamecatalog-script": ""}} ]
+                        """)));
+
+        assertSoftly(softly -> {
+            softly.assertThat(client.listUserSessions("u1")).singleElement().satisfies(session -> {
+                softly.assertThat(session.id()).isEqualTo("s1");
+                softly.assertThat(session.clientIds()).containsExactly("jordylab-host");
+            });
+            softly.assertThat(client.listOfflineSessions("u1", "c1")).singleElement().satisfies(session ->
+                    softly.assertThat(session.clientIds()).containsExactly("gamecatalog-script"));
+        });
+    }
+
+    @Test
+    void findsTheClientUuidOnceAndEndsAnOfflineSessionOnItsOwn() {
+        stubToken();
+        stubFor(get(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=gamecatalog-script"))
+                .willReturn(json("""
+                        [ {"id": "c1", "clientId": "gamecatalog-script"} ]
+                        """)));
+        stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/sessions/s1?isOffline=true"))
+                .willReturn(aResponse().withStatus(204)));
+
+        assertThat(client.findClientUuid("gamecatalog-script")).contains("c1");
+        assertThat(client.findClientUuid("gamecatalog-script")).contains("c1");
+        client.deleteSession("s1", true);
+
+        verify(1, getRequestedFor(urlEqualTo("/admin/realms/jordylab-test/clients?clientId=gamecatalog-script")));
+        verify(deleteRequestedFor(urlEqualTo("/admin/realms/jordylab-test/sessions/s1?isOffline=true")));
+    }
+
+    @Test
+    void deletesAUserAndTreatsAnAlreadyDeletedOneAsDone() {
+        stubToken();
+        stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/users/u1")).willReturn(aResponse().withStatus(204)));
+        stubFor(delete(urlEqualTo("/admin/realms/jordylab-test/users/u2")).willReturn(aResponse().withStatus(404)));
+
+        client.deleteUser("u1");
+        client.deleteUser("u2");
+
+        verify(deleteRequestedFor(urlEqualTo("/admin/realms/jordylab-test/users/u1")));
     }
 
     private void stubToken() {

@@ -6,6 +6,7 @@ import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketState;
 import dev.jordy.jordylab.feedback.domain.FeedbackType;
 import dev.jordy.jordylab.feedback.domain.repository.FeedbackTicketRepository;
+import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +38,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FeedbackSubmissionServiceTest {
 
-    private static final Collection<GrantedAuthority> GUEST = List.of(new SimpleGrantedAuthority("ROLE_guest"));
+    private static final Collection<GrantedAuthority> GUEST = List.of(
+            new SimpleGrantedAuthority("ROLE_guest"),
+            new SimpleGrantedAuthority("ROLE_app-gamecatalog"));
+    private static final Collection<GrantedAuthority> GUEST_WITHOUT_APPS = List.of(
+            new SimpleGrantedAuthority("ROLE_guest"));
     private static final Collection<GrantedAuthority> ADMIN = List.of(new SimpleGrantedAuthority("ROLE_admin"));
     private static final String SUBJECT = "7b5f2d0c-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
     // Fixed 2026-11-02T23:30Z == 2026-11-03 00:30 in Brussels, so the window starts at local midnight.
@@ -46,13 +51,16 @@ class FeedbackSubmissionServiceTest {
     @Mock
     private FeedbackTicketRepository ticketRepository;
 
+    @Mock
+    private NtfyClient ntfyClient;
+
     private FeedbackSubmissionService service;
 
     @BeforeEach
     void setUp() {
         FeedbackProperties properties = new FeedbackProperties(5, "Europe/Brussels", null);
         Clock clock = Clock.fixed(Instant.parse("2026-11-02T23:30:00Z"), ZoneOffset.UTC);
-        service = new FeedbackSubmissionService(ticketRepository, new FeedbackAppAccessService(), properties, clock);
+        service = new FeedbackSubmissionService(ticketRepository, ntfyClient, new FeedbackAppAccessService(), properties, clock);
     }
 
     @Test
@@ -72,10 +80,20 @@ class FeedbackSubmissionServiceTest {
             softly.assertThat(ticket.getDescription()).isEqualTo("When I open a game and go back.");
         });
         verify(ticketRepository).save(ticket);
+        verify(ntfyClient).publish(eq("New feedback ticket"),
+                eq("Ada Palmer sent a Bug report for the Game Catalog app."), eq("/settings/inbox"));
     }
 
     @Test
-    void aMissingDisplayNameFallsBackToAGuestInTheEvent() {
+    void aGuestWithoutTheAppGrantMayNotSubmitForIt() {
+        assertThatThrownBy(() -> service.submit(SUBJECT, "Ada Palmer", GUEST_WITHOUT_APPS,
+                FeedbackApp.GAME_CATALOG, FeedbackType.BUG_REPORT, "Title", "Description"))
+                .isInstanceOf(FeedbackAppNotAllowedException.class);
+        verifyNoInteractions(ticketRepository);
+    }
+
+    @Test
+    void aMissingDisplayNameFallsBackToAGuestInTheNotification() {
         ArgumentCaptor<FeedbackTicket> saveCaptor = ArgumentCaptor.forClass(FeedbackTicket.class);
         when(ticketRepository.countBySenderSubjectAndCreatedDateAfter(eq(SUBJECT), eq(WINDOW_START))).thenReturn(0L);
         when(ticketRepository.save(saveCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -84,6 +102,8 @@ class FeedbackSubmissionServiceTest {
                 FeedbackType.IDEA, "Dark mode for the grid", "Please.");
 
         assertThat(ticket.getSenderDisplayName()).isNull();
+        verify(ntfyClient).publish(eq("New feedback ticket"),
+                eq("A guest sent a Idea for the Game Catalog app."), eq("/settings/inbox"));
     }
 
     @Test

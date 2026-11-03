@@ -28,15 +28,13 @@ import java.util.List;
  * {@code ROLE_*} authorities.
  *
  * <p>Authorization is deny-by-default and follows the access matrix: FNA and Settings
- * require {@code admin}; Game Catalog reads and chat are open to {@code admin} or
- * {@code guest}; Game Catalog writes, sources, library sync and the client download
+ * require {@code admin}; Game Catalog reads and chat are open to {@code admin} or the
+ * per-person grant role {@code app-gamecatalog} (spec 014; an approved guest without that
+ * grant is refused); Game Catalog writes, sources, library sync and the client download
  * require {@code admin}; the scan client keeps its {@code gamecatalog-scanner} device
- * role. Mobile release/download-link requests are open to {@code admin} or {@code guest};
- * publishing a release is restricted to the {@code mobile-release-publisher} service
- * account (spec 007 FR-004); the signed-download stream and
- * {@code /.well-known/assetlinks.json} are public — they are gated by their own signed
- * token or serve no sensitive data (spec 007 research D8, D13). Anything not listed is
- * refused.
+ * role. Anything not listed is refused. The APK release-hosting endpoints and
+ * {@code /.well-known/assetlinks.json} were removed with the native app (spec 018 US4), so
+ * {@code /api/mobile/**} now falls through to the deny-all like any unknown API path.
  */
 @Configuration
 @EnableWebSecurity
@@ -57,26 +55,19 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                     .requestMatchers("/actuator/metrics/**").hasRole("admin")
                 .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/.well-known/assetlinks.json").permitAll()
                     .requestMatchers("/api/gamecatalog/ingest/scan", "/api/gamecatalog/ingest/check")
                     .hasRole("gamecatalog-scanner")
                     .requestMatchers("/api/gamecatalog/ingest/client").hasRole("admin")
                     .requestMatchers("/api/fna/**", "/api/settings/**").hasRole("admin")
                     .requestMatchers("/api/feedback/inbox/**").hasRole("admin")
                     .requestMatchers("/api/feedback/apps", "/api/feedback/tickets").hasRole("guest")
-                    .requestMatchers("/api/mobile/download/**").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/mobile/releases").hasRole("mobile-release-publisher")
-                    .requestMatchers(HttpMethod.GET, "/api/mobile/releases/latest")
-                    .hasAnyRole("admin", "guest")
-                    .requestMatchers(HttpMethod.POST, "/api/mobile/releases/*/download-link")
-                    .hasAnyRole("admin", "guest")
                     .requestMatchers(HttpMethod.GET, "/api/gamecatalog/games/**",
                             "/api/gamecatalog/platforms", "/api/gamecatalog/places")
-                    .hasAnyRole("admin", "guest")
+                    .hasAnyRole("admin", "app-gamecatalog")
                     .requestMatchers(HttpMethod.PUT, "/api/gamecatalog/games/*/mark",
                             "/api/gamecatalog/games/*/installations/*/rom-status")
-                    .hasAnyRole("admin", "guest")
-                    .requestMatchers("/api/gamecatalog/libbot/**").hasAnyRole("admin", "guest")
+                    .hasAnyRole("admin", "app-gamecatalog")
+                    .requestMatchers("/api/gamecatalog/libbot/**").hasAnyRole("admin", "app-gamecatalog")
                     .requestMatchers("/api/gamecatalog/**").hasRole("admin")
                     .requestMatchers("/api/**").denyAll()
                 .anyRequest().denyAll())

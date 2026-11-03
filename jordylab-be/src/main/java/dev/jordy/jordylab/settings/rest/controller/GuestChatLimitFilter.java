@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.settings.SettingsProperties;
 import dev.jordy.jordylab.settings.domain.GuestChatUsage;
 import dev.jordy.jordylab.settings.domain.repository.GuestChatUsageRepository;
+import dev.jordy.jordylab.settings.service.GuestChatLimitService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +42,7 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
     private static final String ADMIN_AUTHORITY = "ROLE_admin";
 
     private final GuestChatUsageRepository guestChatUsageRepository;
+    private final GuestChatLimitService guestChatLimitService;
     private final SettingsProperties settingsProperties;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -67,8 +69,9 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
                 .map(GuestChatUsage::getMessageCount)
                 .orElse(0);
 
-        if (currentCount >= settingsProperties.guestChat().dailyLimit()) {
-            writeLimitReached(response, today, zone);
+        int limit = guestChatLimitService.effectiveFor(subject).limit();
+        if (currentCount >= limit) {
+            writeLimitReached(response, today, zone, limit);
 
             return;
         }
@@ -81,12 +84,13 @@ public class GuestChatLimitFilter extends OncePerRequestFilter {
                 .anyMatch(authority -> ADMIN_AUTHORITY.equals(authority.getAuthority()));
     }
 
-    private void writeLimitReached(HttpServletResponse response, LocalDate today, ZoneId zone) throws IOException {
+    private void writeLimitReached(HttpServletResponse response, LocalDate today, ZoneId zone, int limit)
+            throws IOException {
         Instant resetsAt = today.plusDays(1).atStartOfDay(zone).toInstant();
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(objectMapper.writeValueAsString(new LimitReachedBody("CHAT_LIMIT_REACHED",
-                settingsProperties.guestChat().dailyLimit(), resetsAt)));
+                limit, resetsAt)));
     }
 
     private record LimitReachedBody(String reason, int limit, Instant resetsAt) {

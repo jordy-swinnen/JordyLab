@@ -30,21 +30,48 @@ class RealmConfigurationTest {
 
     /**
      * The admin holds every JordyLab role (Jordy, spec 011 Q-07) so the owner can also scan without a
-     * hand-assigned role (BUG-028). {@code mobile-release-publisher} is deliberately excluded: only
-     * the CI identity may publish Android releases (spec 007 FR-004).
+     * hand-assigned role (BUG-028) and always has every app (spec 014 FR-005).
      */
     @ParameterizedTest
     @ValueSource(strings = {DEV_REALM, PROD_REALM})
-    void adminIsACompositeOfEveryJordyLabRoleExceptTheCiPublisher(String realmFile) throws IOException {
+    void adminIsACompositeOfEveryJordyLabRole(String realmFile) throws IOException {
         JsonNode adminRole = realmRole(realmFile, "admin");
         List<String> composedRealmRoles = new ArrayList<>();
         adminRole.path("composites").path("realm").forEach(role -> composedRealmRoles.add(role.asText()));
 
         assertSoftly(softly -> {
             softly.assertThat(adminRole.path("composite").asBoolean()).isTrue();
-            softly.assertThat(composedRealmRoles).containsExactlyInAnyOrder("guest", "gamecatalog-scanner");
-            softly.assertThat(composedRealmRoles).doesNotContain("mobile-release-publisher");
+            softly.assertThat(composedRealmRoles)
+                    .containsExactlyInAnyOrder("guest", "app-gamecatalog", "gamecatalog-scanner");
         });
+    }
+
+    /**
+     * Spec 014 R1: one realm role per grantable app, assigned per person. It must not be composite, because the
+     * panel grants it to a single person rather than through another role.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {DEV_REALM, PROD_REALM})
+    void appGameCatalogRoleIsASimpleRealmRole(String realmFile) throws IOException {
+        JsonNode appRole = realmRole(realmFile, "app-gamecatalog");
+
+        assertSoftly(softly -> {
+            softly.assertThat(appRole.path("name").asText()).isEqualTo("app-gamecatalog");
+            softly.assertThat(appRole.path("composite").asBoolean(false)).isFalse();
+        });
+    }
+
+    /**
+     * Spec 014 R2: the backend validates JWTs statelessly, so a removed role or a deleted account stops working
+     * only when the access token expires. That lifetime (60 s) is the bound behind FR-007, SC-001 and SC-002 and
+     * must not drift back to the 30 minutes that left a revoked person working for half an hour.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {DEV_REALM, PROD_REALM})
+    void accessTokenLifetimeKeepsAccessChangesWithinOneMinute(String realmFile) throws IOException {
+        JsonNode realm = objectMapper.readTree(Path.of(realmFile).toFile());
+
+        assertThat(realm.path("accessTokenLifespan").asInt()).isEqualTo(60);
     }
 
     /**
@@ -62,51 +89,41 @@ class RealmConfigurationTest {
                 mapping.path("roles").forEach(role -> mappedRoles.add(role.asText()));
             }
         }
+        List<String> serviceAccountClientRoles = new ArrayList<>();
+        for (JsonNode user : realm.path("users")) {
+            if ("service-account-jordylab-backend".equals(user.path("username").asText())) {
+                user.path("clientRoles").path("realm-management")
+                        .forEach(role -> serviceAccountClientRoles.add(role.asText()));
+            }
+        }
 
         assertSoftly(softly -> {
             softly.assertThat(backendClient(realm).path("fullScopeAllowed").asBoolean(true)).isFalse();
-            softly.assertThat(mappedRoles).containsExactlyInAnyOrder("view-users", "manage-users", "view-realm");
+            softly.assertThat(mappedRoles)
+                    .containsExactlyInAnyOrder("view-users", "manage-users", "view-realm", "view-clients");
+            // The import applies the service-account user's clientRoles; the scope mapping alone did not grant
+            // view-clients on a fresh realm (verified 2026-11-02), so both must list it.
+            softly.assertThat(serviceAccountClientRoles)
+                    .containsExactlyInAnyOrder("view-users", "manage-users", "view-realm", "view-clients");
         });
     }
 
     /**
-     * The native app logs in through the system browser with PKCE and returns via the App Link
-     * callback (spec 007 D2/D13); it never gets the password grant.
+     * The native app's identity entries were removed with it (spec 018 US4): no realm file may
+     * reintroduce the App Link client, the release-publishing client or its CI-only role.
      */
     @ParameterizedTest
     @ValueSource(strings = {DEV_REALM, PROD_REALM})
-    void mobileClientIsAPublicPkceClientReturningToTheMobileCallback(String realmFile) throws IOException {
-        JsonNode mobileClient = client(objectMapper.readTree(Path.of(realmFile).toFile()), "jordylab-mobile");
-        List<String> redirectUris = new ArrayList<>();
-        mobileClient.path("redirectUris").forEach(uri -> redirectUris.add(uri.asText()));
-
-        assertSoftly(softly -> {
-            softly.assertThat(mobileClient.path("publicClient").asBoolean()).isTrue();
-            softly.assertThat(mobileClient.path("directAccessGrantsEnabled").asBoolean(true)).isFalse();
-            softly.assertThat(mobileClient.path("attributes").path("pkce.code.challenge.method").asText()).isEqualTo("S256");
-            softly.assertThat(redirectUris).singleElement().asString().endsWith("/mobile/callback");
-        });
-    }
-
-    /** Only the CI service account may publish Android releases (spec 007 FR-004). */
-    @ParameterizedTest
-    @ValueSource(strings = {DEV_REALM, PROD_REALM})
-    void onlyTheCiServiceAccountHoldsTheReleasePublisherRole(String realmFile) throws IOException {
+    void nativeAppClientsAndRoleAreGone(String realmFile) throws IOException {
         JsonNode realm = objectMapper.readTree(Path.of(realmFile).toFile());
-        List<String> holders = new ArrayList<>();
-        for (JsonNode user : realm.path("users")) {
-            user.path("realmRoles").forEach(role -> {
-                if ("mobile-release-publisher".equals(role.asText())) {
-                    holders.add(user.path("username").asText());
-                }
-            });
-        }
-        JsonNode ciClient = client(realm, "mobile-release-ci");
+        List<String> clientIds = new ArrayList<>();
+        realm.path("clients").forEach(client -> clientIds.add(client.path("clientId").asText()));
+        List<String> roleNames = new ArrayList<>();
+        realm.path("roles").path("realm").forEach(role -> roleNames.add(role.path("name").asText()));
 
         assertSoftly(softly -> {
-            softly.assertThat(holders).containsExactly("service-account-mobile-release-ci");
-            softly.assertThat(ciClient.path("serviceAccountsEnabled").asBoolean()).isTrue();
-            softly.assertThat(ciClient.path("publicClient").asBoolean(true)).isFalse();
+            softly.assertThat(clientIds).doesNotContain("jordylab-mobile", "mobile-release-ci");
+            softly.assertThat(roleNames).doesNotContain("mobile-release-publisher");
         });
     }
 

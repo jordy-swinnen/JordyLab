@@ -2,7 +2,6 @@ import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalE
 import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { AUTH_CONFIG, authInterceptor } from '@jordylab-fe/shared/auth';
-import { API_BASE_URL, apiBaseUrlInterceptor } from '@jordylab-fe/shared/platform/api';
 import { ThemeStore } from '@jordylab-fe/shared/theme/api';
 import { appRoutes } from './app.routes';
 import { environment } from '../environments/environment';
@@ -13,10 +12,7 @@ export const appConfig: ApplicationConfig = {
     // Starts the theme store so the browser's address-bar colour follows the stored theme from the first screen on.
     provideAppInitializer(() => void inject(ThemeStore)),
     provideRouter(appRoutes),
-    // apiBaseUrlInterceptor MUST run after authInterceptor — order here is the registration
-    // order (research D5, contracts/app-shell-contract.md).
-    provideHttpClient(withXhr(), withInterceptors([authInterceptor, apiBaseUrlInterceptor])),
+    provideHttpClient(withXhr(), withInterceptors([authInterceptor])),
     { provide: AUTH_CONFIG, useValue: environment },
-    { provide: API_BASE_URL, useValue: (environment as { apiBaseUrl?: string }).apiBaseUrl ?? '' },
   ],
 };

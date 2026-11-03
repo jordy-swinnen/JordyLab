@@ -40,6 +40,7 @@ public class KeycloakAdminClient {
     private final ObjectMapper objectMapper;
 
     private final Map<String, String> realmRoleCache = new ConcurrentHashMap<>();
+    private final Map<String, String> clientUuidCache = new ConcurrentHashMap<>();
 
     private RestClient restClient;
     private volatile String accessToken;
@@ -99,16 +100,56 @@ public class KeycloakAdminClient {
     }
 
     /**
+     * Deletes an account (spec 014 FR-015). Used only after the account is disabled and its sessions are ended, so a
+     * failure here leaves the person blocked and the deletion can be retried. An account that is already gone counts as
+     * deleted, which makes a retry safe.
+     */
+    /** Spec 014 FR-018: the person's regular sessions, one entry per device/browser. */
+    public List<KeycloakSession> listUserSessions(String userId) {
+        return readSessions(call(HttpMethod.GET, "/users/" + userId + "/sessions", null));
+    }
+
+    /** The phone app's offline sessions. The path needs the client's internal UUID, not its client id. */
+    public List<KeycloakSession> listOfflineSessions(String userId, String clientUuid) {
+        return readSessions(call(HttpMethod.GET, "/users/" + userId + "/offline-sessions/" + clientUuid, null));
+    }
+
+    /** Cached: the UUID never changes for a client within a realm. */
+    public Optional<String> findClientUuid(String clientId) {
+        String cached = clientUuidCache.get(clientId);
+        if (cached != null) {
+            return Optional.of(cached);
+        }
+        JsonNode clients = readTree(call(HttpMethod.GET, "/clients?clientId=" + clientId, null));
+        if (clients.isEmpty()) {
+            return Optional.empty();
+        }
+        String uuid = clients.get(0).path("id").asText();
+        clientUuidCache.put(clientId, uuid);
+
+        return Optional.of(uuid);
+    }
+
+    /** Ends one session (spec 014 FR-019). Offline sessions need {@code isOffline=true}. */
+    public void deleteSession(String sessionId, boolean offline) {
+        call(HttpMethod.DELETE, "/sessions/" + sessionId + (offline ? "?isOffline=true" : ""), null);
+    }
+
+    public void deleteUser(String userId) {
+        try {
+            call(HttpMethod.DELETE, "/users/" + userId, null);
+        } catch (HttpClientErrorException.NotFound alreadyGone) {
+            // Idempotent retry: the previous attempt deleted it.
+        }
+    }
+
+    /**
      * Revokes a client's consent (and, with it, any {@code offline_access} grant that client
      * holds) for a user — spec 007 FR-013, research D12. A plain session logout does not revoke
      * offline tokens; this is the documented way to kill one. Throws
      * {@link HttpClientErrorException.NotFound} when the user never granted that client consent
      * — callers decide whether that is expected.
      */
-    public void revokeConsent(String userId, String clientId) {
-        call(HttpMethod.DELETE, "/users/" + userId + "/consents/" + clientId, null);
-    }
-
     private String realmRole(String roleName) {
         return realmRoleCache.computeIfAbsent(roleName, name -> call(HttpMethod.GET, "/roles/" + name, null));
     }
@@ -134,6 +175,22 @@ public class KeycloakAdminClient {
         }
 
         return roles;
+    }
+
+    private List<KeycloakSession> readSessions(String json) {
+        JsonNode nodes = readTree(json);
+        List<KeycloakSession> sessions = new ArrayList<>();
+        for (JsonNode node : nodes) {
+            List<String> clients = new ArrayList<>();
+            node.path("clients").fieldNames().forEachRemaining(clients::add);
+            sessions.add(new KeycloakSession(
+                    node.path("id").asText(),
+                    Instant.ofEpochMilli(node.path("start").asLong(0)),
+                    Instant.ofEpochMilli(node.path("lastAccess").asLong(0)),
+                    List.copyOf(clients)));
+        }
+
+        return sessions;
     }
 
     private JsonNode readTree(String json) {
@@ -225,5 +282,9 @@ public class KeycloakAdminClient {
     /** Keycloak user as the Users page needs it (data-model.md AppUser view). */
     public record KeycloakUser(String id, String email, String firstName, String lastName, Instant createdAt,
             boolean enabled, List<String> realmRoles) {
+    }
+
+    /** One active session, with the clients it was opened for (spec 014 data-model §2). */
+    public record KeycloakSession(String id, Instant startedAt, Instant lastAccessedAt, List<String> clientIds) {
     }
 }

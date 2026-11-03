@@ -1,7 +1,6 @@
 package dev.jordy.jordylab.feedback.domain;
 
 import com.google.common.base.Preconditions;
-import dev.jordy.jordylab.feedback.FeedbackTicketCreated;
 import dev.jordy.jordylab.shared.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -158,14 +157,8 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
             }
             title = title.trim();
             description = description.trim();
-            FeedbackTicket ticket = new FeedbackTicket(id, app, type, title, description, senderSubject,
-                    senderDisplayName, state, reply, privateNote, linearIssueId, linearIssueUrl, acceptError);
-            ticket.registerEvent(new FeedbackTicketCreated(
-                    ticket.senderDisplayName == null ? "A guest" : ticket.senderDisplayName,
-                    app.getDisplayName(),
-                    type.getDisplayName()));
-
-            return ticket;
+            return new FeedbackTicket(id, app, type, title, description, senderSubject, senderDisplayName,
+                    state, reply, privateNote, linearIssueId, linearIssueUrl, acceptError);
         }
     }
 }

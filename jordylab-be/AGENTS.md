@@ -280,41 +280,30 @@ class SomeObjectTestBuilder {
 - `finance` → jordylab-be
 - `gamecatalog` → jordylab-be
 - `garmin` → jordylab-be (NOT garmin-sync-service)
-- `mobile` → jordylab-be
 - `recipe` → jordylab-be
 - `feedback` → jordylab-be
 
-# Mobile module (feature 007)
+# Admin push notifications (feature 017, formerly the `mobile` module)
 
-- Owns `MobileRelease` (release metadata + APK signing-cert verification), signed download-link
-  issuance (HMAC-SHA256, short-lived, no DB row per link — see `specs/007-mobile-app/research.md`
-  D8), the `/.well-known/assetlinks.json` endpoint, and `NtfyClient` (the app's sole push-notification
-  sender — `jordylab.mobile.notifications.ntfy.*` config, moved here from `settings` since no
-  working code read those keys yet).
-- Signed APKs live on a filesystem volume (`jordylab.mobile.release.storage-dir`), mirroring
-  `gamecatalog`'s `artwork.dir` pattern — no object storage or DB blob.
-- **Cross-module wiring is event-only, never a direct call** (Spring Modulith application events —
-  the first real use of that infrastructure in this codebase): `settings`' `PendingSignupWatcherService`
-  publishes `UserSignUpPending`; `fna`'s `BriefingGeneratorService` publishes `BriefingReady` on
-  completion. `mobile.service.MobileNotificationListener` has one `@ApplicationModuleListener` per
-  event, building an Android App Link click-through URL
-  (`https://{PRODUCTION_DOMAIN}/mobile/open?screen=...`) and calling `NtfyClient`. A push failure is
-  logged and swallowed — it must never fail the sign-up or briefing flow that triggered it.
-- `settings.KeycloakUserAdministrationService.revoke()` also revokes the `jordylab-mobile` client's
-  offline consent (`DELETE .../consents/jordylab-mobile`) — a normal Keycloak logout does **not**
-  revoke `offline_access` grants, so without this a revoked user's biometric-unlock token on the
-  mobile app would keep refreshing indefinitely.
-- STOP-AND-REPORT gates (never apply without explicit sign-off, per the user's own instruction):
-  the `jordylab-mobile`/`mobile-release-ci` Keycloak clients and `mobile-release-publisher` realm
-  role (blocked on feature 008's production domain), the Android application id, and the release
-  signing keystore. See `specs/007-mobile-app/tasks.md` T007/T052.
+- `shared/rest/client/NtfyClient` publishes admin pushes to the self-hosted ntfy server, configured by
+  `shared/config/NotificationProperties` (`jordylab.notifications.ntfy.*` plus `app-base-url` ←
+  `JORDYLAB_APP_BASE_URL`). Callers pass the in-app click-through path (`/settings/users`, `/fna/briefing`);
+  the client resolves it against the public origin, so a tap opens the web app (installed or in a tab).
+- Callers are **direct**: `settings`' `PendingSignupWatcherService` (new pending sign-up) and `fna`'s
+  `BriefingGeneratorService` (briefing persisted). The old `UserSignUpPending`/`BriefingReady` events and the
+  `mobile` module were removed with the native app (spec 018 US4). A push failure is logged and swallowed by
+  `NtfyClient` — it must never fail the sign-up or briefing flow that triggered it.
+- `shared/rest/client` is exposed as `@NamedInterface("notifications")`; `ModularityTests` enforces that
+  other modules use it instead of internals.
 
 # Feedback module (feature 017)
 
 - The idea box: guests submit text-only feedback tickets (`feedback.feedback_ticket`, schema `feedback`) for the
-  apps they may use; the admin triages them as New → Accepted | Backlog | Rejected (Accepted and Rejected are
-  terminal). One aggregate (`FeedbackTicket`), one module; `/api/feedback/tickets` + `/api/feedback/apps` are
-  guest-only, `/api/feedback/inbox/**` admin-only — both gated in `SecurityConfig`, never by method security.
+  apps they hold the per-app grant for (spec 014: `app-gamecatalog` today — `FeedbackAppAccessService` reads the grant
+  role, so a guest with no grant sees an empty app list); the admin triages them as New → Accepted | Backlog |
+  Rejected (Accepted and Rejected are terminal). One aggregate (`FeedbackTicket`), one module;
+  `/api/feedback/tickets` + `/api/feedback/apps` are guest-only, `/api/feedback/inbox/**` admin-only — both gated in
+  `SecurityConfig`, never by method security.
 - **Accepting a ticket creates exactly one Linear issue** in team `JOR` (Triage state, App/Type labels,
   `Source: idea box`, no guest personal data) through `LinearClient`, a hand-built GraphQL JSON client over a
   module-private `RestClient` with short timeouts. Auth is Jordy's **personal API key** (`LINEAR_API_KEY`, SOPS
@@ -322,9 +311,10 @@ class SomeObjectTestBuilder {
   under a pessimistic row lock across the Linear call; a ticket with `linear_issue_id` never calls Linear again,
   and a retry after a recorded `accept_error` searches Linear first and adopts the issue a timed-out attempt
   already created instead of making a second one.
-- **Notification is event-only**: `FeedbackTicketCreated` (module root, metadata only — never the ticket text)
-  is consumed by `mobile`'s `MobileNotificationListener`, which sends one Ntfy push without the text.
-  `UserAccessRemoved` anonymises a deleted account's tickets (display name cleared, tickets kept).
+- **Notification**: the submission service calls the shared `NtfyClient` directly (the post-018 pattern — the
+  mobile module and its event listener are gone): one push with sender, app and type, never the ticket text, and a
+  click-through to `/settings/inbox`. `UserAccessRemoved` anonymises a deleted account's tickets (display name
+  cleared, tickets kept).
 - Guest view vs admin view are separate DTO records: a guest response never carries the sender, the private
   note, the Linear link or the accept error. Two admin texts per ticket: the guest-visible `reply` and the
   `private_note` (the Accept note is that private note, snapshotted into the Linear issue).
@@ -344,13 +334,22 @@ class SomeObjectTestBuilder {
 
 - Backend auth is OAuth2 resource server + JWT. Issuer-uri is `${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab` in `application.yaml`.
 - Spring Security config lives in `shared/config/SecurityConfig.java`. Realm roles map to `ROLE_*` authorities via the `realm_access.roles` claim.
-- Endpoint gates:
+- Endpoint gates (spec 014): the Game Catalog reads, marks, ROM status and LibBot require `admin` or the per-app grant
+  `app-gamecatalog`; approval alone (`guest`) no longer opens the catalog. Settings and FNA stay `admin`.
   - `POST /api/gamecatalog/ingest/check` → `hasRole("gamecatalog-scanner")` (client asks if a scan is needed)
   - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (client, device-code)
-  - `GET  /api/gamecatalog/ingest/client` → `hasRole("jordylab-user")` (web UI downloads it)
+  - `GET  /api/gamecatalog/ingest/client` → `hasRole("admin")` (web UI downloads it)
   - other `/api/**` → `authenticated()` (any logged-in user)
   - `/actuator/health`, `/actuator/info`, `/h2-console/**` → `permitAll()` (dev only)
 - CORS allowed origins configured via `jordylab.cors.allowed-origins` property (defaults to `http://localhost:4200,4300,4400` for the per-port dev servers).
+- The realm's access-token lifetime is **60 seconds** (spec 014). The backend validates JWTs statelessly, so that lifespan
+  is what bounds "a revoked person, a removed app or a deleted account stops working within one minute". Do not raise it
+  without revisiting spec 014 FR-007/SC-002.
+- Per-app grants are Keycloak realm roles (`app-gamecatalog` today), assigned by Settings → Users. The settings user
+  routes (`apps`, `chat-limit`, `sessions`, delete) all live under `/api/settings/users/**`; the app registry is
+  `GET /api/settings/apps`. FNA and Settings have no grant role by design (they hold the admin's own data).
+- The Keycloak service account needs `view-users`, `manage-users`, `view-realm` and `view-clients` (`view-clients` is
+  used to resolve the phone app's client UUID for its offline sessions).
 - The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client handles its own token via Keycloak Device Authorization Grant (offline token, scoped to `gamecatalog-scanner` only) and caches it at `~/.config/jordylab/scan/token.json`.
 
 # Game library scan flow (feature 003 — Python client)

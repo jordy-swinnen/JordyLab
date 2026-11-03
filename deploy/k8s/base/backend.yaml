@@ -55,6 +55,16 @@ spec:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10
+          # A cold start can take ~70 s (FNA ingestion plus the ArchUnit scan). Without a startup probe the liveness
+          # probe killed the first container at 75 s during the v0.0.1-rc32 deploy (JOR-76). Liveness and readiness stay
+          # disabled until this succeeds; 30 x 5 s allows 150 s.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
@@ -64,8 +74,6 @@ spec:
           volumeMounts:
             - name: artwork
               mountPath: /var/jordylab/artwork
-            - name: mobile-releases
-              mountPath: /var/jordylab/mobile-releases
           resources:
             requests:
               cpu: 250m
@@ -77,9 +85,6 @@ spec:
         - name: artwork
           persistentVolumeClaim:
             claimName: gamecatalog-artwork
-        - name: mobile-releases
-          persistentVolumeClaim:
-            claimName: mobile-releases
 ---
 apiVersion: v1
 kind: Service

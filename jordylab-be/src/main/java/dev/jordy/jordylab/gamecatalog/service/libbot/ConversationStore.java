@@ -61,6 +61,12 @@ public class ConversationStore {
         conversations.invalidate(key(userSubject, conversationId));
     }
 
+    /** Spec 014 FR-015: a deleted person's conversations are gone, while everyone else's stay. */
+    public void forget(String userSubject) {
+        String prefix = userSubject + ":";
+        conversations.asMap().keySet().removeIf(candidate -> candidate.startsWith(prefix));
+    }
+
     private String key(String userSubject, String conversationId) {
         return userSubject + ":" + conversationId;
     }

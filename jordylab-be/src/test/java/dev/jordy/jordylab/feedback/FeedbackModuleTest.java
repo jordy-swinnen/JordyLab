@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import org.springframework.modulith.test.ApplicationModuleTest;
-import org.springframework.modulith.test.PublishedEvents;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -50,7 +50,9 @@ class FeedbackModuleTest {
 
     private static final String SENDER = "7b5f2d0c-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
     private static final String OTHER_SENDER = "2b4f6a8c-3d5e-4f60-9a1b-2c3d4e5f6a7b";
-    private static final List<GrantedAuthority> GUEST = List.of(new SimpleGrantedAuthority("ROLE_guest"));
+    private static final List<GrantedAuthority> GUEST = List.of(
+            new SimpleGrantedAuthority("ROLE_guest"),
+            new SimpleGrantedAuthority("ROLE_app-gamecatalog"));
 
     @Container
     @ServiceConnection
@@ -68,11 +70,11 @@ class FeedbackModuleTest {
     @Autowired
     private FeedbackTicketRepository ticketRepository;
 
-    @Autowired
-    private PublishedEvents publishedEvents;
-
     @MockitoBean
     private LinearClient linearClient;
+
+    @MockitoBean
+    private NtfyClient ntfyClient;
 
     @BeforeEach
     void cleanTickets() {
@@ -80,18 +82,16 @@ class FeedbackModuleTest {
     }
 
     @Test
-    void submittingAnnouncesTheTicketThroughTheNotificationEvent() {
-        // PublishedEvents accumulates across the shared context, so assert the delta.
-        int eventsBefore = com.google.common.collect.ImmutableList.copyOf(
-                publishedEvents.ofType(FeedbackTicketCreated.class)).size();
-
+    void submittingPushesExactlyOneNotificationWithoutTheTicketText() {
         submit(SENDER);
 
-        java.util.List<FeedbackTicketCreated> events = com.google.common.collect.ImmutableList.copyOf(
-                publishedEvents.ofType(FeedbackTicketCreated.class));
-        assertThat(events).hasSize(eventsBefore + 1);
-        assertThat(events.get(eventsBefore))
-                .isEqualTo(new FeedbackTicketCreated("Ada Palmer", "Game Catalog", "Bug report"));
+        org.mockito.ArgumentCaptor<String> bodyCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(ntfyClient).publish(
+                org.mockito.ArgumentMatchers.eq("New feedback ticket"),
+                bodyCaptor.capture(),
+                org.mockito.ArgumentMatchers.eq("/settings/inbox"));
+        assertThat(bodyCaptor.getValue()).isEqualTo("Ada Palmer sent a Bug report for the Game Catalog app.");
+        org.mockito.Mockito.verifyNoMoreInteractions(ntfyClient);
     }
 
     @Test

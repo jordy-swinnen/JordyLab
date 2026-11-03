@@ -27,6 +27,6 @@ describe('AndroidAppQrEntryComponent', () => {
   });
 
   it('shows the install hint text', () => {
-    expect(spectator.element).toHaveText("Scan with your Android phone's camera");
+    expect(spectator.element).toHaveText("Get the JordyLab appScan with your phone's camera, then install from the browser");
   });
 });

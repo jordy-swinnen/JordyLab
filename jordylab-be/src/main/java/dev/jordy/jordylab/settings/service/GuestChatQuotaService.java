@@ -22,6 +22,7 @@ import java.util.UUID;
 public class GuestChatQuotaService {
 
     private final GuestChatUsageRepository guestChatUsageRepository;
+    private final GuestChatLimitService guestChatLimitService;
     private final SettingsProperties settingsProperties;
     private final Clock clock;
 
@@ -37,7 +38,7 @@ public class GuestChatQuotaService {
         if (admin) {
             return new Quota(null, null, resetsAt, true);
         }
-        int limit = settingsProperties.guestChat().dailyLimit();
+        int limit = guestChatLimitService.effectiveFor(userSubject).limit();
         int used = guestChatUsageRepository.findByUserSubjectAndUsageDate(userSubject, today)
                 .map(GuestChatUsage::getMessageCount)
                 .orElse(0);

@@ -8,7 +8,7 @@ import { AuthService } from '@jordylab-fe/shared/auth';
  * with no component/redirect/children (NG04014).
  */
 @Component({
-  selector: 'lib-settings-home',
+  selector: 'app-settings-home',
   standalone: true,
   template: '',
   changeDetection: ChangeDetectionStrategy.OnPush,

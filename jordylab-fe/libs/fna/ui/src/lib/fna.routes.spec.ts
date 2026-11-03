@@ -58,7 +58,8 @@ describe('fnaRoutes', () => {
   });
 
   it('sends a guest away from the shell', async () => {
-    roles.set(['guest']);
+    // A normal approved guest holds the Game Catalog grant, so their landing route exists.
+    roles.set(['guest', 'app-gamecatalog']);
 
     await expect(runGuard(shell().canActivate)).resolves.toBe(
       'parsed:/games/grid',

@@ -1,8 +1,7 @@
 package dev.jordy.jordylab.settings.service;
 
-import dev.jordy.jordylab.settings.UserSignUpPending;
+import dev.jordy.jordylab.shared.rest.client.NtfyClient;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,23 +13,24 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Polls for newly-pending sign-ups and publishes one {@link UserSignUpPending} event per new
- * arrival (spec 007 FR-016, research D9) — this supersedes 006's original plan of calling Ntfy
- * directly from here, since that was never built (only the config scaffold existed) and
- * {@code mobile} is now the sole Ntfy sender, adding the App-Link click-through the plain
- * sign-up push never had. The "last seen" set is in-memory, matching 006's decision (D6) that
- * user status is derived from Keycloak, never persisted — losing this set on restart just means
- * the next poll treats every still-pending user as newly seen once, an acceptable cost since a
- * restart is rare and a repeat notification is harmless.
+ * Polls for newly-pending sign-ups and pushes one admin notification per new arrival (spec 018 US3,
+ * contracts/notifications-contract.md) through the shared {@link NtfyClient}, with a click-through to the Users
+ * screen. Superseded design: this used to publish a {@code UserSignUpPending} event so the {@code mobile} module could
+ * listen — that module is gone, so the sender lives here. The "last seen" set is in-memory, matching 006's decision
+ * (D6) that user status is derived from Keycloak, never persisted — losing this set on restart just means the next poll
+ * treats every still-pending user as newly seen once, an acceptable cost since a restart is rare and a repeat
+ * notification is harmless.
  */
 @Component
 @RequiredArgsConstructor
 public class PendingSignupWatcherService {
 
     private static final long POLL_DELAY_MS = 5 * 60 * 1000;
+    private static final String NOTIFICATION_TITLE = "New JordyLab sign-up";
+    private static final String USERS_SCREEN_PATH = "/settings/users";
 
     private final KeycloakUserAdministrationService userAdministrationService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final NtfyClient ntfyClient;
 
     private final Set<UUID> lastSeenPendingUserIds = ConcurrentHashMap.newKeySet();
 
@@ -41,8 +41,10 @@ public class PendingSignupWatcherService {
 
         for (AppUser user : pending) {
             if (lastSeenPendingUserIds.add(user.id())) {
-                eventPublisher.publishEvent(new UserSignUpPending(user.id(), user.email(),
-                        (user.firstName() + " " + user.lastName()).trim()));
+                String displayName = (user.firstName() + " " + user.lastName()).trim();
+                ntfyClient.publish(NOTIFICATION_TITLE,
+                        displayName + " (" + user.email() + ") is waiting for approval.",
+                        USERS_SCREEN_PATH);
             }
         }
 
