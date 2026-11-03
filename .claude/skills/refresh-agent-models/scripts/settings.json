@@ -1,0 +1,37 @@
+{
+  "_comment": "Judgement parameters for decide.py, and the current assignments. A change to any value needs a sentence of reasoning in the PR. For a one-off check use decide.py --set PATH=VALUE instead of editing this file. After a switch merges, update current.* here.",
+  "go": {
+    "cost_axis": "tasks",
+    "role_order": ["Worker", "Planner", "Reviewer"],
+    "requests_floor": {"Planner": 15000, "Reviewer": 15000, "Worker": 50000},
+    "tasks_floor": {"Planner": 50, "Reviewer": 50, "Worker": 100},
+    "response_cap_seconds": {"Planner": 180, "Reviewer": 180, "Worker": 60},
+    "points_per_decade": {"Planner": 4, "Reviewer": 3, "Worker": 8},
+    "margin": 5,
+    "cost_ratio_max": 1.25,
+    "promo_window_days": 45,
+    "peak_request_factor": 0.5
+  },
+  "claude": {
+    "metric_by_role": {"Planner": "index", "Reviewer": "coding", "Worker": "coding"},
+    "lambda": {
+      "index": {"Planner": 0.20, "Reviewer": 0.15, "Worker": 0.06},
+      "coding": {"Reviewer": 0.15, "Worker": 0.06}
+    },
+    "margin": 5,
+    "coding_clause_points": 3,
+    "cost_ratio_max": 1.25
+  },
+  "current": {
+    "opencode": {
+      "Planner": {"go_id": "claude-haiku-5-5", "variant": "xhigh"},
+      "Reviewer": {"go_id": "mimo-v2.6-flash", "variant": null},
+      "Worker": {"go_id": "deepseek-v4.1-flash", "variant": "max"}
+    },
+    "claude": {
+      "Planner": {"model": "claude-opus-5-5", "effort": "medium"},
+      "Reviewer": {"model": "claude-haiku-5-5", "effort": "max"},
+      "Worker": {"model": "claude-haiku-5-5", "effort": "max"}
+    }
+  }
+}
