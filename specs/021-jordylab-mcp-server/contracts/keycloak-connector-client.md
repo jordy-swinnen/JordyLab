@@ -36,10 +36,12 @@ Inherited from the realm: `accessTokenLifespan` = 60 seconds (spec 014). Refresh
 
 - **Fresh imports**: the definition is added to `deploy/keycloak/realm-prod.json` and to
   `jordylab-be/compose/keycloak-realm-export.json`, so a new realm contains it.
-- **Live production** (realm already imported; imports run once): created with `kcadm` inside the Keycloak container of the
-  Compose stack (`docker compose exec keycloak`), live since the cutover in `specs/020-compose-deployment/` (I1). The
-  `kubectl exec` pattern in `deploy/keycloak/README.md` is for the retired k3s host and is not used. The change is then
-  recorded as a dated row in that README's change table.
+- **Live production** (realm already imported; imports run once): **applied 2026-11-04.** The client and its audience
+  mapper were created with `kcadm create clients -f` inside the Compose Keycloak container. `kcadm update` drops client
+  attributes, so the PKCE and rotation attributes were written with a full client representation through the admin REST
+  API (a short-lived `python:3.12-slim` container on the `jordylab_default` network, then removed). Keycloak added two
+  defaults of its own (`backchannel.logout.session.required`, `backchannel.logout.revoke.offline.tokens`); both are now
+  in the realm files. The change is recorded in `deploy/keycloak/README.md`.
   Run it before the first Claude connection. It can be run before or after the backend deploy, since the endpoint is
   admin-only either way.
 - **Local dev**: the same `kcadm` commands against the Podman Keycloak (`--server http://localhost:8080`, no `/auth`).

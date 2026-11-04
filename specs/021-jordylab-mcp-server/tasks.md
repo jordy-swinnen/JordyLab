@@ -317,10 +317,10 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 **Gate (I1): met.** The Compose cutover is live (`specs/020-compose-deployment/`). The release path is open in T002 and T2.
 
-- [ ] T057 **OPERATIONS** (after the Compose cutover, I1): create `jordylab-mcp-connector` in the live production realm with
+- [x] T057 **OPERATIONS** (after the Compose cutover, I1): create `jordylab-mcp-connector` in the live production realm with
   `kcadm`, inside the Keycloak container of the Compose stack. Verify with `kcadm get clients -r jordylab -q clientId=jordylab-mcp-connector`
   that it is public, has the redirect, PKCE `S256` and the audience mapper. Confirm that anonymous client registration is off (FR-002, G1). Print no secret. Requires T002 confirmed.
-- [ ] T058 **OPERATIONS**: change the pending row in `deploy/keycloak/README.md` (T051) to applied, with the date and a
+- [x] T058 **OPERATIONS**: change the pending row in `deploy/keycloak/README.md` (T051) to applied, with the date and a
   command summary and no secret values.
 - [x] T059 **OPERATIONS** (runs before T024 and T025, I2; done 2026-11-04 on a throwaway Keycloak from the dev realm export, because the local dev database holds no Keycloak schema): create the same client in the local Podman Keycloak (`--server http://localhost:8080`, no `/auth`),
   so local token checks match production.
@@ -334,7 +334,7 @@ endpoint.
 
 - [ ] T060 **OPERATIONS**: quickstart steps 1 and 2 on production (metadata document; `401` pointer through the public proxy).
   Record the output in `docs/runbook.md`.
-- [ ] T061 **OPERATIONS**: quickstart step 3 on production (`code_challenge_methods_supported` contains `S256`). Record it
+- [x] T061 **OPERATIONS**: quickstart step 3 on production (`code_challenge_methods_supported` contains `S256`). Record it
   in `docs/runbook.md`.
 - [ ] T062 **OPERATIONS**: quickstart step 4 (Claude Desktop connects, nine read-only tools listed). Record the result in
   `docs/runbook.md`. This is Jordy's action in Claude.

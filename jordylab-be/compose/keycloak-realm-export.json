@@ -103,7 +103,9 @@
         "pkce.code.challenge.method": "S256",
         "revoke.refresh.token": "true",
         "refresh.token.max.reuse": "0",
-        "oauth2.device.authorization.grant.enabled": "false"
+        "oauth2.device.authorization.grant.enabled": "false",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
       },
       "protocolMappers": [
         {
