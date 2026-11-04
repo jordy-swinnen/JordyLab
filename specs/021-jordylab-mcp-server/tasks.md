@@ -149,12 +149,12 @@ rest of this phase does not depend on the host.
 
 ### Gates (must pass before Phase 3)
 
-- [ ] T024 Protocol gate, run after T059 (I2) with MCP Inspector against `./gradlew bootRun`. Obtain an admin token through
+- [x] T024 Protocol gate, run after T059 (I2) with MCP Inspector against `./gradlew bootRun`. Obtain an admin token through
   Inspector's OAuth flow for `jordylab-mcp-connector`. `initialize` and `tools/list` complete
   over Streamable HTTP in stateless mode, with no session header required. Claude connects from Anthropic's cloud and
   cannot reach localhost, so Claude's own check is in Phase 8. If the exchange fails, change the protocol in T005 to
   `STREAMABLE` and repeat. Record the result in `specs/021-jordylab-mcp-server/research.md` R1.
-- [ ] T025 Token gate, against the local Keycloak after T059 (I2) created the client live (the realm import runs only once):
+- [x] T025 Token gate, against the local Keycloak after T059 (I2) created the client live (the realm import runs only once):
   a token for `jordylab-mcp-connector` carries `aud`
   containing `jordylab-mcp`, `realm_access.roles` with `admin`, a refresh token, and no offline token. Confirm the exact
   names of "Revoke Refresh Token" and "Refresh Token Max Reuse" in the admin console, and record them in
@@ -163,7 +163,11 @@ rest of this phase does not depend on the host.
   registration (anonymous access to Client Registration off) and record the setting (FR-002, G1).
 
 **Checkpoint**: foundation ready. Authentication, discovery, rate limit, audit and the Keycloak client pass their tests,
-and T024 and T025 are recorded.
+and T024 and T025 are recorded. **Recorded 2026-11-04** on a throwaway Keycloak (the dev realm export, a throwaway
+Postgres and a local bootRun): the metadata document, the 401 pointer, `initialize` (server `jordylab`, protocol
+2025-06-18, tools only), `tools/list` (the nine tools, all read-only), and the token (`aud` with `jordylab-mcp`, the admin
+role, a refresh token, 60 seconds, no offline token). The run found and fixed a duplicated `header` entry in
+`bearer_methods_supported`.
 
 ---
 
@@ -318,7 +322,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
   that it is public, has the redirect, PKCE `S256` and the audience mapper. Confirm that anonymous client registration is off (FR-002, G1). Print no secret. Requires T002 confirmed.
 - [ ] T058 **OPERATIONS**: change the pending row in `deploy/keycloak/README.md` (T051) to applied, with the date and a
   command summary and no secret values.
-- [ ] T059 **OPERATIONS** (runs before T024 and T025, I2): create the same client in the local Podman Keycloak (`--server http://localhost:8080`, no `/auth`),
+- [x] T059 **OPERATIONS** (runs before T024 and T025, I2; done 2026-11-04 on a throwaway Keycloak from the dev realm export, because the local dev database holds no Keycloak schema): create the same client in the local Podman Keycloak (`--server http://localhost:8080`, no `/auth`),
   so local token checks match production.
 
 ---

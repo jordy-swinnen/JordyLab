@@ -49,6 +49,7 @@ public class McpConfiguration {
                                 .resource(resource)
                                 .authorizationServer(issuerUri)
                                 .scope("openid")
+                                .bearerMethods(methods -> methods.clear())
                                 .bearerMethod("header")
                                 .resourceName("JordyLab")
                                 .tlsClientCertificateBoundAccessTokens(false)))
