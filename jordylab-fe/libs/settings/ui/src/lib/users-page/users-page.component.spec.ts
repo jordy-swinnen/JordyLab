@@ -81,6 +81,7 @@ describe('UsersPageComponent', () => {
     loading.set(false);
     error.set(null);
     actioningId.set(null);
+    resetResult.set(null);
     pendingUsers.set([]);
     approvedUsers.set([]);
     rejectedUsers.set([]);
@@ -130,6 +131,45 @@ describe('UsersPageComponent', () => {
 
     expect(spectator.element).toHaveText('rejected-one');
     expect(spectator.element).toHaveText('revoked-one');
+  });
+
+  it('approves and rejects a pending reset request', () => {
+    approvedUsers.set([
+      anAppUserMock({
+        id: 'g1',
+        status: 'APPROVED',
+        role: 'guest',
+        pendingResetRequest: { requestId: 'r1', requestedAt: '2026-11-03T10:00:00Z' },
+      }),
+    ]);
+    spectator.detectChanges();
+
+    expect(spectator.query('[data-testid="reset-request"]')).toExist();
+
+    spectator.click('[data-testid="approve-reset"]');
+    expect(storeMock.approveResetRequest).toHaveBeenCalledWith('g1', 'r1');
+
+    spectator.click('[data-testid="reject-reset"]');
+    expect(storeMock.rejectResetRequest).toHaveBeenCalledWith('g1', 'r1');
+  });
+
+  it('reveals, copies and dismisses the temporary password', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    resetResult.set({ userId: 'g1', temporaryPassword: 'temporary-pass-20ch' });
+    spectator.detectChanges();
+
+    expect(spectator.query('[data-testid="temporary-password"]')).toHaveText('temporary-pass-20ch');
+
+    spectator.click('[data-testid="copy-temporary-password"]');
+    await spectator.fixture.whenStable();
+    spectator.detectChanges();
+
+    expect(writeText).toHaveBeenCalledWith('temporary-pass-20ch');
+    expect(spectator.query('[data-testid="copy-temporary-password"]')).toHaveText('Copied');
+
+    spectator.click('[data-testid="dismiss-reset"]');
+    expect(storeMock.dismissResetResult).toHaveBeenCalled();
   });
 
   it('shows the error state with a retry', () => {

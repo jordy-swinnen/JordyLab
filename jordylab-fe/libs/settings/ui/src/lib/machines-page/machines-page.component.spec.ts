@@ -73,6 +73,27 @@ describe('MachinesPageComponent', () => {
     expect(dismissCreated).toHaveBeenCalled();
   });
 
+  it('copies the one-time token', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    created.set({ id: 'm1', name: 'JordyBox', token: 'jlmt_secret' });
+    spectator.detectChanges();
+
+    spectator.click('[data-testid="copy-token"]');
+    await spectator.fixture.whenStable();
+    spectator.detectChanges();
+
+    expect(writeText).toHaveBeenCalledWith('jlmt_secret');
+    expect(spectator.query('[data-testid="copy-token"]')).toHaveText('Copied');
+  });
+
+  it('clears the name after adding', () => {
+    spectator.typeInElement('JordyBox', '[data-testid="machine-name"]');
+    spectator.click('[data-testid="create-machine"]');
+
+    expect((spectator.query('[data-testid="machine-name"]') as HTMLInputElement).value).toBe('');
+  });
+
   it('asks for confirmation before revoking', () => {
     spectator.click('[data-testid="revoke-machine"]');
 
