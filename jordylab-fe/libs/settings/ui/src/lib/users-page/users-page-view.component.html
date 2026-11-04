@@ -8,34 +8,35 @@
   (saveDefault)="saveGuestLimit.emit($event)"
 />
 
-@if (temporaryPassword(); as reveal) {
-  <div
-    class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-accent-text p-4"
-  >
-    <div>
-      <p class="label text-accent-text">Temporary password — shown once</p>
-      <p class="mt-1 text-base font-semibold tabular-nums text-foreground" data-testid="temporary-password">
-        {{ reveal.password }}
-      </p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        Share this with the user out-of-band. It will not be shown again.
-      </p>
-    </div>
-    <button
-      hlmBtn
-      variant="outline"
-      (click)="dismissTemporaryPassword.emit()"
-      data-testid="dismiss-temporary-password"
-    >
-      Dismiss
-    </button>
-  </div>
-}
-
 @if (error()) {
   <div class="mt-6">
     <lib-error-state [message]="error() ?? ''" (retry)="reload.emit()" />
   </div>
+}
+
+@if (resetResult(); as reset) {
+  <section class="panel mt-6 border-primary/40 px-6 py-5" data-testid="reset-result">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="section-title">Temporary password</h3>
+      <button hlmBtn variant="outline" class="h-9" (click)="dismissReset()" data-testid="dismiss-reset">
+        Done
+      </button>
+    </div>
+    <p class="mt-2 text-sm text-muted-foreground">
+      Give this to the person once, over a channel you trust. It will not be shown again; they should change it after
+      signing in.
+    </p>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <code
+        class="min-w-0 flex-1 overflow-x-auto rounded-[10px] border border-border bg-muted px-3 py-2 text-[13px]"
+        data-testid="temporary-password"
+        >{{ reset.temporaryPassword }}</code
+      >
+      <button hlmBtn class="h-10" (click)="copyTemporaryPassword(reset.temporaryPassword)" data-testid="copy-temporary-password">
+        {{ copied() ? 'Copied' : 'Copy' }}
+      </button>
+    </div>
+  </section>
 }
 
 @if (loading()) {
@@ -57,7 +58,7 @@
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.username }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">
                   signed up {{ user.createdAt | date: 'MMM d, h:mm a' }}
                 </p>
@@ -98,13 +99,40 @@
       } @else {
         <div class="space-y-3">
           @for (user of approvedUsers(); track user.id) {
-            <div class="panel px-6 py-5">
-              <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="min-w-0">
-                  <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                  <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
+            <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+              <div class="min-w-0">
+                <p class="text-base text-foreground">{{ displayName(user) }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.username }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {{ user.role ?? 'no role' }}
+                  @if (user.appGrants.length > 0) {
+                    · {{ user.appGrants.join(', ') }}
+                  }
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                @if (user.role !== 'admin') {
+                  @if (user.appGrants.includes('gamecatalog')) {
+                    <button
+                      hlmBtn class="h-11"
+                      variant="outline"
+                      [disabled]="actioningId() === user.id"
+                      (click)="removeApp.emit(user.id)"
+                      data-testid="revoke-app"
+                    >
+                      Revoke Game Catalog
+                    </button>
+                  } @else {
+                    <button
+                      hlmBtn class="h-11"
+                      variant="outline"
+                      [disabled]="actioningId() === user.id"
+                      (click)="grantApp.emit(user.id)"
+                      data-testid="grant-app"
+                    >
+                      Grant Game Catalog
+                    </button>
+                  }
                   <button
                     hlmBtn class="h-11"
                     variant="outline"
@@ -114,55 +142,93 @@
                   >
                     Reset password
                   </button>
-                  @if (!user.isAdmin) {
-                    <button
-                      hlmBtn class="h-11"
-                      variant="outline"
-                      [disabled]="actioningId() === user.id"
-                      (click)="revoke.emit(user.id)"
-                      data-testid="revoke-user"
-                    >
-                      Revoke
-                    </button>
-                    <button
-                      hlmBtn class="h-11"
-                      variant="outline"
-                      [disabled]="actioningId() === user.id"
-                      (click)="toggleSessions.emit(user.id)"
-                      [attr.data-testid]="'toggle-sessions-' + user.id"
-                    >
-                      Sessions
-                    </button>
-                    <lib-delete-person-dialog
-                      [user]="user"
-                      [busy]="actioningId() === user.id"
-                      (confirm)="deletePerson.emit(user.id)"
-                    />
-                  }
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
+                    (click)="toggleSessions.emit(user.id)"
+                    data-testid="toggle-sessions"
+                  >
+                    Sessions
+                  </button>
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
+                    [disabled]="actioningId() === user.id"
+                    (click)="onDelete(user.id)"
+                    data-testid="delete-user"
+                  >
+                    {{ confirmingDeleteId() === user.id ? 'Confirm delete' : 'Delete' }}
+                  </button>
+                  <button
+                    hlmBtn class="h-11"
+                    variant="outline"
+                    [disabled]="actioningId() === user.id"
+                    (click)="revoke.emit(user.id)"
+                    data-testid="revoke-user"
+                  >
+                    Revoke access
+                  </button>
+                }
+              </div>
+
+            @if (user.pendingResetRequest; as request) {
+              <div class="mt-4 rounded-[10px] border border-primary/40 bg-secondary px-4 py-3" data-testid="reset-request">
+                <p class="text-sm text-foreground">
+                  Password reset requested {{ request.requestedAt | date: 'MMM d, h:mm a' }}
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button
+                    hlmBtn
+                    class="h-9"
+                    [disabled]="actioningId() === user.id"
+                    (click)="approveResetRequest.emit({ userId: user.id, requestId: request.requestId })"
+                    data-testid="approve-reset"
+                  >
+                    Approve reset
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    class="h-9"
+                    [disabled]="actioningId() === user.id"
+                    (click)="rejectResetRequest.emit({ userId: user.id, requestId: request.requestId })"
+                    data-testid="reject-reset"
+                  >
+                    Reject
+                  </button>
                 </div>
               </div>
-              <lib-person-access
-                [user]="user"
-                [busy]="actioningId() === user.id"
-                (grant)="grantApp.emit({ userId: user.id, appKey: $event })"
-                (remove)="removeApp.emit({ userId: user.id, appKey: $event })"
-              />
-              <lib-person-chat-limit
-                [user]="user"
-                [busy]="actioningId() === user.id"
-                (setPersonal)="setPersonalLimit.emit({ userId: user.id, dailyLimit: $event })"
-                (clearPersonal)="clearPersonalLimit.emit(user.id)"
-              />
-              @if (openSessionsUserId() === user.id) {
-                <lib-person-sessions
-                  [sessions]="sessions()"
-                  [loading]="sessionsLoading()"
-                  [actioning]="sessionsActioning()"
-                  [error]="sessionsError()"
-                  (endOne)="endSession.emit($event)"
-                  (endAll)="endAllSessions.emit(user.id)"
-                />
-              }
+            }
+
+            @if (sessionsUserId() === user.id) {
+              <div class="panel mt-3 px-6 py-4" data-testid="sessions-panel">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h4 class="section-title">Sessions</h4>
+                  <button hlmBtn variant="outline" class="h-9" (click)="endAllSessions.emit(user.id)" data-testid="end-all-sessions">
+                    End all sessions
+                  </button>
+                </div>
+                @if (sessionsLoading()) {
+                  <p class="mt-3 text-sm text-muted-foreground">Loading sessions…</p>
+                } @else if (sessions().length === 0) {
+                  <p class="mt-3 text-sm text-muted-foreground">No active sessions.</p>
+                } @else {
+                  <ul class="mt-3 flex flex-col gap-2">
+                    @for (session of sessions(); track session.sessionId) {
+                      <li class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span class="text-muted-foreground">
+                          started {{ session.startedAt | date: 'MMM d, h:mm a' }} · last seen
+                          {{ session.lastAccessedAt | date: 'MMM d, h:mm a' }}
+                        </span>
+                        <button hlmBtn variant="outline" class="h-8" (click)="endSession.emit(session)" data-testid="end-session">
+                          End
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
             </div>
           }
         </div>
@@ -171,28 +237,30 @@
 
     <section>
       <div class="mb-4 flex items-center gap-3">
-        <h3 class="section-title">Rejected</h3>
+        <h3 class="section-title">Rejected or revoked</h3>
         <span hlmBadge variant="secondary">{{ rejectedUsers().length }}</span>
       </div>
       @if (rejectedUsers().length === 0) {
-        <p class="text-sm text-muted-foreground">No rejected accounts.</p>
+        <p class="text-sm text-muted-foreground">No rejected or revoked accounts.</p>
       } @else {
         <div class="space-y-3">
           @for (user of rejectedUsers(); track user.id) {
             <div class="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
               <div class="min-w-0">
                 <p class="text-base text-foreground">{{ displayName(user) }}</p>
-                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.email }}</p>
+                <p class="mt-1 text-[13px] text-muted-foreground">{{ user.username }} · {{ user.status }}</p>
               </div>
-              <button
-                hlmBtn class="h-11"
-                variant="outline"
-                [disabled]="actioningId() === user.id"
-                (click)="approve.emit(user.id)"
-                data-testid="approve-user"
-              >
-                Approve
-              </button>
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  hlmBtn class="h-11"
+                  variant="default"
+                  [disabled]="actioningId() === user.id"
+                  (click)="approve.emit(user.id)"
+                  data-testid="approve-user"
+                >
+                  Approve again
+                </button>
+              </div>
             </div>
           }
         </div>

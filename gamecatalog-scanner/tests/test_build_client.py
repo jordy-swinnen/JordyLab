@@ -16,6 +16,8 @@ def test_generated_file_begins_with_constants_header():
     text = build_client.generate()
 
     assert text.startswith("# Rendered by jordylab-be ClientService. Do not edit by hand.")
+    assert 'BACKEND_URL = "${BACKEND_URL}"' in text
+    assert 'SCAN_ENDPOINT = "${SCAN_ENDPOINT}"' in text
     assert 'LIBRARY_TYPE = "${LIBRARY_TYPE}"' in text
 
 
@@ -50,5 +52,5 @@ def test_generated_file_compiles():
 def test_local_render_replaces_placeholders():
     text = build_client.generate(local=True)
 
-    assert 'KEYCLOAK_URL = "http://localhost:8180"' in text
+    assert 'BACKEND_URL = "http://localhost:8080"' in text
     assert "${" not in text

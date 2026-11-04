@@ -25,7 +25,7 @@ from typing import Dict, List, Tuple
 
 from .__init__ import __version__
 from .api import ScanError, check, scan
-from .auth import get_access_token, load_token, revoke
+from .auth import clear_token, get_access_token, get_token
 from .config import (
     PLACEHOLDER_MARK,
     configured_roots,
@@ -50,9 +50,6 @@ from .status import format_status, read_last_run, write_last_run
 LOGGER = logging.getLogger("jordylab_scan")
 
 HEADER_KEYS = (
-    "KEYCLOAK_URL",
-    "REALM",
-    "CLIENT_ID",
     "BACKEND_URL",
     "SCAN_ENDPOINT",
     "LIBRARY_TYPE",
@@ -238,7 +235,7 @@ def run_scan(args, constants):
             return EXIT_OK
 
         digest = compute_digest(entries, manifest_contents, games)
-        token = get_access_token(cfg, interactive=False)
+        token = get_token(interactive=False)
 
         check_body = build_check_body(library_type, hostname, digest, machine_id)
         _, check_response = check(cfg, check_body, token)
@@ -306,13 +303,12 @@ def run_scan(args, constants):
 
 
 def run_login(args, constants):
-    library_type = resolve_library_type(args, constants)
-    cfg = resolve_service(library_type, constants=constants, config_data=load_config_json())
+    resolve_library_type(args, constants)
     ensure_machine_id()
-    from .auth import device_login
+    from .auth import prompt_login
 
-    device_login(cfg)
-    LOGGER.info("Logged in; token cached at %s", token_file())
+    prompt_login()
+    LOGGER.info("Token cached at %s", token_file())
 
     return EXIT_OK
 
@@ -337,17 +333,9 @@ def _install_source():
 
 
 def run_uninstall(args):
-    token = load_token() or {}
-    revoked = revoke(_uninstall_config(), token.get("refresh_token"))
+    clear_token()
     removed = uninstall_schedule()
-    try:
-        if os.path.isfile(str(token_file())):
-            os.remove(str(token_file()))
-    except OSError:  # pragma: no cover
-        pass
-    LOGGER.info(
-        "Uninstalled (session revoked: %s); removed: %s", revoked, ", ".join(removed) or "none"
-    )
+    LOGGER.info("Uninstalled (local token cleared); removed: %s", ", ".join(removed) or "none")
     if args.purge:
         _purge()
         LOGGER.info("Purged machine id, config, and state")
@@ -468,6 +456,7 @@ def main(argv=None):
         if command == "login":
             return run_login(args, constants)
         if command == "reauth":
+            clear_token()
             return run_login(args, constants)
         if command == "install":
             return run_install(args, constants)

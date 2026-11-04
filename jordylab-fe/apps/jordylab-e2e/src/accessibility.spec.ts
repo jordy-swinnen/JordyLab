@@ -2,7 +2,6 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { environment, expect, test } from './support/fixtures';
 import { PAGES } from './support/pages';
-import { pointAppAtKeycloak } from './support/session';
 
 // Automated accessibility check (WCAG 2.x A and AA: colour contrast, accessible names, labels, landmarks) on every signed-in page, on a
 // desktop and a phone-sized screen (the Android app shows this same web build). It exists because contrast and "label in name" findings
@@ -120,12 +119,9 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
 
   test('the login page has no violations', async ({ browser }) => {
     const context = await browser.newContext({ baseURL: environment.baseUrl, storageState: undefined });
-    await pointAppAtKeycloak(context, environment.keycloakUrl);
     const page = await context.newPage();
     await page.goto('/login');
-    await expect(
-      page.getByRole('button', { name: 'Sign in with Keycloak' }),
-    ).toBeVisible();
+    await expect(page.getByTestId('login-submit')).toBeVisible();
 
     expect(await violationsOf(page)).toEqual([]);
     await context.close();

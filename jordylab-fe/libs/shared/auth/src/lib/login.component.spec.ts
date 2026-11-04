@@ -1,22 +1,47 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { AuthService } from './auth.service';
+import { AuthService, CurrentUser } from './auth.service';
 import { LoginComponent } from './login.component';
 
-describe('LoginComponent', () => {
-  let spectator: Spectator<LoginComponent>;
-  let login: ReturnType<typeof vi.fn>;
-  const isAuthenticated = signal(false);
+const USER: CurrentUser = {
+  id: '11111111-1111-4111-8111-111111111111',
+  username: 'jordy',
+  displayName: null,
+  role: 'admin',
+  status: 'APPROVED',
+  appGrants: [],
+};
 
+describe('LoginComponent', () => {
+  const isAuthenticated = signal(false);
+  let login: ReturnType<typeof vi.fn>;
+  let signInWithPasskey: ReturnType<typeof vi.fn>;
+  let navigateByUrl: ReturnType<typeof vi.fn>;
+  let returnUrl: string | null;
+
+  let spectator: Spectator<LoginComponent>;
   const createComponent = createComponentFactory({
     component: LoginComponent,
     providers: [
-      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          get snapshot() {
+            return { queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}) };
+          },
+        },
+      },
+      {
+        provide: Router,
+        useValue: { navigateByUrl: (...args: unknown[]) => navigateByUrl(...args) },
+      },
       {
         provide: AuthService,
         useValue: {
           login: (...args: unknown[]) => login(...args),
+          signInWithPasskey: (...args: unknown[]) => signInWithPasskey(...args),
           isAuthenticated: isAuthenticated.asReadonly(),
         },
       },
@@ -24,91 +49,82 @@ describe('LoginComponent', () => {
   });
 
   beforeEach(() => {
-    login = vi.fn().mockResolvedValue(undefined);
+    login = vi.fn().mockResolvedValue(USER);
+    signInWithPasskey = vi.fn().mockResolvedValue(USER);
+    navigateByUrl = vi.fn().mockResolvedValue(true);
     isAuthenticated.set(false);
+    returnUrl = null;
     spectator = createComponent();
   });
 
-  it('renders a sign-in button', () => {
-    expect(spectator.query('button')).toHaveText('Sign in with Keycloak');
+  it('renders a username and password form', () => {
+    expect(spectator.query('[data-testid="login-username"]')).toExist();
+    expect(spectator.query('[data-testid="login-password"]')).toExist();
+    expect(spectator.query('[data-testid="login-submit"]')).toHaveText('Sign in');
   });
 
-  it('calls AuthService.login() when the button is clicked', () => {
-    spectator.click('button');
+  it('signs in with the typed credentials and leaves the page', async () => {
+    spectator.typeInElement('jordy', '[data-testid="login-username"]');
+    spectator.typeInElement('correct horse battery', '[data-testid="login-password"]');
+    spectator.click('[data-testid="login-submit"]');
+    await spectator.fixture.whenStable();
 
-    expect(login).toHaveBeenCalledWith('/');
+    expect(login).toHaveBeenCalledWith('jordy', 'correct horse battery');
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 
-  it('leaves the login page as soon as the session becomes authenticated (silent SSO)', () => {
-    const navigateByUrl = vi
-      .spyOn(spectator.inject(Router), 'navigateByUrl')
-      .mockResolvedValue(true);
+  it('returns to the sanitised returnUrl after signing in', async () => {
+    returnUrl = '/games/grid';
+    spectator = createComponent();
+    spectator.typeInElement('jordy', '[data-testid="login-username"]');
+    spectator.typeInElement('pw', '[data-testid="login-password"]');
+    spectator.click('[data-testid="login-submit"]');
+    await spectator.fixture.whenStable();
 
+    expect(navigateByUrl).toHaveBeenCalledWith('/games/grid');
+  });
+
+  it('never returns to an external address', async () => {
+    returnUrl = 'https://evil.example';
+    spectator = createComponent();
+    spectator.typeInElement('jordy', '[data-testid="login-username"]');
+    spectator.typeInElement('pw', '[data-testid="login-password"]');
+    spectator.click('[data-testid="login-submit"]');
+    await spectator.fixture.whenStable();
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('shows a clear message when the credentials are refused', async () => {
+    login.mockRejectedValue(
+      new HttpErrorResponse({ status: 401, error: { reason: 'INVALID_CREDENTIALS' } }),
+    );
+    spectator.typeInElement('jordy', '[data-testid="login-username"]');
+    spectator.typeInElement('wrong', '[data-testid="login-password"]');
+    spectator.click('[data-testid="login-submit"]');
+    await spectator.fixture.whenStable();
+    spectator.detectChanges();
+
+    expect(spectator.query('[data-testid="login-error"]')).toHaveText('Invalid username or password.');
+    expect(navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('signs in with a passkey when the browser supports them', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', { value: vi.fn(), configurable: true });
+    spectator = createComponent();
+    expect(spectator.query('[data-testid="login-passkey"]')).toExist();
+
+    spectator.click('[data-testid="login-passkey"]');
+    await spectator.fixture.whenStable();
+
+    expect(signInWithPasskey).toHaveBeenCalled();
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('leaves as soon as a session already exists', () => {
     isAuthenticated.set(true);
     spectator.detectChanges();
 
     expect(navigateByUrl).toHaveBeenCalledWith('/');
-  });
-});
-
-describe('LoginComponent return address', () => {
-  const isAuthenticated = signal(false);
-  let returnUrl: string | null;
-  const login = vi.fn(() => Promise.resolve());
-
-  const createComponent = createComponentFactory({
-    component: LoginComponent,
-    providers: [
-      {
-        provide: ActivatedRoute,
-        useFactory: () => ({
-          snapshot: { queryParamMap: convertToParamMap(returnUrl === null ? {} : { returnUrl }) },
-        }),
-      },
-      {
-        provide: AuthService,
-        useValue: {
-          login: (...args: unknown[]) => login(...args),
-          isAuthenticated: isAuthenticated.asReadonly(),
-        },
-      },
-    ],
-  });
-
-  beforeEach(() => login.mockClear());
-
-  const signInReturningTo = (candidate: string | null) => {
-    returnUrl = candidate;
-    isAuthenticated.set(false);
-    const spectator = createComponent();
-    const navigateByUrl = vi.spyOn(spectator.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    isAuthenticated.set(true);
-    spectator.detectChanges();
-
-    return navigateByUrl;
-  };
-
-  it('goes back to the share screen a signed-out share was heading for', () => {
-    expect(signInReturningTo('/share?text=remember%20me')).toHaveBeenCalledWith('/share?text=remember%20me');
-  });
-
-  it('goes to the start page when nothing was remembered', () => {
-    expect(signInReturningTo(null)).toHaveBeenCalledWith('/');
-  });
-
-  it('ignores a return address that leaves the app or loops back to the login page', () => {
-    expect(signInReturningTo('//evil.example/x')).toHaveBeenCalledWith('/');
-    expect(signInReturningTo('https://evil.example/')).toHaveBeenCalledWith('/');
-    expect(signInReturningTo('/login?returnUrl=/fna')).toHaveBeenCalledWith('/');
-  });
-
-  it('passes the remembered address to Keycloak so the redirect lands back on it', () => {
-    returnUrl = '/share?text=remember%20me';
-    isAuthenticated.set(false);
-    const spectator = createComponent();
-
-    void spectator.component.onLogin();
-
-    expect(login).toHaveBeenCalledWith('/share?text=remember%20me');
   });
 });

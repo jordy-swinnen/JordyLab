@@ -10,19 +10,12 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 
 class ClientServiceTest {
 
-    private static final String KEYCLOAK_URL = "http://localhost:8180";
-    private static final String REALM = "jordylab";
-    private static final String CLIENT_ID = "gamecatalog-script";
-
     private ClientService clientService;
     private MockHttpServletRequest request;
 
     @BeforeEach
     void setUp() {
         clientService = new ClientService();
-        clientService.keycloakUrl = KEYCLOAK_URL + "/";
-        clientService.realm = REALM;
-        clientService.clientId = CLIENT_ID;
         clientService.init();
         request = new MockHttpServletRequest();
         request.setScheme("http");
@@ -35,9 +28,6 @@ class ClientServiceTest {
         String client = clientService.generateClient("steam", request);
 
         assertSoftly(softly -> {
-            softly.assertThat(client).contains("KEYCLOAK_URL = \"" + KEYCLOAK_URL + "\"");
-            softly.assertThat(client).contains("REALM = \"" + REALM + "\"");
-            softly.assertThat(client).contains("CLIENT_ID = \"" + CLIENT_ID + "\"");
             softly.assertThat(client).contains("BACKEND_URL = \"http://localhost:8080\"");
             softly.assertThat(client).contains("SCAN_ENDPOINT = \"/api/gamecatalog/ingest/scan\"");
             softly.assertThat(client).contains("LIBRARY_TYPE = \"STEAM\"");
@@ -46,13 +36,8 @@ class ClientServiceTest {
     }
 
     @Test
-    void escapesHostileValuesIntoTypedPythonLiterals() {
-        clientService.realm = "a\"b\\c";
-        clientService.init();
-
-        String client = clientService.generateClient("steam", request);
-
-        assertThat(client).contains("REALM = \"a\\\"b\\\\c\"");
+    void escapesPythonStringLiterals() {
+        assertThat(ClientService.escapePythonString("a\"b\\c")).isEqualTo("a\\\"b\\\\c");
     }
 
     @Test

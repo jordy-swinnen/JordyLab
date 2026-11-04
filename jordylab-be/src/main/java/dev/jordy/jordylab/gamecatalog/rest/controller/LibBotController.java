@@ -14,13 +14,12 @@ import dev.jordy.jordylab.gamecatalog.service.libbot.LibBotStage;
 import dev.jordy.jordylab.gamecatalog.service.libbot.LibBotUnavailableException;
 import jakarta.annotation.PreDestroy;
 import jakarta.validation.Valid;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,18 +57,19 @@ public class LibBotController {
     private static final String ADMIN_AUTHORITY = "ROLE_admin";
 
     private final LibBotService libBotService;
+    private final CurrentUserResolver currentUserResolver;
     private final ConversationStore conversationStore;
     private final GameQueryService gameQueryService;
     private final ExecutorService workers = Executors.newVirtualThreadPerTaskExecutor();
     private final ScheduledExecutorService heartbeats = Executors.newSingleThreadScheduledExecutor();
 
     @PostMapping(path = "/ask", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter ask(@Valid @RequestBody LibBotAskRequest request, @AuthenticationPrincipal Jwt jwt,
-            Authentication authentication) {
-        libBotService.requireAttachable(request.attachedGameIds(), jwt.getSubject());
+    public SseEmitter ask(@Valid @RequestBody LibBotAskRequest request, Authentication authentication) {
+        String userSubject = currentUserResolver.requireCurrentUserSubject();
+        libBotService.requireAttachable(request.attachedGameIds(), userSubject);
         boolean admin = authentication.getAuthorities().stream()
                 .anyMatch(authority -> ADMIN_AUTHORITY.equals(authority.getAuthority()));
-        LibBotService.Ask ask = new LibBotService.Ask(jwt.getSubject(), admin, request.conversationId(),
+        LibBotService.Ask ask = new LibBotService.Ask(userSubject, admin, request.conversationId(),
                 request.message(), request.attachedGameIds());
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MILLIS);
         AtomicBoolean connected = new AtomicBoolean(true);
@@ -84,8 +84,8 @@ public class LibBotController {
     }
 
     @DeleteMapping("/conversations/{conversationId}")
-    public ResponseEntity<Void> forget(@PathVariable String conversationId, @AuthenticationPrincipal Jwt jwt) {
-        conversationStore.clear(jwt.getSubject(), conversationId);
+    public ResponseEntity<Void> forget(@PathVariable String conversationId) {
+        conversationStore.clear(currentUserResolver.requireCurrentUserSubject(), conversationId);
 
         return ResponseEntity.noContent().build();
     }

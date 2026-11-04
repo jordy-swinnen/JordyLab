@@ -16,6 +16,7 @@ import dev.jordy.jordylab.gamecatalog.service.libbot.LibBotResult;
 import dev.jordy.jordylab.gamecatalog.service.libbot.LibBotService;
 import dev.jordy.jordylab.gamecatalog.service.libbot.LibBotStage;
 import dev.jordy.jordylab.gamecatalog.service.libbot.LibBotUnavailableException;
+import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,7 +119,7 @@ class LibBotControllerTest {
 
     private String stream(String json) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/gamecatalog/libbot/ask")
-                        .with(jwt().jwt(token -> token.subject("guest-subject")))
+                        .with(IdentityTestAuthentication.asGuest())
                         .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(request().asyncStarted())
                 .andReturn();
@@ -171,13 +172,13 @@ class LibBotControllerTest {
 
     @Test
     void anEmptyMessageIsRejectedBeforeAnyStream() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(jwt().jwt(token -> token.subject("s")))
+        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(IdentityTestAuthentication.asPending())
                 .contentType(MediaType.APPLICATION_JSON).content(body("   "))).andExpect(status().isBadRequest());
     }
 
     @Test
     void aMessageOverAThousandCharactersIsRejected() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(jwt().jwt(token -> token.subject("s")))
+        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(IdentityTestAuthentication.asPending())
                 .contentType(MediaType.APPLICATION_JSON).content(body("x".repeat(1001))))
                 .andExpect(status().isBadRequest());
     }
@@ -186,7 +187,7 @@ class LibBotControllerTest {
     void moreThanFiveAttachedGamesAreRejected() throws Exception {
         String ids = String.join(",", java.util.Collections.nCopies(6, "\"" + GAME_ID + "\""));
 
-        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(jwt().jwt(token -> token.subject("s")))
+        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(IdentityTestAuthentication.asPending())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"conversationId\":\"c1\",\"message\":\"hi\",\"attachedGameIds\":[" + ids + "]}"))
                 .andExpect(status().isBadRequest());
@@ -194,7 +195,7 @@ class LibBotControllerTest {
 
     @Test
     void anAttachedGameThatCannotBeUsedIsA400BeforeTheStreamOpens() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(jwt().jwt(token -> token.subject("s")))
+        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(IdentityTestAuthentication.asPending())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"conversationId\":\"c1\",\"message\":\"hi\","
                         + "\"attachedGameIds\":[\"00000000-0000-0000-0000-00000000dead\"]}"))
@@ -203,7 +204,7 @@ class LibBotControllerTest {
 
     @Test
     void aConversationIdWithUnsafeCharactersIsRejected() throws Exception {
-        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(jwt().jwt(token -> token.subject("s")))
+        mockMvc.perform(post("/api/gamecatalog/libbot/ask").with(IdentityTestAuthentication.asPending())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"conversationId\":\"../../etc\",\"message\":\"hi\"}")).andExpect(status().isBadRequest());
     }
@@ -211,8 +212,8 @@ class LibBotControllerTest {
     @Test
     void forgettingAConversationIsIdempotentAndUsesTheCallersOwnKey() throws Exception {
         mockMvc.perform(delete("/api/gamecatalog/libbot/conversations/c1")
-                .with(jwt().jwt(token -> token.subject("guest-subject")))).andExpect(status().isNoContent());
+                .with(IdentityTestAuthentication.asGuest())).andExpect(status().isNoContent());
 
-        verify(conversationStore).clear("guest-subject", "c1");
+        verify(conversationStore).clear(IdentityTestAuthentication.GUEST_SUBJECT, "c1");
     }
 }

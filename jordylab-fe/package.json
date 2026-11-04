@@ -30,7 +30,6 @@
     "@spartan-ng/ui-table-brain": "^0.0.1-alpha.374",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "keycloak-js": "^26.2.4",
     "marked": "^17.0.4",
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",

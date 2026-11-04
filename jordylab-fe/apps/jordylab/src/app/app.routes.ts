@@ -1,7 +1,14 @@
 import { Route } from '@angular/router';
-import { authGuard, LoginComponent, roleGuard } from '@jordylab-fe/shared/auth';
+import {
+  authGuard,
+  ForgotPasswordComponent,
+  LoginComponent,
+  RegisterComponent,
+  roleGuard,
+} from '@jordylab-fe/shared/auth';
 import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
+import { AccountPageComponent } from './account/account-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
 import { legacyCallbackRedirect, legacyScreenRedirect } from './legacy-mobile-redirect';
 import { NoAppsComponent } from './no-apps/no-apps.component';
@@ -10,6 +17,13 @@ import { settingsAdminRoutes } from '@jordylab-fe/settings/ui';
 
 export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
+  { path: 'register', component: RegisterComponent },
+  { path: 'forgot-password', component: ForgotPasswordComponent },
+  {
+    path: 'account',
+    canActivate: [authGuard],
+    component: AccountPageComponent,
+  },
   {
     path: 'awaiting-approval',
     canActivate: [authGuard],

@@ -37,13 +37,21 @@ spec:
                 secretKeyRef:
                   name: jordylab-db-app
                   key: password
-            # The backend reads KEYCLOAK_BACKEND_SECRET (application.yaml); the Secret key is named
-            # after the Keycloak client it belongs to, and is shared with Keycloak's realm import.
-            - name: KEYCLOAK_BACKEND_SECRET
+            # The first admin on a fresh database (spec 019 D9); ignored once any account exists, never logged.
+            # Optional so a migrated database (release B) needs no re-key to roll out; keep both keys in
+            # jordylab-secrets for a disaster-recovery rebuild.
+            - name: IDENTITY_BOOTSTRAP_ADMIN_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: jordylab-secrets
-                  key: KEYCLOAK_BACKEND_CLIENT_SECRET
+                  key: IDENTITY_BOOTSTRAP_ADMIN_USERNAME
+                  optional: true
+            - name: IDENTITY_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jordylab-secrets
+                  key: IDENTITY_BOOTSTRAP_ADMIN_PASSWORD
+                  optional: true
           envFrom:
             - configMapRef:
                 name: backend-config

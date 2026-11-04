@@ -125,6 +125,13 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         requiredRole: 'admin',
       },
       {
+        label: 'Machines',
+        path: '/settings/machines',
+        icon: ICONS.gear,
+        isActive: startsWith('/settings/machines'),
+        requiredRole: 'admin',
+      },
+      {
         label: 'App',
         path: '/settings/app',
         icon: ICONS.phone,

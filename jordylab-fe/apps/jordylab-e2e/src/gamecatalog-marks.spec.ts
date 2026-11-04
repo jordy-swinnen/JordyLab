@@ -35,7 +35,7 @@ test.describe('Marks', () => {
         await expect(totals.getByRole('img', { name: /^Want to play: 1/ })).toBeVisible();
         await expect(totals.getByRole('img', { name: /^Played & liked: 1/ })).toBeVisible();
         await expect(totals.getByRole('img', { name: /^Played & disliked: 0/ })).toBeVisible();
-        await expect(person.getByTestId('marks-section').getByText(guest.email)).toHaveCount(0);
+        await expect(person.getByTestId('marks-section').getByText(guest.username)).toHaveCount(0);
       }
 
       // Replacing: the guest changes their like to a want. Totals move, still one vote each.

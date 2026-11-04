@@ -32,9 +32,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
+    implementation("org.springframework.security:spring-security-webauthn")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     // Langfuse tracing (AI calls only): Micrometer observations -> OpenTelemetry -> OTLP. Not spring-boot-starter-
     // opentelemetry, which also pulls the OTLP metrics registry and would export metrics to localhost:4318.
@@ -90,8 +91,8 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    // Tests that boot a Spring context (JordylabApplicationTests, KeycloakIntegrationTest,
-    // @ApplicationModuleTest) need a valid profile active or EnvironmentProfileGuard fails them
+    // Tests that boot a Spring context (JordylabApplicationTests, @ApplicationModuleTest) need a valid
+    // profile active or EnvironmentProfileGuard fails them
     // fast, per FR-002. "local" matches how the app actually runs outside prod.
     systemProperty("spring.profiles.active", "local")
     // Test-only values, set here rather than in src/test/resources/application.yaml: a file with that name

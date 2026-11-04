@@ -1,5 +1,5 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { GuestChatLimitStore, UserSession, UserSessionsStore, UsersStore } from '@jordylab-fe/settings/api';
+import { GuestChatLimitStore, UserSession, UsersStore } from '@jordylab-fe/settings/api';
 import { UsersPageViewComponent } from './users-page-view.component';
 
 @Component({
@@ -15,38 +15,35 @@ import { UsersPageViewComponent } from './users-page-view.component';
       [loading]="loading()"
       [error]="error()"
       [actioningId]="actioningId()"
-      [temporaryPassword]="temporaryPassword()"
       (reload)="onReload()"
       (approve)="onApprove($event)"
       (reject)="onReject($event)"
       (revoke)="onRevoke($event)"
       (grantApp)="onGrantApp($event)"
       (removeApp)="onRemoveApp($event)"
-      (setPersonalLimit)="onSetPersonalLimit($event)"
-      (clearPersonalLimit)="onClearPersonalLimit($event)"
-      (deletePerson)="onDeletePerson($event)"
       (toggleSessions)="onToggleSessions($event)"
       (endSession)="onEndSession($event)"
-      (endAllSessions)="onEndAllSessions($event)"
-      [openSessionsUserId]="sessionsUserId()"
+      (endAllSessions)="onEndAllSessions()"
+      (deletePerson)="onDeletePerson($event)"
+      (resetPassword)="onResetPassword($event)"
+      (approveResetRequest)="onApproveResetRequest($event)"
+      (rejectResetRequest)="onRejectResetRequest($event)"
+      (dismissResetResult)="onDismissResetResult()"
+      [sessionsUserId]="sessionsUserId()"
       [sessions]="sessions()"
       [sessionsLoading]="sessionsLoading()"
-      [sessionsActioning]="sessionsActioning()"
-      [sessionsError]="sessionsError()"
+      [resetResult]="resetResult()"
       [guestLimit]="guestLimit()"
       [guestLimitLoading]="guestLimitLoading()"
       [guestLimitSaving]="guestLimitSaving()"
       [guestLimitError]="guestLimitError()"
       (saveGuestLimit)="onSaveGuestLimit($event)"
-      (resetPassword)="onResetPassword($event)"
-      (dismissTemporaryPassword)="onDismissTemporaryPassword()"
     />
   `,
 })
 export class UsersPageComponent {
   readonly #store = inject(UsersStore);
   readonly #guestChatLimit = inject(GuestChatLimitStore);
-  readonly #sessions = inject(UserSessionsStore);
 
   readonly pendingUsers = this.#store.pendingUsers;
   readonly approvedUsers = this.#store.approvedUsers;
@@ -54,16 +51,14 @@ export class UsersPageComponent {
   readonly loading = this.#store.loading;
   readonly error = this.#store.error;
   readonly actioningId = this.#store.actioningId;
-  readonly temporaryPassword = this.#store.temporaryPassword;
+  readonly sessionsUserId = this.#store.sessionsUserId;
+  readonly sessions = this.#store.sessions;
+  readonly sessionsLoading = this.#store.sessionsLoading;
+  readonly resetResult = this.#store.resetResult;
   readonly guestLimit = this.#guestChatLimit.limit;
   readonly guestLimitLoading = this.#guestChatLimit.loading;
   readonly guestLimitSaving = this.#guestChatLimit.saving;
   readonly guestLimitError = this.#guestChatLimit.error;
-  readonly sessionsUserId = this.#sessions.userId;
-  readonly sessions = this.#sessions.sessions;
-  readonly sessionsLoading = this.#sessions.loading;
-  readonly sessionsActioning = this.#sessions.actioning;
-  readonly sessionsError = this.#sessions.error;
 
   onReload(): void {
     this.#store.load();
@@ -81,55 +76,53 @@ export class UsersPageComponent {
     this.#store.revoke(id);
   }
 
-  onGrantApp(change: { userId: string; appKey: string }): void {
-    this.#store.grantApp(change.userId, change.appKey);
+  onGrantApp(id: string): void {
+    this.#store.grantApp(id, 'gamecatalog');
   }
 
-  onRemoveApp(change: { userId: string; appKey: string }): void {
-    this.#store.removeApp(change.userId, change.appKey);
+  onRemoveApp(id: string): void {
+    this.#store.removeApp(id, 'gamecatalog');
   }
 
-  onSetPersonalLimit(change: { userId: string; dailyLimit: number }): void {
-    this.#store.setPersonalLimit(change.userId, change.dailyLimit);
+  onToggleSessions(id: string): void {
+    this.#store.toggleSessions(id);
   }
 
-  onClearPersonalLimit(id: string): void {
-    this.#store.clearPersonalLimit(id);
+  onEndSession(session: UserSession): void {
+    const userId = this.#store.sessionsUserId();
+    if (userId) {
+      this.#store.endSession(userId, session.sessionId);
+    }
   }
 
-  onSaveGuestLimit(dailyLimit: number): void {
-    this.#guestChatLimit.saveDefault(dailyLimit);
+  onEndAllSessions(): void {
+    const userId = this.#store.sessionsUserId();
+    if (userId) {
+      this.#store.endAllSessions(userId);
+    }
   }
 
   onDeletePerson(id: string): void {
     this.#store.deletePerson(id);
   }
 
-  onToggleSessions(userId: string): void {
-    if (this.#sessions.userId() === userId) {
-      this.#sessions.close();
-
-      return;
-    }
-    this.#sessions.loadFor(userId);
-  }
-
-  onEndSession(session: UserSession): void {
-    this.#sessions.endOne(session.id, session.kind);
-  }
-
-  onEndAllSessions(userId: string): void {
-    if (this.#sessions.userId() !== userId) {
-      this.#sessions.loadFor(userId);
-    }
-    this.#sessions.endAll();
-  }
-
   onResetPassword(id: string): void {
     this.#store.resetPassword(id);
   }
 
-  onDismissTemporaryPassword(): void {
-    this.#store.clearTemporaryPassword();
+  onApproveResetRequest(request: { userId: string; requestId: string }): void {
+    this.#store.approveResetRequest(request.userId, request.requestId);
+  }
+
+  onRejectResetRequest(request: { userId: string; requestId: string }): void {
+    this.#store.rejectResetRequest(request.userId, request.requestId);
+  }
+
+  onDismissResetResult(): void {
+    this.#store.dismissResetResult();
+  }
+
+  onSaveGuestLimit(dailyLimit: number): void {
+    this.#guestChatLimit.saveDefault(dailyLimit);
   }
 }

@@ -44,6 +44,23 @@ class FnaControllerTest {
     private dev.jordy.jordylab.fna.service.ManualArticleSubmissionService manualArticleSubmissionService;
 
     @Test
+    void queuesAManualArticleAndReturnsTheCreatedArticle() throws Exception {
+        when(manualArticleSubmissionService.queueArticle(dev.jordy.jordylab.fna.domain.ArticleTestBuilder.DEFAULT_URL))
+                .thenReturn(dev.jordy.jordylab.fna.domain.ArticleTestBuilder.aDefaultArticle());
+
+        mockMvc.perform(post("/api/fna/articles/manual")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"" + dev.jordy.jordylab.fna.domain.ArticleTestBuilder.DEFAULT_URL + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(
+                        dev.jordy.jordylab.fna.domain.ArticleTestBuilder.DEFAULT_ID.toString()))
+                .andExpect(jsonPath("$.title").value(
+                        dev.jordy.jordylab.fna.domain.ArticleTestBuilder.DEFAULT_TITLE))
+                .andExpect(jsonPath("$.url").value(
+                        dev.jordy.jordylab.fna.domain.ArticleTestBuilder.DEFAULT_URL));
+    }
+
+    @Test
     void getArticlesReturnsArticleList() throws Exception {
         when(fnaService.getRecentArticles()).thenReturn(List.of(
                 ArticleSummaryDtoTestBuilder.aDefaultArticleSummaryDto()

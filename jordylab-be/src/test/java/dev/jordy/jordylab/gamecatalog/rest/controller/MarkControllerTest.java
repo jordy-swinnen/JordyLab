@@ -4,6 +4,7 @@ import dev.jordy.jordylab.gamecatalog.domain.MarkType;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.MarkResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.VoteTotalsResponse;
 import dev.jordy.jordylab.gamecatalog.service.MarkService;
+import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,10 +38,10 @@ class MarkControllerTest {
 
     @Test
     void setsTheMarkOfTheAuthenticatedSubjectNotOfAnythingTheBodySays() throws Exception {
-        when(markService.setMark(GAME_ID, "guest-subject", MarkType.WANT_TO_PLAY)).thenReturn(
+        when(markService.setMark(GAME_ID, IdentityTestAuthentication.GUEST_SUBJECT, MarkType.WANT_TO_PLAY)).thenReturn(
                 Optional.of(new MarkResponse(new VoteTotalsResponse(3, 1, 0), MarkType.WANT_TO_PLAY)));
 
-        mockMvc.perform(put(URL).with(jwt().jwt(token -> token.subject("guest-subject")))
+        mockMvc.perform(put(URL).with(IdentityTestAuthentication.asGuest())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"mark\":\"WANT_TO_PLAY\",\"userSubject\":\"somebody-else\"}"))
                 .andExpect(status().isOk())
@@ -51,10 +52,10 @@ class MarkControllerTest {
 
     @Test
     void aNullMarkClearsIt() throws Exception {
-        when(markService.setMark(GAME_ID, "guest-subject", null)).thenReturn(
+        when(markService.setMark(GAME_ID, IdentityTestAuthentication.GUEST_SUBJECT, null)).thenReturn(
                 Optional.of(new MarkResponse(VoteTotalsResponse.none(), null)));
 
-        mockMvc.perform(put(URL).with(jwt().jwt(token -> token.subject("guest-subject")))
+        mockMvc.perform(put(URL).with(IdentityTestAuthentication.asGuest())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"mark\":null}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.myMark").doesNotExist());
@@ -62,16 +63,16 @@ class MarkControllerTest {
 
     @Test
     void aGameThatIsNotVisibleIsNotFound() throws Exception {
-        when(markService.setMark(GAME_ID, "guest-subject", MarkType.PLAYED_LIKED)).thenReturn(Optional.empty());
+        when(markService.setMark(GAME_ID, IdentityTestAuthentication.GUEST_SUBJECT, MarkType.PLAYED_LIKED)).thenReturn(Optional.empty());
 
-        mockMvc.perform(put(URL).with(jwt().jwt(token -> token.subject("guest-subject")))
+        mockMvc.perform(put(URL).with(IdentityTestAuthentication.asGuest())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"mark\":\"PLAYED_LIKED\"}"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void anUnknownMarkValueIsABadRequest() throws Exception {
-        mockMvc.perform(put(URL).with(jwt().jwt(token -> token.subject("guest-subject")))
+        mockMvc.perform(put(URL).with(IdentityTestAuthentication.asGuest())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"mark\":\"LOVED_IT\"}"))
                 .andExpect(status().isBadRequest());
     }

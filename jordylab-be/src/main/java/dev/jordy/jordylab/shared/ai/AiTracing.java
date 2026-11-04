@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.security.core.Authentication;
+import dev.jordy.jordylab.shared.security.UserIdAware;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -76,9 +77,13 @@ class AiTracing {
 
     private static Optional<String> userId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean signedIn = authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getName());
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+        if (authentication.getPrincipal() instanceof UserIdAware userIdAware) {
+            return Optional.of(userIdAware.userId());
+        }
 
-        return signedIn ? Optional.of(authentication.getName()) : Optional.empty();
+        return Optional.empty();
     }
 }

@@ -1,7 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable, Injector } from '@angular/core';
-import { AuthService } from '@jordylab-fe/shared/auth';
-import { from, map, Observable, switchMap } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { map, Observable } from 'rxjs';
 import { askLibBot, LibBotAskRequest } from './libbot-stream';
 import {
   GameConsole,
@@ -60,7 +59,6 @@ export interface GamesQuery {
 export class GameCatalogApiService {
   #http = inject(HttpClient);
   // Resolved only when LibBot is asked, so the other calls (and their tests) do not need the sign-in configuration.
-  #injector = inject(Injector);
 
   getGames(query: GamesQuery = {}): Observable<GamesPage> {
     let params = new HttpParams();
@@ -195,7 +193,7 @@ export class GameCatalogApiService {
 
   /** Asks LibBot; emits stage events, then one answer or error (see {@link askLibBot}). */
   askLibBot(request: LibBotAskRequest): Observable<LibBotAskEvent> {
-    return from(this.#injector.get(AuthService).getToken()).pipe(switchMap((token) => askLibBot(request, token)));
+    return askLibBot(request);
   }
 
   getLibBotQuota(): Observable<LibBotQuota> {

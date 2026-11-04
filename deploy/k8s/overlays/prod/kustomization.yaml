@@ -17,16 +17,11 @@ images:
     newTag: placeholder # was set by `kustomize edit set image` in the retired k3s deploy workflow
   - name: ghcr.io/jordy-swinnen/jordylab-frontend
     newTag: placeholder
-  - name: ghcr.io/jordy-swinnen/jordylab-keycloak
-    newTag: placeholder
 
 configMapGenerator:
   - name: backend-config
     literals:
       - POSTGRES_URL=jdbc:postgresql://cnpg-cluster-rw:5432/jordylab
-      - KEYCLOAK_URL=https://jordylab.be/auth
-      # In-cluster Service for the backend's Keycloak Admin REST calls (/auth/admin is not public).
-      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/auth
       - JORDYLAB_CORS_ALLOWED_ORIGINS=https://jordylab.be,https://localhost
       - NTFY_BASE_URL=https://jordylab.be/ntfy
       # Admin push click-throughs open the web app on this origin (spec 018 US3).
@@ -38,20 +33,6 @@ configMapGenerator:
       # No API docs in prod: SpringDoc's defaults serve /v3/api-docs and /swagger-ui.html (spec 011 BUG-046).
       - SPRINGDOC_API_DOCS_ENABLED=false
       - SPRINGDOC_SWAGGER_UI_ENABLED=false
-  - name: keycloak-config
-    literals:
-      - KC_HOSTNAME=https://jordylab.be/auth
-      - KC_HTTP_RELATIVE_PATH=/auth # must match the value baked into the image (Containerfile)
-      # KC_HTTP_MANAGEMENT_RELATIVE_PATH=/ is baked into the image (Containerfile); setting it here
-      # differently would stop `start --optimized`.
-      - KC_PROXY_HEADERS=xforwarded
-      # TLS is terminated at Traefik; Keycloak itself serves plain HTTP inside the cluster.
-      - KC_HTTP_ENABLED=true
-      # Only trust X-Forwarded-* headers from inside the cluster: k3s's default pod CIDR, where the
-      # Traefik pod lives (its IP changes on restart, so a single IP would break).
-      - KC_PROXY_TRUSTED_ADDRESSES=10.42.0.0/16
-      # Used by realm-prod.json's ${PRODUCTION_DOMAIN} placeholders on the first-boot import.
-      - PRODUCTION_DOMAIN=jordylab.be
 
 patches:
   - target:

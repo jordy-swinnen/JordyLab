@@ -2,8 +2,8 @@ package dev.jordy.jordylab.gamecatalog.service;
 
 import dev.jordy.jordylab.gamecatalog.GameCatalogAccess;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameMarkRepository;
-import dev.jordy.jordylab.shared.event.AppAccessRemoved;
-import dev.jordy.jordylab.shared.event.UserAccessRemoved;
+import dev.jordy.jordylab.identity.AppAccessRemoved;
+import dev.jordy.jordylab.identity.UserAccessRemoved;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.modulith.events.ApplicationModuleListener;

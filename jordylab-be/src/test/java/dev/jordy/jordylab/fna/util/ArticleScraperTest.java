@@ -60,4 +60,42 @@ class ArticleScraperTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void readsThePageTitle() {
+        stubFor(get(urlEqualTo("/page-title"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/html")
+                        .withBody("<html><head><title>Market wraps higher</title></head><body></body></html>")));
+
+        assertThat(scraperService.scrapeTitle("http://localhost:9998/page-title"))
+                .isEqualTo("Market wraps higher");
+    }
+
+    @Test
+    void fallsBackToTheUrlWhenTheTitleIsMissingOrTheFetchFails() {
+        stubFor(get(urlEqualTo("/page-no-title"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/html")
+                        .withBody("<html><head></head><body></body></html>")));
+
+        assertThat(scraperService.scrapeTitle("http://localhost:9998/page-no-title"))
+                .isEqualTo("http://localhost:9998/page-no-title");
+        assertThat(scraperService.scrapeTitle("http://localhost:9998/does-not-exist"))
+                .isEqualTo("http://localhost:9998/does-not-exist");
+    }
+
+    @Test
+    void fallsBackToTheBodyWhenThereIsNoArticleOrMain() {
+        stubFor(get(urlEqualTo("/page-body"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/html")
+                        .withBody("<html><body><p>Body only content here</p></body></html>")));
+
+        assertThat(scraperService.scrape("http://localhost:9998/page-body"))
+                .isEqualTo("Body only content here");
+    }
 }

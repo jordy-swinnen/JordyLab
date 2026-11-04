@@ -8,22 +8,26 @@ import dev.jordy.jordylab.feedback.service.FeedbackAppAccessService;
 import dev.jordy.jordylab.feedback.service.FeedbackAppNotAllowedException;
 import dev.jordy.jordylab.feedback.service.FeedbackLimitReachedException;
 import dev.jordy.jordylab.feedback.service.FeedbackSubmissionService;
+import dev.jordy.jordylab.identity.AuthenticatedUser;
+import dev.jordy.jordylab.identity.ManagedApp;
+import dev.jordy.jordylab.identity.UserAccountLookup;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -44,7 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(FeedbackTicketController.class)
 class FeedbackTicketControllerTest {
 
-    private static final String SUBJECT = "7b5f2d0c-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
+    private static final UUID SUBJECT_ID = UUID.fromString("7b5f2d0c-1a2b-4c3d-8e4f-5a6b7c8d9e0f");
+    private static final String SUBJECT = SUBJECT_ID.toString();
     private static final String TITLE = "Grid loses my scroll position";
     private static final String DESCRIPTION = "When I open a game and go back, the grid jumps to the top.";
     private static final List<GrantedAuthority> GUEST_AUTHORITIES = List.of(
@@ -56,6 +61,15 @@ class FeedbackTicketControllerTest {
 
     @MockitoBean
     private FeedbackSubmissionService submissionService;
+
+    @MockitoBean
+    private UserAccountLookup userAccountLookup;
+
+    @org.junit.jupiter.api.BeforeEach
+    void resolveDisplayName() {
+        when(userAccountLookup.find(SUBJECT_ID)).thenReturn(Optional.of(
+                new UserAccountLookup.AccountRef(SUBJECT_ID, "ada.palmer", "Ada Palmer", "guest")));
+    }
 
     @Test
     void getAppsReturnsTheSendersApps() throws Exception {
@@ -162,15 +176,8 @@ class FeedbackTicketControllerTest {
     }
 
     private Authentication guestAuthentication() {
-        Instant now = Instant.now();
-        Jwt jwt = Jwt.withTokenValue("token")
-                .header("alg", "none")
-                .subject(SUBJECT)
-                .claim("name", "Ada Palmer")
-                .issuedAt(now)
-                .expiresAt(now.plusSeconds(3600))
-                .build();
+        AuthenticatedUser user = new AuthenticatedUser(SUBJECT_ID, "ada.palmer", "guest", Set.of(ManagedApp.GAME_CATALOG));
 
-        return new JwtAuthenticationToken(jwt, GUEST_AUTHORITIES);
+        return new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
     }
 }

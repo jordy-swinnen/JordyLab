@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class EnvironmentProfileGuard implements EnvironmentPostProcessor, Ordered {
 
-    private static final List<String> VALID_PROFILES = List.of("local", "prod");
+    private static final List<String> VALID_PROFILES = List.of("local", "prod", "e2e");
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
@@ -31,7 +31,7 @@ public class EnvironmentProfileGuard implements EnvironmentPostProcessor, Ordere
         }
 
         throw new IllegalStateException("No valid Spring profile is active (active: " + activeProfiles + "). Set "
-                + "SPRING_PROFILES_ACTIVE to exactly \"local\" or \"prod\" - JordyLab refuses to start with any "
+                + "SPRING_PROFILES_ACTIVE to \"local\", \"prod\" or \"e2e\" - JordyLab refuses to start with any "
                 + "other value (FR-002).");
     }
 

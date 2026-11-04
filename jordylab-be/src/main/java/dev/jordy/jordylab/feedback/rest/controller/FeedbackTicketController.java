@@ -8,10 +8,11 @@ import dev.jordy.jordylab.feedback.rest.controller.model.GuestTicketsResponse;
 import dev.jordy.jordylab.feedback.rest.controller.model.TicketSubmitRequest;
 import dev.jordy.jordylab.feedback.service.FeedbackAppAccessService;
 import dev.jordy.jordylab.feedback.service.FeedbackSubmissionService;
+import dev.jordy.jordylab.identity.AuthenticatedUser;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
+import dev.jordy.jordylab.identity.UserAccountLookup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,10 +36,12 @@ public class FeedbackTicketController {
 
     private final FeedbackSubmissionService submissionService;
     private final FeedbackAppAccessService appAccessService;
+    private final CurrentUserResolver currentUserResolver;
+    private final UserAccountLookup userAccountLookup;
 
     @GetMapping("/apps")
-    public FeedbackAppsResponse getApps(Authentication authentication) {
-        List<FeedbackAppView> apps = appAccessService.allowedApps(authentication.getAuthorities()).stream()
+    public FeedbackAppsResponse getApps() {
+        List<FeedbackAppView> apps = appAccessService.allowedApps(currentUser().getAuthorities()).stream()
                 .map(FeedbackAppView::from)
                 .toList();
 
@@ -47,11 +50,12 @@ public class FeedbackTicketController {
 
     @PostMapping("/tickets")
     @ResponseStatus(HttpStatus.CREATED)
-    public GuestTicketView submit(@RequestBody TicketSubmitRequest request, Authentication authentication) {
+    public GuestTicketView submit(@RequestBody TicketSubmitRequest request) {
+        AuthenticatedUser user = currentUser();
         FeedbackTicket ticket = submissionService.submit(
-                authentication.getName(),
-                senderDisplayName(authentication),
-                authentication.getAuthorities(),
+                user.id().toString(),
+                senderDisplayName(user),
+                user.getAuthorities(),
                 request.app(),
                 request.type(),
                 request.title(),
@@ -61,24 +65,23 @@ public class FeedbackTicketController {
     }
 
     @GetMapping("/tickets")
-    public GuestTicketsResponse getOwnTickets(Authentication authentication) {
-        List<GuestTicketView> tickets = submissionService.ownTickets(authentication.getName()).stream()
+    public GuestTicketsResponse getOwnTickets() {
+        List<GuestTicketView> tickets = submissionService.ownTickets(currentUser().id().toString()).stream()
                 .map(GuestTicketView::from)
                 .toList();
 
         return new GuestTicketsResponse(tickets);
     }
 
-    private String senderDisplayName(Authentication authentication) {
-        if (authentication instanceof JwtAuthenticationToken jwtAuthenticationToken) {
-            String name = jwtAuthenticationToken.getToken().getClaimAsString("name");
-            if (StringUtils.hasText(name)) {
-                return name;
-            }
+    private AuthenticatedUser currentUser() {
+        return currentUserResolver.currentUser()
+                .orElseThrow(() -> new IllegalStateException("No authenticated user"));
+    }
 
-            return jwtAuthenticationToken.getToken().getClaimAsString("preferred_username");
-        }
-
-        return null;
+    private String senderDisplayName(AuthenticatedUser user) {
+        return userAccountLookup.find(user.id())
+                .map(UserAccountLookup.AccountRef::displayName)
+                .filter(StringUtils::hasText)
+                .orElse(user.username());
     }
 }

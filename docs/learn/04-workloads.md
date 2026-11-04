@@ -5,7 +5,7 @@
 The smallest deployable unit — one or more containers that always run together on the same node,
 sharing a network namespace (they can reach each other on `localhost`) and, optionally, volumes.
 JordyLab's Pods are all single-container (`deploy/k8s/base/backend.yaml`,
-`frontend.yaml`, `keycloak.yaml`, `ntfy.yaml`) — nothing here needs a sidecar.
+`frontend.yaml`, `ntfy.yaml`) — nothing here needs a sidecar.
 
 ## Deployment
 

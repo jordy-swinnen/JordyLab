@@ -15,7 +15,7 @@ controller (itself just a Pod, running in the cluster) that watches for `Cluster
 does whatever "reconcile the real world to match this spec" means for that domain: for CNPG, that's
 provisioning a PostgreSQL `StatefulSet`, managing failover (moot with 1 instance here, but the same
 machinery), running backups, and exposing a `cnpg-cluster-rw` Service that `deploy/k8s/base/backend.yaml`
-and `keycloak.yaml` both connect to. This is the same pattern cert-manager uses for `Certificate`/
+connects to. This is the same pattern cert-manager uses for `Certificate`/
 `ClusterIssuer` (Chapter 5) — an operator watching its own CRDs.
 
 ## The Barman Cloud Plugin — a CRD you install *separately* from the operator it extends

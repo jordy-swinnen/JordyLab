@@ -33,6 +33,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 22. [Before a release that changes the database: backup and pgvector](#22-before-a-release-that-changes-the-database-backup-and-pgvector)
 23. [LibBot and the auto-fill: what to check](#23-libbot-and-the-auto-fill-what-to-check)
 24. [Postgres major-version upgrade](#24-postgres-major-version-upgrade)
+25. [Break-glass: an admin locked out](#25-break-glass-an-admin-locked-out)
 
 ---
 
@@ -627,3 +628,28 @@ notes, and keep the pgvector extension: the pinned base image is the `pgvector/p
 7. **Go back** (while the old volume still exists): `$COMPOSE down`, point `compose.yaml` back at the old image and
    `jordylab_postgres-data`, `$COMPOSE up -d --wait`, and deploy the previous release (§11). Anything written after the
    cutover lives only in the new volume: dump it first if it matters.
+
+---
+
+## 25. Break-glass: an admin locked out
+
+There is no email recovery. A normal user's reset goes through Settings → Users (the person requests it, the admin
+approves it). When the **only admin** cannot sign in, the operator restores the admin password directly in the
+database — the documented last resort (spec 019 US6, D15). Do it over Tailscale, never over a public port.
+
+1. Generate a BCrypt hash of a temporary password (12+ characters, not the username). `htpasswd` ships with macOS
+   (`/usr/sbin/htpasswd`) and `apache2-utils` on Linux; Spring Security's BCrypt encoder accepts the `$2y$` prefix.
+   ```bash
+   htpasswd -bnBC 10 "" 'choose-a-temporary-password' | tr -d ':\n'
+   ```
+2. Update the admin row in production. This also clears the lockout state:
+   ```bash
+   ssh ubuntu@100.93.81.41 "sudo docker compose --env-file /opt/jordylab/env/prod.env \
+     -f /opt/jordylab/compose/compose.yaml exec -T postgres psql -U postgres -d jordylab -c \
+     \"UPDATE identity.user_account SET password_hash = '\$2y\$10\$…', failed_attempts = 0, locked_until = NULL WHERE username = 'jordy';\""
+   ```
+   Quote the hash in single quotes; escape `$` when the shell would expand it. No restart is needed: the next
+   sign-in reads the hash.
+3. Sign in with the temporary password, change it immediately in Account settings, then enroll or verify a passkey.
+4. Rehearse on dev with a throwaway account, never with the real admin: register a user, replace its hash, sign in,
+   then delete the account from Settings → Users.

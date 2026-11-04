@@ -15,7 +15,7 @@ ESLINT_SAMPLES=(
   "apps/jordylab src/main.ts"
   "libs/fna/ui src/lib/article-list/article-list.component.ts"
   "libs/fna/ui src/lib/article-list/article-list.component.html"
-  "libs/shared/auth src/lib/pkce.ts"
+  "libs/shared/auth src/lib/auth.service.ts"
   "libs/gamecatalog/api src/index.ts"
 )
 for sample in "${ESLINT_SAMPLES[@]}"; do

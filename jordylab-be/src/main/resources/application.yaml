@@ -10,6 +10,12 @@ spring:
     url: ${POSTGRES_URL}
     username: ${POSTGRES_USER:jordylab}
     password: ${POSTGRES_PASSWORD:}
+  session:
+    jdbc:
+      # Sessions live in the identity schema (spec 019): Flyway creates the tables, Spring Session never does.
+      initialize-schema: never
+      # Unquoted, Postgres folds this to identity.spring_session (and identity.spring_session_attributes).
+      table-name: identity.SPRING_SESSION
   jpa:
     hibernate:
       ddl-auto: validate
@@ -57,15 +63,18 @@ spring:
         options:
           model: claude-sonnet-5
           max-tokens: 8192
-  security:
-     oauth2:
-       resourceserver:
-         jwt:
-           issuer-uri: ${KEYCLOAK_URL}/realms/jordylab
 
 server:
+  servlet:
+    session:
+      # Sessions survive restarts and rolling deploys (spec 019 SC-003). The cookie is persistent with the
+      # same idle window; HttpOnly and SameSite=Lax are Boot defaults, secure is set in the prod profile.
+      timeout: 30d
+      cookie:
+        max-age: 30d
   error:
-    # /error is reachable now (SecurityConfig permits DispatcherType.ERROR), so never expose internals in it.
+    # /error is reachable now (IdentitySecurityConfiguration permits DispatcherType.ERROR), so never expose
+    # internals in it.
     include-message: never
     include-stacktrace: never
     include-exception: false
@@ -174,12 +183,6 @@ jordylab:
       stale-after-days: 14
       store-min-interval-ms: 1500
       call-timeout-ms: 10000
-  settings:
-    keycloak:
-      server-url: ${KEYCLOAK_URL}
-      realm: jordylab
-      admin-client-id: jordylab-backend
-      admin-client-secret: ${KEYCLOAK_BACKEND_SECRET:}
     guest-chat:
       daily-limit: ${JORDYLAB_GUEST_CHAT_DAILY_LIMIT:20}
       zone: Europe/Brussels
@@ -192,6 +195,20 @@ jordylab:
       base-url: ${NTFY_BASE_URL:}
       topic: ${NTFY_TOPIC:}
       token: ${NTFY_TOKEN:}
+  # Identity module (spec 019). The bootstrap admin is created only while the account table is empty.
+  identity:
+    password:
+      min-length: 12
+    lockout:
+      max-failures: 5
+      lock-minutes: 15
+    bootstrap:
+      username: ${IDENTITY_BOOTSTRAP_ADMIN_USERNAME:}
+      password: ${IDENTITY_BOOTSTRAP_ADMIN_PASSWORD:}
+    webauthn:
+      rp-id: ${IDENTITY_WEBAUTHN_RP_ID:localhost}
+      rp-name: JordyLab
+      allowed-origins: ${IDENTITY_WEBAUTHN_ALLOWED_ORIGINS:http://localhost:4200}
   feedback:
     # 017: the idea box. Five tickets per guest per day, reset at midnight in this zone.
     daily-ticket-limit: ${JORDYLAB_FEEDBACK_DAILY_LIMIT:5}

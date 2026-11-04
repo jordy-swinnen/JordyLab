@@ -3,7 +3,7 @@ package dev.jordy.jordylab.feedback.service;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketTestBuilder;
 import dev.jordy.jordylab.feedback.domain.repository.FeedbackTicketRepository;
-import dev.jordy.jordylab.shared.event.UserAccessRemoved;
+import dev.jordy.jordylab.identity.UserAccessRemoved;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

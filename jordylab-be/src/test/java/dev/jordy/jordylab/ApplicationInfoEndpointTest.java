@@ -3,26 +3,17 @@ package dev.jordy.jordylab;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = {
-        "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:0/realms/test",
-        "JORDYLAB_GIT_COMMIT=" + ApplicationInfoEndpointTest.BUILT_COMMIT
-})
+@SpringBootTest(properties = "JORDYLAB_GIT_COMMIT=" + ApplicationInfoEndpointTest.BUILT_COMMIT)
 @AutoConfigureMockMvc
 class ApplicationInfoEndpointTest {
 
@@ -30,21 +21,6 @@ class ApplicationInfoEndpointTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @TestConfiguration
-    static class JwtDecoderOverride {
-
-        @Bean
-        @Primary
-        JwtDecoder testJwtDecoder() {
-            return token -> Jwt.withTokenValue(token)
-                    .header("alg", "none")
-                    .claim("sub", "test-user")
-                    .issuedAt(Instant.now())
-                    .expiresAt(Instant.now().plusSeconds(60))
-                    .build();
-        }
-    }
 
     @Test
     void infoEndpointReportsTheCommitTheImageWasBuiltFromWithoutAToken() throws Exception {

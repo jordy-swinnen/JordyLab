@@ -11,7 +11,7 @@ const BUTTON =
 /**
  * The Web Share Target landing screen (spec 018 US2, contracts/share-target-contract.md): an installed Android PWA is
  * opened here by the OS share sheet with `?title&text&url`. The payload lives only in the URL — no service and no
- * storage — so a share that needs sign-in survives the Keycloak round trip through the login page's `returnUrl`, and a
+ * storage — so a share that needs sign-in survives the sign-in round trip through the login page's `returnUrl`, and a
  * killed tab drops the share exactly like the OS would.
  */
 @Component({

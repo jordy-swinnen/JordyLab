@@ -1,20 +1,24 @@
 import { signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
 import { AuthService } from './auth.service';
 import { UserMenuComponent } from './user-menu.component';
 
 describe('UserMenuComponent', () => {
   const username = signal<string | null>('jordy');
-  const requestAction = vi.fn<AuthService['requestAction']>().mockResolvedValue(undefined);
+  const navigateByUrl = vi.fn().mockResolvedValue(true);
 
   let spectator: Spectator<UserMenuComponent>;
   const createComponent = createComponentFactory({
     component: UserMenuComponent,
-    providers: [{ provide: AuthService, useValue: { username: username.asReadonly(), requestAction } }],
+    providers: [
+      { provide: AuthService, useValue: { username: username.asReadonly() } },
+      { provide: Router, useValue: { navigateByUrl } },
+    ],
   });
 
   beforeEach(() => {
-    requestAction.mockClear();
+    navigateByUrl.mockClear();
     username.set('jordy');
     spectator = createComponent();
   });
@@ -49,25 +53,11 @@ describe('UserMenuComponent', () => {
     expect(spectator.query('[data-testid="user-menu-trigger"]')).not.toHaveAttribute('aria-label');
   });
 
-  it('starts the Keycloak password change', () => {
+  it('opens the account settings', () => {
     open();
-    item('user-menu-password').click();
+    item('user-menu-account').click();
 
-    expect(requestAction).toHaveBeenCalledWith('UPDATE_PASSWORD');
-  });
-
-  it('starts the Keycloak profile edit', () => {
-    open();
-    item('user-menu-profile').click();
-
-    expect(requestAction).toHaveBeenCalledWith('UPDATE_PROFILE');
-  });
-
-  it('starts the Keycloak email change', () => {
-    open();
-    item('user-menu-email').click();
-
-    expect(requestAction).toHaveBeenCalledWith('UPDATE_EMAIL');
+    expect(navigateByUrl).toHaveBeenCalledWith('/account');
   });
 
   it('asks the shell to sign out', () => {
@@ -78,6 +68,5 @@ describe('UserMenuComponent', () => {
     item('user-menu-sign-out').click();
 
     expect(signedOut).toBe(true);
-    expect(requestAction).not.toHaveBeenCalled();
   });
 });

@@ -4,9 +4,8 @@
 // (main.ts -> pre-bootstrap auth -> bootstrapApplication -> router). It would have caught the rc12 blank page
 // (NG0201: AuthService -> Router, spec 011 BUG-056). No dependencies: Chrome DevTools Protocol over a WebSocket.
 //
-// Keycloak is deliberately not available here: the app is served from 127.0.0.1, which Keycloak refuses to frame, so the
-// silent check-sso never answers and the login page appears only after AuthService's 8 s start-up timeout. That timeout
-// must therefore stay well below BOOT_TIMEOUT_MS (45 s). Any uncaught exception (or NG0xxx console error) fails the check.
+// The app is served from 127.0.0.1 with no backend, so the login page must render even when `/api/identity/me` refuses the
+// anonymous request. Any uncaught exception (or NG0xxx console error) fails the check.
 //
 //   bun tools/app-boot-check.mjs [distDir]      (default dist/apps/jordylab/browser; CHROME_BIN overrides the browser)
 import { spawn } from 'node:child_process';
@@ -17,19 +16,16 @@ import { tmpdir } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 
 const distDir = process.argv[2] ?? 'dist/apps/jordylab/browser';
-const EXPECTED_TEXT = 'Sign in with Keycloak';
+const EXPECTED_TEXT = 'Sign in to access your library and game catalog.';
 // The production Content-Security-Policy (the Report-Only header in security-headers.conf), served here as an ENFORCING header, so
 // anything the built app needs that the policy forbids (a changed inline-script hash after an Angular upgrade, a new host) fails the
-// check instead of surfacing in the owner's console. In production the page origin is jordylab.be, which 'self' covers (API and
-// Keycloak share it); here the page is on 127.0.0.1, so that origin is added to the same directives.
-const PRODUCTION_ORIGIN = 'https://jordylab.be';
+// check instead of surfacing in the owner's console.
 const POLICY_FILE = new URL('../../deploy/containers/frontend/security-headers.conf', import.meta.url);
 const policyLine = readFileSync(POLICY_FILE, 'utf8').split('\n').find((line) => line.startsWith('add_header Content-Security-Policy-Report-Only'));
 if (!policyLine) throw new Error(`No Content-Security-Policy-Report-Only header found in ${POLICY_FILE.pathname}`);
 const policyValue = policyLine.match(/"([^"]+)"/)?.[1];
 if (!policyValue) throw new Error(`The Content-Security-Policy-Report-Only line in ${POLICY_FILE.pathname} has no double-quoted policy value`);
-const POLICY = policyValue
-  .replace(/(default-src|connect-src) 'self'/g, `$1 'self' ${PRODUCTION_ORIGIN}`);
+const POLICY = policyValue;
 const BOOT_TIMEOUT_MS = 45_000;
 const CHROME_CANDIDATES = [
   process.env.CHROME_BIN,
@@ -119,8 +115,7 @@ try {
     } else if (message.method === 'Log.entryAdded') {
       const entry = `${message.params.entry.level}: ${message.params.entry.text} ${message.params.entry.url ?? ''}`;
       consoleLog.push(entry);
-      // Only our own policy's blocks count: "Framing …" lines are Keycloak's policy refusing the silent-check-sso frame (the known 127.0.0.1 artefact above).
-      if (/Content Security Policy directive/i.test(message.params.entry.text) && !/^Framing /.test(message.params.entry.text)) problems.push(`Content-Security-Policy violation: ${message.params.entry.text}`);
+      if (/Content Security Policy directive/i.test(message.params.entry.text)) problems.push(`Content-Security-Policy violation: ${message.params.entry.text}`);
     }
   };
   await send('Runtime.enable');

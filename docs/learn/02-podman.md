@@ -6,9 +6,9 @@ chapter before assuming it does more than it does.**
 ## What Podman IS here
 
 1. **Your local dev container engine**, replacing Docker. `jordylab-be/compose.yaml` runs
-   Postgres+pgvector and Keycloak via `podman compose up -d`. Testcontainers (used by the backend's
+   Postgres+pgvector via `podman compose up -d`. Testcontainers (used by the backend's
    test suite) points `DOCKER_HOST` at the Podman socket instead of Docker's. You also use it to
-   build the three images locally from their Containerfiles (Chapter 1) before ever pushing to CI.
+   build the two images locally from their Containerfiles (Chapter 1) before ever pushing to CI.
 2. **A learning bridge to Kubernetes**, via two specific commands:
    - `podman generate kube` turns an already-running container or pod into Kubernetes YAML — a
      reverse-engineering tool for "what would this look like as a Pod spec?"
@@ -52,7 +52,7 @@ silently diverge from what actually gets deployed.
 ## Hands-on
 
 1. `podman machine start` (macOS only) or confirm `podman info` runs natively (CachyOS).
-2. `podman compose up -d` in `jordylab-be/` — this is Postgres + Keycloak for local dev.
+2. `podman compose up -d` in `jordylab-be/` — this is Postgres for local dev.
 3. `podman kube play deploy/k8s/base/backend.yaml` — sandbox the backend's Deployment locally, then
    `podman kube down deploy/k8s/base/backend.yaml` to tear it down. (It won't fully start without
    real Secrets/ConfigMaps — that's expected; the point is exercising the workflow.)

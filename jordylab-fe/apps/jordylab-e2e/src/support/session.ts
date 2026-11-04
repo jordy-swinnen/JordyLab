@@ -1,24 +1,22 @@
-import type { BrowserContext, Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 /**
- * environment.e2e.ts reads the Keycloak address from `window.__JORDYLAB_E2E__` because every run's Keycloak is on a random
- * free port. The init script must run before the bundle executes, so it is added to the context, not the page.
+ * Signs in through the app's own form (spec 019 US1). Leaves the page on the signed-in app; every caller checks that with
+ * a navigation or account-menu assertion so a failed sign-in fails where it happened.
  */
-export async function pointAppAtKeycloak(context: BrowserContext, keycloakUrl: string): Promise<void> {
-  await context.addInitScript((url: string) => {
-    (globalThis as { __JORDYLAB_E2E__?: { keycloakUrl: string } }).__JORDYLAB_E2E__ = { keycloakUrl: url };
-  }, keycloakUrl);
+export async function signIn(page: Page, username: string, password: string): Promise<void> {
+  await page.goto('/login');
+  await page.getByTestId('login-username').fill(username);
+  await page.getByTestId('login-password').fill(password);
+  await page.getByTestId('login-submit').click();
+  await page.getByRole('navigation', { name: 'Primary' }).waitFor();
 }
 
-/** Signs in through the real Keycloak login page. Leaves the page on the signed-in app. */
-export async function signInThroughKeycloak(page: Page, username: string, password: string): Promise<void> {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Sign in with Keycloak' }).click();
-  // Keycloak's own pages are third-party DOM without accessible labels; its documented element ids are the stable handle here.
-  await page.locator('#username').fill(username);
-  await page.locator('#password').fill(password);
-  await page.locator('#kc-login').click();
-  await page.getByRole('navigation', { name: 'Primary' }).waitFor();
+/** Signs the current page out through the account menu. */
+export async function signOut(page: Page): Promise<void> {
+  await visibleUserMenu(page).click();
+  await page.getByTestId('user-menu-sign-out').click();
+  await page.getByTestId('login-submit').waitFor();
 }
 
 /** The app renders the account menu once per layout (wide and narrow); only one of them is visible at a given width. */

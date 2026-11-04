@@ -7,7 +7,7 @@
 
 jordylab.be {
 	# A Caddy path matcher is exact unless it ends in *, so each prefix route lists the bare path and /*.
-	@backend path /api /api/* /.well-known/assetlinks.json
+	@backend path /api /api/* /webauthn /webauthn/* /login/webauthn /.well-known/assetlinks.json
 	handle @backend {
 		reverse_proxy backend:8080
 	}

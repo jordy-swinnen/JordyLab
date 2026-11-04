@@ -11,6 +11,8 @@ import dev.jordy.jordylab.feedback.service.FeedbackLimitReachedException;
 import dev.jordy.jordylab.feedback.service.FeedbackSubmissionService;
 import dev.jordy.jordylab.feedback.service.FeedbackTriageService;
 import dev.jordy.jordylab.feedback.service.LinearUnavailableException;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
+import dev.jordy.jordylab.identity.UserAccountLookup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -69,6 +71,12 @@ class FeedbackModuleTest {
 
     @Autowired
     private FeedbackTicketRepository ticketRepository;
+
+    @MockitoBean
+    private CurrentUserResolver currentUserResolver;
+
+    @MockitoBean
+    private UserAccountLookup userAccountLookup;
 
     @MockitoBean
     private LinearClient linearClient;

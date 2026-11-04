@@ -1,5 +1,5 @@
 ---
-description: "JordyLab production DevOps: the OVH VPS + k3s deployment, Tailscale access, CI/CD deploys and rollbacks, SOPS secrets, Keycloak admin, CloudNativePG backups, TLS/Gateway routing. Use for delegated production investigations or changes that should run in their own context."
+description: "JordyLab production DevOps: the OVH VPS + k3s deployment, Tailscale access, CI/CD deploys and rollbacks, SOPS secrets, identity/user administration, CloudNativePG backups, TLS/Gateway routing. Use for delegated production investigations or changes that should run in their own context."
 mode: subagent
 model: opencode-go/kimi-k2.7-code
 ---

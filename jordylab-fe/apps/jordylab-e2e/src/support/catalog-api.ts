@@ -23,28 +23,16 @@ export const CATALOG_GAMES: readonly CatalogGame[] = [
   },
 ];
 
-async function serviceAccountToken(request: APIRequestContext, environment: E2eEnvironment): Promise<string> {
-  const response = await request.post(`${environment.keycloakUrl}/realms/jordylab/protocol/openid-connect/token`, {
-    form: {
-      grant_type: 'client_credentials',
-      client_id: 'e2e-ingest',
-      client_secret: environment.ingestClientSecret,
-    },
-  });
-  if (!response.ok()) {
-    throw new Error(`Could not get the ingest service-account token (HTTP ${response.status()})`);
-  }
-  const body = (await response.json()) as { access_token: string };
-
-  return body.access_token;
-}
-
 /**
- * Fills the throwaway catalog through the app's own scan endpoint with a scanner-role token, never with SQL. The response is
- * checked: a rejected scan fails the setup with the backend's reason instead of leaving the journeys with an empty catalog.
+ * Fills the throwaway catalog through the app's own scan endpoint with the machine token created in global setup, never
+ * with SQL. The response is checked: a rejected scan fails the setup with the backend's reason instead of leaving the
+ * journeys with an empty catalog.
  */
-export async function ingestCatalog(request: APIRequestContext, environment: E2eEnvironment): Promise<void> {
-  const token = await serviceAccountToken(request, environment);
+export async function ingestCatalog(
+  request: APIRequestContext,
+  environment: E2eEnvironment,
+  token: string,
+): Promise<void> {
   const response = await request.post(`${environment.apiOrigin}/api/gamecatalog/ingest/scan`, {
     headers: { Authorization: `Bearer ${token}` },
     data: {

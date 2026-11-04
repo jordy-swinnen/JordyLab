@@ -19,7 +19,7 @@ describe('App', () => {
   const authInit = vi.fn();
   const createComponent = createComponentFactory({
     component: App,
-    imports: [RouterModule.forRoot([])],
+    imports: [RouterModule.forRoot([{ path: 'login', children: [] }])],
     providers: [
       provideHttpClient(),
       {
@@ -82,6 +82,7 @@ describe('App', () => {
       'Briefing',
       'Users',
       'AI Models',
+      'Machines',
       'App',
       'Feedback',
     ]);
@@ -106,6 +107,7 @@ describe('App', () => {
       '/fna/briefing',
       '/settings/users',
       '/settings/ai-models',
+      '/settings/machines',
       '/settings/app',
       '/settings/inbox',
     ]);

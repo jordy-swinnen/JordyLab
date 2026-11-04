@@ -1,10 +1,9 @@
 package dev.jordy.jordylab.settings.rest.controller;
 
 import dev.jordy.jordylab.settings.service.GuestChatQuotaService;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,12 +21,13 @@ public class GuestChatQuotaController {
     private static final String ADMIN_AUTHORITY = "ROLE_admin";
 
     private final GuestChatQuotaService quotaService;
+    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping
-    public QuotaResponse quota(@AuthenticationPrincipal Jwt jwt, Authentication authentication) {
+    public QuotaResponse quota(Authentication authentication) {
         boolean admin = authentication.getAuthorities().stream()
                 .anyMatch(authority -> ADMIN_AUTHORITY.equals(authority.getAuthority()));
-        GuestChatQuotaService.Quota quota = quotaService.quotaFor(jwt.getSubject(), admin);
+        GuestChatQuotaService.Quota quota = quotaService.quotaFor(currentUserResolver.requireCurrentUserSubject(), admin);
 
         return new QuotaResponse(quota.limit(), quota.remaining(), quota.resetsAt(), quota.exempt());
     }

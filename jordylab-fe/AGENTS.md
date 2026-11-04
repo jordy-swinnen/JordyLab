@@ -57,8 +57,8 @@ All real code lives in per-domain libs; the apps are thin shells over them:
 ```
 apps/jordylab          — the deployable app. Lazy-loads each domain's routes
 apps/<domain>/         — dev harness per domain: boots that domain's routes alone,
-                         without the host shell. Still authenticates via Keycloak
-                         independently (see Auth via Keycloak below). Not deployed
+                         without the host shell. Uses the same session auth
+                         (see Auth below). Not deployed
 libs/<domain>/{ui,api} — domain libs: ui = components + routes, api = services & HTTP
 libs/ui/helm           — shared spartan helm overrides reused by multiple apps
 ```
@@ -89,7 +89,7 @@ same build in standalone mode on the site's own origin. What makes it installabl
   (`apps/jordylab/src/app/app-settings/`) and the desktop QR entry.
 - `libs/shared/platform/ui/.../share-landing/` — reads the share query params (`url`, else the first `http(s)`
   link inside `text`); "Ask LibBot" for everyone, "Save to FNA" for admins. The payload lives only in the URL,
-  and `AuthService.login(returnUrl)` sends Keycloak back to it after a sign-in.
+  and the login page's `returnUrl` sends the person back to it after signing in.
 - Legacy native links redirect (`apps/jordylab/src/app/legacy-mobile-redirect.ts`): `/mobile/open?screen=…`
   → the web route, `/mobile/callback` → `/login`.
 
@@ -105,8 +105,7 @@ puts each domain (and each component within it) in its own chunk, fetched on fir
 - **Dev harnesses.** `apps/fna` and `apps/gamecatalog` exist only so `bunx nx serve <domain>`
   can exercise one domain without the host shell. Their `app.routes.ts` re-exports the lib's
   routes wrapped in the shared `authGuard`, so there is one source of truth for the routes and
-  each harness still authenticates against the real Keycloak realm independently — see
-  "Auth via Keycloak" below. They are not deployed.
+  each harness uses the same backend session — see "Auth" below. They are not deployed.
 - **No cross-domain imports.** No shared stores, no cross-domain service imports, no shared
   mutable state — enforced by the Nx tag boundaries above.
 - **Base hrefs:** `apps/jordylab` → `/`, `apps/fna` → `/fna`, `apps/gamecatalog` → `/games`.
@@ -155,7 +154,7 @@ fast layer; this is the regression gate for whole journeys.
 
 ```bash
 cd jordylab-fe
-e2e/run.sh web                       # build fresh, start Postgres + Keycloak + backend, run the journeys, clean up, verify clean
+e2e/run.sh web                       # build fresh, start Postgres + backend, run the journeys, clean up, verify clean
 E2E_SKIP_BACKEND_BUILD=1 E2E_SKIP_WEB_BUILD=1 e2e/run.sh web    # reuse the last builds while iterating
 e2e/lib/cleanup.sh verify-all        # lists any E2E container, volume or network still around (should print "verified clean")
 e2e/prove-cleanup.sh                 # proves cleanup after a pass, a failure, Ctrl-C, SIGTERM and a hard kill
@@ -164,14 +163,13 @@ e2e/prove-cleanup.sh                 # proves cleanup after a pass, a failure, C
 Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromium` once. CI runs the same script as the required
 `e2e-web` check.
 
-- **Throwaway environment.** Every run starts its own Postgres and Keycloak (unique compose project, free ports, labels, no volumes,
-  per-run credentials, a realm derived from the dev export) and a backend against them, and removes everything on pass, failure,
-  interrupt or hard kill; a final check fails the run if anything with the run label is left. It never touches the dev stack or the
-  dev database: the backend runs under profile `local` with every dev value overridden (see `e2e/run.sh`).
-- **Data only through the app.** The catalog is filled through the scan endpoint with a scanner-role token, guests sign up through
-  Keycloak's page. No SQL, no hand-seeded rows (same rule as everywhere).
-- **Selectors** are roles, labels and `data-testid`; never class names. Keycloak's own pages are third-party DOM, so only there the
-  documented element ids are used.
+- **Throwaway environment.** Every run starts its own Postgres (unique compose project, free ports, labels, no volumes,
+  per-run credentials) and a backend against it, and removes everything on pass, failure, interrupt or hard kill; a final
+  check fails the run if anything with the run label is left. It never touches the dev stack or the dev database: the
+  backend runs under profiles `local,e2e` with every dev value overridden (see `e2e/run.sh`).
+- **Data only through the app.** The catalog is filled through the scan endpoint with a machine token created in global
+  setup; guests register through the app's own `/register` form and the admin approves them. No SQL, no hand-seeded rows.
+- **Selectors** are roles, labels and `data-testid`; never class names.
 - **Journeys** (`apps/jordylab-e2e/src/*.spec.ts`): sign-in with session reuse and sign-out, library grid/search/detail, library filters, marks (admin + a signed-up guest), LibBot
   up to the model call, FNA briefing (read-only), admin approving a sign-up. `accessibility.spec.ts` runs axe (WCAG 2 A/AA: colour contrast, names, labels, keyboard access) on every signed-in page plus the login page, at desktop and phone width; a new page needs one line in its `PAGES` list. `layout.spec.ts` checks that no signed-in page scrolls sideways at 360, 390 and 430 px (`scrollWidth <= clientWidth`) and names the elements that stick out; the e2e catalog holds a game with one very long word in its title on purpose. The throwaway backend has no AI keys, so nothing paid
   is ever called and journeys that touch AI assert the graceful "unavailable" state.
@@ -190,31 +188,23 @@ Needs Podman (macOS) or Docker, Java 25, Bun and `bunx playwright install chromi
 - Shared screen pieces live in `libs/shared/layout` (`PageHeader`, `EmptyState`, `ErrorState`, `SkeletonRows`, `Switch`, `SpecRow`, `TabBar`). A new data screen shows all three of loading, empty and error with them. One font family (Archivo, bundled; no external font requests), sentence-case labels via `.label`.
 - Adding a theme: one entry in `themes.js` (every token), its id in the store and the boot script; the contrast spec (`theme-contrast.spec.ts`) then checks it automatically.
 
-# Auth via Keycloak
+# Auth (session cookie)
 
-- Keycloak integration (the `keycloak-js` SDK, token plumbing, route guard, login page) lives in
-  the shared `libs/shared/auth` lib (`@jordylab-fe/shared/auth`), not in any single app. All three
-  deployable/dev-harness apps (`jordylab`, `fna`, `gamecatalog`) depend on it and authenticate
-  independently — there is no host-only session that other apps borrow from.
-- Token plumbing: `AuthService` (`libs/shared/auth/src/lib/auth.service.ts`) wraps the SDK.
-  `authInterceptor` (`auth.interceptor.ts`) adds the bearer header to every outgoing request.
-- Route protection: `authGuard` (`auth.guard.ts`) redirects unauthenticated users to `/login`.
-- Login page: `LoginComponent` (`login.component.ts`). Button calls `authService.login()` which
-  kicks off the standard OIDC Authorization Code flow with PKCE.
-- Logout: `authService.logout()` from the header button (host app only — the standalone harnesses
-  don't render the host chrome).
-- Configuration: each app supplies its own `AUTH_CONFIG` (an `InjectionToken` defined in
-  `auth-config.ts`) from its own `src/environments/environment.ts` (dev) /
-  `environment.prod.ts` (prod), provided in that app's `app.config.ts`. All three apps currently
-  provide the same realm/client — only the runtime redirect origin differs, and that's read from
-  `window.location.origin`, not from the environment file. Each app's `project.json` swaps via
-  `fileReplacements` on production builds.
-- Realm: single `jordylab` realm. Client: `jordylab-host` (public, OIDC web) — its `redirectUris`/
-  `webOrigins` in `compose/keycloak-realm-export.json` already list the standalone harness ports
-  (`:4300`, `:4400`) alongside the host's `:4200`. Roles: `jordylab-user` (default for any
-  logged-in user), `gamecatalog-scanner` (required for the script's `/scan` access — the script
-  uses a separate `gamecatalog-script` device-code client). Since spec 014, `guest` means approved
-  only; the Game Catalog needs the per-app grant `app-gamecatalog`, and an approved person with no
-  grant lands on `/no-apps`. `roleGuard('admin', 'app-gamecatalog')` mirrors the backend on the
-  `games` route, and the nav hides the Game Catalog without the grant.
-- `apps/gamecatalog` calls `/api/gamecatalog/ingest/client?libraryType=steam` (or `emudeck`) to download the scan client for the user. Both endpoints sit behind the host's auth interceptor.
+- Authentication lives in the shared `libs/shared/auth` lib (`@jordylab-fe/shared/auth`), not in any
+  single app. All three apps (`jordylab`, `fna`, `gamecatalog`) depend on it and use the same
+  backend session.
+- `AuthService` (`auth.service.ts`) loads `GET /api/identity/me` at start-up and bootstraps the CSRF
+  cookie (`GET /api/identity/auth/csrf`); Angular's XSRF interceptor adds `X-XSRF-TOKEN` to every
+  mutating request. There is no OIDC SDK and no token in JavaScript.
+- Screens: `LoginComponent` (`/login`), `RegisterComponent` (`/register`), `ForgotPasswordComponent`
+  (`/forgot-password`, admin-approved reset — no email), and the account page for display name,
+  password and passkeys.
+- Passkeys: `webauthn.ts` converts the backend's JSON options to `navigator.credentials` and back.
+  Sign-in is usernameless; enrollment happens on `/account`, and the device prompts for fingerprint/face.
+- Route protection: `authGuard` redirects unauthenticated users to `/login?returnUrl=…`; `roleGuard`
+  checks role plus app grants. Roles are `admin` and `guest`; the Game Catalog needs the per-app grant
+  `app-gamecatalog`, and an approved person with no grant lands on `/no-apps`.
+- Logout: `authService.logout()` invalidates the server session; the standalone harnesses don't render
+  the host chrome, so it lives in the app shell's account menu.
+- `apps/gamecatalog` calls `/api/gamecatalog/ingest/client?libraryType=steam` (or `emudeck`) to download
+  the scan client for the user; both endpoints require an admin session.

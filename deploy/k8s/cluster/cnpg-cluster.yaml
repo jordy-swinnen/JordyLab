@@ -7,9 +7,8 @@
 # PostgreSQL 18+ (extension_control_path), so it cannot work on PostgreSQL 16. The "system" flavour
 # is deprecated (it only adds the in-tree Barman binaries we don't use).
 #
-# Credentials (all from secrets.sops.yaml, one place each):
-#   - jordylab-db-app      (kubernetes.io/basic-auth): owner of the `jordylab` database; used by the backend
-#   - jordylab-db-keycloak (kubernetes.io/basic-auth): the `keycloak` role; owns the `keycloak` schema
+# Credentials (from secrets.sops.yaml): jordylab-db-app (kubernetes.io/basic-auth) is the owner of the
+# `jordylab` database and is used by the backend.
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
@@ -28,21 +27,6 @@ spec:
       owner: jordylab
       secret:
         name: jordylab-db-app
-      # postInitSQL runs in the `postgres` database: create the Keycloak role (cluster-wide object).
-      # Its password is set and kept in sync by `managed.roles` below.
-      postInitSQL:
-        - CREATE ROLE keycloak LOGIN;
-      # postInitApplicationSQL runs inside the `jordylab` database, where Keycloak expects its schema.
-      postInitApplicationSQL:
-        - CREATE SCHEMA IF NOT EXISTS keycloak AUTHORIZATION keycloak;
-
-  managed:
-    roles:
-      - name: keycloak
-        ensure: present
-        login: true
-        passwordSecret:
-          name: jordylab-db-keycloak
 
   resources:
     requests:

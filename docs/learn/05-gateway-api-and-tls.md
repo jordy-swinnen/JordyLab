@@ -20,13 +20,12 @@ default.
 
 Each `HTTPRoute` in `gateway.yaml` attaches to the Gateway (`parentRefs`) and matches on a path
 prefix, forwarding to a backend Service (Chapter 4): `frontend-route` → `/` → the frontend Service,
-`backend-route` → `/api` → the backend Service, `keycloak-route` → three narrow prefixes
-(`/auth/realms/jordylab`, `/auth/resources`, `/auth/.well-known`) → the Keycloak Service — only the app's own realm, so the
-`master` realm (where the Keycloak admin logs in) is not reachable from the internet. Notice there is
-**no** `/auth` catch-all route — `/auth/admin` and Keycloak's management port are simply never
-referenced by any HTTPRoute, so they're unreachable from outside the cluster no matter what
-firewall rules exist (`contracts/http-routing.md`). A separate `http-to-https-redirect` HTTPRoute
-handles the port-80 listener, redirecting everything to HTTPS.
+`backend-route` → `/api` plus the exact `/webauthn` and `/login/webauthn` ceremony paths and
+`/.well-known/assetlinks.json` → the backend Service. Notice the backend route lists explicit
+prefixes rather than a catch-all: anything not named there falls through to the frontend, so a new
+backend endpoint is unreachable until its path is added to the route (the same "deny by default"
+idea the security configuration applies). A separate `http-to-https-redirect` HTTPRoute handles the
+port-80 listener, redirecting everything to HTTPS.
 
 ## Certificates, the ACME way
 

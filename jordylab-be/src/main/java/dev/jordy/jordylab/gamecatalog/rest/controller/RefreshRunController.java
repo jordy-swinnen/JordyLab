@@ -8,12 +8,11 @@ import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshAlreadyActiveExcep
 import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshRunNotFoundException;
 import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshRunNotRunningException;
 import dev.jordy.jordylab.gamecatalog.service.autofill.RefreshRunService;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,12 +31,13 @@ import java.util.UUID;
 public class RefreshRunController {
 
     private final RefreshRunService refreshRunService;
+    private final CurrentUserResolver currentUserResolver;
 
     @PostMapping
-    public ResponseEntity<RefreshRunResponse> start(@Valid @RequestBody StartRefreshRunRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<RefreshRunResponse> start(@Valid @RequestBody StartRefreshRunRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(RefreshRunResponse.of(
-                refreshRunService.start(request.kind(), jwt.getSubject(), request.costConfirmed())));
+                refreshRunService.start(request.kind(), currentUserResolver.requireCurrentUserSubject(),
+                        request.costConfirmed())));
     }
 
     @GetMapping("/current")

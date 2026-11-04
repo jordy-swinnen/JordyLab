@@ -2,7 +2,7 @@ package dev.jordy.jordylab.feedback.service;
 
 import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.repository.FeedbackTicketRepository;
-import dev.jordy.jordylab.shared.event.UserAccessRemoved;
+import dev.jordy.jordylab.identity.UserAccessRemoved;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;

@@ -1,18 +1,14 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { appConfig } from './app.config';
-import { createPreBootstrapAuth } from './pre-bootstrap-auth';
-import { environment } from '../environments/environment';
 
 /**
- * Boots the real application providers (router, HTTP interceptors, auth config) and resolves the services the shell
- * needs at start-up. A missing provider (NG0201) otherwise only shows up as a blank page on a device.
+ * Boots the real application providers (router, HTTP client, theme initializer) and resolves the services the shell
+ * needs at start-up. A missing provider (NG0201) otherwise only shows up as a blank page in the browser.
  */
 describe('application providers', () => {
-  it('can create the auth service in the throwaway injector main.ts uses before bootstrapping', () => {
-    expect(() => createPreBootstrapAuth(environment)).not.toThrow();
-  });
-
   beforeEach(() => {
     // jsdom has no matchMedia; the theme store, started by an app initializer, asks the device whether it is light or dark.
     Object.defineProperty(window, 'matchMedia', {
@@ -20,7 +16,9 @@ describe('application providers', () => {
       writable: true,
       configurable: true,
     });
-    TestBed.configureTestingModule({ providers: appConfig.providers });
+    TestBed.configureTestingModule({
+      providers: [...appConfig.providers, provideHttpClient(), provideHttpClientTesting()],
+    });
   });
 
   it('can create the auth service', () => {

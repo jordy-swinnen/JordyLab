@@ -1,4 +1,4 @@
-# Throwaway Postgres + Keycloak for ONE end-to-end run (spec 012 US11). Never used by dev: that is jordylab-be/compose.yaml.
+# Throwaway Postgres for ONE end-to-end run (spec 019 US7). The app signs in with its own accounts; no identity container.
 # Everything is parameterised by run.sh: unique project name, free host ports, per-run credentials. No named volumes, nothing
 # persisted; every container and the network carry the run labels so cleanup can find them even after a hard kill.
 name: ${E2E_PROJECT}
@@ -17,42 +17,11 @@ services:
       POSTGRES_PASSWORD: ${E2E_DB_PASSWORD}
     ports:
       - "127.0.0.1:${E2E_POSTGRES_PORT}:5432"
-    volumes:
-      # Read-only bind of one file from the repo (creates the keycloak schema); not a volume, nothing is stored.
-      - "${E2E_REPO_ROOT}/jordylab-be/compose/keycloak-init.sql:/docker-entrypoint-initdb.d/00-keycloak-schema.sql:ro"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U jordylab -d jordylab"]
       interval: 2s
       timeout: 3s
       retries: 30
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.7.4
-    labels: *run-labels
-    command: ["start-dev", "--import-realm"]
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: e2e-bootstrap
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${E2E_KEYCLOAK_ADMIN_PASSWORD}
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/jordylab
-      KC_DB_USERNAME: jordylab
-      KC_DB_PASSWORD: ${E2E_DB_PASSWORD}
-      KC_DB_SCHEMA: keycloak
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: ${E2E_KEYCLOAK_PORT}
-      KC_HTTP_PORT: "8080"
-      # Diagnostics for failed logins in CI artifacts: Keycloak's own events (why a code exchange failed) and an access log with the
-      # caller's Origin (whether a browser request arrived and what it was answered with).
-      KC_LOG_LEVEL: "info,org.keycloak.events:debug"
-      QUARKUS_HTTP_ACCESS_LOG_ENABLED: "true"
-      QUARKUS_HTTP_ACCESS_LOG_PATTERN: '%h "%r" %s origin=%{i,Origin}'
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:${E2E_KEYCLOAK_PORT}:8080"
-    volumes:
-      - "${E2E_REALM_FILE}:/opt/keycloak/data/import/jordylab-realm.json:ro"
 
 networks:
   default:

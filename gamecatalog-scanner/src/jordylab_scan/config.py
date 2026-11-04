@@ -11,16 +11,10 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_KEYCLOAK_URL = "http://localhost:8180"
-DEFAULT_REALM = "jordylab"
-DEFAULT_CLIENT_ID = "gamecatalog-script"
 DEFAULT_BACKEND_URL = "http://localhost:8080"
 DEFAULT_SCAN_ENDPOINT = "/api/gamecatalog/ingest/scan"
 
 _ENV_KEYS = {
-    "keycloak_url": "JORDYLAB_SCAN_KEYCLOAK_URL",
-    "realm": "JORDYLAB_SCAN_REALM",
-    "client_id": "JORDYLAB_SCAN_CLIENT_ID",
     "backend_url": "JORDYLAB_SCAN_BACKEND_URL",
     "scan_endpoint": "JORDYLAB_SCAN_ENDPOINT",
 }
@@ -35,9 +29,6 @@ PLACEHOLDER_MARK = "$" + "{"
 @dataclass
 class AppConfig:
     library_type: str
-    keycloak_url: str = DEFAULT_KEYCLOAK_URL
-    realm: str = DEFAULT_REALM
-    client_id: str = DEFAULT_CLIENT_ID
     backend_url: str = DEFAULT_BACKEND_URL
     scan_endpoint: str = DEFAULT_SCAN_ENDPOINT
 
@@ -140,11 +131,6 @@ def resolve_service(library_type, constants=None, config_data=None, env=None):
 
     return AppConfig(
         library_type=library_type,
-        keycloak_url=pick(
-            "KEYCLOAK_URL", "keycloak_url", _ENV_KEYS["keycloak_url"], DEFAULT_KEYCLOAK_URL
-        ),
-        realm=pick("REALM", "realm", _ENV_KEYS["realm"], DEFAULT_REALM),
-        client_id=pick("CLIENT_ID", "client_id", _ENV_KEYS["client_id"], DEFAULT_CLIENT_ID),
         backend_url=pick(
             "BACKEND_URL", "backend_url", _ENV_KEYS["backend_url"], DEFAULT_BACKEND_URL
         ),

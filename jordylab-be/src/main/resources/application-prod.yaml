@@ -4,15 +4,18 @@
 # value fails the container's readiness probe rather than silently falling back to a dev-shaped
 # default.
 #
-# spring.datasource.url, spring.security.oauth2.resourceserver.jwt.issuer-uri, and
-# jordylab.cors.allowed-origins are already required env-var placeholders in application.yaml
-# (${POSTGRES_URL}, ${KEYCLOAK_URL}, ${JORDYLAB_CORS_ALLOWED_ORIGINS} — no defaults) — their real
+# spring.datasource.url and jordylab.cors.allowed-origins are already required env-var placeholders
+# in application.yaml (${POSTGRES_URL}, ${JORDYLAB_CORS_ALLOWED_ORIGINS} — no defaults) — their real
 # values come from the prod ConfigMap/Secret (deploy/k8s/overlays/prod/), never from this file.
-# ${KEYCLOAK_INTERNAL_URL} below is required the same way (backend-config ConfigMap).
 server:
   # Required behind Traefik so redirect-to-HTTPS, the client's real scheme, and the real remote
   # address are honoured, instead of Spring seeing plain HTTP from the in-cluster proxy hop.
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        # The public origin is HTTPS; the session cookie never travels over plain HTTP (spec 019).
+        secure: true
 
 management:
   endpoint:
@@ -30,11 +33,10 @@ management:
         include: health, info
 
 jordylab:
-  settings:
-    keycloak:
-      # Admin REST calls stay inside the cluster: the public Gateway deliberately does not route
-      # /auth/admin (spec 008 FR-009), so the public ${KEYCLOAK_URL} answers with the SPA's HTML.
-      server-url: ${KEYCLOAK_INTERNAL_URL}
-  script:
-    # The downloadable scan client logs in from the user's own machine, so it needs the public URL.
-    keycloak-url: ${KEYCLOAK_URL}
+  # Identity module (spec 019): passkeys are bound to the public domain. Bootstrap credentials come
+  # from the IDENTITY_BOOTSTRAP_ADMIN_* keys in jordylab-secrets (already env placeholders in
+  # application.yaml).
+  identity:
+    webauthn:
+      rp-id: jordylab.be
+      allowed-origins: https://jordylab.be

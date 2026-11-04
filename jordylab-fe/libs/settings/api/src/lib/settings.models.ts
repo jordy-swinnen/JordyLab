@@ -1,33 +1,7 @@
-export type UserStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type UserStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
 
 /** Where an effective guest chat limit comes from (spec 014 FR-009, FR-010). */
 export type ChatLimitSource = 'PERSONAL' | 'DEFAULT_SAVED' | 'ENVIRONMENT';
-
-/** One app in the admin's registry, with this person's grant state. */
-export interface AppAccess {
-  key: string;
-  name: string;
-  granted: boolean;
-  grantable: boolean;
-  /** Why the app cannot be granted; null when it can. */
-  reason: string | null;
-}
-
-export interface PersonChatLimit {
-  limit: number;
-  source: ChatLimitSource;
-}
-
-export type SessionKind = 'WEB' | 'SCANNER';
-
-/** One active sign-in (spec 014 US5). Offline means the scanner's device-code token, which a logout leaves alive. */
-export interface UserSession {
-  id: string;
-  kind: SessionKind;
-  offline: boolean;
-  startedAt: string;
-  lastAccessedAt: string;
-}
 
 /** The saved default guest limit, with its source (spec 014 FR-009). */
 export interface GuestChatLimit {
@@ -37,19 +11,28 @@ export interface GuestChatLimit {
   updatedBy: string | null;
 }
 
+/** A locked-out user's pending password reset, shown on their card (spec 019 US6). */
+export interface PendingResetRequest {
+  requestId: string;
+  requestedAt: string;
+}
+
+/** One account as the identity API lists it (spec 019 contracts/identity-api.md). */
 export interface AppUser {
   id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  createdAt: string;
-  enabled: boolean;
-  realmRoles: string[];
+  username: string;
+  displayName: string | null;
+  role: 'admin' | 'guest' | null;
   status: UserStatus;
-  isAdmin: boolean;
-  apps: AppAccess[];
-  /** Null for the admin, who is never limited. */
-  chatLimit: PersonChatLimit | null;
-  /** Null when the identity provider could not answer for this person. */
-  sessionCount: number | null;
+  /** App keys such as `gamecatalog` (spec 014 per-app grants). */
+  appGrants: string[];
+  createdAt: string;
+  pendingResetRequest: PendingResetRequest | null;
+}
+
+/** One web session of an account, from Spring Session (spec 019 US4). */
+export interface UserSession {
+  sessionId: string;
+  startedAt: string;
+  lastAccessedAt: string;
 }

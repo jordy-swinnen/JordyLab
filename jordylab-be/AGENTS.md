@@ -5,7 +5,7 @@
 ./gradlew test                                     # All tests
 ./gradlew :test --tests "*ModularityTests*"        # Verify module boundaries
 ./gradlew bootRun                                  # Run with DevTools
-podman compose up -d                               # Start PostgreSQL (pgvector) + Keycloak
+podman compose up -d                               # Start PostgreSQL (pgvector)
 ```
 
 Run `ModularityTests` after any structural change — this is the build-time boundary check.
@@ -330,32 +330,33 @@ class SomeObjectTestBuilder {
 
 - Require `spring-boot-starter-flyway` dependency, not just `flyway-core`
 
-# Security / Keycloak
+# Security / identity
 
-- Backend auth is OAuth2 resource server + JWT. Issuer-uri is `${KEYCLOAK_URL:http://localhost:8180}/realms/jordylab` in `application.yaml`.
-- Spring Security config lives in `shared/config/SecurityConfig.java`. Realm roles map to `ROLE_*` authorities via the `realm_access.roles` claim.
+- Authentication is built in (`identity` module, spec 019): BCrypt passwords, WebAuthn passkeys, Spring Session JDBC
+  sessions and per-machine tokens. There is no OAuth2 resource server and no external identity provider.
+- `IdentitySecurityConfiguration` in `identity/` defines two chains: a stateless `jlmt_` machine-token chain for the
+  ingest endpoints, and the browser session chain (CSRF via the `XSRF-TOKEN`/`X-XSRF-TOKEN` pair, 30-day sessions).
 - Endpoint gates (spec 014): the Game Catalog reads, marks, ROM status and LibBot require `admin` or the per-app grant
   `app-gamecatalog`; approval alone (`guest`) no longer opens the catalog. Settings and FNA stay `admin`.
-  - `POST /api/gamecatalog/ingest/check` → `hasRole("gamecatalog-scanner")` (client asks if a scan is needed)
-  - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (client, device-code)
+  - `POST /api/gamecatalog/ingest/check` → `hasRole("gamecatalog-scanner")` (machine token; asks if a scan is needed)
+  - `POST /api/gamecatalog/ingest/scan` → `hasRole("gamecatalog-scanner")` (machine token)
   - `GET  /api/gamecatalog/ingest/client` → `hasRole("admin")` (web UI downloads it)
-  - other `/api/**` → `authenticated()` (any logged-in user)
+  - `/api/identity/users/**`, `/api/identity/machines/**`, `/api/fna/**`, `/api/settings/**` → `hasRole("admin")`
+  - other `/api/**` → `authenticated()` (any signed-in user)
   - `/actuator/health`, `/actuator/info`, `/h2-console/**` → `permitAll()` (dev only)
 - CORS allowed origins configured via `jordylab.cors.allowed-origins` property (defaults to `http://localhost:4200,4300,4400` for the per-port dev servers).
-- The realm's access-token lifetime is **60 seconds** (spec 014). The backend validates JWTs statelessly, so that lifespan
-  is what bounds "a revoked person, a removed app or a deleted account stops working within one minute". Do not raise it
-  without revisiting spec 014 FR-007/SC-002.
-- Per-app grants are Keycloak realm roles (`app-gamecatalog` today), assigned by Settings → Users. The settings user
-  routes (`apps`, `chat-limit`, `sessions`, delete) all live under `/api/settings/users/**`; the app registry is
-  `GET /api/settings/apps`. FNA and Settings have no grant role by design (they hold the admin's own data).
-- The Keycloak service account needs `view-users`, `manage-users`, `view-realm` and `view-clients` (`view-clients` is
-  used to resolve the phone app's client UUID for its offline sessions).
-- The previous static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client handles its own token via Keycloak Device Authorization Grant (offline token, scoped to `gamecatalog-scanner` only) and caches it at `~/.config/jordylab/scan/token.json`.
+- Sessions are checked on every request (Spring Session JDBC, indexed by username), so revoking, deleting or ending a
+  person's sessions takes effect on their next request — there is no token lifetime to tune (spec 019 SC-005).
+- Per-app grants are `ManagedApp` values (`GAME_CATALOG` today) stored on `identity.user_app_grant`, assigned by
+  Settings → Users. The user routes (`apps`, `sessions`, `reset-requests`, delete) live under `/api/identity/users/**`;
+  machines under `/api/identity/machines/**`. FNA and Settings have no grant by design (they hold the admin's own data).
+- The old static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client
+  handles its own `jlmt_` machine token (created in Settings → Machines) and caches it at `~/.config/jordylab/scan/token.json`.
 
 # Game library scan flow (feature 003 — Python client)
 
 - Users download a per-library Python client via the web UI's source-manager page → `GET /api/gamecatalog/ingest/client` renders `jordylab-scan-template.py` (frozen from `gamecatalog-scanner/` by `tools/build_client.py`) into `text/x-python`.
-- The client (`gamecatalog-scanner/`) authenticates via Keycloak Device Authorization Grant with `scope=openid offline_access`, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so.
+- The client (`gamecatalog-scanner/`) authenticates with its `jlmt_` machine token, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so.
 - `ScanService` resolves-or-adopts a `ScanSource` keyed on `(machine_id, sourceType)` falling back to `(hostname, sourceType)`; client-grouped EmuDeck `games[]` take precedence over the path-inference `LibraryParser` backstop; Steam VDF parsing stays server-side.
 - Change detection is **server-authoritative**: `scanNeeded = fingerprint differs OR stored ingest_version < CURRENT_INGEST_VERSION OR lastOutcome ∉ {APPLIED, NO_CHANGE}`. The digest is equality-only — the client never controls invalidation.
 - Safety: a scan whose resulting installed set is empty, or that would remove more than `jordylab.gamecatalog.scan.max-shrink-fraction` (default 0.5) of a source's installed games, is `REJECTED` with `SNAPSHOT_SHRINK_SUSPECT` unless `force` is set. The client skips (exit 5) explicitly configured roots that are missing/unreadable/empty.
@@ -402,7 +403,7 @@ class SomeObjectTestBuilder {
 - **Hosts and names.** `Host` has the hostname (from the machine) and an optional display name; `Host.label()` is the only place that picks one. `PUT /hosts/{id}/display-name` (admin, unique across hosts and consoles, 40 characters). A scan never touches the name.
 - **Consoles replace the Switch tab.** `Console` (platform from `PlatformCatalog`, generation 5+ autocomplete, free-text allowed) with games found through IGDB; no format. `/consoles/**` is admin only.
 - **Filters.** `GET /games` takes `platform*`, `where*` (host/console ids), `installStatus`, `source*`, `minLocalPlayers` (confirmed only, the response reports `unknownPlayerCount`), `romStatus*`, `mark*`, `markScope`, `sort`. Implemented as a dynamic JPQL fragment (`GameFilterRepositoryImpl`). `GET /places`, `GET /platforms` (with the chip colours from `PlatformCatalog`; the frontend holds none).
-- **Marks.** One of `WANT_TO_PLAY | PLAYED_LIKED | PLAYED_DISLIKED` per person per game (`PUT /games/{id}/mark`, subject from the JWT, upsert on the unique index). Totals are public, voters never. `UserAccessRemoved` (in `shared.event`, to avoid a module cycle) deletes a removed account's marks.
+- **Marks.** One of `WANT_TO_PLAY | PLAYED_LIKED | PLAYED_DISLIKED` per person per game (`PUT /games/{id}/mark`, subject from the signed-in user, upsert on the unique index). Totals are public, voters never. `UserAccessRemoved` (published by the `identity` module) deletes a removed account's marks.
 - **ROM status.** `UNKNOWN | VALIDATED | BROKEN` per emulated copy (`PUT /games/{id}/installations/{installationId}/rom-status`, `409 ROM_STATUS_NOT_APPLICABLE` for others). It lives on the installation, so rescans and the grace period keep it.
 - **LibBot** (`service/libbot`, SSE `POST /libbot/ask`): interpret (typed facts, temperature 0) → `ConstraintDeriver` (rules in Java: six people = 6+ local players) → `CandidateRetriever` (SQL + pgvector + tsvector fallback; unknown facts are reported, not matched; votes order only games that already satisfy the requirements; the asker's disliked games and games whose only copies are broken are left out) → `AnswerComposer` (temperature 0.3) → `LibBotAnswerValidator` (≤ 10 references, all named in the text). Session memory of the last 10 exchanges in `ConversationStore` (in process, keyed by user and conversation). Guests have a daily allowance counted by `LibBotMessageAnswered` in `settings`; `GET /libbot/quota` lives in `settings`.
 - **Tests that guard it:** `GoldenReplayTest` (recorded model output, in CI), `GoldenLiveTest` (`./gradlew goldenLive`, real models, needs `OPENROUTER_API_KEY`), `IgdbPlatformCatalogCheck` (`./gradlew igdbCheck`, needs IGDB keys), `GameFilterQueryTest`, `CandidateRetrieverTest`, `MarkServiceTest`, the e2e journeys.

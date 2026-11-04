@@ -1,6 +1,6 @@
 package dev.jordy.jordylab.gamecatalog.service.libbot;
 
-import dev.jordy.jordylab.shared.event.UserDeleted;
+import dev.jordy.jordylab.identity.UserDeleted;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;

@@ -2,6 +2,7 @@ package dev.jordy.jordylab.settings.rest.controller;
 
 import dev.jordy.jordylab.settings.service.GuestChatLimitService;
 import dev.jordy.jordylab.settings.service.InvalidLimitException;
+import dev.jordy.jordylab.shared.config.IdentityTestAuthentication;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SettingsGuestChatLimitController.class)
 class SettingsGuestChatLimitControllerTest {
 
-    private static final String ADMIN_SUBJECT = "00000000-0000-0000-0000-00000000000a";
+    private static final String ADMIN_SUBJECT = IdentityTestAuthentication.ADMIN_SUBJECT;
 
     @Autowired
     private MockMvc mockMvc;
@@ -76,6 +77,6 @@ class SettingsGuestChatLimitControllerTest {
     }
 
     private static org.springframework.test.web.servlet.request.RequestPostProcessor adminJwt() {
-        return jwt().jwt(jwt -> jwt.subject(ADMIN_SUBJECT));
+        return IdentityTestAuthentication.asAdmin();
     }
 }

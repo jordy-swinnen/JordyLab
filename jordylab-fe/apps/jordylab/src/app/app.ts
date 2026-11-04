@@ -86,5 +86,6 @@ export class App {
 
   async onLogout(): Promise<void> {
     await this.#auth.logout();
+    await this.#router.navigateByUrl('/login');
   }
 }

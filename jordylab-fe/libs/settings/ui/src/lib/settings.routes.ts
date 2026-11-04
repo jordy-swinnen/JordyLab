@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 import { roleGuard } from '@jordylab-fe/shared/auth';
 import { AiModelsPageComponent } from './ai-models-page/ai-models-page.component';
+import { MachinesPageComponent } from './machines-page/machines-page.component';
 import { UsersPageComponent } from './users-page/users-page.component';
 
 /**
@@ -12,6 +13,7 @@ import { UsersPageComponent } from './users-page/users-page.component';
 export const settingsAdminRoutes: Route[] = [
   { path: 'users', canActivate: [roleGuard('admin')], component: UsersPageComponent },
   { path: 'ai-models', canActivate: [roleGuard('admin')], component: AiModelsPageComponent },
+  { path: 'machines', canActivate: [roleGuard('admin')], component: MachinesPageComponent },
 ];
 
 /**

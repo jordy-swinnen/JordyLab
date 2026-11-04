@@ -23,8 +23,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
@@ -45,7 +43,6 @@ import static org.mockito.ArgumentMatchers.argThat;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = {
-        "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost:0/realms/test",
         "OPENROUTER_API_KEY=test-gateway-key"
 })
 class AiModelSelectionIntegrationTest {
@@ -73,18 +70,6 @@ class AiModelSelectionIntegrationTest {
     @Autowired
     private AiFeatureLastRunRepository lastRunRepository;
 
-    @TestConfiguration
-    static class JwtDecoderOverride {
-
-        @Bean
-        @Primary
-        JwtDecoder testJwtDecoder() {
-            return token -> Jwt.withTokenValue(token).header("alg", "none").claim("sub", "test-user")
-                    .claim("realm_access", Map.of("roles", List.of())).issuedAt(Instant.now())
-                    .expiresAt(Instant.now().plusSeconds(60)).build();
-        }
-    }
-
     @AfterEach
     void cleanUp() {
         settingRepository.deleteAll();
@@ -103,7 +88,7 @@ class AiModelSelectionIntegrationTest {
                         null, 128000, false))));
         AiCallResult before = aiService.call(AiFeature.GAMECATALOG_ENRICHMENT, "system", "user");
 
-        settingsService.saveModel(AiFeature.GAMECATALOG_ENRICHMENT.key(), CHOSEN_MODEL, "keycloak-subject-admin");
+        settingsService.saveModel(AiFeature.GAMECATALOG_ENRICHMENT.key(), CHOSEN_MODEL, "identity-subject-admin");
         AiCallResult after = aiService.call(AiFeature.GAMECATALOG_ENRICHMENT, "system", "user");
 
         ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);

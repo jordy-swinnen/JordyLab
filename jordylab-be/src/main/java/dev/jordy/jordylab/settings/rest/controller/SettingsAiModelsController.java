@@ -7,11 +7,10 @@ import dev.jordy.jordylab.settings.rest.controller.model.AiModelsResponse;
 import dev.jordy.jordylab.settings.rest.controller.model.ModelCatalogResponse;
 import dev.jordy.jordylab.settings.rest.controller.model.SaveAiModelRequest;
 import dev.jordy.jordylab.settings.service.AiModelSettingsService;
+import dev.jordy.jordylab.identity.CurrentUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +33,7 @@ import java.util.Locale;
 public class SettingsAiModelsController {
 
     private final AiModelSettingsService settingsService;
+    private final CurrentUserResolver currentUserResolver;
     private final OpenRouterModelCatalogClient catalogClient;
 
     @GetMapping
@@ -62,9 +62,8 @@ public class SettingsAiModelsController {
     }
 
     @PutMapping("/{featureKey}")
-    public ResponseEntity<Void> save(@PathVariable String featureKey, @RequestBody SaveAiModelRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
-        settingsService.saveModel(featureKey, request.modelId(), jwt.getSubject());
+    public ResponseEntity<Void> save(@PathVariable String featureKey, @RequestBody SaveAiModelRequest request) {
+        settingsService.saveModel(featureKey, request.modelId(), currentUserResolver.requireCurrentUserSubject());
 
         return ResponseEntity.noContent().build();
     }

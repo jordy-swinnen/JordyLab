@@ -75,9 +75,7 @@ def rom_root(tmp_path):
 
 
 def _cache_token():
-    auth.save_token(
-        {"access_token": "t", "refresh_token": "r", "expires_in": 3600, "obtained_at": time.time()}
-    )
+    auth.save_token("jlmt_test_token")
 
 
 def test_scan_applied(ingest_server, rom_root, monkeypatch):
@@ -152,16 +150,15 @@ def test_login_command(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     called = {}
 
-    def fake_device_login(cfg, **kwargs):
-        called["client_id"] = cfg.client_id
-        auth.save_token({"access_token": "a", "refresh_token": "r", "expires_in": 3600})
-        return {"access_token": "a"}
+    def fake_prompt_login(*args, **kwargs):
+        called["prompted"] = True
+        auth.save_token("jlmt_pasted")
 
-    monkeypatch.setattr(auth, "device_login", fake_device_login)
+    monkeypatch.setattr(auth, "prompt_login", fake_prompt_login)
     monkeypatch.setattr(cli, "resolve_library_type", lambda args, constants: "EMUDECK")
 
     assert cli.main(["login", "--library", "EMUDECK"]) == 0
-    assert called["client_id"] == "gamecatalog-script"
+    assert called["prompted"] is True
     assert token_file().is_file()
 
 
