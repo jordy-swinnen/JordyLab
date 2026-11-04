@@ -8,52 +8,57 @@
 Q5). The decisions are in [research.md](research.md) (R1–R12).
 
 ## Summary
-
-An admin connects Claude Desktop and Claude mobile to JordyLab through `https://jordylab.be/mcp`. Claude signs in with a
-public Keycloak client, and then calls nine read-only tools: five for the game catalog and four for finance. Every call
-is admin-only, limited to 60 a minute, returns at most 50 items, and leaves one audit line in the backend log. The
-connector never writes, and it never calls an AI model.
+An admin connects Claude Desktop and Claude mobile to JordyLab through `https://jordylab.be/mcp`. Claude signs in with the
+admin's JordyLab account through an OAuth 2.1 authorization server that the backend runs, and then calls nine read-only
+tools: five for the game catalog and four for finance. Every call is admin-only, limited to 60 a minute, returns at most
+50 items, and leaves one audit line in the backend log. The connector never writes, and it never calls an AI model.
 
 Technical approach, in one line each:
 - **Transport**: Spring AI Streamable-HTTP in stateless mode, so a deploy's restart does not drop a connected client (R1).
-- **Auth**: a dedicated security chain for `/mcp`; the token must carry the audience `jordylab-mcp` and the admin role (R2, R3).
-- **Discovery**: protected resource metadata (RFC 9728) served by the backend, reached through two gateway routes (R4, R10).
-- **Keycloak**: one public client, PKCE S256, refresh rotation, no `offline_access` (R5, R6).
+- **Sign-in**: Spring Authorization Server inside the backend, one pre-registered public client with PKCE S256, and the
+  existing session login as the bridge (R2, R5).
+- **Tokens**: a short-lived JWT for the connector (`aud` `jordylab-mcp`, the user's id and role), with the account
+  re-checked against the identity module on every call (R3).
+- **Discovery**: protected resource metadata (RFC 9728) plus the authorization server's own metadata (RFC 8414), both
+  served by the backend (R4, R10).
 - **Guardrails**: an AOP advice on each tool gives the rate limit, the audit line and the error mapping (R7).
-- **Placement**: a new `mcp` module, with tool classes in the domain modules beside their controllers (R8). No schema.
+- **Placement**: the `mcp` module owns the auth server, the `/mcp` chain and the guardrails; the tools stay in the domain
+  modules (R8). One Flyway migration in a new `mcp` schema.
 
 ## Technical Context
+**Language/Version**: Java 25 (backend); YAML (Caddy); SQL (Flyway).
 
-**Language/Version**: Java 25 (backend); YAML (gateway); JSON (realm files).
+**Primary Dependencies**: Spring Boot 4.1.1 and Spring Security 7.1.1 (existing), with
+`spring-boot-starter-oauth2-authorization-server` (Spring Authorization Server 7.1.x, version from the Boot BOM); Spring AI
+2.0.1 via the BOM with `spring-ai-starter-mcp-server-webmvc`; `aspectjrt` for the tool advice; Spring Modulith 2.1.1; the
+`identity` module from spec 019 (`AuthenticatedUser`, `CurrentUserResolver`, `UserAccountLookup`).
 
-**Primary Dependencies**: Spring Boot 4.1.1 and the existing OAuth2 resource server; Spring AI 2.0.1 via the BOM, with
-the new `spring-ai-starter-mcp-server-webmvc`; a new AOP runtime for the tool advice (starter name confirmed in the
-spike); Spring Modulith 2.1.1 (existing); Keycloak 26.7.4 (existing, `deploy/containers/keycloak/Containerfile`).
-
-**Storage**: none. No table, no migration, no schema. The rate limit is in process memory (R7). The connector client is
-realm configuration.
+**Storage**: one new schema, `mcp`, with one Flyway migration holding Spring Authorization Server's JDBC tables
+(authorization, authorization consent, and the registered client if stored in JDBC). The rate limit stays in process
+memory (R7).
 
 **Testing**: JUnit 5, AssertJ (`assertSoftly` for multi-assertion tests), Mockito without `any()`, MockMvc with
-`@Language("JSON")`, the shared `TestSecurityConfig` for slice tests, Testcontainers Postgres for query tests,
-`ModularityTests`. Live proof: `quickstart.md` steps 1–10, with Claude Desktop and Claude mobile.
+`@Language("JSON")`, the identity module's test sign-in, Testcontainers Postgres for the query tests, `ModularityTests`.
+A dedicated test drives the authorization-code flow (session login → authorize → code → token with the audience and
+role). Live proof: `quickstart.md` steps 1–10, with Claude Desktop and Claude mobile.
 
-**Target Platform**: single host on OVH VPS-2, public at `https://jordylab.be`. It has run Docker Compose behind Caddy since the
-cutover (`specs/020-compose-deployment/`, live 2026-11-03). The k3s stack is retired, and this feature is released on the Compose stack. Claude
-calls it from Anthropic's cloud, so it must be public HTTPS (Claude's docs).
+**Target Platform**: single host on OVH VPS-2, public at `https://jordylab.be`, Docker Compose behind Caddy since
+`specs/020-compose-deployment/`. Claude calls it from Anthropic's cloud, so it must be public HTTPS.
 
-**Project Type**: backend feature (a new module and tool adapters), plus a realm client, gateway routes and docs. No
-frontend change.
+**Project Type**: backend feature (the `mcp` module with an authorization server and tool adapters), plus Caddy routes,
+one Flyway migration and docs. No frontend change: the login page already honours `returnUrl`.
 
-**Performance Goals**: 95% of questions answered within 10 s (SC-002). A tool call adds one database read and no model call.
+**Performance Goals**: 95% of questions answered within 10 s (SC-002). A tool call adds one database read and one account
+lookup, and no model call.
 
 **Constraints**:
 - Read-only: no mutating route, no AI call, no notification (FR-011, FR-012).
-- Admin only, on the audience `jordylab-mcp` (FR-003, FR-021).
+- Admin only, on the audience `jordylab-mcp`, re-checked on every call (FR-003, FR-004, FR-021).
 - At most 50 items per call; at most 60 calls per admin per minute (FR-009, FR-020).
 - No secret, no hidden personal field, no argument or result in logs (FR-014, FR-015, FR-016).
-- 60-second access tokens (spec 014); SSO session 30 days idle, 90 days maximum (realm).
-
-**Scale/Scope**: one admin, a few hundred tool calls a month, nine tools, one instance.
+- Access token 10 minutes; refresh token 30 days with rotation; the session login is the only human sign-in.
+- The authorization endpoint, the token endpoint, the JWKS and both well-known documents must be reachable from the
+  internet.
 
 ## Constitution Check
 
@@ -97,47 +102,43 @@ specs/021-jordylab-mcp-server/
 
 ```text
 jordylab-be/
-├── build.gradle.kts                                    # + spring-ai-starter-mcp-server-webmvc; + AOP runtime
-├── src/main/resources/application.yaml                 # spring.ai.mcp.server.* (protocol STATELESS, tools only)
+├── build.gradle.kts                                    # + spring-ai-starter-mcp-server-webmvc, spring-boot-starter-oauth2-authorization-server, aspectjrt
+├── src/main/resources/
+│   ├── application.yaml                                # spring.ai.mcp.server.* (STATELESS, tools only); jordylab.mcp.*
+│   └── db/migration/V20261104001__mcp_oauth_tables.sql # NEW: schema mcp + SAS authorization, consent and client tables
 ├── src/main/java/dev/jordy/jordylab/
 │   ├── mcp/                                            # NEW module
-│   │   ├── McpConfiguration.java                       # SecurityFilterChain for /mcp and the metadata path (@Order highest)
-│   │   ├── McpProperties.java                          # publicBaseUrl (JORDYLAB_APP_BASE_URL), audience, limits
+│   │   ├── McpAuthorizationServerConfiguration.java    # SAS chains, registered client, JWK, consent off (@Order before the session chain)
+│   │   ├── McpConfiguration.java                       # /mcp chain: AS JWKS decoder, audience, admin, 401 pointer
+│   │   ├── McpProperties.java                          # publicBaseUrl, issuer, audience, limits
 │   │   ├── McpToolPage.java                            # public envelope (items, returned, totalMatching, hasMore)
-│   │   ├── rest/controller/
-│   │   │   ├── ProtectedResourceMetadataController.java
-│   │   │   └── model/ProtectedResourceMetadata.java
 │   │   └── service/
+│   │       ├── McpTokenCustomizer.java                 # aud=jordylab-mcp, sub=account id, roles claim
+│   │       ├── McpAccountStatusValidator.java          # per-call admin re-check through UserAccountLookup
 │   │       ├── McpRateLimiter.java                     # fixed window per sub, 60/min, Clock-driven
 │   │       ├── McpToolCallAdvice.java                  # @Around @McpTool: limit, run, audit line, error mapping
-│   │       ├── McpJwtDecoderFactory.java               # lazy decoder with issuer + audience validators
 │   │       └── McpAuthenticationEntryPoint.java        # 401 with resource_metadata
 │   ├── gamecatalog/rest/controller/
-│   │   ├── GameCatalogMcpTools.java                    # NEW: search_games, get_game, list_places, list_sources, get_library_status
-│   │   └── model/                                      # NEW result records (GameSearchItem, GameDetail, PlaceSummary, …)
+│   │   ├── GameCatalogMcpTools.java                    # five tools (unchanged)
+│   │   └── model/                                      # result records (unchanged)
 │   └── fna/
-│       ├── domain/repository/ArticleRepository.java    # + findByTitleContainingIgnoreCaseOrderByPublishedAtDesc (Pageable, so offset works)
+│       ├── domain/repository/ArticleRepository.java    # + paged title search (unchanged)
 │       ├── rest/controller/
-│       │   ├── FnaMcpTools.java                        # NEW: search_articles, get_portfolio, get_wishlist, get_latest_briefing
-│       │   └── model/                                  # NEW result records (ArticleItem, PortfolioItem, BriefingView, …)
-│       └── service/FnaService.java                     # + article title search
+│       │   ├── FnaMcpTools.java                        # four tools (unchanged)
+│       │   └── model/                                  # result records (unchanged)
+│       └── service/FnaService.java                     # + article title search (unchanged)
 └── src/test/java/dev/jordy/jordylab/
-    ├── mcp/                                            # NEW: McpSecurityTest, McpToolCallAdviceTest, McpRateLimiterTest,
-    │                                                   #      ProtectedResourceMetadataControllerTest, McpToolSurfaceTest
-    ├── gamecatalog/rest/controller/GameCatalogMcpToolsTest.java   # NEW (Testcontainers)
-    └── fna/rest/controller/FnaMcpToolsTest.java                   # NEW (Testcontainers)
+    ├── mcp/                                            # McpAuthorizationServerTest, McpSecurityTest, McpToolCallAdviceTest,
+    │                                                   # McpRateLimiterTest, McpToolSurfaceTest, McpJwtTestBuilder
+    ├── gamecatalog/rest/controller/GameCatalogMcpToolsTest.java
+    └── fna/rest/controller/FnaMcpToolsTest.java
 
-deploy/
-├── compose/Caddyfile                                   # after the cutover (019): + /mcp and /.well-known/oauth-protected-resource;
-│                                                       #   the k3s k8s/base/gateway.yaml is not edited
-├── keycloak/realm-prod.json                            # + jordylab-mcp-connector client (fresh imports)
-└── keycloak/README.md                                  # + dated row for the live kcadm apply
+deploy/compose/Caddyfile                                # + /oauth2/*, /.well-known/oauth-authorization-server*,
+                                                        #   /mcp, /.well-known/oauth-protected-resource*
 
-jordylab-be/compose/keycloak-realm-export.json          # + jordylab-mcp-connector client (local dev imports)
-
-AGENTS.md                                               # module table: + mcp; Infrastructure: connector one paragraph
-jordylab-be/AGENTS.md                                   # module section for mcp (routes, guardrails, tool rule)
-docs/runbook.md                                         # connector setup, rotation, revocation, what to check on failure
+AGENTS.md                                               # module table: + mcp
+jordylab-be/AGENTS.md                                   # mcp section: auth server, /mcp chain, guardrails
+docs/runbook.md                                         # connector setup and troubleshooting
 ```
 
 **Structure Decision**: a new `mcp` module holds the transport, the security chain, discovery and the guardrails. It has
@@ -147,27 +148,21 @@ follows AGENTS.md: `rest/controller/model/` for records, `service/` for logic, a
 layout already names.
 
 ## Delivery slices (input to `/speckit-tasks`)
-
-1. **Foundation**: the `mcp` module skeleton, the starter dependency, the STATELESS property, the security chain (401
-   with the pointer, 403 for non-admins, 401 for a missing audience), the metadata controller, `ModularityTests` green.
-   Spike gate: an MCP client (MCP Inspector, run locally) completes `initialize` and `tools/list` against the stateless
-   server (R1). Claude connects from Anthropic's cloud and cannot reach localhost, so Claude's own check runs after the deploy.
-2. **Guardrails**: the rate limiter, the advice (limit, audit, error mapping), with the 61st-call test and the audit-line
-   test. Spike gate: the advice runs on tool beans invoked by the framework (R7).
-3. **Catalog tools**: `GameCatalogMcpTools` (five tools) with Testcontainers tests for filters, unknown facts, hidden
-   fields and the 50-item bound.
-4. **Finance tools**: `FnaMcpTools` (four tools), the title-search query, and the briefing "no briefing yet" case.
-5. **Keycloak and gateway** (after the Compose cutover, I1): the client in both realm files; the `kcadm` apply recorded in the README; the two routes in the Caddyfile;
-   the stale rule removed. Spike gate: token has `aud`, `realm_access`, a refresh token and no offline token; rotation
-   on (R5).
-6. **Surface test and docs**: the exact-tool-list test, the read-only hint test, `AGENTS.md`, `jordylab-be/AGENTS.md`,
-   the runbook section.
-7. **Operations** (after the merge, not code): the Keycloak apply before the first connection, quickstart steps 1–10
-   (steps 4–8 need Claude), the rotation check, and the revocation check with a throwaway admin.
-
-Slices 1–6 are one PR (one spec, one branch). Slice 7 runs after the merge and is recorded in the runbook. Slice 5's
-Keycloak apply should happen before the merge, because each merge to `main` deploys (spec 019) and the connector client
-must exist before Jordy first connects.
+1. **Authorization server** (new): `McpAuthorizationServerConfiguration` with Spring Authorization Server, one registered
+   public client (`jordylab-mcp-connector`, authorization_code + refresh_token, PKCE S256, the Claude callback, consent
+   off), a JWK source, the token customizer (`aud` `jordylab-mcp`, `sub` = account id, `roles`), the authorization
+   endpoint's entry point to `/login?returnUrl=…`, and the Flyway migration for the `mcp` schema. Gate: an
+   authorization-code flow test reaches a token with the audience and `admin`.
+2. **The `/mcp` chain on AS tokens**: replace the issuer-based decoder with the AS JWKS, keep the audience validator, map
+   the `roles` claim to authorities, add the per-call account check through `UserAccountLookup`, keep the 401 pointer and
+   the protected resource metadata. Tests: 401, wrong audience, guest, revoked account, the nine tools.
+3. **Guardrails** (already built): rate limiter, advice, audit line and error mapping; tests stay.
+4. **Tools** (already built): the five catalog and four finance tools, their records and tests; unchanged.
+5. **Deployment and docs**: Caddy routes for `/oauth2/*`, `/.well-known/oauth-authorization-server` (and its path-suffixed
+   form), `/mcp` and `/.well-known/oauth-protected-resource*`; remove the Keycloak client changes from the realm files and
+   this spec; docs (`AGENTS.md`, `jordylab-be/AGENTS.md`, runbook, Keycloak README row reverted).
+6. **Operations** (after the merge): the public discovery checks, then Claude Desktop and mobile, the ten questions, the
+   read-only probe, parallel questions, the audit lines, revocation.
 
 ## Spec changes from planning
 
@@ -179,45 +174,45 @@ These follow from the research. They are applied to `spec.md` in the same change
 | S2 | User Story 2, acceptance scenario 1 | "articles about it" becomes "recent articles whose title mentions the ticker or company name" | R9: FNA stores no ticker tags, so the match is on the title |
 | S3 | Assumptions | A connector sign-in lasts as long as the SSO session (30 days idle, 90 days at most), then Jordy signs in again | R6: refresh tokens are bound to the SSO session (no `offline_access`) |
 | S4 | Assumptions | The rate-limit count is kept per running instance; a restart resets it | R7: one instance, in-memory window |
+| S5 | FR-002, FR-004, assumptions, dependencies | Sign-in moves from a Keycloak client to the backend's own OAuth 2.1 authorization server; every call re-checks the account | Spec 019 removed Keycloak; R2, R13–R15 |
+| S6 | Keycloak client contract and realm changes | Removed; replaced by `contracts/oauth-authorization-server.md` and `contracts/oauth-client.md` | Same |
+| S7 | Quickstart steps 3–4 | The Keycloak checks become the AS discovery document and the login bridge | Same |
 
 ## Risks and mitigations
-
 | # | Risk | Likelihood / impact | Mitigation |
 |---|------|---------------------|------------|
-| K1 | Claude's handshake with a STATELESS server fails | Low / high | Spike gate in slice 1; fallback is `STREAMABLE` (a property change) |
-| K2 | The AOP advice is not applied to tools the framework invokes, so the limit and audit do not run | Medium / high | Spike gate in slice 2 asserts the 61st call is refused and not run; fallback is a wrapper per tool |
-| K3 | Refresh rotation fails under parallel calls in one chat | Medium / low | Quickstart step 8; raise "Refresh Token Max Reuse" (a Keycloak setting) |
-| K4 | Claude's proactive refresh (60-second tokens) adds a Keycloak call before almost every tool call | Certain / low | Accepted: one user, far below any limit, and the latency budget is 30 s |
-| K5 | A connector token also works on `/api` (OI-1) | Certain / medium | Open decision for Jordy (below); the read-only promise rests on the tool list until then |
-| K6 | The `WWW-Authenticate` pointer is lost in the gateway | Low / high | Quickstart step 2 is the first check after the deploy; the route keeps the header by default |
-| K7 | A deploy restarts the backend mid-conversation | Certain / low | Stateless transport: no session to lose; Claude retries the call |
-| K8 | The connector client is missing when the backend deploys | Medium / low | The endpoint is admin-only and returns 401 without the client; apply the Keycloak client first (slice 5) |
-| K9 | Title search misses articles that only mention a company in the body | Medium / low | Accepted and stated in the tool description and spec S2 |
-| K10 | The 90-day SSO cap forces a fresh sign-in | Certain / low | Stated in the spec (S3) and the runbook |
-| K11 | Claude mobile needs a separate connector setup | Unknown / low | Quickstart step 6 verifies it; a documentation change if it does |
-| K12 | The stale assetlinks rule is removed while something still needs it | Very low / low | Spec 018 removed the endpoint; the SecurityConfig comment confirms it |
+| K1 | Claude's handshake with a STATELESS server fails | Low / high | Gate in slice 2 with a real MCP client; fallback is `STREAMABLE` (a property change) |
+| K2 | The AOP advice is not applied to tools the framework invokes, so the limit and audit do not run | Medium / high | Gate in slice 2 asserts the 61st call is refused and not run; fallback is a wrapper per tool |
+| K3 | The authorize request loses the login session and loops back to `/login` | Medium / high | Same origin and the SPA's existing `returnUrl`; quickstart step 4 catches it; the entry point keeps the exact request |
+| K4 | Spring Authorization Server's tables are missing on first boot | Low / high | Flyway owns them and runs before the AS serves a request; the migration is in the first slice |
+| K5 | An AS token reaches more than `/mcp` | Low / medium | The `/api` chain is session-only; the AS token is accepted by the `/mcp` chain alone, and only there |
+| K6 | The `WWW-Authenticate` pointer is lost in the proxy | Low / high | Quickstart step 2 is the first check after the deploy; Caddy keeps the header by default |
+| K7 | A deploy restarts the backend mid-conversation | Certain / low | Stateless transport and a stateless access token; Claude retries the call |
+| K8 | Spring Authorization Server 7.1.x is incompatible with the pinned Security 7.1.1 | Low / high | The Boot BOM manages both; the first slice compiles and runs the flow test before anything else |
+| K9 | Refresh tokens are lost across a deploy | Low / medium | Authorizations live in the `mcp` schema, not in memory; the flow test crosses a context restart |
+| K10 | The token issuer does not match the public URL Claude sees | Medium / medium | The issuer is `publicBaseUrl`; the discovery document and the decoder use the same property; quickstart step 3 |
+| K11 | A removed admin keeps access until the token expires | Low / medium | Every call re-checks the account and role against the identity module (FR-004) |
+| K12 | Claude mobile needs its own connector setup | Unknown / low | Quickstart step 6; a documentation change only |
 
 ## Open items (decided 2026-11-03: OI-1 option A, OI-2 merge straight to prod, OI-3 title only)
+All earlier answers hold, with the authentication changed on 2026-11-04:
 
-1. **OI-1: connector tokens and `/api`. Decided 2026-11-03: option A.** A connector token carries the admin's rights on `/api` as well, so a leaked
-   token could call a write endpoint. Options: (A) accept it for v1, as the browser session already carries the same
-   rights, and revisit in a later spec (recommended); (B) require the audience on the `/api` chain too, which touches
-   every login path and needs the web client to send the audience.
-2. **Keycloak apply before release.** The release follows the Compose cutover (I1), so the `kcadm` step for
-   `jordylab-mcp-connector` runs before it. Confirm that, and confirm whether a merge still deploys: Compose decision 4
-   says deploys run on release tags only (T2 in the analysis).
-3. **Article matching.** Confirm S2: `search_articles` matches titles only, so a company mentioned only in the body is
-   not found.
+1. **OI-1 is closed by design**: connector tokens are issued by the backend's own authorization server and accepted only by
+   the `/mcp` chain; `/api` remains session-only, so the residual risk from the Keycloak design is gone.
+2. **OI-2 and OI-3** stay as recorded (merge to `main` deploys; article search matches titles).
+3. **Resolved 2026-11-04**: the auth server is Spring Authorization Server inside the backend, not Keycloak, and every call
+   re-checks the account (FR-004).
 
 ## Complexity Tracking
-
 > Fill ONLY if Constitution Check has violations that must be justified
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| New module `mcp` | Transport, security chain, discovery and guardrails are cross-cutting; they belong to no domain | Putting them in `shared` mixes MCP into the AI/config/utilities module; putting them in one domain makes the others depend on it |
-| Two new dependencies (Spring AI MCP starter, AOP runtime) | The MCP server and the per-call advice (limit, audit, outcome) need them | A hand-written JSON-RPC handler drifts from the protocol; a servlet filter cannot see call outcomes |
-| A second `SecurityFilterChain` | `/mcp` needs an audience check and a different 401 that the existing deny-by-default chain must not get | Adding the audience to the global decoder would break every web login |
+| A new module `mcp` | The auth server, the `/mcp` chain, discovery and the guardrails are cross-cutting; the tools live in the domain modules | Putting them in `shared` mixes MCP into config and utilities; one domain module would make the others depend on it |
+| An authorization server in the backend | Claude's remote connectors need OAuth 2.1; the identity module has sessions only | A static request-header token is a weaker, long-lived credential and depends on Claude's limited static-credential support |
+| A new `mcp` schema with SAS tables | Refresh tokens and consents must survive a deploy | In-memory authorizations log Claude out on every deploy |
+| Two new dependencies (Spring AI MCP starter, SAS starter) plus `aspectjrt` | The MCP server, the OAuth flow and the per-call advice | A hand-written JSON-RPC handler and a hand-written OAuth server both drift from their specifications |
+| A second `SecurityFilterChain` | `/mcp` needs an audience check and a different 401 than the session chain | Adding token auth to the session chain would change the web app's login |
 
 ## Notes from the automated review (non-blocking, follow-ups)
 

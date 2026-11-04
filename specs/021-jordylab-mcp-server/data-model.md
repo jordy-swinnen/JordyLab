@@ -1,13 +1,23 @@
 # Data Model: JordyLab MCP Server (read-only)
 
-This feature adds **no database tables and no Flyway migration**. It owns no schema, so `ModularityTests` has no schema
-rule to satisfy. The shapes below are the in-memory state and the response records that the tools and the discovery
-endpoint return.
+This feature adds **one schema, `mcp`, with one Flyway migration**: Spring Authorization Server's JDBC tables. The tools
+read the existing domain data and store nothing. The shapes below cover that schema, the in-memory rate window and the
+response records the tools return.
 
-## Persistent data
+## Persistent data (schema `mcp`, migration `V20261104001__mcp_oauth_tables.sql`)
 
-None. Connector access is the existing admin role on the existing identity, and the connector client is realm
-configuration in Keycloak (see `contracts/keycloak-connector-client.md`).
+Spring Authorization Server's own tables, created by Flyway in the `mcp` schema and used through its JDBC services:
+
+| Table | Holds |
+|---|---|
+| `oauth2_authorization` | One row per authorization: the registered client id, the account (`sub`), the granted scopes, the authorization code while it is unused, the access and refresh tokens and their metadata |
+| `oauth2_authorization_consent` | One row per client and account. Consent is off for the single client, so this table stays empty; it exists because the JDBC consent service needs it |
+
+The registered client is **not** stored: there is exactly one, defined in configuration
+(`contracts/oauth-authorization-server.md`).
+
+No entity in `identity` changes. The connector's `sub` is the account's UUID, the same id the owner columns hold, so a
+deleted account leaves at most a stale authorization row that the per-call account check already refuses.
 
 ## Response envelope (`mcp` root, public API)
 

@@ -14,6 +14,13 @@ its implementation.
 was removed by clarification Q1. Owner decisions are marked **OWNER DECISION**; operations steps are marked
 **OPERATIONS**.
 
+
+> **Superseded 2026-11-04 (authentication).** `main` moved to spec 019 (`identity` module: session auth, no Keycloak).
+> The Keycloak tasks — T015, T016, T057, T058, T059, T061 — are obsolete, and the auth slice changes: Spring
+> Authorization Server inside the backend replaces the realm client, and every tool call re-checks the account. The tools,
+> guardrails and their tests stand. This file must be regenerated with `/speckit-tasks` from the updated plan before the
+> remaining work is executed.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: different files, no dependency on an unfinished task

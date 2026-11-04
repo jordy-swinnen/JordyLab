@@ -13,7 +13,7 @@ stateless mode (research R1). Protocol: MCP 2025-06-18 or later, as negotiated b
 ```json
 {
   "resource": "https://jordylab.be/mcp",
-  "authorization_servers": ["https://jordylab.be/auth/realms/jordylab"],
+  "authorization_servers": ["https://jordylab.be"],
   "scopes_supported": ["openid"],
   "bearer_methods_supported": ["header"],
   "resource_name": "JordyLab"
@@ -21,13 +21,14 @@ stateless mode (research R1). Protocol: MCP 2025-06-18 or later, as negotiated b
 ```
 
 Rules: `resource` equals the URL the user enters, character for character (Claude's requirement). The first and only
-entry in `authorization_servers` is Keycloak's issuer, which must match the `iss` claim exactly. Status `200`,
-`Content-Type: application/json`, no authentication.
+entry in `authorization_servers` is the backend's own issuer (`https://jordylab.be`), which must match the `iss` claim of
+the tokens exactly. Status `200`, `Content-Type: application/json`, no authentication.
 
 ### 1b. Authorization server metadata
 
-Served by Keycloak at `https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration`. This feature changes
-nothing there. It must advertise `code_challenge_methods_supported` containing `S256` (checked in quickstart step 3).
+Served by the backend at `https://jordylab.be/.well-known/oauth-authorization-server` (Spring Authorization Server). It
+advertises the issuer, the authorize and token endpoints, `code_challenge_methods_supported` containing `S256`, the
+`authorization_code` and `refresh_token` grants, and the `jordylab.mcp` scope. Checked in quickstart step 3.
 
 ## 2. The MCP endpoint
 

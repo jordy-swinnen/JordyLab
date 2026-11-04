@@ -2,7 +2,7 @@
 
 Phase 0 decisions for `plan.md`. Each entry gives the decision, why, and what was rejected. Sources: the Spring AI MCP
 server reference (the 2.0.x docs, the same starter line as the pinned 2.0.1), Claude's connector authentication docs
-(`claude.com/docs/connectors/building/authentication`), the Keycloak 26.7 MCP authorization guide, and the repository as
+(`claude.com/docs/connectors/building/authentication`), Spring Authorization Server (7.1.x) and Spring Security 7.1 reference, and the repository as
 it stands on 2026-11-03.
 
 ## R1. Transport: Spring AI Streamable-HTTP, stateless
@@ -18,94 +18,73 @@ it stands on 2026-11-03.
   server for Boot 4.
 - **Rejected**: `STREAMABLE` with sessions (lost at each deploy); `SSE` (deprecated since 2.0.0); a hand-written
   JSON-RPC handler (protocol drift); the community MCP Security library (its own docs mark it work in progress).
-- **Confirmed 2026-11-04** on the stateless server, against the Keycloak test realm: `initialize` returns the server name
+- **Confirmed 2026-11-04** on the stateless server (against a throwaway Keycloak test realm, before spec 019 landed): `initialize` returns the server name
   `jordylab`, and `tools/list` returns the nine tools. `McpConnectorIntegrationTest` holds both. MCP Inspector against the
   dev stack (T024) and Claude's own check after the deploy (Phase 8) are still open.
 
-## R2. Authentication and authorization on `/mcp`
+## R2. Sign-in: Spring Authorization Server inside the backend
 
-- **Fact**: the starter applies no authentication. Its docs say the endpoint accepts every request unless a security
-  layer sits in front of it.
-- **Fact**: `SecurityConfig` is deny-by-default with `anyRequest().denyAll()`, and every `/api` rule is listed in it.
-- **Decision**: a dedicated `SecurityFilterChain` in the `mcp` module with `@Order(Ordered.HIGHEST_PRECEDENCE)` and a
-  `securityMatcher` for `/mcp` and `/.well-known/oauth-protected-resource/**`. It requires `hasRole("admin")` for `/mcp`
-  and `permitAll` for the metadata document. Its JWT decoder is a `NimbusJwtDecoder.withIssuerLocation(issuer)` (lazy:
-  startup does not wait for Keycloak) with two validators: the default issuer validator and an audience validator for
-  `jordylab-mcp` (R3). The 401 response uses a custom entry point that adds `resource_metadata` (R4).
-- **Existing chain**: unchanged. It still denies anything it does not list.
-- **Rejected**: adding the audience check to the global decoder (web-app tokens carry no connector audience, so the login
-  path would break); method security on the tools (the spec and `SecurityConfig` put access in one deny-by-default
-  place).
+- **Fact (2026-11-04)**: `main` moved to spec 019. The backend's `identity` module owns sessions (Spring Session JDBC),
+  passwords and passkeys, the `admin`/`guest` roles and per-app grants. There is no Keycloak and no OAuth2 resource
+  server, so the Keycloak design this feature first planned (a realm client, the Keycloak issuer and 60-second JWTs) no
+  longer has a foundation.
+- **Decision**: the backend runs its own OAuth 2.1 authorization server with Spring Authorization Server (the Boot
+  `spring-boot-starter-oauth2-authorization-server` starter). One pre-registered **public** client
+  `jordylab-mcp-connector`, authorization code with PKCE `S256`, the Claude callback as its only redirect URI, consent
+  off, refresh tokens on. The client identifier is what Jordy enters in Claude; no secret exists.
+- **Why the backend and not a separate identity service**: one deployable, the existing session login is the human
+  sign-in, and the account model the tools already use is the same one the connector authenticates against.
+- **Rejected**: keeping Keycloak (removed by spec 019); a static request-header token (a long-lived shared credential,
+  and Claude's static-credential support is limited); a hosted identity provider (a new dependency and a new secret).
 
-## R3. Audience binding
+## R3. Tokens: audience, roles and the per-call account check
 
-- **Fact**: the MCP authorization spec says a server MUST validate that a token was issued for it. The mechanism is
-  RFC 8707 resource indicators.
-- **Fact**: Keycloak 26.7 accepts the `resource` parameter only with the experimental `resource-indicators` feature.
-- **Decision**: bind the token with Keycloak's standard **Audience** protocol mapper on the connector client
-  (R5), which adds `jordylab-mcp` to the access token's `aud`. The `/mcp` chain rejects any token without that audience
-  (401). This needs no experimental feature.
-- **Residual risk (OI-1, decided 2026-11-03: accepted for v1)**: other chains do not check `aud`, so a connector token also works on `/api`. It
-  carries the admin's own rights there, which is the same as the browser session today. The read-only promise rests on
-  the connector's tool list, not on the token.
+- **Decision**: access tokens are JWTs signed by the backend's authorization server, with `aud` containing
+  `jordylab-mcp`, `sub` equal to the account's UUID, and a `roles` claim (the role key, `admin`). The `/mcp` chain
+  validates the issuer, the audience and the role.
+- **Revocation**: a JWT cannot be recalled, so every tool call also looks the `sub` up through the identity module's
+  `UserAccountLookup.find(UUID)` and requires the account to exist with role `admin`. That is what makes FR-004 true
+  (the next call is refused after a role change or a disabled account) without introspection.
+- **Why the role check on every call**: the alternative is a very short token plus trust in the refresh grant, which a
+  JWT cannot enforce. One indexed lookup per call is cheaper than the risk.
+- **Rejected**: opaque tokens with introspection (extra round trip and a second HTTP hop inside the server); a 60-second
+  token with a 60-second revocation window (weaker than the spec's "next call").
 
-## R4. Discovery: protected resource metadata and the 401 pointer
+## R4. Discovery: protected resource metadata and the authorization server metadata
 
-- **Claude's requirements** (docs, "Serve discovery metadata"): a `401` with
-  `WWW-Authenticate: Bearer resource_metadata="<url>"`; the metadata's `resource` equals the URL the user enters;
-  `authorization_servers` lists the issuer first (Claude uses only the first entry); the authorization server's own
-  metadata is reachable; PKCE with `S256`; a form-encoded token endpoint; responses within 10 s (discovery) and 30 s
-  (refresh).
-- **Decision**: a `ProtectedResourceMetadataController` in the `mcp` module serves the RFC 9728 document at
-  `/.well-known/oauth-protected-resource/mcp` (the path-suffixed form Claude probes first) and at
-  `/.well-known/oauth-protected-resource`. Values:
-  - `resource`: `${publicBaseUrl}/mcp` = `https://jordylab.be/mcp`
-  - `authorization_servers`: `["https://jordylab.be/auth/realms/jordylab"]`, which is the issuer Keycloak advertises
-    behind `KC_HOSTNAME=https://jordylab.be/auth`
-  - `scopes_supported`: `["openid"]`
-  - `bearer_methods_supported`: `["header"]`
-- **Base URL**: the existing `JORDYLAB_APP_BASE_URL` (set to `https://jordylab.be` in the prod overlay). No new variable.
-- **Authorization server metadata**: already reachable. The gateway routes `/auth/realms/jordylab`.
-- **Gateway**: two routes to the backend, one for `/mcp` and one for `/.well-known/oauth-protected-resource`, see R10.
+- **Claude's requirements** (connector authentication docs): a `401` whose `WWW-Authenticate` header carries
+  `resource_metadata`; the metadata's `resource` equal to the URL the user entered; `authorization_servers` with the
+  issuer first; the authorization server's own metadata reachable; PKCE `S256`; a form-encoded token endpoint.
+- **Decision**: keep the protected resource metadata document (RFC 9728) that is already built, and point its
+  `authorization_servers` at the backend's own issuer, `${publicBaseUrl}`. Spring Authorization Server serves
+  `/.well-known/oauth-authorization-server` (RFC 8414) and the JWKS at `/oauth2/jwks`; the token endpoint is
+  `/oauth2/token`, the authorization endpoint `/oauth2/authorize`.
+- **Routes**: Caddy forwards `/oauth2/*`, `/.well-known/oauth-authorization-server*`, `/mcp` and
+  `/.well-known/oauth-protected-resource*` to the backend. Everything else keeps its current route.
+- **Rejected**: Keycloak's `/.well-known` (removed); an external authorization server (new hosting, new trust setup).
 
-## R5. The Keycloak connector client
+## R5. The login bridge: the existing session login
 
-- **Decision**: a client `jordylab-mcp-connector` in the `jordylab` realm:
-  - public (no secret), standard flow only; no direct access grants, implicit flow, or service account
-  - PKCE required with `S256`
-  - redirect URI `https://claude.ai/api/mcp/auth_callback`. Claude's docs say the hosted apps (web, Desktop, mobile,
-    Cowork) use exactly this callback
-  - no web origins
-  - an **Audience** mapper adding `jordylab-mcp` to the access token (R3)
-  - the `roles` default scope, so `realm_access.roles` is in the token that `SecurityConfig` maps
-  - `offline_access` **not** assigned. Keycloak then issues ordinary refresh tokens bound to the SSO session, so the
-    revocation rule (FR-004) and the 90-day SSO cap apply. Claude appends `offline_access` only when the authorization
-    server metadata lists it; it is ignored when the client lacks it (verified in the spike)
-  - refresh rotation on: "Revoke Refresh Token" on, "Refresh Token Max Reuse" 0 (Claude's docs ask public clients to
-    rotate). The exact setting names are confirmed in the admin console during the spike
-- **Claude side**: Jordy enters only the client identifier under "Use your own OAuth client" and leaves the secret blank
-  (Claude's docs allow this for a public client). This is the choice recorded for Q2.
-- **Applying it**: the prod realm is imported once (`deploy/keycloak/README.md`), so the client is created live with
-  `kcadm` inside the Compose Keycloak container (`docker compose exec keycloak`), and recorded in that README's change table.
-  The README's `kubectl exec` form is for the retired k3s host. The same definition
-  goes into `deploy/keycloak/realm-prod.json` and the dev export `jordylab-be/compose/keycloak-realm-export.json`, so a
-  fresh import matches.
-- **Token lifetime**: the realm's 60-second access token (spec 014) applies unchanged.
+- **Fact**: the SPA login is `/login`; it posts to `POST /api/identity/auth/login` and the login component already
+  honours a `returnUrl` query parameter (`safeReturnUrl`, same-origin only).
+- **Decision**: the authorization endpoint's authentication entry point sends an unauthenticated user to
+  `/login?returnUrl=<the exact authorization request>`; after login the SPA returns there, the session cookie authenticates
+  the request, and Spring Authorization Server issues the code. Consent is off for the single client, so there is no second
+  screen.
+- **Tests**: an authorization-code flow test signs in against the identity test controller, follows the redirect, and
+  exchanges the code for a token.
+- **Rejected**: a separate login page inside the backend (a second login UI); the device grant (Claude's remote connectors
+  use the authorization code flow).
 
-## R6. Refresh frequency, rotation and revocation
+## R6. Token lifetimes, refresh and storage
 
-- **Fact**: access tokens last 60 seconds. Claude refreshes proactively up to five minutes before expiry, so in practice
-  it refreshes before almost every tool call. Each refresh is one Keycloak call, which is far below any limit for one
-  user.
-- **Fact**: each connection (desktop, mobile) signs in separately and holds its own refresh token, so one client's
-  rotation does not invalidate the other's.
-- **Risk**: two parallel tool calls inside one client may refresh at the same time, and with rotation and reuse 0 the
-  second one fails with `invalid_grant`. Mitigation: the spike runs parallel questions in one chat. If it fails, raise
-  "Refresh Token Max Reuse" to a small number. This is a Keycloak setting, not a code change.
-- **Revocation (FR-004)**: a disabled account cannot refresh; a removed admin role appears in the next refreshed token.
-  Either way access stops within about one token lifetime, with no disconnect step in Claude.
-- **Cap**: the SSO session lasts 30 days idle and 90 days at most (realm setting). After that Jordy signs in again. This
-  becomes an assumption in the spec (S3).
+- **Decision**: access token 10 minutes, refresh token 30 days with rotation (`reuseRefreshTokens(false)`), authorizations
+  and consents in the `mcp` schema through Spring Authorization Server's JDBC services, so a deploy does not sign Claude
+  out. The registered client is defined in configuration (one client), not in a table.
+- **Revocation** is covered by R3's per-call account check; the refresh token adds no extra window because the account
+  check happens on every call, not only at refresh.
+- **Rejected**: in-memory authorizations (lost at every deploy); a 1-hour access token (a longer brute-force window if a
+  token leaks, for no benefit since the account is checked per call anyway).
 
 ## R7. Tool-call guardrails: rate limit, audit and error mapping
 
@@ -174,7 +153,8 @@ it stands on 2026-11-03.
   `tlsClientCertificateBoundAccessTokens(false)`), not a controller of our own. It answers both well-known paths, and a
   second handler is shadowed by it, so an own controller would never be reached. The integration test asserts the exact
   document. The decoder is built on first use: `NimbusJwtDecoder.withIssuerLocation(...).build()` reads the issuer's
-  configuration, and an eager build stopped the application from starting while Keycloak was unreachable.
+  configuration, and an eager build stopped the application from starting while the issuer was unreachable. With the
+  authorization server inside the backend the decoder reads the local JWKS (`/oauth2/jwks`), so the first use is local.
 
 ## R10. Gateway routes and a stale rule
 
@@ -210,4 +190,5 @@ it stands on 2026-11-03.
   the token's audience and roles (R5). Still open: the dev-stack gates T024 and T025, the live client (T057), Caddy
   validation on the host (the file validates with `caddy validate`), and Claude's own connection after the deploy.
 - Confirmed by the spike rather than assumed: the STATELESS handshake with Claude (R1), AOP on MCP-invoked tools (R7),
-  the Keycloak setting names and refresh behaviour (R5, R6), and the `WWW-Authenticate` header through Caddy (R10).
+  the authorization server version and starter (R2, R11), the session login bridge (R5), token lifetimes and storage (R6),
+  and the `WWW-Authenticate` header through Caddy (R10).

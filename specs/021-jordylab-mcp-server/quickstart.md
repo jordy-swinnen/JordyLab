@@ -17,8 +17,8 @@ catalog (root AGENTS.md, Validation Data).
 curl -s https://jordylab.be/.well-known/oauth-protected-resource/mcp | jq .
 ```
 
-Expected: `resource` is `https://jordylab.be/mcp`; `authorization_servers` is
-`["https://jordylab.be/auth/realms/jordylab"]`; `scopes_supported` is `["openid"]`.
+Expected: `resource` is `https://jordylab.be/mcp`; `authorization_servers` is `["https://jordylab.be"]` (the backend's
+own issuer); `scopes_supported` is `["jordylab.mcp"]`.
 
 ## 2. The 401 pointer (no authentication)
 
@@ -33,10 +33,11 @@ route (research R10) before anything else.
 ## 3. Authorization server metadata
 
 ```bash
-curl -s https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration | jq '{issuer, code_challenge_methods_supported, token_endpoint}'
+curl -s https://jordylab.be/.well-known/oauth-authorization-server | jq '{issuer, authorization_endpoint, token_endpoint, code_challenge_methods_supported}'
 ```
 
-Expected: `issuer` is `https://jordylab.be/auth/realms/jordylab` (exactly the value in the resource metadata);
+Expected: `issuer` is `https://jordylab.be` (exactly the value in the resource metadata);
+`authorization_endpoint` is `https://jordylab.be/oauth2/authorize`; `token_endpoint` is `https://jordylab.be/oauth2/token`;
 `code_challenge_methods_supported` contains `S256`.
 
 ## 4. Connect Claude Desktop
@@ -47,9 +48,10 @@ Expected: `issuer` is `https://jordylab.be/auth/realms/jordylab` (exactly the va
 3. Sign in with the admin account in the browser window Claude opens.
 4. Expected: the connector shows nine tools, each described as read-only. Record any difference in the runbook.
 
-Also check the token shape (optional, with the browser's developer tools on the Keycloak token response): the access
-token decodes to `aud` containing `jordylab-mcp` and `realm_access.roles` containing `admin`, and there is a
-`refresh_token` but no offline token.
+Check the login bridge: the browser should land on `/login?returnUrl=…`, then return to the authorization request after
+sign-in. Also check the token shape (optional, in the browser's developer tools on the token response): the access token
+decodes to `aud` containing `jordylab-mcp`, `sub` equal to the account's id, and `roles` containing `admin`; there is a
+`refresh_token`.
 
 ## 5. Answer questions from live data
 
@@ -87,8 +89,9 @@ how it was added there. This closes the untested assumption in the spec.
 ## 8. Refresh under parallel questions
 
 In one Claude chat, ask two catalog questions at once, then two wishlist questions. Expected: all four answer. A
-failure saying authorization failed means the rotation race in research R6 happened: raise "Refresh Token Max Reuse"
-to a small number (a Keycloak setting), re-run, and record the change in the README table.
+failure saying authorization failed means two refreshes raced. Refresh rotation is on (research R6); check the
+authorization row in the `mcp` schema and whether the two calls share one Claude session: desktop and mobile sign in
+separately, so only parallel calls inside one client can race.
 
 ## 9. Audit lines
 
@@ -102,8 +105,8 @@ titles, no prices, no e-mail address, no token.
 ## 10. Revocation (owner-run, with a throwaway admin account)
 
 With a second admin account that exists only for this check, sign in through the connector, then remove its admin role
-in Settings → Users. Expected: its next tool call within about a minute is refused, and no data comes back. Restore the
-role and delete the account afterwards.
+in Settings → Users. Expected: its **next** tool call is refused, with no data returned, whatever the token's remaining
+lifetime (every call re-checks the account). Restore the role and delete the account afterwards.
 
 ## Automated checks (run before merge, not in production)
 

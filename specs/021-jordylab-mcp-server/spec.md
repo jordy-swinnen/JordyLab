@@ -22,23 +22,23 @@ JordyLab, obeys the same access rules, and can only read. It cannot add, change 
 scan or a refresh, cannot spend AI tokens and cannot create a Linear issue. Asking it to do any of those things is
 refused, and nothing in JordyLab changes.
 
-## Current state (verified in the repository, 2026-11-03)
+## Current state (verified in the repository, 2026-11-03; authentication re-verified 2026-11-04)
 
 - The backend has no MCP endpoint and no MCP dependency; the only "mcp" in the repository is the GitHub MCP launcher
   used by the pull-request review workflow.
 - Four modules are built: `gamecatalog`, `fna`, `feedback` and `settings`. `garmin`, `recipe` and `trading` have no
   code, so there is no health, recipe or trading data to expose.
-- The backend is an OAuth2 resource server on Keycloak JWTs. Realm roles are `admin`, `guest`, `app-gamecatalog` and
-  `gamecatalog-scanner`; authorization is deny-by-default in one `SecurityConfig`. FNA, settings and the feedback
-  inbox are admin-only; the game catalog is admin or the per-app grant; anything unlisted is refused.
-- Access tokens live 60 seconds, and the backend validates them statelessly. A revoked account or removed role stops
-  working within that minute (spec 014).
-- Production is a single public origin, `https://jordylab.be`. The gateway sends `/api` to the backend,
-  `/auth/realms/jordylab` and `/auth/.well-known` to Keycloak, and everything else to the web app. There is no
-  `.well-known` route for a connector to discover an authorization server except Keycloak's own under `/auth`.
-- The production realm has the clients `jordylab-host` (public web app), `gamecatalog-script` (device-code scan
-  client) and `jordylab-backend` (service account). It has no connector client and no dynamic client registration
-  configured.
+- Authentication is the backend's own `identity` module (spec 019): server-side sessions (Spring Session JDBC),
+  passwords and WebAuthn passkeys, an admin-approved sign-up flow, and per-machine `jlmt_` tokens for the scanner.
+  There is no Keycloak and no OAuth2 resource server any more. Authorization is deny-by-default in
+  `IdentitySecurityConfiguration`: FNA, settings, identity administration and the feedback inbox are admin-only; the game
+  catalog is admin or the per-app grant; anything unlisted is refused.
+- A session is the only credential the backend issues today. The scanner's machine tokens are single-purpose and the
+  only bearer credential; there is no authorization server Claude could sign in against.
+- A revoked or disabled account loses its session immediately; an admin role removed in Settings → Users applies to the
+  account, and the backend reads the role from the database on the session's next request.
+- Production is a single public origin, `https://jordylab.be`. Caddy sends `/api` to the backend and everything else to
+  the web app. There is no `.well-known` route for a connector to discover an authorization server.
 - Claude mobile only supports remote connectors; a local process cannot be used from the phone.
 
 ## Clarifications
@@ -49,9 +49,12 @@ refused, and nothing in JordyLab changes.
   inbox and user administration move to a later spec, because they hold guests' personal data.
 - Q: How should Claude identify itself to JordyLab's Keycloak when Jordy connects? (FR-002) → A: One public client,
   created once in the `jordylab` realm; Jordy enters its client identifier in Claude. No secret, no experimental feature,
-  no anonymous registration.
+  no anonymous registration. **Superseded 2026-11-04** by the next entry, after `main` moved to the identity module.
 - Q: Where should each connector call be recorded: only in the backend log, or also in a database table? (FR-016) → A:
   Backend log only; no database table for connector calls.
+- Q: With Keycloak removed by spec 019, how does Claude sign in? (FR-002) → A: the backend runs its own OAuth 2.1
+  authorization server (Spring Authorization Server) with one pre-registered public client, PKCE S256 and the Claude
+  callback; the admin signs in through the existing JordyLab login page and Claude receives a token for the connector.
 - Q: Should the connector limit how many tool calls one admin can make per minute? (FR-020) → A: Yes, 60 calls per
   minute per admin; calls over the limit are refused, not queued.
 - Q: How many items may one tool call return before it says more exist? (FR-009) → A: 50 items per call.
@@ -140,9 +143,9 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 
 ### Edge Cases
 
-- **Access revoked while connected**: an account revoked or stripped of the admin role in Keycloak stops getting data
-  within the 60-second token lifetime; the tool call fails with a clear sign-in or permission error, and Claude does
-  not retry with cached data.
+- **Access revoked while connected**: an account disabled or stripped of the admin role stops getting data on its next
+  tool call, because every call re-checks the account against the identity module; the call fails with a clear sign-in
+  or permission error, and Claude does not retry with cached data.
 - **Wrong account**: signing in with a guest account, or with an account that is still pending approval, is refused
   before any data is read.
 - **Empty data**: with no installed games, no portfolio, no wishlist or no briefing, the answer says the
@@ -171,13 +174,14 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 - **FR-001**: An admin MUST be able to add JordyLab to Claude Desktop and to Claude mobile as a remote connector
   using a single public HTTPS address on `https://jordylab.be`.
 - **FR-002**: Connecting MUST use the existing JordyLab account through the browser sign-in that Claude uses for remote
-  connectors, against one public client for the connector, created once in the `jordylab` realm. Jordy enters that
-  client's identifier in Claude. No secret is copied into Claude, and the realm MUST NOT accept anonymous client
-  registration for this purpose.
+  connectors, served by JordyLab's own OAuth 2.1 authorization server against one pre-registered public client
+  (`jordylab-mcp-connector`, authorization code with PKCE S256, the Claude callback as its only redirect URI). Jordy
+  enters that client's identifier in Claude. No secret is copied into Claude, and the server MUST NOT accept anonymous
+  client registration.
 - **FR-003**: Only an account holding the `admin` role MUST be able to connect or call any tool. A guest, a pending
   or revoked account and the scan client's role MUST all be refused, and the refusal MUST reveal no data.
-- **FR-004**: Revoking the account or the admin role MUST stop access within the existing 60-second token lifetime,
-  without an extra disconnect step in Claude.
+- **FR-004**: Revoking the account or the admin role MUST stop access on the next tool call, without an extra
+  disconnect step in Claude. A token therefore never outlives the account's right to use the connector.
 - **FR-005**: The server MUST be usable from Claude mobile, which supports remote connectors only; no local process
   on Jordy's machine may be required.
 
@@ -209,7 +213,7 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 **Safety and observability**
 
 - **FR-014**: Responses MUST NOT contain secrets or credentials — API keys, client secrets, SMTP or Ntfy tokens,
-  database passwords, Keycloak admin credentials, the Linear API key, scan-client tokens or other people's session
+  database passwords, the identity bootstrap password, the Linear API key, machine tokens or other people's session
   data.
 - **FR-015**: Responses MUST NOT contain personal data of any account other than the admin's own, and no hidden fields.
 - **FR-016**: Each tool call MUST leave one line in the backend log naming the signed-in admin, the tool name, the time
@@ -272,8 +276,9 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 - There is exactly one admin today, Jordy. "Admin role" is still the rule, so a second admin would work without a
   code change.
 - Claude Desktop and Claude mobile support remote MCP connectors with browser-based OAuth and a user-entered OAuth client
-  identifier with no secret. This is assumed, not yet tested: the first connection from each client verifies it.
-  Keycloak 26.7.4 also offers dynamic registration and an experimental published-identity mode; neither is used.
+  identifier with no secret. This is assumed, not yet tested: the first connection from each client verifies it. The
+  connector's authorization server is part of the backend (Spring Authorization Server), so no external identity
+  provider is involved.
 - Read-only means: no state change, no AI generation, no external side effect and no cost. A question that can only
   be answered by generating something new is answered with what exists, or refused.
 - The connector publishes what the app already knows. It is not a data warehouse, does not add caching that could go
@@ -285,8 +290,8 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
   something.
 - Tool count stays small enough that the model can choose without confusion (roughly one tool per data area rather
   than one per REST endpoint).
-- A connector sign-in lasts as long as the JordyLab sign-in session: 30 days idle, 90 days at most. After that Jordy
-  signs in to the connector again. The connector does not hold a long-lived offline token.
+- The connector's access token is short-lived (10 minutes) and its refresh token lasts 30 days. Revoking the account or
+  the admin role takes effect on the next call regardless of the token, because the call re-checks the account.
 - The rate-limit count is kept by the running instance. There is one instance, so a restart (including a deploy) resets
   the count, which is accepted.
 - The feature is released when its pull request merges to `main`. Merges go straight to production (owner decision,
@@ -310,13 +315,13 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
 
 ## Dependencies
 
-- `specs/014-console-player-counts/`: the access matrix (admin, guest, per-app grant) and the 60-second token
-  lifetime the connector reuses.
+- `specs/019-auth-without-keycloak/`: the `identity` module the connector signs in against (sessions, accounts, the
+  `admin` role) and the module public API (`AuthenticatedUser`, `CurrentUserResolver`, `UserAccountLookup`).
 - `specs/016-fna-stock-wishlist/` and the finance module: the portfolio, wishlist and briefing data.
 - `specs/018-pwa-replaces-capacitor/`: the PWA that remains the web client; the connector is a separate door and
   does not change it.
 - `specs/020-compose-deployment/` (Draft): moved production to Docker Compose behind Caddy, which has served production
   since the cutover of 2026-11-03, and owns the public routes. The connector's address and discovery routes are added to that Caddyfile, and this feature is
   released only after the cutover (owner decision I1, 2026-11-03).
-- Keycloak: one public connector client in the `jordylab` realm, created once (FR-002), with the existing admin role as
-  the only way in.
+- Spring Authorization Server (version managed by the Spring Boot BOM) running inside the backend, with one registered
+  public client and the `admin` role as the only way in (FR-002).
