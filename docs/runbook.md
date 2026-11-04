@@ -33,6 +33,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 22. [Before a release that changes the database: backup and pgvector](#22-before-a-release-that-changes-the-database-backup-and-pgvector)
 23. [LibBot and the auto-fill: what to check](#23-libbot-and-the-auto-fill-what-to-check)
 24. [Postgres major-version upgrade](#24-postgres-major-version-upgrade)
+25. [The Claude connector (MCP)](#25-the-claude-connector-mcp)
 
 ---
 
@@ -627,3 +628,26 @@ notes, and keep the pgvector extension: the pinned base image is the `pgvector/p
 7. **Go back** (while the old volume still exists): `$COMPOSE down`, point `compose.yaml` back at the old image and
    `jordylab_postgres-data`, `$COMPOSE up -d --wait`, and deploy the previous release (§11). Anything written after the
    cutover lives only in the new volume: dump it first if it matters.
+
+## 25. The Claude connector (MCP)
+
+The read-only MCP server lets Claude Desktop and Claude mobile read the game catalog and finance data. It lives in the
+`mcp` module of the backend (spec `specs/021-jordylab-mcp-server/`).
+
+- **Address:** `https://jordylab.be/mcp`. In Claude: Settings → Connectors → Add custom connector, then Advanced
+  settings → OAuth client → "Use your own OAuth client", client ID `jordylab-mcp-connector`, secret blank. Sign in with
+  the admin account. The same address works as a remote connector on the phone.
+- **What it can do:** read only. Nine tools, no writes, no scans, no briefings, no AI spend, no Linear issues. Each
+  admin gets 60 tool calls a minute; over that, the tool answers "Too many requests in one minute."
+- **Access:** the token must carry the audience `jordylab-mcp` and the `admin` role. Both come from the Keycloak client
+  `jordylab-mcp-connector`, whose definition is in `deploy/keycloak/README.md` (pending until it is applied live).
+- **Revoking:** remove the admin role or disable the account. The next call within about a minute is refused; there is
+  nothing to disconnect in Claude. A connector sign-in lasts as long as the SSO session (30 days idle, 90 maximum).
+- **Audit:** one line per call on the logger `dev.jordy.jordylab.mcp.audit`, with the tool, the Keycloak subject, the
+  outcome and the duration. No arguments and no data. `docker compose … logs backend | grep mcp.audit`.
+- **When it fails:** first check that
+  `curl -si -X POST https://jordylab.be/mcp -H 'Content-Type: application/json' -d '{}'` answers `401` with
+  `WWW-Authenticate: Bearer resource_metadata="https://jordylab.be/.well-known/oauth-protected-resource/mcp"`. If that
+  header is missing, the Caddy route is wrong (`deploy/compose/Caddyfile`). If the metadata is right but sign-in fails,
+  the Keycloak client or its audience mapper is missing. If a tool answers "too many requests", wait a minute.
+

@@ -18,9 +18,9 @@ it stands on 2026-11-03.
   server for Boot 4.
 - **Rejected**: `STREAMABLE` with sessions (lost at each deploy); `SSE` (deprecated since 2.0.0); a hand-written
   JSON-RPC handler (protocol drift); the community MCP Security library (its own docs mark it work in progress).
-- **Risk**: Claude's handshake against a STATELESS server is not yet tested. Task T024 confirms `initialize` and `tools/list`
-  locally with MCP Inspector. Claude's own check runs after the deploy (Phase 8), because Claude connects from Anthropic's
-  cloud and cannot reach localhost. If either check fails, switch to `STREAMABLE` (a property change only).
+- **Confirmed 2026-11-04** on the stateless server, against the Keycloak test realm: `initialize` returns the server name
+  `jordylab`, and `tools/list` returns the nine tools. `McpConnectorIntegrationTest` holds both. MCP Inspector against the
+  dev stack (T024) and Claude's own check after the deploy (Phase 8) are still open.
 
 ## R2. Authentication and authorization on `/mcp`
 
@@ -124,6 +124,9 @@ it stands on 2026-11-03.
   dependencies.
 - **Rejected**: a servlet filter that parses JSON-RPC bodies (it must read and cache request bodies, handle batches, and
   cannot see whether a call succeeded).
+- **Correction (2026-11-04)**: the annotation layer shows an exception's message and then its root cause's message. With no
+  cause the safe text appears twice, so `McpToolException` carries an empty cause and the text appears once, followed by
+  one line separator.
 - **State**: the counter lives in memory per running instance. There is one instance, and a restart (also a deploy)
   resets it. Accepted; it is noted in the spec's assumptions (S4).
 - **Risk**: the advice must apply to beans the MCP framework invokes through the annotation scanner. The spike asserts
@@ -164,6 +167,15 @@ it stands on 2026-11-03.
   hides (voter identities, e-mail addresses, grants, source file paths, machine identifiers) never reach a tool. This
   is how FR-014 and FR-015 hold by construction.
 
+## R9b. Spring Security's own metadata document (found while building)
+
+- **Decision**: the protected resource metadata is Spring Security's built-in document, configured in `McpConfiguration`
+  (resource, authorization server, `openid`, `header`, `JordyLab`, and
+  `tlsClientCertificateBoundAccessTokens(false)`), not a controller of our own. It answers both well-known paths, and a
+  second handler is shadowed by it, so an own controller would never be reached. The integration test asserts the exact
+  document. The decoder is built on first use: `NimbusJwtDecoder.withIssuerLocation(...).build()` reads the issuer's
+  configuration, and an eager build stopped the application from starting while Keycloak was unreachable.
+
 ## R10. Gateway routes and a stale rule
 
 - **Add** to the public Caddyfile `deploy/compose/Caddyfile`, which the Compose cutover (`specs/020-compose-deployment/`) created and which is live on
@@ -194,5 +206,8 @@ it stands on 2026-11-03.
 ## Open items carried into the plan
 
 - OI-1: decided 2026-11-03, accepted for v1 (R3).
+- Proven by the tests rather than by the gates: the stateless handshake (R1), the advice on framework-invoked tools (R7),
+  the token's audience and roles (R5). Still open: the dev-stack gates T024 and T025, the live client (T057), Caddy
+  validation on the host (the file validates with `caddy validate`), and Claude's own connection after the deploy.
 - Confirmed by the spike rather than assumed: the STATELESS handshake with Claude (R1), AOP on MCP-invoked tools (R7),
   the Keycloak setting names and refresh behaviour (R5, R6), and the `WWW-Authenticate` header through Caddy (R10).

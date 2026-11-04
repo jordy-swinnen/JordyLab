@@ -408,3 +408,26 @@ class SomeObjectTestBuilder {
 - **Tests that guard it:** `GoldenReplayTest` (recorded model output, in CI), `GoldenLiveTest` (`./gradlew goldenLive`, real models, needs `OPENROUTER_API_KEY`), `IgdbPlatformCatalogCheck` (`./gradlew igdbCheck`, needs IGDB keys), `GameFilterQueryTest`, `CandidateRetrieverTest`, `MarkServiceTest`, the e2e journeys.
 - **Descriptions.** `DescriptionQualityValidator` (2 to 4 sentences, about 40 to 110 words, third person, no scores, no filler, no contradicting year) gates every AI description; one retry with the reason; a rejected text is never stored. Authorship (`descriptionModel` = what the provider reported, `descriptionRequestedModel` only when different, `descriptionWrittenAt`) is returned as `description{…}` with `factSources{…}`.
 - **Embeddings.** `GameEmbeddingService` embeds title, genres, developer and description into `game_embedding` (`vector(1536)`, HNSW cosine); `GAMECATALOG_EMBEDDING` is a non-selectable feature. Production needs the `vector` extension: `deploy/k8s/cluster/cnpg-database.yaml`.
+
+# MCP connector module (feature 021)
+
+- **Routes and identity.** `McpConfiguration` adds a `SecurityFilterChain` ordered `HIGHEST_PRECEDENCE` for `/mcp` and
+  `/.well-known/oauth-protected-resource/**`. It requires `hasRole("admin")` and a token whose `aud` contains
+  `jordylab-mcp` (`McpAudienceValidator`), and it serves Spring Security's protected resource metadata configured with
+  the connector's resource. The platform chain in `shared/config/SecurityConfig.java` is unchanged. The decoder is built on
+  first use, so the application starts while Keycloak is unreachable.
+- **The 401.** `McpAuthenticationEntryPoint` answers `401` with
+  `WWW-Authenticate: Bearer resource_metadata="<public-base-url>/.well-known/oauth-protected-resource/mcp"`. Claude
+  starts sign-in only on that status and header.
+- **Tools.** `GameCatalogMcpTools` and `FnaMcpTools` sit in each module's `rest/controller` and call that module's
+  services. Every tool is read-only: no `save`, `delete`, `trigger`, `refresh`, `scan` or `generate` call. Its description
+  ends with "Read-only." and its `@McpTool` carries `readOnlyHint = true`. `McpToolSurfaceTest` enforces exactly nine
+  tools and no write verb in a name.
+- **Guardrails.** `McpToolCallAdvice` wraps every `@McpTool`: the per-admin limit (60 a minute, `McpRateLimiter`), one audit
+  line per call, and an exception mapped to a fixed safe message. Throw `McpToolException` for an expected "not found";
+  anything else becomes "The tool could not read this data right now."
+- **Bounds.** `McpToolPage` clamps every list to 50 items and reports `totalMatching` and `hasMore`. Tool result records
+  list their fields explicitly, so fields the screens hide never reach the model.
+- **Config.** `jordylab.mcp.public-base-url` (same `JORDYLAB_APP_BASE_URL` as the notifications), `.audience`,
+  `.tool-calls-per-minute`; `spring.ai.mcp.server` runs STATELESS on `/mcp` with tools only.
+

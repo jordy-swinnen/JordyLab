@@ -21,6 +21,7 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 | `gamecatalog` | `gamecatalog` | ROM/Steam/console game catalog — ingestion, grid/detail, filters, marks, auto-filled covers/facts/descriptions, LibBot (grounded AI chat), consoles, source management (**built**) |
 | `garmin` | `garmin` | Health/fitness data from Garmin Connect (written by Python sidecar) |
 | `feedback` | `feedback` | Guest feedback tickets triaged in an admin idea box; accepting creates a Linear issue (see `specs/017-guest-feedback/`) |
+| `mcp` | — | Read-only MCP connector for Claude Desktop and mobile: nine tools over the game catalog and finance, admin only, no schema (see `specs/021-jordylab-mcp-server/`) |
 | `recipe` | `recipe` | Self-hosted recipe management (planned) |
 | `trading` | — | AI trade signals with mandatory human-in-the-loop approval |
 | `shared` | — | Cross-module AI layer, config, utilities |

@@ -1,5 +1,8 @@
 package dev.jordy.jordylab.mcp;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.jordy.jordylab.settings.KeycloakIntegrationTest;
@@ -36,6 +39,8 @@ class McpConnectorIntegrationTest extends KeycloakIntegrationTest {
              "params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}""";
     private static final String TOOLS_LIST = """
             {"jsonrpc":"2.0","id":2,"method":"tools/list"}""";
+    private static final String UNKNOWN_TOOL = """
+            {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"create_game","arguments":{}}}""";
     private static final Set<String> NINE_TOOLS = Set.of(
             "search_games", "get_game", "list_places", "list_sources", "get_library_status",
             "search_articles", "get_portfolio", "get_wishlist", "get_latest_briefing");
@@ -99,6 +104,28 @@ class McpConnectorIntegrationTest extends KeycloakIntegrationTest {
             softly.assertThat(names).hasSize(9);
             softly.assertThat(names).containsExactlyInAnyOrderElementsOf(NINE_TOOLS);
         });
+    }
+
+    @Test
+    void refusesAnUnknownToolAndRunsNothing() throws Exception {
+        String adminToken = tokenFor("test-mcp", "admin-user", "admin-password");
+        Logger auditLogger = (Logger) org.slf4j.LoggerFactory.getLogger("dev.jordy.jordylab.mcp.audit");
+        ListAppender<ILoggingEvent> auditEvents = new ListAppender<>();
+        auditEvents.start();
+        auditLogger.addAppender(auditEvents);
+        try {
+            MvcResult result = mockMvc.perform(mcpPost(UNKNOWN_TOOL, adminToken)).andExpect(status().isOk()).andReturn();
+            JsonNode body = jsonRpc(result);
+            boolean refused = body.has("error") || body.path("result").path("isError").asBoolean(false);
+
+            assertSoftly(softly -> {
+                softly.assertThat(refused).isTrue();
+                softly.assertThat(auditEvents.list)
+                        .noneMatch(event -> event.getFormattedMessage().contains("tool=create_game"));
+            });
+        } finally {
+            auditLogger.detachAppender(auditEvents);
+        }
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder mcpPost(String body, String token) {

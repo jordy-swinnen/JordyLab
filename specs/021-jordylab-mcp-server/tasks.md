@@ -267,7 +267,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
   the registered names are exactly the nine in `specs/021-jordylab-mcp-server/contracts/tools.md`; each has the read-only
   hint; no name contains a write verb (create, update, delete, approve, reject, scan, refresh, sync, generate, post,
   send, trigger, reset, end); each description contains "Read-only.".
-- [ ] T045 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
+- [x] T045 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
   unknown name such as `create_game` or `trigger_briefing` returns the protocol's error and writes no `ok` audit line.
 - [x] T046 [US3] Add to `jordylab-be/src/test/java/dev/jordy/jordylab/mcp/McpToolSurfaceTest.java`: a `tools/call` for an
   existing tool with an out-of-range `limit` (for example 500) returns at most 50 items and a correct `hasMore` (FR-009).
@@ -286,21 +286,21 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 
 **Purpose**: documentation, boundary and build checks, and the CI check set.
 
-- [ ] T048 [P] Update the module table in `AGENTS.md` (root): add the `mcp` row (no schema, endpoint `/mcp`), and add one
+- [x] T048 [P] Update the module table in `AGENTS.md` (root): add the `mcp` row (no schema, endpoint `/mcp`), and add one
   paragraph under Infrastructure about the connector and the deploy path.
-- [ ] T049 [P] Add an `mcp` section to `jordylab-be/AGENTS.md`: the routes, the audience rule, the tool rule (read-only, one
+- [x] T049 [P] Add an `mcp` section to `jordylab-be/AGENTS.md`: the routes, the audience rule, the tool rule (read-only, one
   service call each, no AI call), and the guardrails.
-- [ ] T050 [P] Add a connector section to `docs/runbook.md`: how to connect (quickstart step 4), revoking access, the
+- [x] T050 [P] Add a connector section to `docs/runbook.md`: how to connect (quickstart step 4), revoking access, the
   90-day sign-in cap, and what to check when the connector fails (the 401 pointer, the audience, the rate limit).
-- [ ] T051 [P] Add a row for `jordylab-mcp-connector` to the change table in `deploy/keycloak/README.md`, marked pending
+- [x] T051 [P] Add a row for `jordylab-mcp-connector` to the change table in `deploy/keycloak/README.md`, marked pending
   until T058 runs.
-- [ ] T052 Run `cd jordylab-be && ./gradlew :test --tests "*ModularityTests*"` and fix any boundary violation. The `mcp`
+- [x] T052 Run `cd jordylab-be && ./gradlew :test --tests "*ModularityTests*"` and fix any boundary violation. The `mcp`
   module must not depend on a domain module; the domain modules may depend only on `mcp` root.
-- [ ] T053 Run `cd jordylab-be && ./gradlew :test --tests "*Mcp*"`. Every test in the `Mcp` family passes.
-- [ ] T054 Validate the Caddyfile after T017:
+- [x] T053 Run `cd jordylab-be && ./gradlew :test --tests "*Mcp*"`. Every test in the `Mcp` family passes.
+- [x] T054 Validate the Caddyfile after T017:
   `caddy validate --config deploy/compose/Caddyfile --adapter caddyfile`. Confirm the two new routes are present and the stale
   assetlinks route is absent.
-- [ ] T055 Record the spike outcomes (T024, T025) and the Keycloak setting names in
+- [x] T055 Record the spike outcomes (T024, T025) and the Keycloak setting names in
   `specs/021-jordylab-mcp-server/research.md` R1 and R5.
 - [ ] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web` (SC-011: the web app is unchanged),
   `app-boot`, `refs`, `secret-scan`.
