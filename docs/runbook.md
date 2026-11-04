@@ -371,6 +371,32 @@ $COMPOSE ps caddy
 curl -sI https://jordylab.be/
 ```
 
+### Testing renewal without touching DNS
+
+The zone has no wildcard, so a test hostname under `jordylab.be` would need a DNS record. `https://<ip-with-dashes>.sslip.io`
+resolves to the host with no DNS change. Add a temporary site block with the staging CA, reload, and remove it afterwards:
+
+```
+57-129-163-110.sslip.io {
+    tls {
+        ca https://acme-staging-v02.api.letsencrypt.org/directory
+    }
+    respond "renewal test OK"
+}
+```
+
+Two Caddy behaviours matter:
+
+- **A changed Caddyfile is not seen until the container is recreated.** The file is a bind mount, and rsync replaces it
+  with a new inode on every deploy, so the running container keeps the old file and `caddy reload` reads that old inode.
+  After a Caddyfile change, run `$COMPOSE up -d --no-deps --force-recreate caddy` (a few seconds of downtime).
+- **Deleting the stored certificate and reloading does not force a new one**, because the certificate cache lives in the
+  process. Delete the host's certificate directory and restart the container.
+
+Record of the 2026-11-04 test: the first staging certificate took 7 s (serial `2CF0DCF…`); after deleting it and
+restarting Caddy, a new one took 6 s (serial `2C1AA79…`). Production's certificate was untouched (serial `064F290B…`,
+issuer `YE2`), the test site and its certificate were removed, and the host Caddyfile ended byte-identical to the repo copy.
+
 Common causes: DNS not propagated (§6), port 80 not reachable from outside (firewall, §2 — HTTP-01 needs it), or
 Let's Encrypt rate limits after repeated failures. For a renewal test, use a staging hostname (quickstart step 7)
 rather than burning production attempts. Caddy stores its data in the `jordylab_caddy-data` volume; deleting the
