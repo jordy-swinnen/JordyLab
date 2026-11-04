@@ -530,9 +530,13 @@ $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select extname, e
 
 ## 24. Postgres major-version upgrade
 
-**Status: written 2026-11-03, not yet rehearsed** (no major bump is planned). A minor or patch bump never needs this: it
-is a new tag of the same major image. A major upgrade is a deliberate rebuild, a dump and a restore, and it is downtime:
-Postgres stops for the dump and again for the cutover. Rehearse step 4 before the real window.
+**Status: written 2026-11-03; the dump and restore were rehearsed on 2026-11-04** against a throwaway PostgreSQL 17
+cluster (`pgvector/pgvector:pg17` at manifest-list digest `sha256:7d0a4146…`, plus pgBackRest 2.60.0). The rehearsal covered
+steps 2 and 4: a 15 MB `pg_dumpall` restored in about a second, with `gamecatalog.game` 512/512, `flyway_schema_history` at
+`20261103002`, the `vector` extension present and `keycloak.user_entity` 11/11. The cutover and the way back (steps 5 and 7)
+need a real major bump and were not rehearsed. A minor or patch bump never needs any of this: it is a new tag of the same
+major image. A major upgrade is a deliberate rebuild, a dump and a restore, and it is downtime: Postgres stops for the dump
+and again for the cutover.
 
 **Before you start:** a full backup and a restore drill from the last week (§15); the live release in
 `state/current-release` (§5); at least twice the database size free under `/var/lib/docker` (a dump plus a second volume);
@@ -543,12 +547,14 @@ notes, and keep the pgvector extension: the pinned base image is the `pgvector/p
    ```
    $COMPOSE stop backend keycloak
    ```
-2. **Dump everything** — roles, the `jordylab` database and the `keycloak` schema — as root with a private mode:
+2. **Dump everything** — roles, the `jordylab` database and the `keycloak` schema — as root, with the redirect inside
+   the root shell so the file is never world-readable:
    ```
-   sudo sh -c 'umask 077; docker exec -i jordylab-postgres-1 pg_dumpall -U postgres --clean --if-exists' \
-     > /opt/jordylab/postgres-<old-major>-<date>.sql
+   sudo sh -c 'umask 077; docker exec -i jordylab-postgres-1 pg_dumpall -U postgres > /opt/jordylab/postgres-<old-major>-<date>.sql'
    ```
-   The dump is a copy of production data: keep it on the host, mode 600, and delete it once the new stack is proven.
+   Do **not** add `--clean`: it emits `DROP ROLE postgres` and `DROP DATABASE template1`, and a running cluster refuses the
+   first ("current user cannot be dropped"). The target is a fresh volume, so no drops are needed. The dump is a copy of
+   production data: keep it mode 600 on the host and delete it once the new stack is proven.
 3. **Build the new image.** In `deploy/compose/postgres/Containerfile`, change the base to the new major's
    `pgvector/pgvector:pg<new>` **multi-arch manifest-list digest** (a single-platform manifest breaks the build, BUG-081)
    and the pinned `pgbackrest` version. Mirror `deploy/compose` to the host (§5), then build; keep the old image:
@@ -563,20 +569,21 @@ notes, and keep the pgvector extension: the pinned base image is the `pgvector/p
    sudo docker run -d --name jordylab-pg<new>-rehearsal --env-file /opt/jordylab/env/prod.env \
      --mount type=volume,src=jordylab-postgres-<new>-rehearsal,dst=/var/lib/postgresql/data \
      jordylab-postgres:pg<new>-pgbackrest
-   sudo sh -c 'docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d postgres' \
-     < /opt/jordylab/postgres-<old-major>-<date>.sql
+   sudo sh -c 'docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d postgres < /opt/jordylab/postgres-<old-major>-<date>.sql'
    sudo docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d jordylab -At \
      -c "select count(*) from gamecatalog.game" -c "select version, success from flyway_schema_history order by installed_rank desc limit 1"
    sudo docker rm -f jordylab-pg<new>-rehearsal && sudo docker volume rm jordylab-postgres-<new>-rehearsal
    ```
-   Fix anything here, not on the real volume.
+   Expect exactly one harmless error, `role "postgres" already exists` (the fresh cluster already has it); any other error
+   is a real problem. Do not add `ON_ERROR_STOP`, or that one error aborts the restore. Fix anything else here, not on the
+   real volume.
 5. **Cut over.** Stop the stack, point `compose.yaml` at the new image and a **new** volume
    (`jordylab_postgres-data-<new>`), start Postgres alone, load the dump, then the rest of the stack:
    ```
    $COMPOSE down
    # edit compose.yaml: postgres image and the postgres-data volume name
    $COMPOSE up -d --wait postgres
-   sudo sh -c 'docker exec -i jordylab-postgres-1 psql -U postgres -d postgres' < /opt/jordylab/postgres-<old-major>-<date>.sql
+   sudo sh -c 'docker exec -i jordylab-postgres-1 psql -U postgres -d postgres < /opt/jordylab/postgres-<old-major>-<date>.sql'
    $COMPOSE up -d --wait
    ```
    Then the smoke checks (§10 step 5). Leave the old volume in place: that is the way back.
