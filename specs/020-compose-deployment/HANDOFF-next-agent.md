@@ -6,6 +6,11 @@
 > `deploy-prod-compose.yml` is the only deploy path and automatic deploys stay off (`AUTO_DEPLOY` is no longer read by any
 > workflow). `docs/runbook.md` §9–§11 and §20 and `.claude/skills/jordylab-ops/SKILL.md`'s deploy sections now describe
 > the Compose flow; the rest of the runbook and skill still needs the T058+ rewrite.
+> **Also done since:** T049 (the first deploy through the workflow, run 41728815560, target `76f38366`, a commit sha) is green and
+> `current-release` now names it; the runbook and the skill are rewritten for Compose (T058/T060/T061); public SSH is closed
+> (T056); runbook §24 holds the Postgres major-version upgrade procedure (T059). T062 is done too: automatic deploys are wired
+> (`build.yml` → `deploy-prod-compose.yml`, gated by `AUTO_DEPLOY`), with a superseded skip for late builds.
+> T051 and T052 are done as well: an older sha rolled back and was restored, and an unresolvable target failed before the host.
 
 Written at the end of an OpenCode session (GLM-5.2). Read this first, then [tasks.md](tasks.md) and [quickstart.md](quickstart.md) — every claim below is recorded there with timestamps.
 

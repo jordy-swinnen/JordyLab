@@ -1,3 +1,10 @@
+# k3s era (history)
+
+> Production moved from k3s to Docker Compose on 2026-11-03 (spec 020). Nothing in this folder is a live procedure any
+> more; it is the narrative of how the k3s deployment was built, kept for the rebuild fallback (spec 020, research R14).
+> The last k3s version of the project runbook is `docs/runbook.md` at commit `f5bff2a`; `docs/runbook.md` now documents
+> the Compose stack.
+
 # Runbook: deploying a web app to a single VPS with k3s
 
 This runbook describes, start to finish, how we took a typical full-stack application

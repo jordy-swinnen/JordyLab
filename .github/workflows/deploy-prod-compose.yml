@@ -13,6 +13,19 @@ name: Deploy to Production (Compose)
 # to a registry: it changes rarely and deliberately, and compose.yaml already declares the build.
 
 on:
+  # Called by build.yml for a green main build when the repository variable AUTO_DEPLOY is 'true' (spec 020 T062).
+  # The automatic path skips a target older than the live release; a manual run never does (see deploy-decision.sh).
+  workflow_call:
+    inputs:
+      target:
+        description: "Commit sha to deploy (build.yml passes github.sha)"
+        required: true
+        type: string
+      automatic:
+        description: "true when called from build.yml; enables the superseded skip"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       target:
@@ -34,6 +47,7 @@ jobs:
       packages: read
     env:
       TARGET: ${{ inputs.target }}
+      AUTOMATIC: ${{ inputs.automatic || false }}
       DEPLOY_HOST: 100.93.81.41
       DEPLOY_USER: jordylab-deploy
       # The host's ed25519 fingerprint, cross-verified against the trusted public-IP anchor on
@@ -48,12 +62,22 @@ jobs:
           ref: ${{ inputs.target }}
           fetch-depth: 0
 
+      # The workflow's own commit supplies the helpers and the host tooling. The target supplies the release (compose.yaml,
+      # the Caddyfile, the Postgres build), but rolling back to an older commit must not restore older tooling: run
+      # 41730834972 failed because it did exactly that (an old deploy-release.sh rejected the sha).
+      - name: Check out the workflow's own commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-src
+          fetch-depth: 1
+
       # Contract step 1: resolve the target with the script the k3s pipeline used (spec 019, research D6). A sha must
       # be in the history, a tag must exist, and the result names the image tag: sha-<sha>, or the tag unchanged.
       - name: Resolve the target
         id: resolve_target
         run: |
-          resolution="$(deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic false)"
+          resolution="$(workflow-src/deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic false)"
           printf '%s\n' "$resolution" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$resolution"
           if printf '%s\n' "$resolution" | grep -qx 'decision=refused'; then
@@ -124,13 +148,43 @@ jobs:
           chmod 600 ~/.ssh/config
           ssh jordylab-vps 'echo SSH_OK as $(whoami) on $(hostname)'
 
-      # Mirrors the tag's deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the
-      # running stack read (compose.yaml, Caddyfile, the timers, the Postgres Containerfile, the scripts).
-      # --delete keeps it an exact mirror; nothing host-side writes there.
-      - name: Copy deploy/compose to the host
+      - name: Read the live release
+        id: read_live
         run: |
-          rsync -az --delete deploy/compose/ jordylab-vps:/opt/jordylab/compose/
+          live_release="$(ssh jordylab-vps 'cat /opt/jordylab/state/current-release 2>/dev/null' || true)"
+          echo "live_release=$live_release" >> "$GITHUB_OUTPUT"
+          echo "live release: ${live_release:-none}"
+
+      # Only an automatic run can be superseded: a slow build finishing after a newer release went live. A manual run
+      # always proceeds, which is what makes an older target a rollback (spec 019 FR-006, FR-015).
+      - name: Decide whether to apply
+        id: decide
+        env:
+          LIVE_RELEASE: ${{ steps.read_live.outputs.live_release }}
+        run: |
+          decision_output="$(workflow-src/deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "$LIVE_RELEASE" --automatic "$AUTOMATIC")"
+          printf '%s\n' "$decision_output" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$decision_output"
+          if printf '%s\n' "$decision_output" | grep -qx 'decision=superseded'; then
+            echo "::notice::$TARGET is older than the live release $LIVE_RELEASE; it was not applied"
+          fi
+
+      # Mirrors deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the running stack read.
+      # The target supplies the release files (compose.yaml, the Caddyfile, the timers, the Postgres build);
+      # scripts/ comes from the workflow's own commit, so a rollback cannot restore older tooling.
+      # --delete keeps each side an exact mirror; nothing host-side writes there.
+      - name: Copy deploy/compose to the host
+        if: steps.decide.outputs.decision != 'superseded'
+        run: |
+          rsync -az --delete --exclude 'scripts/' deploy/compose/ jordylab-vps:/opt/jordylab/compose/
+          rsync -az --delete workflow-src/deploy/compose/scripts/ jordylab-vps:/opt/jordylab/compose/scripts/
           ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
+
+      # JOR-82: a changed Caddyfile is validated and reloaded atomically here; the script keeps the previous file
+      # for the rollback below and recreates caddy once if it still mounts the file instead of the directory.
+      - name: Apply the Caddy config
+        if: steps.decide.outputs.decision != 'superseded'
+        run: ssh jordylab-vps /opt/jordylab/compose/scripts/apply-caddy-config.sh
 
       # The runner needs sops to decrypt; it ships in no image on ubuntu-latest (T049 found this missing).
       - name: Install sops
@@ -144,6 +198,7 @@ jobs:
       # The rendered output is checked before it replaces anything, so a failed render leaves prod.env alone.
       - name: Write the environment file on the host
         id: write_env
+        if: steps.decide.outputs.decision != 'superseded'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
@@ -153,7 +208,7 @@ jobs:
           export PATH="/tmp/render-venv/bin:$PATH"
           # From here the host may have been touched, so the automatic rollback step is allowed to run.
           echo "host_touched=true" >> "$GITHUB_OUTPUT"
-          deploy/compose/scripts/render-env.sh | ssh jordylab-vps \
+          workflow-src/deploy/compose/scripts/render-env.sh | ssh jordylab-vps \
             'set -e; cd /opt/jordylab/env;
              if [ -f prod.env ]; then cp -p prod.env prod.env.previous; fi;
              cat > prod.env.new; chmod 600 prod.env.new;
@@ -166,6 +221,7 @@ jobs:
       # exits non-zero; the state files only change on success.
       - name: Deploy the release on the host
         id: deploy
+        if: steps.decide.outputs.decision != 'superseded'
         env:
           IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
@@ -177,7 +233,8 @@ jobs:
       # Contract step 7: external check from the runner (deploy/scripts/smoke-check.sh, written for spec 019).
       - name: Smoke-check the public site
         id: smoke
-        run: deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+        if: steps.decide.outputs.decision != 'superseded'
+        run: workflow-src/deploy/scripts/smoke-check.sh --base-url https://jordylab.be
 
       # Contract step 8: automatic rollback, only after the host was touched. deploy-release.sh acts only
       # when TARGET is still the live release (a refused or self-restored deploy is a no-op), and it exits 1
@@ -189,12 +246,17 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
+          # Put the Caddyfile back first (best effort; a no-op when it did not change), then the releases.
+          ssh jordylab-vps /opt/jordylab/compose/scripts/revert-caddy-config.sh || true
           # Same as the deploy step: the release value is resolved and checked, client-side expansion is intended.
           # shellcheck disable=SC2029
           ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh rollback "$IMAGE_TAG"
 
       - name: Summarise the run
         if: always()
+        env:
+          DECISION: ${{ steps.decide.outputs.decision }}
+          PREVIOUS_LIVE_RELEASE: ${{ steps.read_live.outputs.live_release }}
         run: |
           live="unknown"
           if [ -f ~/.ssh/config ]; then
@@ -207,6 +269,8 @@ jobs:
             echo "|---|---|"
             echo "| Target | $TARGET |"
             echo "| Image tag | ${{ steps.resolve_target.outputs.image_tag }} |"
+            echo "| Decision | ${DECISION:-not run} |"
+            echo "| Live release before | ${PREVIOUS_LIVE_RELEASE:-none} |"
             echo "| Deploy on the host | ${{ steps.deploy.outcome }} |"
             echo "| Smoke check | ${{ steps.smoke.outcome }} |"
             echo "| Automatic rollback | ${{ steps.rollback.outcome }} |"

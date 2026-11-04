@@ -215,3 +215,17 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  # Deploys the images this run just published (spec 019 research D1, spec 020 T062). Runs only while the repository
+  # variable AUTO_DEPLOY is 'true'; the Compose workflow itself skips a target older than the live release.
+  deploy:
+    needs: [build-and-push]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTO_DEPLOY == 'true'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/deploy-prod-compose.yml
+    with:
+      target: ${{ github.sha }}
+      automatic: true
+    secrets: inherit
