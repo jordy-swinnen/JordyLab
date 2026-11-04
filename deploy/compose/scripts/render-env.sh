@@ -25,6 +25,8 @@ except ImportError:
 # Settings that are not secret. They live here so a change is reviewed in git (contracts/env-contract.md).
 LITERALS = [
     ("SPRING_PROFILES_ACTIVE", "prod"),
+    ("KEYCLOAK_URL", "https://jordylab.be/auth"),
+    ("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080/auth"),
     ("POSTGRES_DB", "jordylab"),
     ("POSTGRES_URL", "jdbc:postgresql://postgres:5432/jordylab"),
     ("JORDYLAB_CORS_ALLOWED_ORIGINS", "https://jordylab.be,https://localhost"),
