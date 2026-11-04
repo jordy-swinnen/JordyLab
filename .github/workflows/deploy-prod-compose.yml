@@ -1,0 +1,278 @@
+name: Deploy to Production (Compose)
+
+# Deploys one target to the Compose stack on the VPS (spec 020, contracts/deploy-workflow.md, T047; spec 019
+# FR-001 and FR-014 for the target rules). The target is a full commit sha or a release tag vX.Y.Z[-rcN]; it maps
+# to the image tag sha-<sha> or <tag>, so a sha deploy runs exactly the images its Build published (no retag), and
+# an older target is how a rollback works. All three images must exist in GHCR before the host is touched.
+# Run it by hand; automatic deploys are off since the k3s to Compose cutover (T062 decides when they return).
+#
+# The host side is scripts/deploy-release.sh (T009): it pulls and starts only backend, frontend and
+# keycloak, checks the site through Caddy on the host, and restores the live release itself when its own
+# steps fail. Postgres, ntfy and Caddy are never restarted by a release. The Postgres image is built on
+# the host from the mirrored deploy/compose copy (pinned base digest and pgBackRest version), not pushed
+# to a registry: it changes rarely and deliberately, and compose.yaml already declares the build.
+
+on:
+  # Called by build.yml for a green main build when the repository variable AUTO_DEPLOY is 'true' (spec 020 T062).
+  # The automatic path skips a target older than the live release; a manual run never does (see deploy-decision.sh).
+  workflow_call:
+    inputs:
+      target:
+        description: "Commit sha to deploy (build.yml passes github.sha)"
+        required: true
+        type: string
+      automatic:
+        description: "true when called from build.yml; enables the superseded skip"
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "A full commit sha, or a release tag vX.Y.Z or vX.Y.Z-rcN (older targets are allowed, for rollback)"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+      queue: max
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      TARGET: ${{ inputs.target }}
+      AUTOMATIC: ${{ inputs.automatic || false }}
+      DEPLOY_HOST: 100.93.81.41
+      DEPLOY_USER: jordylab-deploy
+      # The host's ed25519 fingerprint, cross-verified against the trusted public-IP anchor on
+      # 2026-11-03 (T023). Host keys are public data; a mismatch fails the job.
+      EXPECTED_ED25519_FP: SHA256:a7f59RlxrXwd5RIRZ5G0MphuKqyffsV6SB6RsnyLnm8
+    steps:
+      # Contract step 3 first in practice: the checkout needs the target's tree for the Compose files and scripts.
+      # A target that does not exist fails here, before the host is touched.
+      - name: Check out the target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target }}
+          fetch-depth: 0
+
+      # The workflow's own commit supplies the helpers and the host tooling. The target supplies the release (compose.yaml,
+      # the Caddyfile, the Postgres build), but rolling back to an older commit must not restore older tooling: run
+      # 41730834972 failed because it did exactly that (an old deploy-release.sh rejected the sha).
+      - name: Check out the workflow's own commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-src
+          fetch-depth: 1
+
+      # Contract step 1: resolve the target with the script the k3s pipeline used (spec 019, research D6). A sha must
+      # be in the history, a tag must exist, and the result names the image tag: sha-<sha>, or the tag unchanged.
+      - name: Resolve the target
+        id: resolve_target
+        run: |
+          resolution="$(workflow-src/deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "" --automatic false)"
+          printf '%s\n' "$resolution" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$resolution"
+          if printf '%s\n' "$resolution" | grep -qx 'decision=refused'; then
+            echo "::error::the target is refused: $(printf '%s\n' "$resolution" | grep '^reason=' | cut -d= -f2-)"
+            exit 1
+          fi
+
+      - name: Set up buildx and log in to the registry
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # FR-014: a target without images is refused before the host is touched, so the live release is untouched
+      # (this is also the T052 failure path).
+      - name: Check that the target's images exist
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
+        run: |
+          for component in backend frontend keycloak; do
+            image="ghcr.io/jordy-swinnen/jordylab-$component:$IMAGE_TAG"
+            if ! docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
+              echo "::error::the image $image does not exist: the target is refused"
+              exit 1
+            fi
+          done
+
+      # Contract step 2: join the tailnet as tag:ci.
+      - name: Join Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Install the deploy key and verify the host key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          scanned="$(ssh-keyscan -T 30 -t ed25519 "$DEPLOY_HOST" 2>/dev/null | grep -v '^#' | head -n 1)"
+          if [ -z "$scanned" ]; then
+            echo "::error::no SSH host key from $DEPLOY_HOST over the tailnet (is the tag:ci tcp:22 grant in place?)"
+            exit 1
+          fi
+          actual_fp="$(printf '%s\n' "$scanned" | ssh-keygen -lf - | awk '{print $2}')"
+          echo "host key fingerprint: $actual_fp (expected $EXPECTED_ED25519_FP)"
+          if [ "$actual_fp" != "$EXPECTED_ED25519_FP" ]; then
+            echo "::error::host key mismatch for $DEPLOY_HOST: the tailnet path is not trusted"
+            exit 1
+          fi
+          printf '%s\n' "$scanned" >> ~/.ssh/known_hosts
+          # One named host for every later step: no repeated flags, no tilde-in-quotes pitfalls.
+          cat > ~/.ssh/config <<CONFIG
+          Host jordylab-vps
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+          CONFIG
+          chmod 600 ~/.ssh/config
+          ssh jordylab-vps 'echo SSH_OK as $(whoami) on $(hostname)'
+
+      - name: Read the live release
+        id: read_live
+        run: |
+          live_release="$(ssh jordylab-vps 'cat /opt/jordylab/state/current-release 2>/dev/null' || true)"
+          echo "live_release=$live_release" >> "$GITHUB_OUTPUT"
+          echo "live release: ${live_release:-none}"
+
+      # Only an automatic run can be superseded: a slow build finishing after a newer release went live. A manual run
+      # always proceeds, which is what makes an older target a rollback (spec 019 FR-006, FR-015).
+      - name: Decide whether to apply
+        id: decide
+        env:
+          LIVE_RELEASE: ${{ steps.read_live.outputs.live_release }}
+        run: |
+          decision_output="$(workflow-src/deploy/scripts/deploy-decision.sh --target "$TARGET" --live-tag "$LIVE_RELEASE" --automatic "$AUTOMATIC")"
+          printf '%s\n' "$decision_output" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$decision_output"
+          if printf '%s\n' "$decision_output" | grep -qx 'decision=superseded'; then
+            echo "::notice::$TARGET is older than the live release $LIVE_RELEASE; it was not applied"
+          fi
+
+      # Mirrors deploy/compose to /opt/jordylab/compose, which deploy-release.sh and the running stack read.
+      # The target supplies the release files (compose.yaml, the Caddyfile, the timers, the Postgres build);
+      # scripts/ comes from the workflow's own commit, so a rollback cannot restore older tooling.
+      # --delete keeps each side an exact mirror; nothing host-side writes there.
+      - name: Copy deploy/compose to the host
+        if: steps.decide.outputs.decision != 'superseded'
+        run: |
+          rsync -az --delete --exclude 'scripts/' deploy/compose/ jordylab-vps:/opt/jordylab/compose/
+          rsync -az --delete workflow-src/deploy/compose/scripts/ jordylab-vps:/opt/jordylab/compose/scripts/
+          ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
+
+      # JOR-82: a changed Caddyfile is validated and reloaded atomically here; the script keeps the previous file
+      # for the rollback below and recreates caddy once if it still mounts the file instead of the directory.
+      - name: Apply the Caddy config
+        if: steps.decide.outputs.decision != 'superseded'
+        run: ssh jordylab-vps /opt/jordylab/compose/scripts/apply-caddy-config.sh
+
+      # The runner needs sops to decrypt; it ships in no image on ubuntu-latest (T049 found this missing).
+      - name: Install sops
+        run: |
+          sudo curl -sSLo /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.13.3/sops-v3.13.3.linux.amd64
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
+
+      # Contract steps 4 and 5: render the environment file on the runner (sops + PyYAML; values never
+      # reach a log) and write it on the host, keeping the file it replaces as prod.env.previous.
+      # The rendered output is checked before it replaces anything, so a failed render leaves prod.env alone.
+      - name: Write the environment file on the host
+        id: write_env
+        if: steps.decide.outputs.decision != 'superseded'
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          set -o pipefail
+          python3 -m venv /tmp/render-venv
+          /tmp/render-venv/bin/pip install --quiet pyyaml
+          export PATH="/tmp/render-venv/bin:$PATH"
+          # From here the host may have been touched, so the automatic rollback step is allowed to run.
+          echo "host_touched=true" >> "$GITHUB_OUTPUT"
+          workflow-src/deploy/compose/scripts/render-env.sh | ssh jordylab-vps \
+            'set -e; cd /opt/jordylab/env;
+             if [ -f prod.env ]; then cp -p prod.env prod.env.previous; fi;
+             cat > prod.env.new; chmod 600 prod.env.new;
+             grep -q "^SPRING_PROFILES_ACTIVE=" prod.env.new \
+               || { echo "rendered environment file is empty or incomplete; nothing was written" >&2; rm -f prod.env.new; exit 1; };
+             mv prod.env.new prod.env;
+             echo "environment file written (mode 600)"'
+
+      # Contract step 6: deploy on the host. On failure the script restores the live release itself and
+      # exits non-zero; the state files only change on success.
+      - name: Deploy the release on the host
+        id: deploy
+        if: steps.decide.outputs.decision != 'superseded'
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
+        run: |
+          # IMAGE_TAG is a sha or a vX.Y.Z[-rcN] tag resolved by deploy-decision.sh, so expanding it client-side
+          # into a literal remote command is intended.
+          # shellcheck disable=SC2029
+          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh deploy "$IMAGE_TAG"
+
+      # Contract step 7: external check from the runner (deploy/scripts/smoke-check.sh, written for spec 019).
+      - name: Smoke-check the public site
+        id: smoke
+        if: steps.decide.outputs.decision != 'superseded'
+        run: workflow-src/deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+
+      # Contract step 8: automatic rollback, only after the host was touched. deploy-release.sh acts only
+      # when TARGET is still the live release (a refused or self-restored deploy is a no-op), and it exits 1
+      # by design after a successful rollback too, so this step is expected to show as failed on an already
+      # failed job - the summary reports what actually happened.
+      - name: Roll back to the previous release
+        id: rollback
+        if: failure() && steps.write_env.outputs.host_touched == 'true'
+        env:
+          IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
+        run: |
+          # Put the Caddyfile back first (best effort; a no-op when it did not change), then the releases.
+          ssh jordylab-vps /opt/jordylab/compose/scripts/revert-caddy-config.sh || true
+          # Same as the deploy step: the release value is resolved and checked, client-side expansion is intended.
+          # shellcheck disable=SC2029
+          ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh rollback "$IMAGE_TAG"
+
+      - name: Summarise the run
+        if: always()
+        env:
+          DECISION: ${{ steps.decide.outputs.decision }}
+          PREVIOUS_LIVE_RELEASE: ${{ steps.read_live.outputs.live_release }}
+        run: |
+          live="unknown"
+          if [ -f ~/.ssh/config ]; then
+            live="$(ssh jordylab-vps 'cat /opt/jordylab/state/current-release 2>/dev/null' || true)"
+          fi
+          {
+            echo "## Deploy to Production (Compose)"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Target | $TARGET |"
+            echo "| Image tag | ${{ steps.resolve_target.outputs.image_tag }} |"
+            echo "| Decision | ${DECISION:-not run} |"
+            echo "| Live release before | ${PREVIOUS_LIVE_RELEASE:-none} |"
+            echo "| Deploy on the host | ${{ steps.deploy.outcome }} |"
+            echo "| Smoke check | ${{ steps.smoke.outcome }} |"
+            echo "| Automatic rollback | ${{ steps.rollback.outcome }} |"
+            echo "| Live release on the host | ${live:-unknown} |"
+          } >> "$GITHUB_STEP_SUMMARY"

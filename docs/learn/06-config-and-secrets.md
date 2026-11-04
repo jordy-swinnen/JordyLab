@@ -32,7 +32,8 @@ GitHub Actions secret, never a third).
 
 **SOPS** is the tool that applies that age key to a Kubernetes-shaped YAML file: `sops
 secrets.sops.yaml` decrypts to a temp file, opens your editor, and re-encrypts on save. In CI
-(`deploy-prod.yml`), the same decrypt happens non-interactively, using the private key from a
+(`deploy-prod-compose.yml`, through `deploy/compose/scripts/render-env.sh`), the same decrypt happens
+non-interactively, using the private key from a
 GitHub Actions secret, entirely inside the ephemeral runner — the plaintext never touches disk in
 your own checkout, and never gets committed.
 

@@ -250,12 +250,12 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 - [X] T088 [US7] Rewrite the e2e stack: `jordylab-fe/e2e/compose.e2e.yaml` (Postgres only — delete the Keycloak service and `keycloak-init.sql` bind), `jordylab-fe/e2e/run.sh` (drop `E2E_KEYCLOAK_*`, Keycloak readiness and issuer env; add `E2E_ADMIN_PASSWORD`, `SPRING_PROFILES_ACTIVE=local,e2e`, `JORDYLAB_IDENTITY_WEBAUTHN_ALLOWED_ORIGINS=http://localhost:$WEB_PORT`), delete `jordylab-fe/e2e/lib/make-realm.py`
 - [X] T089 [US7] Run the rewritten suite locally (`e2e/run.sh web` + `bash e2e/lib/cleanup.sh verify-all`) and fix every journey — `e2e-web` is green again from here
 - [X] T090 [US7] Create `jordylab-be/src/main/resources/db/migration/V20261103003__identity_migrate_keycloak_users.sql`: verify the exact Keycloak 26.7 table/column names against the dev DB with read-only `psql`, then the guarded `DO $$ … IF EXISTS (schema 'keycloak') …` + `INSERT … SELECT` per [data-model.md](data-model.md) (users + grants, `RAISE NOTICE` when absent)
-- [ ] T091 [US7] **OWNER GATE — not started by the agent**: **Release A gate — owner action, STOP before any removal task**: deploy release A to production; verify read-only that `identity.user_account` matches the Keycloak persons (count + ids = `sub`s) and grants match `app-gamecatalog`; have every user sign in via an approved reset and add a passkey; then take the **verified CNPG backup** (runbook §15, comparison row now `identity.user_account`). Record the sign-off here before T092
-- [X] T092 [US7] Create `jordylab-be/src/main/resources/db/migration/V20261103004__drop_keycloak_schema.sql` (`DROP SCHEMA IF EXISTS keycloak CASCADE` + `RAISE NOTICE` when absent) — only after T091's recorded sign-off
-- [X] T093 [US7] Remove the Keycloak deployment (k8s today): delete `deploy/containers/keycloak/` and `deploy/k8s/base/keycloak.yaml`, remove the `keycloak-route` from `gateway.yaml`, the keycloak entries from both kustomization `images:` lists, the `keycloak-config` ConfigMap and all `KEYCLOAK_*` keys from `deploy/k8s/overlays/prod/kustomization.yaml` (+ `backend-config`), re-key `secrets.sops.yaml` (add `IDENTITY_BOOTSTRAP_ADMIN_*`, drop `KEYCLOAK_ADMIN_BOOTSTRAP_*`/`KEYCLOAK_BACKEND_CLIENT_SECRET` — **SOPS edit is the owner's; the manifests/config are done and the bootstrap refs are optional so release B rolls out before the re-key**), add the bootstrap env to `deploy/k8s/base/backend.yaml`, and drop the `keycloak` role/schema/managed secret from `deploy/k8s/cluster/cnpg-cluster.yaml`. If spec 017's Compose stack has landed, remove its equivalent Keycloak service/route/env instead
-- [X] T094 [US7] Remove Keycloak from CI: drop the `keycloak` matrix entries in `.github/workflows/build.yml` and `.github/workflows/release.yml`, and the keycloak image/`rollout status deploy/keycloak` steps from `.github/workflows/deploy-prod.yml` (or the 017 Compose workflow if it exists)
-- [X] T095 [US7] Remove Keycloak from local dev: delete the `keycloak` service, `compose/keycloak-init.sql`, `compose/keycloak-realm-export.json`, `compose/keycloak-theme/`, and clean `KEYCLOAK_*` from `jordylab-be/.env.example`
-- [X] T096 [P] [US7] Rewrite the docs to the new reality: `docs/runbook.md` (§11/§13/§15 without `deploy/keycloak`; the one-time APK-stack section stays historical), `docs/environments.md`, `docs/cowork-deploy-ovh.md`, `docs/learn/01`–`09` + README, root `AGENTS.md` + `jordylab-be/AGENTS.md` + `jordylab-fe/AGENTS.md`, `.claude/skills/jordylab-ops/SKILL.md`, `.claude/agents/jordylab-devops.md`, `.opencode/agents/jordylab-devops.md`; leave `docs/testing/*` history untouched
+- [ ] T091 [US7] **OWNER GATE — re-run against the Compose prod DB**: **Release A gate — owner action, STOP before any removal task**: deploy release A to production; verify read-only that `identity.user_account` matches the Keycloak persons (count + ids = `sub`s) and grants match `app-gamecatalog`; have every user sign in via an approved reset and add a passkey; then take the **verified CNPG backup** (runbook §15, comparison row now `identity.user_account`). Record the sign-off here before T092
+- [ ] T092 [US7] Create `jordylab-be/src/main/resources/db/migration/V20261103004__drop_keycloak_schema.sql` (`DROP SCHEMA IF EXISTS keycloak CASCADE` + `RAISE NOTICE` when absent) — only after T091's recorded sign-off
+- [ ] T093 [US7] Remove the Keycloak deployment (k8s today): delete `deploy/containers/keycloak/` and `deploy/k8s/base/keycloak.yaml`, remove the `keycloak-route` from `gateway.yaml`, the keycloak entries from both kustomization `images:` lists, the `keycloak-config` ConfigMap and all `KEYCLOAK_*` keys from `deploy/k8s/overlays/prod/kustomization.yaml` (+ `backend-config`), re-key `secrets.sops.yaml` (add `IDENTITY_BOOTSTRAP_ADMIN_*`, drop `KEYCLOAK_ADMIN_BOOTSTRAP_*`/`KEYCLOAK_BACKEND_CLIENT_SECRET` — **SOPS edit is the owner's; the manifests/config are done and the bootstrap refs are optional so release B rolls out before the re-key**), add the bootstrap env to `deploy/k8s/base/backend.yaml`, and drop the `keycloak` role/schema/managed secret from `deploy/k8s/cluster/cnpg-cluster.yaml`. If spec 017's Compose stack has landed, remove its equivalent Keycloak service/route/env instead
+- [ ] T094 [US7] Remove Keycloak from CI: drop the `keycloak` matrix entries in `.github/workflows/build.yml` and `.github/workflows/release.yml`, and the keycloak image/`rollout status deploy/keycloak` steps from `.github/workflows/deploy-prod.yml` (or the 017 Compose workflow if it exists)
+- [ ] T095 [US7] Remove Keycloak from local dev: delete the `keycloak` service, `compose/keycloak-init.sql`, `compose/keycloak-realm-export.json`, `compose/keycloak-theme/`, and clean `KEYCLOAK_*` from `jordylab-be/.env.example`
+- [ ] T096 [P] [US7] Rewrite the docs to the new reality: `docs/runbook.md` (§11/§13/§15 without `deploy/keycloak`; the one-time APK-stack section stays historical), `docs/environments.md`, `docs/cowork-deploy-ovh.md`, `docs/learn/01`–`09` + README, root `AGENTS.md` + `jordylab-be/AGENTS.md` + `jordylab-fe/AGENTS.md`, `.claude/skills/jordylab-ops/SKILL.md`, `.claude/agents/jordylab-devops.md`, `.opencode/agents/jordylab-devops.md`; leave `docs/testing/*` history untouched
 - [ ] T097 [US7] Release B verification per [quickstart.md](quickstart.md) §8: deploy; no `deploy/keycloak`; `/auth/realms/jordylab` → 404; `grep -ri keycloak` excluding `docs/testing/` and `specs/` returns nothing; `e2e/run.sh web` + `cleanup.sh verify-all` green
 
 **Checkpoint**: Production runs one fewer container, the repository is Keycloak-free outside history, and the whole suite is green (SC-008).
@@ -373,3 +373,23 @@ Task: "T029 [P] [US1] Switch settings/shared to CurrentUserResolver"
   keys, drop the three `KEYCLOAK_*` keys and the `jordylab-db-keycloak` Secret), then deploy release B and confirm
   `/auth/realms/jordylab` returns 404. The remaining `keycloak` strings in the repo are the immutable cutover/drop
   migrations, their test, the SOPS ciphertext, and the spec's own folder name.
+
+### Release split after the Compose cutover (2026-11-04)
+
+Main moved to the Compose production stack and added the feedback module while this branch was open. Two consequences changed
+release B into release A:
+
+- **Flyway collision**: main's `V20261103002__feedback_create_tables.sql` and this branch's identity create used the same
+  version. Identity is now **003 create** and **004 copy**; the schema drop is held in
+  [`release-b/`](release-b/) and ships only after verification.
+- **Production state**: the Compose production database has `keycloak` (9 persons) but **no identity schema**, and its
+  latest Flyway row is feedback `20261103002`. The earlier release-A verification therefore did not reach this database.
+  Release A is being deployed now, with Keycloak **kept running and `/auth` routed** for rollback; the backend no longer
+  reads it, and Compose gets the identity bootstrap env plus the WebAuthn routes.
+- **Feedback integration**: the merged feedback module now uses `CurrentUserResolver`/`UserAccountLookup` and the identity
+  events; `/api/feedback/inbox/**` is admin, the guest endpoints admin/guest.
+
+Release B (T092–T097) follows only after the owner verifies the 9 migrated persons and grants, runs the break-glass admin
+recovery (`docs/runbook.md` §25), approves every user's password reset, and takes the verified backup.
+
+*(The 2026-11-03 "Release B removal" record below describes the pre-merge local run and is superseded by this split.)*

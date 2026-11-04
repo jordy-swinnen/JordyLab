@@ -20,6 +20,7 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 | `fna` | `finance` | Financial news aggregation, RSS ingestion, AI investment briefings |
 | `gamecatalog` | `gamecatalog` | ROM/Steam/console game catalog — ingestion, grid/detail, filters, marks, auto-filled covers/facts/descriptions, LibBot (grounded AI chat), consoles, source management (**built**) |
 | `garmin` | `garmin` | Health/fitness data from Garmin Connect (written by Python sidecar) |
+| `feedback` | `feedback` | Guest feedback tickets triaged in an admin idea box; accepting creates a Linear issue (see `specs/017-guest-feedback/`) |
 | `recipe` | `recipe` | Self-hosted recipe management (planned) |
 | `trading` | — | AI trade signals with mandatory human-in-the-loop approval |
 | `shared` | — | Cross-module AI layer, config, utilities |
@@ -90,6 +91,7 @@ All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeatu
   pipeline, which reaches the firewalled k3s API over Tailscale (never a public port 6443). See
   `deploy/`, `docs/runbook.md` (operational procedures) and `docs/learn/` (the concepts, explained against these
   same files).
+- **Deploys**: production runs the Docker Compose stack on the VPS (spec 020); k3s is retired. A green `main` build publishes `sha-<commit>` images and, while the repository variable `AUTO_DEPLOY` is `true`, deploys them through `.github/workflows/deploy-prod-compose.yml` with no approval (set the variable to anything else to pause). A manual run takes a full commit sha or a release tag, and an older target is a rollback; the workflow refuses a target without images, skips an automatic target older than the live release, and restores the previous release when it fails. Details: `docs/runbook.md` §10, §11 and §20.
 - **Main desktop**: Ryzen 9 7950X, RX 7900 XTX — development machine (macOS/Linux scanner runs)
 - **JordyBox**: i7-9700K, RTX 2070 Super — HTPC/gaming, NFS server for ROMs (where the downloaded scan client walks the libraries)
 - **Authentication** (spec 019): built into the backend's `identity` module — BCrypt passwords, WebAuthn

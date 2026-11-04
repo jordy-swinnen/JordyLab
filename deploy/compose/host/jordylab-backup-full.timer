@@ -1,0 +1,10 @@
+# Sunday at 04:00 UTC.
+[Unit]
+Description=Run the JordyLab full backup every Sunday at 04:00 UTC
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

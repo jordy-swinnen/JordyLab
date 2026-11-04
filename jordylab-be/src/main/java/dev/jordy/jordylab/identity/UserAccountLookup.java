@@ -24,10 +24,11 @@ public class UserAccountLookup {
     }
 
     /** The little another module may know about an account. */
-    public record AccountRef(UUID id, String username, String role) {
+    public record AccountRef(UUID id, String username, String displayName, String role) {
 
         static AccountRef from(UserAccount account) {
-            return new AccountRef(account.getId(), account.getUsername(), account.roleKey().orElse(null));
+            return new AccountRef(account.getId(), account.getUsername(), account.getDisplayName(),
+                    account.roleKey().orElse(null));
         }
     }
 }

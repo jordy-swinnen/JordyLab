@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/jordy-swinnen/jordylab
@@ -110,7 +113,7 @@ jobs:
         working-directory: jordylab-fe
         run: bun tools/app-boot-check.mjs
 
-  # End-to-end journeys against a freshly built app, on this run's own throwaway Postgres + backend (spec 019).
+  # End-to-end journeys against a freshly built app, on this run's own throwaway Postgres + Keycloak + backend (spec 012 FR-045).
   # Gates merges: make this check required in branch protection. The cleanup steps always run, so nothing outlives the job.
   e2e-web:
     runs-on: ubuntu-latest
@@ -156,6 +159,19 @@ jobs:
         working-directory: jordylab-fe
         run: bash e2e/lib/cleanup.sh verify-all
 
+  # Fixtures for the deploy decision and backup scripts (spec 019, research D15), and actionlint over the workflows.
+  deploy-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the deploy decision fixtures
+        run: bash deploy/scripts/tests/deploy-decision-cases.sh
+      - name: Run the backup freshness fixtures
+        run: bash deploy/scripts/tests/backup-freshness-cases.sh
+      # actionlint 1.7.12 does not know concurrency.queue (GitHub supports it; deploy-prod-compose.yml needs queue: max).
+      - name: Lint the workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -ignore 'unexpected key "queue" for "concurrency" section'
+
   build-and-push:
     needs: [secret-scan, licence-check, test-backend, test-frontend, app-boot, e2e-web]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -164,10 +180,17 @@ jobs:
       contents: read
       packages: write
     strategy:
-      # One image failing shouldn't cancel the others.
+      # One image failing shouldn't cancel the others (Build #14 lost backend/keycloak this way).
       fail-fast: false
       matrix:
-        image: [backend, frontend]
+        # The backend reports the commit it was built from on /actuator/info (spec 019, FR-017).
+        include:
+          - image: backend
+            build-args: JORDYLAB_GIT_COMMIT=${{ github.sha }}
+          - image: frontend
+            build-args: ""
+          - image: keycloak
+            build-args: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -187,7 +210,22 @@ jobs:
         with:
           context: .
           file: deploy/containers/${{ matrix.image }}/Containerfile
+          build-args: ${{ matrix.build-args }}
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  # Deploys the images this run just published (spec 019 research D1, spec 020 T062). Runs only while the repository
+  # variable AUTO_DEPLOY is 'true'; the Compose workflow itself skips a target older than the live release.
+  deploy:
+    needs: [build-and-push]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AUTO_DEPLOY == 'true'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/deploy-prod-compose.yml
+    with:
+      target: ${{ github.sha }}
+      automatic: true
+    secrets: inherit

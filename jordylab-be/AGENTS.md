@@ -281,6 +281,7 @@ class SomeObjectTestBuilder {
 - `gamecatalog` → jordylab-be
 - `garmin` → jordylab-be (NOT garmin-sync-service)
 - `recipe` → jordylab-be
+- `feedback` → jordylab-be
 
 # Admin push notifications (feature 017, formerly the `mobile` module)
 
@@ -294,6 +295,32 @@ class SomeObjectTestBuilder {
   `NtfyClient` — it must never fail the sign-up or briefing flow that triggered it.
 - `shared/rest/client` is exposed as `@NamedInterface("notifications")`; `ModularityTests` enforces that
   other modules use it instead of internals.
+
+# Feedback module (feature 017)
+
+- The idea box: guests submit text-only feedback tickets (`feedback.feedback_ticket`, schema `feedback`) for the
+  apps they hold the per-app grant for (spec 014: `app-gamecatalog` today — `FeedbackAppAccessService` reads the grant
+  role, so a guest with no grant sees an empty app list); the admin triages them as New → Accepted | Backlog |
+  Rejected (Accepted and Rejected are terminal). One aggregate (`FeedbackTicket`), one module;
+  `/api/feedback/tickets` + `/api/feedback/apps` are guest-only, `/api/feedback/inbox/**` admin-only — both gated in
+  `SecurityConfig`, never by method security.
+- **Accepting a ticket creates exactly one Linear issue** in team `JOR` (Triage state, App/Type labels,
+  `Source: idea box`, no guest personal data) through `LinearClient`, a hand-built GraphQL JSON client over a
+  module-private `RestClient` with short timeouts. Auth is Jordy's **personal API key** (`LINEAR_API_KEY`, SOPS
+  secret in prod; unset means Accept fails fast with `503 LINEAR_UNAVAILABLE`). Idempotency: the ticket is loaded
+  under a pessimistic row lock across the Linear call; a ticket with `linear_issue_id` never calls Linear again,
+  and a retry after a recorded `accept_error` searches Linear first and adopts the issue a timed-out attempt
+  already created instead of making a second one.
+- **Notification**: the submission service calls the shared `NtfyClient` directly (the post-018 pattern — the
+  mobile module and its event listener are gone): one push with sender, app and type, never the ticket text, and a
+  click-through to `/settings/inbox`. `UserAccessRemoved` anonymises a deleted account's tickets (display name
+  cleared, tickets kept).
+- Guest view vs admin view are separate DTO records: a guest response never carries the sender, the private
+  note, the Linear link or the accept error. Two admin texts per ticket: the guest-visible `reply` and the
+  `private_note` (the Accept note is that private note, snapshotted into the Linear issue).
+- Frontend: `libs/feedback/{api,ui}` (scope `feedback`); the host composes `/settings` as a children array —
+  admin-and-guest guarded at the root, each tab re-guarded (`feedback` guest-only, `inbox` admin-only), with a
+  role-aware default redirect. `settingsAdminRoutes` is exported by the settings lib for that composition.
 
 # pgvector
 

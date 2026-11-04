@@ -1,0 +1,115 @@
+<lib-page-header
+  title="Feedback"
+  subtitle="Report a bug, suggest a feature, or share an idea about the apps you use."
+/>
+
+@if (error()) {
+  <div class="mt-6">
+    <lib-error-state [message]="error() ?? ''" (retry)="dismissError.emit()" />
+  </div>
+}
+
+<section class="panel mt-6 flex flex-col gap-5 px-6 py-6">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <label class="block text-sm font-medium">
+      App
+      <select
+        class="{{ inputClass }}"
+        data-testid="feedback-app"
+        (change)="onAppChange($any($event.target).value)"
+      >
+        <option value="" disabled selected>Pick an app</option>
+        @for (app of apps(); track app.id) {
+          <option [value]="app.id">{{ app.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="block text-sm font-medium">
+      Type
+      <select
+        class="{{ inputClass }}"
+        data-testid="feedback-type"
+        (change)="onTypeChange($any($event.target).value)"
+      >
+        @for (type of types; track type.id) {
+          <option [value]="type.id" [selected]="type.id === 'BUG_REPORT'">{{ type.label }}</option>
+        }
+      </select>
+    </label>
+  </div>
+
+  <label class="block text-sm font-medium">
+    Title
+    <input
+      type="text"
+      class="{{ inputClass }}"
+      data-testid="feedback-title"
+      [attr.maxlength]="titleMaxLength"
+      [value]="title()"
+      (input)="onTitleInput($any($event.target).value)"
+    />
+  </label>
+
+  <label class="block text-sm font-medium">
+    Description
+    <textarea
+      rows="5"
+      class="mt-1 w-full rounded-xl border border-input bg-background px-3 py-3 text-foreground"
+      data-testid="feedback-description"
+      [attr.maxlength]="descriptionMaxLength"
+      [value]="description()"
+      (input)="onDescriptionInput($any($event.target).value)"
+    ></textarea>
+  </label>
+
+  <div class="flex justify-end">
+    <button
+      hlmBtn
+      class="h-11"
+      [disabled]="!canSubmit"
+      (click)="onSubmit()"
+      data-testid="feedback-submit"
+    >
+      {{ submitting() ? 'Sending…' : 'Send feedback' }}
+    </button>
+  </div>
+</section>
+
+<section class="mt-10">
+  <h3 class="section-title mb-4">Your feedback</h3>
+  @if (loading()) {
+    <lib-skeleton-rows [count]="3" [height]="80" />
+  } @else if (tickets().length === 0) {
+    <p class="text-sm text-muted-foreground">You have not sent any feedback yet.</p>
+  } @else {
+    <div class="space-y-3">
+      @for (ticket of tickets(); track ticket.id) {
+        <details class="panel px-6 py-5" data-testid="guest-ticket">
+          <summary class="cursor-pointer list-none">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-base text-foreground">{{ ticket.title }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {{ ticket.app }} · {{ ticket.type }} · {{ ticket.createdAt | date: 'MMM d, h:mm a' }}
+                </p>
+              </div>
+              <span hlmBadge variant="secondary" data-testid="guest-ticket-state">
+                {{ stateLabels[ticket.state] }}
+              </span>
+            </div>
+          </summary>
+          <p class="mt-3 whitespace-pre-line text-sm text-muted-foreground">{{ ticket.description }}</p>
+          @if (ticket.reply) {
+            <p
+              class="mt-3 rounded-lg border border-border px-4 py-3 text-sm text-foreground"
+              data-testid="guest-ticket-reply"
+            >
+              <span class="label block text-accent-text">Reply from Jordy</span>
+              {{ ticket.reply }}
+            </p>
+          }
+        </details>
+      }
+    </div>
+  }
+</section>

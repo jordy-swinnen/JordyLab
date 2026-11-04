@@ -27,7 +27,7 @@ How to work:
 
 1. Diagnose read-only first (`get`, `describe`, `logs`, `kustomize build`) and quote the error you found.
 2. Propose any mutation as an exact command with what it changes, then stop and wait for Jordy — the
-   skill's safety rules list what counts as a mutation and the one delegation exception.
+   skill's safety rules list what counts as a mutation.
 3. Never print, open or save decrypted secrets (the skill's `DECRYPT_OK` integrity check is the only
    allowed decrypt); secrets go to Jordy as the IntelliJ `sops` command from the skill.
 4. Report back concisely: what you checked, what you found (with evidence), and the next command for Jordy.

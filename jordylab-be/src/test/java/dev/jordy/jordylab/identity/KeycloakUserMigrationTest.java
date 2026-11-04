@@ -19,7 +19,8 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 /**
  * The release-A cutover migration (spec 019 US7, D10) against a real PostgreSQL and a synthetic Keycloak 26 schema: persons
  * are copied with their subject as the id, usernames lowercased, admin &gt; guest roles, the {@code app-gamecatalog} grant,
- * no password, and service accounts skipped. Release B then drops the schema; databases without it migrate as a no-op.
+ * no password, and service accounts skipped. The schema drop is release B (after verification); databases without the
+ * schema migrate as a no-op.
  */
 @Testcontainers
 class KeycloakUserMigrationTest {
@@ -92,17 +93,6 @@ class KeycloakUserMigrationTest {
 
         assertThat(jdbc.queryForList("SELECT username FROM identity.user_account", String.class))
                 .doesNotContain("service-account-scan", "master-admin");
-    }
-
-    @Test
-    void releaseBDropsTheKeycloakSchema() {
-        createKeycloakSchema();
-
-        flyway().migrate();
-
-        assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM information_schema.schemata WHERE schema_name = 'keycloak'", Integer.class))
-                .isZero();
     }
 
     @Test

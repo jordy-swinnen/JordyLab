@@ -12,6 +12,7 @@ describe('App', () => {
   // Real signals back the mock's reactive state so tests can drive shell visibility.
   const hasAppRole = signal(true);
   const isAdmin = signal(false);
+  const isGuest = signal(false);
   const hasGameCatalogAccess = signal(false);
   const pendingCount = signal(0);
   const captureInstallPrompt = vi.fn();
@@ -29,6 +30,7 @@ describe('App', () => {
           logout,
           hasAppRole: hasAppRole.asReadonly(),
           isAdmin: isAdmin.asReadonly(),
+          isGuest: isGuest.asReadonly(),
           hasGameCatalogAccess: hasGameCatalogAccess.asReadonly(),
         },
       },
@@ -54,6 +56,7 @@ describe('App', () => {
   beforeEach(() => {
     hasAppRole.set(true);
     isAdmin.set(false);
+    isGuest.set(false);
     hasGameCatalogAccess.set(false);
     pendingCount.set(0);
     authInit.mockReset().mockResolvedValue(false);
@@ -81,6 +84,7 @@ describe('App', () => {
       'AI Models',
       'Machines',
       'App',
+      'Feedback',
     ]);
   });
 
@@ -105,10 +109,12 @@ describe('App', () => {
       '/settings/ai-models',
       '/settings/machines',
       '/settings/app',
+      '/settings/inbox',
     ]);
   });
 
   it('shows a guest with the app grant the Game Catalog library and LibBot and App settings, with Sources, Consoles, FNA and the admin settings hidden', () => {
+    isGuest.set(true);
     hasGameCatalogAccess.set(true);
     spectator.detectChanges();
 
@@ -116,15 +122,20 @@ describe('App', () => {
       .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.textContent?.trim());
 
-    expect(links).toEqual(['Library', 'LibBot', 'App']);
+    expect(links).toEqual(['Library', 'LibBot', 'App', 'Feedback']);
   });
 
   it('hides the Game Catalog from an approved guest without the app grant', () => {
+    isGuest.set(true);
+    spectator.detectChanges();
+
     const links = spectator
       .queryAll('nav[aria-label="Primary"] a')
       .map((link) => link.textContent?.trim());
 
-    expect(links).toEqual(['App']);
+    // The guest still has the Feedback tab: an approved guest with no app grant can still write
+    // to the admin (its app list is then empty).
+    expect(links).toEqual(['App', 'Feedback']);
   });
 
   it('renders a router outlet for the domain routes', () => {
@@ -203,15 +214,19 @@ describe('App', () => {
   });
 
   it('shows the App settings entry on the web to everyone, because the theme choice lives there', () => {
+    isGuest.set(true);
+    spectator.detectChanges();
+
     const settings = spectator.component['visibleGroups']().find((group) => group.label === 'Settings');
 
-    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/app']);
+    expect(settings?.items.map((item) => item.path)).toEqual(['/settings/app', '/settings/feedback']);
   });
 
   describe('phone tab bar', () => {
     const tabLabels = () => spectator.queryAll('lib-tab-bar nav > *').map((tab) => tab.textContent?.trim());
 
     it('shows Games and Settings to a guest with the app grant', () => {
+      isGuest.set(true);
       hasGameCatalogAccess.set(true);
       spectator.detectChanges();
 
@@ -219,6 +234,9 @@ describe('App', () => {
     });
 
     it('shows only Settings to an approved guest without the app grant', () => {
+      isGuest.set(true);
+      spectator.detectChanges();
+
       expect(tabLabels()).toEqual(['Settings']);
     });
 
@@ -245,13 +263,19 @@ describe('App', () => {
       ]);
     });
 
-    it('goes straight to the only page of a module', () => {
-      hasGameCatalogAccess.set(true);
+    it('opens the guest Settings pages, App and Feedback, from its tab', () => {
+      isGuest.set(true);
       spectator.detectChanges();
-      const settingsTab = spectator.queryAll('lib-tab-bar nav > *')[1];
+      const settingsTab = spectator.queryAll('lib-tab-bar nav > *')[0];
 
-      expect(settingsTab.tagName).toBe('A');
-      expect(settingsTab.getAttribute('href')).toBe('/settings/app');
+      expect(settingsTab.tagName).toBe('BUTTON');
+
+      spectator.click(settingsTab);
+
+      expect(spectator.queryAll('[data-testid="tab-bar-options"] a').map((link) => link.textContent?.trim())).toEqual([
+        'App',
+        'Feedback',
+      ]);
     });
 
     it('is not shown to an account with no application role', () => {

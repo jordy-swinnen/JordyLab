@@ -118,6 +118,8 @@ public class IdentitySecurityConfiguration {
                                 "/api/gamecatalog/games/*/installations/*/rom-status")
                         .hasAnyRole("admin", "app-gamecatalog")
                         .requestMatchers("/api/gamecatalog/libbot/**").hasAnyRole("admin", "app-gamecatalog")
+                        .requestMatchers("/api/feedback/inbox/**").hasRole("admin")
+                        .requestMatchers("/api/feedback/**").hasAnyRole("admin", "guest")
                         .requestMatchers("/api/gamecatalog/**").hasRole("admin")
                         .requestMatchers("/api/**").denyAll()
                         .anyRequest().denyAll())

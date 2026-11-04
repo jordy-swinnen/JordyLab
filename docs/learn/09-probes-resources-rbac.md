@@ -40,9 +40,10 @@ pieces:
   here (FR-007).
 - **RoleBinding** — connects the two: "this ServiceAccount gets this Role's permissions."
 
-The resulting token (minted with `kubectl create token`, `docs/runbook.md` §9) is what
-`deploy-prod.yml` authenticates with — never `/etc/rancher/k3s/k3s.yaml`, the cluster-admin
-kubeconfig that can do anything, anywhere in the cluster.
+That k3s credential is retired with k3s itself: production moved to Docker Compose (spec 020) and the
+deploy now authenticates with an SSH key for the `jordylab-deploy` user on the host, never with
+`/etc/rancher/k3s/k3s.yaml`, the cluster-admin kubeconfig that can do anything, anywhere in the
+cluster.
 
 ## Hands-on
 

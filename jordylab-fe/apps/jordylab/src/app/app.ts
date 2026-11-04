@@ -36,6 +36,7 @@ export class App {
   username = this.#auth.username;
   hasAppRole = this.#auth.hasAppRole;
   isAdmin = this.#auth.isAdmin;
+  isGuest = this.#auth.isGuest;
 
   protected readonly showQrEntry = signal(false);
 
@@ -56,7 +57,7 @@ export class App {
   );
 
   protected readonly visibleGroups = computed(() =>
-    visibleNavigationGroups(this.isAdmin(), this.#auth.hasGameCatalogAccess()),
+    visibleNavigationGroups(this.isAdmin(), this.isGuest(), this.#auth.hasGameCatalogAccess()),
   );
 
   protected readonly tabs = computed<TabBarItem[]>(() => {

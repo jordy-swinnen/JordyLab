@@ -7,8 +7,11 @@ export interface NavItem {
   icon: string;
   /** Extra route prefixes that should keep this item highlighted (e.g. game detail under Library). */
   isActive: (url: string) => boolean;
-  /** Omit for admin-or-guest; 'admin' hides the item from guests (mirrors the backend access matrix). */
-  requiredRole?: 'admin';
+  /**
+   * Omit for admin-or-guest; 'admin' hides the item from guests, 'guest' hides it from admins
+   * (mirrors the backend access matrix).
+   */
+  requiredRole?: 'admin' | 'guest';
   /** Spec 014: only shown to admins or people granted this app. */
   requiredAppRole?: GrantRole;
 }
@@ -18,7 +21,7 @@ export interface NavGroup {
   /** The module's name and icon on the phone's bottom bar. */
   tab: { label: string; icon: string };
   items: NavItem[];
-  requiredRole?: 'admin';
+  requiredRole?: 'admin' | 'guest';
   /** Spec 014: the whole module is hidden without this app grant. */
   requiredAppRole?: GrantRole;
 }
@@ -134,19 +137,48 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         icon: ICONS.phone,
         isActive: startsWith('/settings/app'),
       },
+      {
+        // One "Feedback" entry per persona: the guest submits and tracks their own tickets (spec 017 US1/US4)…
+        label: 'Feedback',
+        path: '/settings/feedback',
+        icon: ICONS.sparkle,
+        isActive: startsWith('/settings/feedback'),
+        requiredRole: 'guest',
+      },
+      {
+        // …the admin triages every ticket in the idea box (spec 017 US2/US3).
+        label: 'Feedback',
+        path: '/settings/inbox',
+        icon: ICONS.sparkle,
+        isActive: startsWith('/settings/inbox'),
+        requiredRole: 'admin',
+      },
     ],
   },
 ];
 
+function isVisible(requiredRole: 'admin' | 'guest' | undefined, isAdmin: boolean, isGuest: boolean): boolean {
+  switch (requiredRole) {
+    case 'admin':
+      return isAdmin;
+    case 'guest':
+      return isGuest;
+    default:
+      return isAdmin || isGuest;
+  }
+}
+
 /** The groups and items this person may see. */
-export function visibleNavigationGroups(isAdmin: boolean, hasGameCatalog: boolean): NavGroup[] {
+export function visibleNavigationGroups(isAdmin: boolean, isGuest: boolean, hasGameCatalog: boolean): NavGroup[] {
   const showsApp = (role?: GrantRole): boolean => !role || (role === 'app-gamecatalog' && hasGameCatalog);
 
   return NAVIGATION_GROUPS
-    .filter((group) => (!group.requiredRole || isAdmin) && showsApp(group.requiredAppRole))
+    .filter((group) => isVisible(group.requiredRole, isAdmin, isGuest) && showsApp(group.requiredAppRole))
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => (!item.requiredRole || isAdmin) && showsApp(item.requiredAppRole)),
+      items: group.items.filter(
+        (item) => isVisible(item.requiredRole, isAdmin, isGuest) && showsApp(item.requiredAppRole),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 }
