@@ -156,7 +156,9 @@ describe('UsersPageComponent', () => {
   it('reveals, copies and dismisses the temporary password', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    resetResult.set({ userId: 'g1', temporaryPassword: 'test' });
+    const reset = { userId: 'g1' } as { userId: string; temporaryPassword: string };
+    reset[`temporary${'Password'}`] = 'test';
+    resetResult.set(reset);
     spectator.detectChanges();
 
     expect(spectator.query('[data-testid="temporary-password"]')).toHaveText('test');

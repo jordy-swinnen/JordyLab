@@ -1,3 +1,6 @@
 c13dbc77040d7db4afefac16a690a2f1080e8d88:jordylab-fe/e2e/run.sh:generic-api-key:142
 # spec 014: a fake key (no real service) used only by TheGamesDbClientTest against WireMock
 bae71e3918bb158210cc3358bd34e0a167adc921:jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/rest/client/TheGamesDbClientTest.java:generic-api-key:38
+# spec 019 UI test: a made-up one-time password in the temporary-password reveal test (no real value)
+a269781258af390b070d646dd5879039256e3c75:jordylab-fe/libs/settings/ui/src/lib/users-page/users-page.component.spec.ts:generic-api-key:159
+d1653c184df918fac4fc4d78f3bb6ca15111f6e9:jordylab-fe/libs/settings/ui/src/lib/users-page/users-page.component.spec.ts:generic-api-key:159
