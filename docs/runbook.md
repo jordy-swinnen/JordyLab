@@ -214,7 +214,8 @@ an older target a rollback.
    tag itself, so a sha deploy runs exactly the images its Build published: nothing is rebuilt and nothing is retagged.
 3. Before the host is touched, a target that cannot be resolved is refused: a sha that is not in the history, a tag that
    does not exist, or any of the three images missing from GHCR (FR-014).
-4. The workflow mirrors `deploy/compose` to `/opt/jordylab/compose`, renders `prod.env` from the SOPS secrets on the runner,
+4. The workflow mirrors `deploy/compose` to `/opt/jordylab/compose`, applies a changed Caddyfile (validated, atomic reload;
+   see §17), renders `prod.env` from the SOPS secrets on the runner,
    writes it on the host (mode 600, the file it replaces kept as `prod.env.previous`), and runs
    `/opt/jordylab/compose/scripts/deploy-release.sh deploy <release>`. That script pulls and restarts **only** backend,
    frontend and keycloak, then checks the site through Caddy on the host. Postgres, ntfy and Caddy are not restarted by a
@@ -374,7 +375,8 @@ curl -sI https://jordylab.be/
 ### Testing renewal without touching DNS
 
 The zone has no wildcard, so a test hostname under `jordylab.be` would need a DNS record. `https://<ip-with-dashes>.sslip.io`
-resolves to the host with no DNS change. Add a temporary site block with the staging CA, reload, and remove it afterwards:
+resolves to the host with no DNS change. Add a temporary site block with the staging CA, apply it with the script, and
+remove it afterwards (the deploy applies a committed change automatically):
 
 ```
 57-129-163-110.sslip.io {
@@ -387,9 +389,11 @@ resolves to the host with no DNS change. Add a temporary site block with the sta
 
 Two Caddy behaviours matter:
 
-- **A changed Caddyfile is not seen until the container is recreated.** The file is a bind mount, and rsync replaces it
-  with a new inode on every deploy, so the running container keeps the old file and `caddy reload` reads that old inode.
-  After a Caddyfile change, run `$COMPOSE up -d --no-deps --force-recreate caddy` (a few seconds of downtime).
+- **A changed Caddyfile is applied by the deploy** (JOR-82): Caddy mounts the directory (`/srv`), so the mirrored file is
+  visible, and `apply-caddy-config.sh` validates it, reloads atomically, and keeps `state/Caddyfile.previous` for the
+  rollback. The first deploy after that change recreates the container once, because the old one mounts the file. If you
+  edit the mirrored file by hand for a test, run `ssh ubuntu@100.93.81.41 /opt/jordylab/compose/scripts/apply-caddy-config.sh`
+  and then put the repo copy back (a deploy does it).
 - **Deleting the stored certificate and reloading does not force a new one**, because the certificate cache lives in the
   process. Delete the host's certificate directory and restart the container.
 

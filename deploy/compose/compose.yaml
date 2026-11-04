@@ -20,8 +20,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The directory, not the file (JOR-82): the deploy replaces the Caddyfile with a new inode, and a file bind
+      # mount keeps serving the pre-deploy copy. scripts/apply-caddy-config.sh validates and reloads it.
+      - ./:/srv:ro
       - caddy-data:/data
+    command: ["caddy", "run", "--config", "/srv/Caddyfile", "--adapter", "caddyfile"]
     depends_on:
       frontend:
         condition: service_healthy

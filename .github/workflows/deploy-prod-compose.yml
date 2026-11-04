@@ -180,6 +180,12 @@ jobs:
           rsync -az --delete workflow-src/deploy/compose/scripts/ jordylab-vps:/opt/jordylab/compose/scripts/
           ssh jordylab-vps 'test -f /opt/jordylab/compose/compose.yaml && echo compose copy in place'
 
+      # JOR-82: a changed Caddyfile is validated and reloaded atomically here; the script keeps the previous file
+      # for the rollback below and recreates caddy once if it still mounts the file instead of the directory.
+      - name: Apply the Caddy config
+        if: steps.decide.outputs.decision != 'superseded'
+        run: ssh jordylab-vps /opt/jordylab/compose/scripts/apply-caddy-config.sh
+
       # The runner needs sops to decrypt; it ships in no image on ubuntu-latest (T049 found this missing).
       - name: Install sops
         run: |
@@ -240,6 +246,8 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
+          # Put the Caddyfile back first (best effort; a no-op when it did not change), then the releases.
+          ssh jordylab-vps /opt/jordylab/compose/scripts/revert-caddy-config.sh || true
           # Same as the deploy step: the release value is resolved and checked, client-side expansion is intended.
           # shellcheck disable=SC2029
           ssh jordylab-vps /opt/jordylab/compose/scripts/deploy-release.sh rollback "$IMAGE_TAG"
