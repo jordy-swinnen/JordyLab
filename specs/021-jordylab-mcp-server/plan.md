@@ -218,3 +218,17 @@ These follow from the research. They are applied to `spec.md` in the same change
 | New module `mcp` | Transport, security chain, discovery and guardrails are cross-cutting; they belong to no domain | Putting them in `shared` mixes MCP into the AI/config/utilities module; putting them in one domain makes the others depend on it |
 | Two new dependencies (Spring AI MCP starter, AOP runtime) | The MCP server and the per-call advice (limit, audit, outcome) need them | A hand-written JSON-RPC handler drifts from the protocol; a servlet filter cannot see call outcomes |
 | A second `SecurityFilterChain` | `/mcp` needs an audience check and a different 401 that the existing deny-by-default chain must not get | Adding the audience to the global decoder would break every web login |
+
+## Notes from the automated review (non-blocking, follow-ups)
+
+The PR review found no blocking issue. Three minor points, deferred rather than widening this PR:
+
+1. `McpRateLimiter` never evicts expired windows. Bounded by the number of admins and harmless today; evict on read.
+2. `McpJwtDecoderFactory` mixes `@RequiredArgsConstructor` with a package-private `@Value` field. Taking the issuer through the
+   constructor or through `McpProperties` would be more consistent.
+3. `McpToolException` carries an empty cause to stop the MCP annotation layer repeating the message. Documented in the class,
+   but check it again on a Spring AI upgrade (the annotation layer's error text is the reason).
+
+Also from that review: a Linear key alone in the PR title may close JOR-79 on merge, while T060 and T062 to T068 are still
+open. Verify the ticket after the merge, or link the PR as "Part of".
+

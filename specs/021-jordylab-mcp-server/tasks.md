@@ -162,6 +162,8 @@ rest of this phase does not depend on the host.
   `tool-calls-per-minute` and capability property keys used in T005. Confirm that the realm refuses anonymous client
   registration (anonymous access to Client Registration off) and record the setting (FR-002, G1).
 
+CI (2026-11-04, run on the draft PR #213): `test-backend`, `test-frontend`, `e2e-web` (10m48s), `app-boot`, `deploy-scripts`, `refs`, `secret-scan` and `licence-check` all pass. The automated review found no blocking issue; its three minor points are in the plan's Notes.
+
 **Checkpoint**: foundation ready. Authentication, discovery, rate limit, audit and the Keycloak client pass their tests,
 and T024 and T025 are recorded. **Recorded 2026-11-04** on a throwaway Keycloak (the dev realm export, a throwaway
 Postgres and a local bootRun): the metadata document, the 401 pointer, `initialize` (server `jordylab`, protocol
@@ -306,7 +308,7 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
   assetlinks route is absent.
 - [x] T055 Record the spike outcomes (T024, T025) and the Keycloak setting names in
   `specs/021-jordylab-mcp-server/research.md` R1 and R5.
-- [ ] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web` (SC-011: the web app is unchanged),
+- [x] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web` (SC-011: the web app is unchanged),
   `app-boot`, `refs`, `secret-scan`.
 
 ---
