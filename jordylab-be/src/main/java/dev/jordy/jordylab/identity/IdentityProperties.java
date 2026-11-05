@@ -9,7 +9,8 @@ import java.util.List;
  * environment overrides; the bootstrap credentials are ignored once any account exists.
  */
 @ConfigurationProperties(prefix = "jordylab.identity")
-public record IdentityProperties(Password password, Lockout lockout, Bootstrap bootstrap, WebAuthn webauthn) {
+public record IdentityProperties(Password password, Lockout lockout, Bootstrap bootstrap, AgentTest agentTest,
+        WebAuthn webauthn) {
 
     /** Minimum length and the not-equal-to-username rule (today's realm policy, without the email rule). */
     public record Password(int minLength) {
@@ -21,6 +22,13 @@ public record IdentityProperties(Password password, Lockout lockout, Bootstrap b
 
     /** First-boot admin, created only while the user table is empty. Blank values disable the bootstrap. */
     public record Bootstrap(String username, String password) {
+    }
+
+    /**
+     * The permanent test account for the coding agent (JOR-86). Re-ensured on every startup as an approved guest with
+     * the Game Catalog grant; blank values disable it, and an existing admin account is refused.
+     */
+    public record AgentTest(String username, String password) {
     }
 
     /** WebAuthn relying party (spec 019 D16): the production domain, or localhost in dev/e2e. */

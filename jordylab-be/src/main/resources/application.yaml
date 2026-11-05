@@ -227,6 +227,10 @@ jordylab:
     bootstrap:
       username: ${IDENTITY_BOOTSTRAP_ADMIN_USERNAME:}
       password: ${IDENTITY_BOOTSTRAP_ADMIN_PASSWORD:}
+    # JOR-86: the coding agent's permanent test account. Blank disables it; local defaults are in application-local.yaml.
+    agent-test:
+      username: ${AGENT_TEST_USERNAME:}
+      password: ${AGENT_TEST_PASSWORD:}
     webauthn:
       rp-id: ${IDENTITY_WEBAUTHN_RP_ID:localhost}
       rp-name: JordyLab

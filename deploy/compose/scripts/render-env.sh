@@ -43,6 +43,8 @@ SECRET_VALUES = [
     ("POSTGRES_PASSWORD", "jordylab-db-app", "password", True),
     ("IDENTITY_BOOTSTRAP_ADMIN_USERNAME", "jordylab-secrets", "IDENTITY_BOOTSTRAP_ADMIN_USERNAME", True),
     ("IDENTITY_BOOTSTRAP_ADMIN_PASSWORD", "jordylab-secrets", "IDENTITY_BOOTSTRAP_ADMIN_PASSWORD", True),
+    ("AGENT_TEST_USERNAME", "jordylab-secrets", "AGENT_TEST_USERNAME", True),
+    ("AGENT_TEST_PASSWORD", "jordylab-secrets", "AGENT_TEST_PASSWORD", True),
     ("POSTGRES_SUPERUSER_PASSWORD", "jordylab-secrets", "POSTGRES_SUPERUSER_PASSWORD", True),
     ("PGBACKREST_REPO1_S3_KEY", "jordylab-secrets", "S3_ACCESS_KEY", True),
     ("PGBACKREST_REPO1_S3_KEY_SECRET", "jordylab-secrets", "S3_SECRET_KEY", True),

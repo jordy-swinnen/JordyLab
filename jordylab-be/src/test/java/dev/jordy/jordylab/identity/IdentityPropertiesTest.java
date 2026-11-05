@@ -21,6 +21,8 @@ class IdentityPropertiesTest {
                         "jordylab.identity.lockout.lock-minutes=15",
                         "jordylab.identity.bootstrap.username=jordy",
                         "jordylab.identity.bootstrap.password=dev-password",
+                        "jordylab.identity.agent-test.username=agent",
+                        "jordylab.identity.agent-test.password=agent-password",
                         "jordylab.identity.webauthn.rp-id=localhost",
                         "jordylab.identity.webauthn.rp-name=JordyLab",
                         "jordylab.identity.webauthn.allowed-origins=http://localhost:4200,http://localhost:4300")
@@ -34,6 +36,8 @@ class IdentityPropertiesTest {
                         softly.assertThat(properties.lockout().lockMinutes()).isEqualTo(15);
                         softly.assertThat(properties.bootstrap().username()).isEqualTo("jordy");
                         softly.assertThat(properties.bootstrap().password()).isEqualTo("dev-password");
+                        softly.assertThat(properties.agentTest().username()).isEqualTo("agent");
+                        softly.assertThat(properties.agentTest().password()).isEqualTo("agent-password");
                         softly.assertThat(properties.webauthn().rpId()).isEqualTo("localhost");
                         softly.assertThat(properties.webauthn().rpName()).isEqualTo("JordyLab");
                         softly.assertThat(properties.webauthn().allowedOrigins())

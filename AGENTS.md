@@ -106,7 +106,11 @@ All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeatu
   per-machine `jlmt_` scanner tokens. One `admin` role and per-app grants (`app-gamecatalog`); the single admin
   approves sign-ups in Settings → Users. There is no external identity provider or identity container. The first
   admin on a fresh database comes from `IDENTITY_BOOTSTRAP_ADMIN_USERNAME`/`_PASSWORD` (ignored once accounts
-  exist); break-glass is `docs/runbook.md` §24.
+  exist); break-glass is `docs/runbook.md` §25.
+- **Agent test account** (JOR-86): `agent` is a permanent guest with Game Catalog access, re-ensured on every backend
+  start from `AGENT_TEST_USERNAME`/`AGENT_TEST_PASSWORD` (local defaults in `application-local.yaml`, production values
+  in SOPS). The password is in `~/.config/jordylab/agent-test-credentials.txt` (0600) on the owner's Mac — read it
+  there, never print it.
 
 ## Reference Docs
 

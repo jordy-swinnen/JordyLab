@@ -34,6 +34,8 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 23. [LibBot and the auto-fill: what to check](#23-libbot-and-the-auto-fill-what-to-check)
 24. [Postgres major-version upgrade](#24-postgres-major-version-upgrade)
 25. [Break-glass: an admin locked out](#25-break-glass-an-admin-locked-out)
+26. [MCP connector (Claude Desktop and mobile)](#26-mcp-connector-claude-desktop-and-mobile)
+27. [Agent test account](#27-agent-test-account)
 
 ---
 
@@ -697,3 +699,29 @@ same; the POST without a token answers `401` with `resource_metadata="…/.well-
 
 **Revoke**: disable or delete the account, or remove its admin role, in Settings → Users. The next tool call is refused;
 there is nothing to disconnect in Claude. The audit lines are in the backend log under `dev.jordy.jordylab.mcp.audit`.
+
+---
+
+## 27. Agent test account
+
+The coding agent has a permanent test account so it never needs break-glass or the owner's admin password. It is a
+normal **guest** with the Game Catalog grant; the backend re-ensures it on every start (approved, grant present,
+password reset to the configured value, lockout cleared). A configured username that is an existing **admin** makes the
+startup fail instead of touching that account.
+
+- **Configuration**: `AGENT_TEST_USERNAME` / `AGENT_TEST_PASSWORD` (`jordylab.identity.agent-test`). Local defaults are
+  in `application-local.yaml`; production values are `AGENT_TEST_*` in the SOPS Secret `jordylab-secrets`.
+- **Where the password is**: `~/.config/jordylab/agent-test-credentials.txt` on Jordy's Mac, mode 600. Read it there;
+  never print it in chat, a ticket, a commit or a screenshot.
+- **Verify**: sign in at `/login` with the username and the matching password. Read-only database check (never select
+  `password_hash`):
+  ```bash
+  ssh ubuntu@100.93.81.41
+  export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+  $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c \
+    "select username, role, status from identity.user_account where username = 'agent'"
+  $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c \
+    "select g.app from identity.user_app_grant g join identity.user_account u on u.id = g.user_account_id where u.username = 'agent'"
+  ```
+- **Rotate**: write a new value (12+ characters) into `AGENT_TEST_PASSWORD` in SOPS and deploy; the next backend start
+  applies it. To disable the account, set both values empty and deploy.

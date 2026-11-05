@@ -44,6 +44,7 @@ class UserAccountServiceTest {
                     new IdentityProperties.Password(12),
                     new IdentityProperties.Lockout(5, 15),
                     new IdentityProperties.Bootstrap("", ""),
+                    new IdentityProperties.AgentTest("", ""),
                     new IdentityProperties.WebAuthn("localhost", "JordyLab", List.of("http://localhost:4200"))),
             ntfyClient);
 

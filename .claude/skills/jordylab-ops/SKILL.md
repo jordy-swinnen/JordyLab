@@ -92,9 +92,9 @@ Laptop / CI ──Tailscale SSH──► host :22 (CI node tag:ci may reach tcp:
 | `.sops.yaml`                                                     | age public key + `encrypted_regex: ^(data\|stringData)$`                                  | sops                                          |
 | `.github/workflows/build.yml`, `deploy-prod-compose.yml`         | CI/CD                                                                                     | GitHub                                        |
 
-Secrets in `deploy/k8s/overlays/prod/secrets.sops.yaml`: `jordylab-secrets` (`IDENTITY_BOOTSTRAP_ADMIN_*`, AI keys,
-S3 keys, `POSTGRES_SUPERUSER_PASSWORD`, Steam/IGDB/TheGamesDB, `NTFY_TOKEN`) and `jordylab-db-app` (basic-auth pair).
-The same file feeds `prod.env` through the rendered environment.
+Secrets in `deploy/k8s/overlays/prod/secrets.sops.yaml`: `jordylab-secrets` (`IDENTITY_BOOTSTRAP_ADMIN_*`,
+`AGENT_TEST_*`, AI keys, S3 keys, `POSTGRES_SUPERUSER_PASSWORD`, Steam/IGDB/TheGamesDB, `NTFY_TOKEN`) and
+`jordylab-db-app` (basic-auth pair). The same file feeds `prod.env` through the rendered environment.
 
 ## How the pieces fit (things that must stay true)
 
@@ -264,6 +264,10 @@ $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select name, scop
 ```
 
 A machine token is shown once at creation; if it is lost, revoke it and add the machine again.
+
+The coding agent's permanent test account (`agent`, guest with Game Catalog) is re-ensured on every backend start from
+`AGENT_TEST_*` in SOPS. Rotate it by editing the SOPS value and redeploying; the current password is in
+`~/.config/jordylab/agent-test-credentials.txt` (0600). Blank values disable it, and an admin username is refused.
 
 ### Database and backups (pgBackRest)
 
