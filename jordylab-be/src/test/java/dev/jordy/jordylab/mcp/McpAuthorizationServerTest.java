@@ -53,6 +53,8 @@ class McpAuthorizationServerTest extends McpIntegrationTestSupport {
                         .registeredClient(client)
                         .principal(principal)
                         .authorizationGrantType(org.springframework.security.oauth2.core.AuthorizationGrantType.AUTHORIZATION_CODE)
+                        .authorizationGrant(new org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken(
+                                client, org.springframework.security.oauth2.core.ClientAuthenticationMethod.NONE, null))
                         .tokenType(org.springframework.security.oauth2.server.authorization.OAuth2TokenType.REFRESH_TOKEN)
                         .build();
         assertThat(tokenGenerator.generate(context))
