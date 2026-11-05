@@ -193,7 +193,7 @@ $COMPOSE ps
 3. The workflow pins the host's ed25519 fingerprint (`EXPECTED_ED25519_FP` in `deploy-prod-compose.yml`) and fails on a
    mismatch before it connects.
 4. No k3s credential is used any more. Production runs on Docker Compose (spec 020), k3s is stopped and disabled, and the
-   `KUBE_*` secrets and the `ci-deploy` token belong to the retired pipeline; remove them when convenient.
+   retired pipeline's `KUBE_*` environment secrets have been removed from the `production` environment.
 5. Automatic deploys are on since the pipeline was rewired (spec 020 T062). The repository variable `AUTO_DEPLOY` gates
    them: `true` deploys a green `main` build by itself, anything else pauses that, and manual runs are unaffected.
 
