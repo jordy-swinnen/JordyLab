@@ -21,7 +21,7 @@ readonly state_dir=$jordylab_home/state
 readonly current_file=$state_dir/current-release
 readonly previous_file=$state_dir/previous-release
 readonly public_url=https://jordylab.be/
-readonly openid_url=https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration
+readonly identity_url=https://jordylab.be/api/identity/auth/csrf
 readonly release_pattern='^(v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?|sha-[0-9a-f]{40})$'
 
 usage() {
@@ -65,7 +65,7 @@ check_public_site() {
   curl --fail --silent --show-error --output /dev/null --retry 5 --retry-delay 3 --retry-all-errors \
     --resolve jordylab.be:443:127.0.0.1 "$public_url" &&
     curl --fail --silent --show-error --output /dev/null --retry 5 --retry-delay 3 --retry-all-errors \
-      --resolve jordylab.be:443:127.0.0.1 "$openid_url"
+      --resolve jordylab.be:443:127.0.0.1 "$identity_url"
 }
 
 restore_previous_environment() {
