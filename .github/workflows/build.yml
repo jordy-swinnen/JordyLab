@@ -188,7 +188,7 @@ jobs:
           - image: backend
             build-args: JORDYLAB_GIT_COMMIT=${{ github.sha }}
           - image: frontend
-            build-args: """"
+            build-args: ""
     steps:
       - uses: actions/checkout@v4
 
