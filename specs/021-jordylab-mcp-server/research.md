@@ -30,8 +30,8 @@ it stands on 2026-11-03.
   longer has a foundation.
 - **Decision**: the backend runs its own OAuth 2.1 authorization server with Spring Authorization Server (the Boot
   `spring-boot-starter-oauth2-authorization-server` starter). One pre-registered **public** client
-  `jordylab-mcp-connector`, authorization code with PKCE `S256`, the Claude callback as its only redirect URI, consent
-  off, refresh tokens on. The client identifier is what Jordy enters in Claude; no secret exists.
+  `jordylab-mcp-connector`, authorization code with PKCE `S256`, the Claude callback plus the Claude Code and OpenCode
+  loopback callbacks, consent off, refresh tokens on. The client identifier is what Jordy enters in Claude; no secret exists.
 - **Why the backend and not a separate identity service**: one deployable, the existing session login is the human
   sign-in, and the account model the tools already use is the same one the connector authenticates against.
 - **Rejected**: keeping Keycloak (removed by spec 019); a static request-header token (a long-lived shared credential,

@@ -73,6 +73,11 @@ bypass it with `--no-verify`. Merge, `fixup!`/`squash!` and `git revert` commits
 
 ## AI Routing
 
+The repo's agents can query the live catalog and finance through the read-only `jordylab` MCP connector. Claude Code uses
+`.mcp.json` (public client `jordylab-mcp-connector`, callback port 19877; `/mcp` to sign in); OpenCode uses
+`opencode.json` (same client, callback port 19876; `opencode mcp auth jordylab`). Both call `https://jordylab.be/mcp` and
+must not be given a client secret.
+
 All AI calls go through `ResilientAiService.call(AiFeature, …)`. Each `AiFeature` (`fna.briefing`, `gamecatalog.enrichment`, `gamecatalog.chat.query` and `.chat.answer` = LibBot understanding and writing; `gamecatalog.embedding` is a fixed internal feature) has its own model: the one picked on Settings → AI Models (`settings.ai_feature_model_setting`), else the default in `jordylab.ai.features`. Calls go to the **OpenRouter** gateway first and are retried once on **Anthropic** (`jordylab.ai.fallback`) on any failure; without `OPENROUTER_API_KEY` they go straight to Anthropic. Every call publishes `AiCallCompleted` and counts `jordylab.ai.calls`. Local inference (Ollama) was removed from the product on 2026-09-30 (006 FR-017) — don't reintroduce it.
 
 | Feature | Default model (OpenRouter id) | Rationale | Status |

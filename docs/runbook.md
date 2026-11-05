@@ -661,6 +661,15 @@ public and PKCE-bound.
 4. Nine read-only tools appear: `search_games`, `get_game`, `list_places`, `list_sources`, `get_library_status`,
    `search_articles`, `get_portfolio`, `get_wishlist`, `get_latest_briefing`.
 
+**Claude Code and OpenCode** (the repo's agents):
+
+- Claude Code reads `.mcp.json`: `jordylab` is `https://jordylab.be/mcp` with client `jordylab-mcp-connector` and
+  `callbackPort: 19877`. Run `/mcp`, pick `jordylab` and authenticate with the admin account.
+- OpenCode reads `opencode.json`: same server and client, `callbackPort: 19876`. Run `opencode mcp auth jordylab` (or
+  authenticate on first use). Tokens are stored by each tool, not in the repo.
+- Both callbacks are registered on the connector client. Do not change either port in one place only: the authorization
+  server would reject the sign-in with a redirect URI mismatch.
+
 **Check the public surface** (no authentication):
 
 ```bash

@@ -23,12 +23,14 @@ The issuer is `jordylab.mcp.public-base-url` (`https://jordylab.be`), the same v
 | Authentication | public, no secret (`ClientAuthenticationMethod.NONE`) |
 | Grants | `authorization_code`, `refresh_token` |
 | PKCE | required, `S256` only |
-| Redirect URI | `https://claude.ai/api/mcp/auth_callback` (the only one) |
+| Redirect URIs | `https://claude.ai/api/mcp/auth_callback` (Claude Desktop/mobile), `http://localhost:19877/callback` and `http://127.0.0.1:19877/callback` (Claude Code), `http://127.0.0.1:19876/mcp/oauth/callback` and `http://localhost:19876/mcp/oauth/callback` (OpenCode). The ports are fixed in `.mcp.json` and `opencode.json` |
 | Consent | not required (one client, one admin) |
 | Scopes | `jordylab.mcp` |
 | Refresh | rotation on (`reuseRefreshTokens(false)`), 30 days; issued by the connector's own generator, because the library refuses refresh tokens to public clients on the code grant |
 
-The client is defined in configuration, not in a table, because there is exactly one.
+The client is defined in configuration, not in a table, because there is exactly one. The loopback redirect URIs are for
+the two local agent clients in this repository: Claude Code sends `callbackPort: 19877` from `.mcp.json`, and OpenCode
+uses `callbackPort: 19876` from `opencode.json`. Changing either port means changing the registered client too.
 
 ## Tokens
 

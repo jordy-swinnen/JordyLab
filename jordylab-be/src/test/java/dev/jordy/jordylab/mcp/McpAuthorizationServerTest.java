@@ -62,6 +62,19 @@ class McpAuthorizationServerTest extends McpIntegrationTestSupport {
     }
 
     @Test
+    void registersTheDesktopAndLocalAgentCallbacks() {
+        org.springframework.security.oauth2.server.authorization.client.RegisteredClient client =
+                registeredClientRepository.findByClientId(CLIENT_ID);
+
+        assertThat(client.getRedirectUris()).containsExactlyInAnyOrder(
+                "https://claude.ai/api/mcp/auth_callback",
+                "http://localhost:19877/callback",
+                "http://127.0.0.1:19877/callback",
+                "http://127.0.0.1:19876/mcp/oauth/callback",
+                "http://localhost:19876/mcp/oauth/callback");
+    }
+
+    @Test
     void servesTheAuthorizationServerMetadata() throws Exception {
         mockMvc.perform(get("/.well-known/oauth-authorization-server"))
                 .andExpect(status().isOk())

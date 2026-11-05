@@ -111,7 +111,9 @@ starts fresh from `main`. T070 builds on both.
   (a) the Spring Authorization Server `SecurityFilterChain` for `/oauth2/**` and `/.well-known/oauth-authorization-server`, with
   a `securityMatcher` that does not overlap `/mcp`; (b) one `RegisteredClient` `jordylab-mcp-connector`, defined in code:
   public (`ClientAuthenticationMethod.NONE`), grants `authorization_code` and `refresh_token`, PKCE required with `S256` only,
-  the single redirect URI `https://claude.ai/api/mcp/auth_callback`, scope `jordylab.mcp`, consent not required; (c) token
+  the Claude callback and the fixed Claude Code (`http://localhost:19877/callback`,
+  `http://127.0.0.1:19877/callback`) and OpenCode (`http://127.0.0.1:19876/mcp/oauth/callback`,
+  `http://localhost:19876/mcp/oauth/callback`) loopback callbacks, scope `jordylab.mcp`, consent not required; (c) token
   settings: access token `accessTokenTtl`, refresh token `refreshTokenTtl`, `reuseRefreshTokens(false)`; (d) the RSA JWK source
   and `JwtEncoder`, keyed as T078 decides; (e) the JDBC authorization and consent services on the `mcp` schema (T071); (f) the
   authorization endpoint's unauthenticated entry point answers `302` to `/login?returnUrl=<the request's path and query, starting
