@@ -7,8 +7,25 @@
 
 jordylab.be {
 	# A Caddy path matcher is exact unless it ends in *, so each prefix route lists the bare path and /*.
-	@backend path /api /api/* /webauthn /webauthn/* /login/webauthn /.well-known/assetlinks.json
+	@backend path /api /api/* /webauthn /webauthn/* /login/webauthn
 	handle @backend {
+		reverse_proxy backend:8080
+	}
+
+	# The MCP connector's authorization server and its metadata (spec 021, contracts/oauth-authorization-server.md).
+	@oauth path /oauth2 /oauth2/* /.well-known/oauth-authorization-server /.well-known/oauth-authorization-server/*
+	handle @oauth {
+		reverse_proxy backend:8080
+	}
+
+	# The connector endpoint and the protected resource metadata Claude reads before signing in (RFC 9728).
+	@mcp path /mcp /mcp/*
+	handle @mcp {
+		reverse_proxy backend:8080
+	}
+
+	@protected_resource path /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/*
+	handle @protected_resource {
 		reverse_proxy backend:8080
 	}
 

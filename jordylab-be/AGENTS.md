@@ -409,3 +409,29 @@ class SomeObjectTestBuilder {
 - **Tests that guard it:** `GoldenReplayTest` (recorded model output, in CI), `GoldenLiveTest` (`./gradlew goldenLive`, real models, needs `OPENROUTER_API_KEY`), `IgdbPlatformCatalogCheck` (`./gradlew igdbCheck`, needs IGDB keys), `GameFilterQueryTest`, `CandidateRetrieverTest`, `MarkServiceTest`, the e2e journeys.
 - **Descriptions.** `DescriptionQualityValidator` (2 to 4 sentences, about 40 to 110 words, third person, no scores, no filler, no contradicting year) gates every AI description; one retry with the reason; a rejected text is never stored. Authorship (`descriptionModel` = what the provider reported, `descriptionRequestedModel` only when different, `descriptionWrittenAt`) is returned as `description{…}` with `factSources{…}`.
 - **Embeddings.** `GameEmbeddingService` embeds title, genres, developer and description into `game_embedding` (`vector(1536)`, HNSW cosine); `GAMECATALOG_EMBEDDING` is a non-selectable feature. Production needs the `vector` extension: `deploy/k8s/cluster/cnpg-database.yaml`.
+
+# MCP connector (spec 021)
+
+- The `mcp` module owns the schema `mcp` and the connector's sign-in and guardrails. The nine tools live in the domain
+  modules: `gamecatalog/rest/controller/GameCatalogMcpTools.java` and `fna/rest/controller/FnaMcpTools.java`. They import
+  only the `mcp` root (`McpToolPage`, `McpToolException`) and the Spring AI `@McpTool` annotation.
+- `McpAuthorizationServerConfiguration` runs Spring Authorization Server for `/oauth2/**` and
+  `/.well-known/oauth-authorization-server`: one public client `jordylab-mcp-connector` (authorization code + refresh,
+  PKCE S256 only, redirect `https://claude.ai/api/mcp/auth_callback`, consent off), JWT access tokens of 10 minutes with
+  `aud=jordylab-mcp`, `sub` equal to the account UUID and `roles`, and a 30-day rotating refresh token stored in
+  `mcp.oauth2_authorization` (Flyway `V20261104001__mcp_oauth_tables.sql`). The signing key is generated at start-up, so a
+  deploy invalidates access tokens; the stored refresh token renews them.
+- **Two library gaps are intentional.** Spring Authorization Server issues no refresh token to a public client on the
+  authorization-code grant, and its public-client authentication only covers the PKCE code request.
+  `PublicClientRefreshTokenGenerator` issues the connector's refresh token, and
+  `McpRefreshClientAuthenticationConverter`/`McpRefreshClientAuthenticationProvider` authenticate the `refresh_token` grant
+  with `client_id` only. Do not remove them; `McpAuthorizationServerTest` covers rotation and the reused-token refusal.
+- `/mcp` is a separate chain (order before identity): a connector token only, with the `jordylab-mcp` audience and
+  `ROLE_admin`; `/api` stays session-only, so a connector token gets `401` there. Every tool call re-checks the account
+  through `UserAccountLookup.findApprovedAdmin` (`McpAccountStatusValidator`), then `McpToolCallAdvice` applies the
+  60-calls-per-minute limit and writes one audit line (`dev.jordy.jordylab.mcp.audit`) with the admin, tool, outcome and
+  duration — never arguments or results.
+- The login bridge is the SPA's existing `/login?returnUrl=…`. The authorization endpoint sends an unauthenticated browser
+  there, and `login.component.ts` loads a `/oauth2/` return path with a full page load; do not route it through Angular.
+- Read-only: no writes, no AI calls, no notifications. A tool calls the same service the screen uses and returns its own
+  record, so hidden fields (voters, paths, machine ids) never reach the model.
