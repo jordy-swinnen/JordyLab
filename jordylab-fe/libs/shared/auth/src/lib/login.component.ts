@@ -129,7 +129,7 @@ export class LoginComponent {
     // A session restored in another tab (or still valid) authenticates without any form submit: leave immediately.
     effect(() => {
       if (this.#auth.isAuthenticated()) {
-        void this.#router.navigateByUrl(this.#returnUrl);
+        void this.#returnTo();
       }
     });
   }
@@ -142,7 +142,7 @@ export class LoginComponent {
     this.passkeyError.set(null);
     try {
       await this.#auth.signInWithPasskey();
-      await this.#router.navigateByUrl(this.#returnUrl);
+      await this.#returnTo();
     } catch (failure) {
       if (failure instanceof Error && failure.message === 'PASSKEY_CANCELLED') {
         this.passkeyError.set('Passkey sign-in was cancelled.');
@@ -156,6 +156,24 @@ export class LoginComponent {
     }
   }
 
+  /**
+   * A `/oauth2/` return path belongs to the backend's authorization server, not to an Angular route, so it needs a full
+   * page load (spec 021, T074). Every other path stays inside the app.
+   */
+  /** A full page load, because the path belongs to the backend; protected so the spec can observe it. */
+  protected returnToBackend(url: string): void {
+    window.location.assign(url);
+  }
+
+  async #returnTo(): Promise<void> {
+    if (this.#returnUrl.startsWith('/oauth2/')) {
+      this.returnToBackend(this.#returnUrl);
+
+      return;
+    }
+    await this.#router.navigateByUrl(this.#returnUrl);
+  }
+
   async onLogin(): Promise<void> {
     if (this.submitting()) {
       return;
@@ -164,7 +182,7 @@ export class LoginComponent {
     this.error.set(null);
     try {
       await this.#auth.login(this.username.trim(), this.password);
-      await this.#router.navigateByUrl(this.#returnUrl);
+      await this.#returnTo();
     } catch (failure) {
       this.error.set(authErrorMessage(failure));
     } finally {

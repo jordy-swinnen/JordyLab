@@ -35,6 +35,19 @@ spring:
       # Spring AI's AnthropicApi and StockPriceService's Yahoo Finance client.
       read-timeout: 120s
   ai:
+    # The connector's MCP server (spec 021): stateless Streamable HTTP at /mcp, tools only (research R1).
+    mcp:
+      server:
+        name: jordylab
+        type: SYNC
+        protocol: STATELESS
+        annotation-scanner:
+          enabled: true
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
     # Chat and embeddings are used (LibBot's semantic index embeds through the same OpenRouter gateway, spec 013 research A3);
     # keep the OpenAI starter's other clients (image, audio, moderation) out of the context.
     model:
@@ -111,6 +124,15 @@ langfuse:
   capture-content: ${LANGFUSE_CAPTURE_CONTENT:false}
 
 jordylab:
+  mcp:
+    # The connector's public origin and OAuth issuer; the protected resource is <origin>/mcp. Same variable as the
+    # notifications' click-through origin.
+    public-base-url: ${JORDYLAB_APP_BASE_URL:}
+    audience: jordylab-mcp
+    tool-calls-per-minute: 60
+    # Access tokens are short-lived; the rotating refresh token keeps Claude connected across a deploy.
+    access-token-ttl: 10m
+    refresh-token-ttl: 30d
   ai:
     health-check-ttl-seconds: 30
     call-timeout-seconds: 120

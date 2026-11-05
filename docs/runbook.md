@@ -644,3 +644,47 @@ database — the documented last resort (spec 019 US6, D15). Do it over Tailscal
 3. Sign in with the temporary password, change it immediately in Account settings, then enroll or verify a passkey.
 4. Rehearse on dev with a throwaway account, never with the real admin: register a user, replace its hash, sign in,
    then delete the account from Settings → Users.
+
+---
+
+## 26. MCP connector (Claude Desktop and mobile)
+
+The connector lets Claude ask about the game catalog and finance at `https://jordylab.be/mcp`. It is read-only, admin
+only, and the backend is its own OAuth 2.1 authorization server (spec 021). There is no secret to copy: the client is
+public and PKCE-bound.
+
+**Connect** (Claude Desktop → Settings → Connectors → Add custom connector; the mobile app has the same screen):
+
+1. URL `https://jordylab.be/mcp`.
+2. Advanced settings → OAuth client → "Use your own OAuth client": client ID `jordylab-mcp-connector`, secret blank.
+3. Sign in with the admin account. The browser goes to `/login` and returns to the authorization request by itself.
+4. Nine read-only tools appear: `search_games`, `get_game`, `list_places`, `list_sources`, `get_library_status`,
+   `search_articles`, `get_portfolio`, `get_wishlist`, `get_latest_briefing`.
+
+**Check the public surface** (no authentication):
+
+```bash
+curl -s https://jordylab.be/.well-known/oauth-protected-resource/mcp | jq '{resource, authorization_servers, scopes_supported}'
+curl -s https://jordylab.be/.well-known/oauth-authorization-server | jq '{issuer, authorization_endpoint, token_endpoint, code_challenge_methods_supported}'
+curl -s -o /dev/null -D - -X POST https://jordylab.be/mcp | grep -i www-authenticate
+```
+
+Expected: `resource` is `https://jordylab.be/mcp`; `authorization_servers` is `["https://jordylab.be"]`; the issuer is the
+same; the POST without a token answers `401` with `resource_metadata="…/.well-known/oauth-protected-resource/mcp"`.
+
+**When it fails**:
+
+- `401` on the connector call: the access token is missing/expired; Claude should refresh. If it asks to sign in again
+  after a deploy, that is expected: the signing key is generated at start-up, and the refresh token should renew the
+  access token. A refresh that fails means a real problem — check the `mcp.oauth2_authorization` row and the backend log.
+- `403` with a valid token: the account is not an approved admin any more. Re-approve it in Settings → Users.
+- The tool returns "Your JordyLab account can no longer use the connector": the per-call account check refused a token
+  whose account was revoked or demoted. Sign in again after restoring the account.
+- "Too many requests in one minute": the 60 calls per admin per minute limit. Wait and retry.
+- The browser stays on `/login` after signing in: check that the login page loaded the `/oauth2/` return path (the SPA
+  uses a full page load for it); the backend log shows the authorization request.
+- Issuer mismatch: confirm `JORDYLAB_APP_BASE_URL` is `https://jordylab.be` in the production
+  environment. The issuer, both discovery documents and the protected resource all come from it.
+
+**Revoke**: disable or delete the account, or remove its admin role, in Settings → Users. The next tool call is refused;
+there is nothing to disconnect in Claude. The audit lines are in the backend log under `dev.jordy.jordylab.mcp.audit`.
