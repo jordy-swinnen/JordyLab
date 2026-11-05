@@ -82,6 +82,7 @@ class BootstrapAdminInitializerTest {
                         new IdentityProperties.Password(12),
                         new IdentityProperties.Lockout(5, 15),
                         new IdentityProperties.Bootstrap(username, password),
+                        new IdentityProperties.AgentTest("", ""),
                         new IdentityProperties.WebAuthn("localhost", "JordyLab", List.of())));
     }
 }

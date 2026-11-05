@@ -334,6 +334,9 @@ class SomeObjectTestBuilder {
 
 - Authentication is built in (`identity` module, spec 019): BCrypt passwords, WebAuthn passkeys, Spring Session JDBC
   sessions and per-machine tokens. There is no OAuth2 resource server and no external identity provider.
+- `AgentTestAccountInitializer` (JOR-86) re-ensures the coding agent's permanent test account (`agent`, approved guest
+  with the Game Catalog grant) on every start from `jordylab.identity.agent-test`. Blank values disable it; it refuses
+  to touch an existing admin account, and it never logs the password.
 - `IdentitySecurityConfiguration` in `identity/` defines two chains: a stateless `jlmt_` machine-token chain for the
   ingest endpoints, and the browser session chain (CSRF via the `XSRF-TOKEN`/`X-XSRF-TOKEN` pair, 30-day sessions).
 - Endpoint gates (spec 014): the Game Catalog reads, marks, ROM status and LibBot require `admin` or the per-app grant

@@ -12,6 +12,11 @@ jordylab:
     bootstrap:
       username: jordy
       password: local-dev-admin-password-not-for-prod
+    # JOR-86: the coding agent's test account, re-ensured on every startup. E2E sets both to empty to keep its user
+    # list deterministic.
+    agent-test:
+      username: ${AGENT_TEST_USERNAME:agent}
+      password: ${AGENT_TEST_PASSWORD:local-dev-agent-password-not-for-prod}
     webauthn:
       rp-id: localhost
       allowed-origins: http://localhost:4200,http://localhost:4300,http://localhost:4400
