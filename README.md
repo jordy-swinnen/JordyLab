@@ -6,61 +6,66 @@ recipe management — a modular monolith with a separate frontend and Python sid
 
 ## Architecture
 
-Production runs on a single OVH VPS with k3s at **https://jordylab.be**. Local development runs the same
-pieces with Podman Compose (see below). How production was built: [
-`docs/runbooks/vps-k3s-deployment`](docs/runbooks/vps-k3s-deployment/README.md);
-day-to-day operations: the `jordylab-devops` agent (`.claude/agents/`, `.opencode/agents/`).
+Production is one Docker Compose stack on a single OVH VPS, served at **https://jordylab.be**. Caddy terminates
+TLS and is the only service that publishes ports. Local development runs the backend and Postgres with Podman
+Compose (see below).
+
+Operations: the procedures in [`docs/runbook.md`](docs/runbook.md) and the `jordylab-devops` agent
+(`.claude/agents/`, `.opencode/agents/`). The stack is in [`deploy/compose`](deploy/compose/); the move from
+Kubernetes is recorded in [`specs/020-compose-deployment`](specs/020-compose-deployment/).
+
+What is built, what is being replaced and the end goal: [`docs/status.md`](docs/status.md). The AI development
+workflow: [`docs/ai-workflow.md`](docs/ai-workflow.md).
+
+<!-- Keep this drawing current. When a feature ships, is replaced or dropped, update it in the same change
+     (rule: AGENTS.md, "Keeping the drawing and status current"). Edit the Mermaid text directly. -->
+
 
 ```mermaid
-flowchart TB
+flowchart LR
     user(["Browser / installed PWA"])
-    dev(["Jordy's Mac<br/>kubectl · helm · sops"])
+    scanner(["Game scanner client<br/>on the owner's machines"])
 
-    subgraph gh["GitHub"]
-        repo["Repo + PR"] --> build["Build workflow<br/>tests → images"]
-        build --> ghcr[("GHCR<br/>backend · frontend<br/>tag sha-&lt;commit&gt;")]
-        build --> deploy["Deploy workflow<br/>env: production<br/>(manual approval)"]
+    subgraph gh["GitHub Actions"]
+        build["build.yml<br/>tests → images"] --> ghcr[("GHCR<br/>backend · frontend<br/>tags sha-&lt;commit&gt; and releases")]
+        build -- "green main, AUTO_DEPLOY=true" --> deploy["deploy-prod-compose.yml<br/>(also run by hand)"]
     end
 
-    subgraph ts["Tailscale (private admin network)"]
-        tsnote["only port 6443 for CI"]
+    subgraph vps["OVH VPS · Docker Compose"]
+        caddy["Caddy<br/>TLS · only public ports 80, 443"]
+        fe["frontend<br/>nginx · Angular"]
+        be["backend<br/>Spring Boot 4 · Java 25"]
+        ntfy["ntfy<br/>push notifications"]
+        pg[("Postgres 16 + pgvector<br/>app data + identity")]
+        art[("artwork volume")]
+        host["deploy-release.sh<br/>on the host"]
     end
 
-    subgraph vps["OVH VPS · Ubuntu LTS · ufw: 22/80/443 only"]
-        subgraph k3s["k3s (single-node Kubernetes)"]
-            api["k3s API :6443"]
-            subgraph ks["kube-system / add-ons"]
-                traefik["Traefik<br/>Gateway API"]
-                certm["cert-manager<br/>Let's Encrypt"]
-                cnpgop["CloudNativePG operator<br/>+ Barman Cloud plugin"]
-            end
-            subgraph ns["namespace jordylab"]
-                fe["frontend<br/>nginx · Angular"]
-                be["backend<br/>Spring Boot"]
-                ntfy["ntfy<br/>/ntfy"]
-                pg[("PostgreSQL 16<br/>app data + identity")]
-                pvc[("PVCs<br/>artwork · APKs")]
-            end
-        end
+    s3[("S3-compatible object store<br/>pgBackRest WAL + backups")]
+
+    subgraph ext["External services"]
+        ai["OpenRouter, Anthropic fallback<br/>AI calls"]
+        games["Steam · IGDB · TheGamesDB"]
+        linear["Linear<br/>feedback → issue"]
+        lf["Langfuse<br/>AI traces"]
     end
 
-    s3[("OVH Object Storage<br/>Gravelines · backups")]
-
-    user -- "HTTPS jordylab.be" --> traefik
-    traefik -- "/" --> fe
-    traefik -- "/api, /webauthn" --> be
-    traefik -- "/ntfy" --> ntfy
-    certm -. "TLS cert" .-> traefik
+    user -- "HTTPS jordylab.be" --> caddy
+    scanner -- "POST /api/gamecatalog/ingest" --> caddy
+    caddy -- "/" --> fe
+    caddy -- "/api, /webauthn, /mcp, /oauth2" --> be
+    caddy -- "/ntfy" --> ntfy
     be --> pg
-    be --> pvc
+    be --> art
     be -- "publish" --> ntfy
-    cnpgop -. "manages" .-> pg
-    pg -- "WAL + daily/weekly base backups" --> s3
-
-    deploy -- "joins as tag:ci" --> ts
-    dev --> ts
-    ts --> api
-    ghcr -. "image pull" .-> k3s
+    be --> ai
+    be --> games
+    be --> linear
+    be --> lf
+    pg -- "WAL + base backups" --> s3
+    deploy -- "SSH as tag:ci over Tailscale" --> host
+    ghcr -. "image pull" .-> fe
+    ghcr -. "image pull" .-> be
 ```
 
 ## Running locally
