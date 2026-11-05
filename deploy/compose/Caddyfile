@@ -14,6 +14,10 @@ jordylab.be {
 
 	# The /ntfy prefix is stripped before forwarding, as the Gateway's ReplacePrefixMatch did. handle_path takes
 	# one pattern only, so the strip is written out with a named matcher that lists both forms.
+	# The old identity-provider paths are gone: never fall through to the SPA.
+	@oldAuth path /auth /auth/*
+	respond @oldAuth 404
+
 	@ntfy path /ntfy /ntfy/*
 	handle @ntfy {
 		uri strip_prefix /ntfy
