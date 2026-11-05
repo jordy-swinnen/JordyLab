@@ -109,12 +109,11 @@ jordylab-be/
 │   └── db/migration/V20261104001__mcp_oauth_tables.sql # NEW: schema mcp + SAS authorization, consent and client tables
 ├── src/main/java/dev/jordy/jordylab/
 │   ├── mcp/                                            # NEW module
-│   │   ├── McpAuthorizationServerConfiguration.java    # SAS chains, registered client, JWK, consent off (@Order before the session chain)
+│   │   ├── McpAuthorizationServerConfiguration.java    # SAS chains, client, JWK, token customizer, refresh helpers, schema wrapper
 │   │   ├── McpConfiguration.java                       # /mcp chain: AS JWKS decoder, audience, admin, 401 pointer
 │   │   ├── McpProperties.java                          # publicBaseUrl, issuer, audience, limits
 │   │   ├── McpToolPage.java                            # public envelope (items, returned, totalMatching, hasMore)
 │   │   └── service/
-│   │       ├── McpTokenCustomizer.java                 # aud=jordylab-mcp, sub=account id, roles claim
 │   │       ├── McpAccountStatusValidator.java          # per-call admin re-check through UserAccountLookup
 │   │       ├── McpRateLimiter.java                     # fixed window per sub, 60/min, Clock-driven
 │   │       ├── McpToolCallAdvice.java                  # @Around @McpTool: limit, run, audit line, error mapping

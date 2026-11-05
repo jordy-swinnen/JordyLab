@@ -106,7 +106,12 @@ class GameCatalogMcpToolsTest {
 
         McpToolPage<GameSearchItem> result = tools.searchGames(null, null, null, null, null, null, null, null, 0, 500);
 
-        assertSoftly(softly -> softly.assertThat(result.returned()).isEqualTo(1));
+        GameFilter filter = filterCaptor.getValue();
+        assertSoftly(softly -> {
+            softly.assertThat(result.returned()).isEqualTo(1);
+            softly.assertThat(filter.installStatus()).isEqualTo(InstallStatus.INSTALLED.name());
+            softly.assertThat(filter.markScope()).isEqualTo(GameFilter.MarkScope.MINE);
+        });
     }
 
     @Test
@@ -118,7 +123,10 @@ class GameCatalogMcpToolsTest {
 
         McpToolPage<GameSearchItem> result = tools.searchGames(null, null, null, null, null, null, null, null, null, null);
 
-        assertSoftly(softly -> softly.assertThat(result.items().getFirst().localMultiplayer()).isNull());
+        assertSoftly(softly -> {
+            softly.assertThat(result.items().getFirst().localMultiplayer()).isNull();
+            softly.assertThat(filterCaptor.getValue().minLocalPlayers()).isNull();
+        });
     }
 
     @Test

@@ -103,10 +103,10 @@ starts fresh from `main`. T070 builds on both.
   (data-model.md). Do not create `oauth2_registered_client`: the one client is defined in configuration. The version must sort
   after `V20261103005__identity_copy_keycloak_users.sql` on `main`. Gate: the migration runs on an empty Testcontainers
   Postgres in T075.
-- [x] T072 [P] Create `McpTokenCustomizer` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/service/McpTokenCustomizer.java`:
-  an `OAuth2TokenCustomizer<JwtEncodingContext>` for access tokens. It sets `aud` to `jordylab-mcp` only, `sub` to the
-  account's UUID from the identity module's `AuthenticatedUser`, `roles` to the account's role key (`admin`), and `scope` to
-  `jordylab.mcp` (contracts/oauth-authorization-server.md, Tokens). Refresh tokens stay opaque. Depends on T004.
+- [x] T072 [P] The token customizer is a bean in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/McpAuthorizationServerConfiguration.java`
+  (no separate `McpTokenCustomizer.java`): for access tokens it sets `aud` to `jordylab-mcp` only, `sub` to the account's
+  UUID and `roles` to the admin role; Spring Authorization Server writes `scope` from the authorized scopes itself
+  (contracts/oauth-authorization-server.md, Tokens). Refresh tokens stay opaque. Depends on T004.
 - [x] T070 Create `McpAuthorizationServerConfiguration` in `jordylab-be/src/main/java/dev/jordy/jordylab/mcp/McpAuthorizationServerConfiguration.java`:
   (a) the Spring Authorization Server `SecurityFilterChain` for `/oauth2/**` and `/.well-known/oauth-authorization-server`, with
   a `securityMatcher` that does not overlap `/mcp`; (b) one `RegisteredClient` `jordylab-mcp-connector`, defined in code:
@@ -463,7 +463,7 @@ T007 McpToolPage        ← run together
 T008 ProtectedResourceMetadata
 T069 McpAccountStatusValidator
 T071 Flyway migration
-T072 McpTokenCustomizer
+T072 token customizer
 ```
 
 ### Parallel example: User Stories 1 and 2 after Phase 2

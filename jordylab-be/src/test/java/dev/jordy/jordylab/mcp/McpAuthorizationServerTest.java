@@ -98,6 +98,7 @@ class McpAuthorizationServerTest extends McpIntegrationTestSupport {
             softly.assertThat(accessToken.getAudience()).containsExactly("jordylab-mcp");
             softly.assertThat(accessToken.getSubject()).isEqualTo(adminId.toString());
             softly.assertThat(accessToken.getClaimAsStringList("roles")).containsExactly("admin");
+            softly.assertThat(accessToken.getClaimAsStringList("scope")).containsExactly("jordylab.mcp");
             softly.assertThat(Duration.between(accessToken.getIssuedAt(), accessToken.getExpiresAt()))
                     .isEqualTo(Duration.ofMinutes(10));
             softly.assertThat(tokens.path("refresh_token").asText()).isNotBlank();

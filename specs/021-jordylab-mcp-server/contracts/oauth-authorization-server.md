@@ -40,7 +40,7 @@ Access token: a JWT signed by the server, `10` minutes.
 | `sub` | the account's UUID (the same id the owner columns hold) |
 | `aud` | `jordylab-mcp` |
 | `roles` | the account's role key (`admin`); guests are refused at the `/mcp` chain |
-| `scope` | `jordylab.mcp` |
+| `scope` | `jordylab.mcp`, written by Spring Authorization Server from the authorized scopes (the connector's customizer sets the other three) |
 
 The `/mcp` chain validates the signature (JWKS), the issuer, the audience `jordylab-mcp`, and the role; then every tool call
 looks the `sub` up through `UserAccountLookup` and requires the account to exist with role `admin` (FR-004).
