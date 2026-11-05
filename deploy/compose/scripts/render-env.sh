@@ -25,8 +25,6 @@ except ImportError:
 # Settings that are not secret. They live here so a change is reviewed in git (contracts/env-contract.md).
 LITERALS = [
     ("SPRING_PROFILES_ACTIVE", "prod"),
-    ("KEYCLOAK_URL", "https://jordylab.be/auth"),
-    ("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080/auth"),
     ("POSTGRES_DB", "jordylab"),
     ("POSTGRES_URL", "jdbc:postgresql://postgres:5432/jordylab"),
     ("JORDYLAB_CORS_ALLOWED_ORIGINS", "https://jordylab.be,https://localhost"),
@@ -36,14 +34,6 @@ LITERALS = [
     ("LANGFUSE_CAPTURE_CONTENT", "true"),
     ("SPRINGDOC_API_DOCS_ENABLED", "false"),
     ("SPRINGDOC_SWAGGER_UI_ENABLED", "false"),
-    ("KC_DB_URL", "jdbc:postgresql://postgres:5432/jordylab?currentSchema=keycloak"),
-    ("KC_DB_SCHEMA", "keycloak"),
-    ("KC_HOSTNAME", "https://jordylab.be/auth"),
-    ("KC_HTTP_RELATIVE_PATH", "/auth"),
-    ("KC_PROXY_HEADERS", "xforwarded"),
-    ("KC_HTTP_ENABLED", "true"),
-    ("KC_PROXY_TRUSTED_ADDRESSES", "172.28.0.0/16"),
-    ("PRODUCTION_DOMAIN", "jordylab.be"),
 ]
 
 # (variable, Secret, key in that Secret, required). A required variable fails the render when empty.
@@ -51,8 +41,6 @@ LITERALS = [
 SECRET_VALUES = [
     ("POSTGRES_USER", "jordylab-db-app", "username", True),
     ("POSTGRES_PASSWORD", "jordylab-db-app", "password", True),
-    ("KC_DB_USERNAME", "jordylab-db-keycloak", "username", True),
-    ("KC_DB_PASSWORD", "jordylab-db-keycloak", "password", True),
     ("IDENTITY_BOOTSTRAP_ADMIN_USERNAME", "jordylab-secrets", "IDENTITY_BOOTSTRAP_ADMIN_USERNAME", True),
     ("IDENTITY_BOOTSTRAP_ADMIN_PASSWORD", "jordylab-secrets", "IDENTITY_BOOTSTRAP_ADMIN_PASSWORD", True),
     ("POSTGRES_SUPERUSER_PASSWORD", "jordylab-secrets", "POSTGRES_SUPERUSER_PASSWORD", True),

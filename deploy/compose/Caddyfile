@@ -12,11 +12,6 @@ jordylab.be {
 		reverse_proxy backend:8080
 	}
 
-	@keycloak path /auth/realms/jordylab /auth/realms/jordylab/* /auth/resources /auth/resources/* /auth/.well-known /auth/.well-known/*
-	handle @keycloak {
-		reverse_proxy keycloak:8080
-	}
-
 	# The /ntfy prefix is stripped before forwarding, as the Gateway's ReplacePrefixMatch did. handle_path takes
 	# one pattern only, so the strip is written out with a named matcher that lists both forms.
 	@ntfy path /ntfy /ntfy/*
@@ -25,7 +20,7 @@ jordylab.be {
 		reverse_proxy ntfy:80
 	}
 
-	# Everything else, including near misses such as /apis and /auth/admin, goes to the Angular application.
+	# Everything else, including near misses such as /apis, goes to the Angular application.
 	handle {
 		reverse_proxy frontend:8080
 	}
