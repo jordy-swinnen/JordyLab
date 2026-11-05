@@ -256,7 +256,7 @@ description: "Task list for Authentication Inside the Backend Without Keycloak (
 - [X] T094 [US7] Remove Keycloak from CI: drop the `keycloak` matrix entries in `.github/workflows/build.yml` and `.github/workflows/release.yml`, and the keycloak image/`rollout status deploy/keycloak` steps from `.github/workflows/deploy-prod.yml` (or the 017 Compose workflow if it exists)
 - [X] T095 [US7] Remove Keycloak from local dev: delete the `keycloak` service, `compose/keycloak-init.sql`, `compose/keycloak-realm-export.json`, `compose/keycloak-theme/`, and clean `KEYCLOAK_*` from `jordylab-be/.env.example`
 - [X] T096 [P] [US7] Rewrite the docs to the new reality: `docs/runbook.md` (§11/§13/§15 without `deploy/keycloak`; the one-time APK-stack section stays historical), `docs/environments.md`, `docs/cowork-deploy-ovh.md`, `docs/learn/01`–`09` + README, root `AGENTS.md` + `jordylab-be/AGENTS.md` + `jordylab-fe/AGENTS.md`, `.claude/skills/jordylab-ops/SKILL.md`, `.claude/agents/jordylab-devops.md`, `.opencode/agents/jordylab-devops.md`; leave `docs/testing/*` history untouched
-- [ ] T097 [US7] Release B verification per [quickstart.md](quickstart.md) §8: deploy; no `deploy/keycloak`; `/auth/realms/jordylab` → 404; `grep -ri keycloak` excluding `docs/testing/` and `specs/` returns nothing; `e2e/run.sh web` + `cleanup.sh verify-all` green
+- [X] T097 [US7] Release B verification per [quickstart.md](quickstart.md) §8: deploy; no `deploy/keycloak`; `/auth/realms/jordylab` → 404; `grep -ri keycloak` excluding `docs/testing/` and `specs/` returns nothing; `e2e/run.sh web` + `cleanup.sh verify-all` green
 
 **Checkpoint**: Production runs one fewer container, the repository is Keycloak-free outside history, and the whole suite is green (SC-008).
 
