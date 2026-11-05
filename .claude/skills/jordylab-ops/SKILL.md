@@ -316,7 +316,6 @@ sudo nmap -Pn -p- -T4 --max-rate 200 57.129.163.110                        # onl
 
 ## Open items
 
-- Remove the retired `KUBE_*` environment secrets and the unused legacy DB role Secret from SOPS/cluster.
 - Restrict the OVH Object Storage user to the single bucket (currently project-wide operator role).
 - ntfy subdomain if attachments / web push are needed.
 - Turn on VPS auto-renewal at OVH; watch domain renewal.
