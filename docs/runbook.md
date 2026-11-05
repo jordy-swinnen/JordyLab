@@ -128,9 +128,9 @@ and nothing else (the k3s API's 6443 is not used any more):
 | `/opt/jordylab/env/prod.env` | The environment file, rendered from SOPS by the deploy; `prod.env.previous` is the one before |
 | `/opt/jordylab/state/current-release`, `previous-release` | The live release (a tag or `sha-<sha>`) and the one before it |
 
-- Only `caddy` publishes ports (80, 443). Caddy terminates TLS, redirects HTTP to HTTPS, and routes `/api`, `/auth/...`
-  and `/ntfy` (`Caddyfile`); every other path goes to the Angular app.
-- The other services are `backend`, `frontend`, `keycloak`, `postgres` and `ntfy`, each with `restart: unless-stopped`,
+- Only `caddy` publishes ports (80, 443). Caddy terminates TLS, redirects HTTP to HTTPS, and routes `/api` plus the
+  WebAuthn ceremony paths and `/ntfy` (`Caddyfile`); every other path goes to the Angular app.
+- The other services are `backend`, `frontend`, `postgres` and `ntfy`, each with `restart: unless-stopped`,
   a memory limit and capped json-file logs (10 MB × 3).
 - The database is `jordylab-postgres:pg16-pgbackrest`, built on the host from `deploy/compose/postgres/`: pgvector
   included, base image pinned by digest, pgBackRest pinned by version.
@@ -218,11 +218,11 @@ an older target a rollback.
 4. The workflow mirrors `deploy/compose` to `/opt/jordylab/compose`, applies a changed Caddyfile (validated, atomic reload;
    see §17), renders `prod.env` from the SOPS secrets on the runner,
    writes it on the host (mode 600, the file it replaces kept as `prod.env.previous`), and runs
-   `/opt/jordylab/compose/scripts/deploy-release.sh deploy <release>`. That script pulls and restarts **only** backend,
-   frontend and keycloak, then checks the site through Caddy on the host. Postgres, ntfy and Caddy are not restarted by a
-   release.
+   `/opt/jordylab/compose/scripts/deploy-release.sh deploy <release>`. That script pulls and restarts **only** backend
+   and frontend (removing any orphaned service), then checks the site through Caddy on the host. Postgres, ntfy and Caddy
+   are not restarted by a release.
 5. From the runner it smoke-checks `https://jordylab.be`: the home page answers 200, an unauthenticated `/api` call
-   answers 401, and Keycloak's discovery document answers 200.
+   answers 401, and the identity CSRF endpoint answers 204.
 6. If anything fails from the environment file onwards, the workflow runs `deploy-release.sh rollback <release>`. It acts
    only when that release is still the live one: it restores `prod.env.previous` and the previous release, and the job
    ends red. The state files are `/opt/jordylab/state/current-release` and `previous-release`.
@@ -286,7 +286,7 @@ The stack's logs are capped json-file logs on the host:
 ```bash
 ssh ubuntu@100.93.81.41
 export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
-$COMPOSE logs -f backend          # also: frontend, keycloak, caddy, postgres, ntfy
+$COMPOSE logs -f backend          # also: frontend, caddy, postgres, ntfy
 $COMPOSE ps
 sudo docker stats --no-stream
 sudo journalctl -u 'jordylab-backup-*' -n 50    # the backup timers (§15)
@@ -304,7 +304,7 @@ sudo journalctl -u 'jordylab-backup-*' -n 50    # the backup timers (§15)
 If the private key is gone from **both** the password manager and the GitHub environment secret:
 
 1. Every value in `secrets.sops.yaml` is unrecoverable as ciphertext — you must know the plaintext values
-   independently (e.g. re-generate DB/Keycloak credentials, re-fetch API keys from their providers).
+   independently (e.g. re-generate DB credentials and the identity bootstrap password, re-fetch API keys from their providers).
 2. Generate a **new** age key (§7).
 3. Re-create `secrets.sops.yaml` from scratch with the new key's public half in `.sops.yaml`, and the
    (re-obtained) plaintext values.
@@ -345,7 +345,7 @@ with production, then log the drill below.
 
 | Date | Restored to | Time to restore | Row counts match | By | Next due |
 |------|-------------|-----------------|------------------|----|----------|
-| 2026-10-01 | k3s era: base backup `cnpg-daily-backup-20261001030000` + WAL to ~09:53 UTC | 1 min 55 s | yes — `gamecatalog.game` 128/128, `keycloak.user_entity` 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | replaced by the Compose drill |
+| 2026-10-01 | k3s era: base backup `cnpg-daily-backup-20261001030000` + WAL to ~09:53 UTC | 1 min 55 s | yes — `gamecatalog.game` 128/128, users 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | replaced by the Compose drill |
 | 2026-11-03 | the cutover window: `finance.article` at exactly its value at 20:38 UTC (823 vs 822 in the pre-window baseline) | inside the window; recorded in the cutover records | yes for the checked row | agent (approved by Jordy), in the cutover window | 2027-02-03 (quarterly) |
 
 Restores to a time **before** the cutover use the old CloudNativePG chain and the kept k3s manifests (backup contract,
@@ -499,17 +499,8 @@ safe to skip temporarily; none of them changes the web app.
    now answers 403 (expected — the endpoint is gone).
 2. The APK volume was a k3s PVC (`mobile-releases`) on the old cluster's local disk. k3s is gone (spec 020), so
    there is nothing to delete, and the data is not needed.
-3. Delete the native identity entries from the live realm (the realm file no longer contains them; a first-boot import
-   would not remove them):
-   ```bash
-   ssh ubuntu@100.93.81.41
-   export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
-   $COMPOSE exec -T keycloak /opt/keycloak/bin/kcadm.sh config credentials \
-     --server http://localhost:8080/auth --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" --config /tmp/kc.cfg
-   $COMPOSE exec -T keycloak /opt/keycloak/bin/kcadm.sh get clients -r jordylab -q clientId=jordylab-mobile --fields id --config /tmp/kc.cfg
-   ```
-   Delete that client's id with `delete clients/<id> -r jordylab`, then the same for `mobile-release-ci`, then
-   `delete roles/mobile-release-publisher -r jordylab`. Confirm `get clients -r jordylab` no longer lists them.
+3. The native app's identity clients and roles are gone with the identity-provider removal (spec 019 release B); nothing
+   is left to delete.
 4. Remove the retired CI secret from GitHub (`gh secret remove MOBILE_RELEASE_CI_CLIENT_SECRET --repo jordy-swinnen/JordyLab`
    and, if present, `--env production`).
 5. SOPS: `MOBILE_RELEASE_CI_CLIENT_SECRET` and `MOBILE_DOWNLOAD_LINK_SECRET` are already gone from
@@ -564,21 +555,21 @@ $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select extname, e
 **Status: written 2026-11-03; the dump and restore were rehearsed on 2026-11-04** against a throwaway PostgreSQL 17
 cluster (`pgvector/pgvector:pg17` at manifest-list digest `sha256:7d0a4146…`, plus pgBackRest 2.60.0). The rehearsal covered
 steps 2 and 4: a 15 MB `pg_dumpall` restored in about a second, with `gamecatalog.game` 512/512, `flyway_schema_history` at
-`20261103002`, the `vector` extension present and `keycloak.user_entity` 11/11. The cutover and the way back (steps 5 and 7)
+`20261103005`, the `vector` extension present. The cutover and the way back (steps 5 and 7)
 need a real major bump and were not rehearsed. A minor or patch bump never needs any of this: it is a new tag of the same
 major image. A major upgrade is a deliberate rebuild, a dump and a restore, and it is downtime: Postgres stops for the dump
 and again for the cutover.
 
 **Before you start:** a full backup and a restore drill from the last week (§15); the live release in
 `state/current-release` (§5); at least twice the database size free under `/var/lib/docker` (a dump plus a second volume);
-and confirmation that both the backend (Spring Boot/Hibernate) and Keycloak support the new major — check their release
+and confirmation that the backend (Spring Boot/Hibernate) supports the new major — check its release
 notes, and keep the pgvector extension: the pinned base image is the `pgvector/pgvector` one.
 
 1. **Stop the writers, keep Postgres up**, so the dump is consistent:
    ```
-   $COMPOSE stop backend keycloak
+   $COMPOSE stop backend
    ```
-2. **Dump everything** — roles, the `jordylab` database and the `keycloak` schema — as root, with the redirect inside
+2. **Dump everything** — roles and the `jordylab` database — as root, with the redirect inside
    the root shell so the file is never world-readable:
    ```
    sudo sh -c 'umask 077; docker exec -i jordylab-postgres-1 pg_dumpall -U postgres > /opt/jordylab/postgres-<old-major>-<date>.sql'

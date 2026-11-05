@@ -30,8 +30,6 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
-      keycloak:
-        condition: service_healthy
       ntfy:
         condition: service_healthy
     healthcheck:
@@ -65,10 +63,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       IDENTITY_BOOTSTRAP_ADMIN_USERNAME: ${IDENTITY_BOOTSTRAP_ADMIN_USERNAME}
       IDENTITY_BOOTSTRAP_ADMIN_PASSWORD: ${IDENTITY_BOOTSTRAP_ADMIN_PASSWORD}
-      # Keep the old backend startable if this release is rolled back before release B removes Keycloak.
-      KEYCLOAK_URL: ${KEYCLOAK_URL}
-      KEYCLOAK_INTERNAL_URL: ${KEYCLOAK_INTERNAL_URL}
-      KEYCLOAK_BACKEND_SECRET: ${KEYCLOAK_BACKEND_SECRET:-}
       JORDYLAB_CORS_ALLOWED_ORIGINS: ${JORDYLAB_CORS_ALLOWED_ORIGINS}
       JORDYLAB_APP_BASE_URL: ${JORDYLAB_APP_BASE_URL}
       NTFY_BASE_URL: ${NTFY_BASE_URL}
@@ -94,8 +88,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
-        condition: service_healthy
     # Bash's /dev/tcp is used because the runtime image has no curl. A cold start can take about 70 s, so the
     # start period covers 150 s, as the startup probe on the Kubernetes deploy did (JOR-76).
     healthcheck:
@@ -104,33 +96,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 150s
-
-  keycloak:
-    image: ghcr.io/jordy-swinnen/jordylab-keycloak:${JORDYLAB_RELEASE}
-    restart: unless-stopped
-    mem_limit: 1024m
-    logging: *logging
-    environment:
-      KC_DB_URL: ${KC_DB_URL}
-      KC_DB_SCHEMA: ${KC_DB_SCHEMA}
-      KC_DB_USERNAME: ${KC_DB_USERNAME}
-      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
-      KC_HOSTNAME: ${KC_HOSTNAME}
-      KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH}
-      KC_PROXY_HEADERS: ${KC_PROXY_HEADERS}
-      KC_HTTP_ENABLED: ${KC_HTTP_ENABLED}
-      KC_PROXY_TRUSTED_ADDRESSES: ${KC_PROXY_TRUSTED_ADDRESSES}
-      PRODUCTION_DOMAIN: ${PRODUCTION_DOMAIN}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    # The Keycloak image has bash but no curl, so the check opens the management port (9000) with bash's /dev/tcp.
-    healthcheck:
-      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/9000 && printf "GET /health/ready HTTP/1.0\r\n\r\n" >&3 && head -n1 <&3 | grep -q " 200 "']
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
 
   ntfy:
     image: binwiederhier/ntfy:v2.28.0
@@ -181,10 +146,3 @@ volumes:
   artwork:
   ntfy-cache:
   caddy-data:
-
-# Fixed subnet: Keycloak trusts X-Forwarded-* only from here (research R8, KC_PROXY_TRUSTED_ADDRESSES).
-networks:
-  default:
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16

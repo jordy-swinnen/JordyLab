@@ -6,8 +6,8 @@ name: Deploy to Production (Compose)
 # an older target is how a rollback works. All three images must exist in GHCR before the host is touched.
 # Run it by hand; automatic deploys are off since the k3s to Compose cutover (T062 decides when they return).
 #
-# The host side is scripts/deploy-release.sh (T009): it pulls and starts only backend, frontend and
-# keycloak, checks the site through Caddy on the host, and restores the live release itself when its own
+# The host side is scripts/deploy-release.sh (T009): it pulls and starts only backend and frontend,
+# checks the site through Caddy on the host, and restores the live release itself when its own
 # steps fail. Postgres, ntfy and Caddy are never restarted by a release. The Postgres image is built on
 # the host from the mirrored deploy/compose copy (pinned base digest and pgBackRest version), not pushed
 # to a registry: it changes rarely and deliberately, and compose.yaml already declares the build.
@@ -101,7 +101,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.resolve_target.outputs.image_tag }}
         run: |
-          for component in backend frontend keycloak; do
+          for component in backend frontend; do
             image="ghcr.io/jordy-swinnen/jordylab-$component:$IMAGE_TAG"
             if ! docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
               echo "::error::the image $image does not exist: the target is refused"

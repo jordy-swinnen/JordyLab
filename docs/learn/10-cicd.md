@@ -33,10 +33,10 @@ refuses one it cannot resolve: a sha outside the history, a tag that does not ex
 2. Mirrors `deploy/compose` to `/opt/jordylab/compose`; renders `prod.env` from `secrets.sops.yaml` on the
    runner, so the plaintext never reaches a log or your checkout (Chapter 6); writes it on the host, keeping
    the previous file as `prod.env.previous`.
-3. Runs `deploy-release.sh deploy <release>`: it pulls and restarts only backend, frontend and keycloak,
-   checks the site through Caddy on the host, and records the release in
+3. Runs `deploy-release.sh deploy <release>`: it pulls and restarts only backend and frontend (and removes an
+   orphaned service), checks the site through Caddy on the host, and records the release in
    `/opt/jordylab/state/current-release`. Postgres, ntfy and Caddy are not restarted by a release.
-4. Smoke-checks the site from the runner: home 200, an unauthenticated API call 401, Keycloak discovery 200.
+4. Smoke-checks the site from the runner: home 200, an unauthenticated API call 401, identity CSRF 204.
 5. If anything after the environment file fails, asks the host script to restore the previous release and
    `prod.env.previous`. The job ends red, and its summary names what is live.
 

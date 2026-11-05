@@ -52,6 +52,7 @@ run_check() {
 failures=0
 run_check home / 200 || failures=$((failures + 1))
 run_check api-unauthenticated /api/settings/users 401 || failures=$((failures + 1))
-run_check keycloak-discovery /auth/realms/jordylab/.well-known/openid-configuration 200 || failures=$((failures + 1))
+run_check identity-csrf /api/identity/auth/csrf 204 || failures=$((failures + 1))
+run_check old-auth /auth/realms/jordylab 404 || failures=$((failures + 1))
 
 [ "$failures" -eq 0 ]
