@@ -672,10 +672,22 @@ public and PKCE-bound.
 - Both callbacks are registered on the connector client. Do not change either port in one place only: the authorization
   server would reject the sign-in with a redirect URI mismatch.
 
-**Validated 2026-11-06**: Claude Desktop and Claude mobile connect and list the nine read-only tools; the ten questions, the
-read-only probe, parallel questions, the audit lines and the revocation check passed; Claude Code and OpenCode authenticate
-with the same public client. The public discovery documents, the `401` pointer, the login bridge, the clean `invalid_grant`
-answers, the `mcp` schema/migration and the Keycloak removal were checked against production.
+**Validated 2026-11-06**
+
+- **Public surface**: the protected resource is `https://jordylab.be/mcp` with `authorization_servers=["https://jordylab.be"]`
+  and `scopes_supported=["jordylab.mcp"]`; the authorization server metadata names the same issuer, `/oauth2/authorize`,
+  `/oauth2/token`, `/oauth2/jwks` and PKCE `S256`; `POST /mcp` without a token answers `401` with
+  `resource_metadata="https://jordylab.be/.well-known/oauth-protected-resource/mcp"`; an authorize request without a session
+  answers `302` to `/login?returnUrl=…`; an invalid code and an invalid refresh token both answer `400 {"error":"invalid_grant"}`.
+- **Host**: the `mcp` schema has `oauth2_authorization` and `oauth2_authorization_consent`; Flyway
+  `20261104001 mcp oauth tables` is successful; the backend is healthy; five containers, no Keycloak, and
+  `/auth/realms/jordylab` returns `404`.
+- **Owner validation**: Claude Desktop and Claude mobile connect and list the nine read-only tools; the ten questions matched
+  their screens with no differences reported; the read-only probe changed nothing; parallel questions answered; the audit
+  lines named admin, tool, outcome and duration with no arguments; revocation with a throwaway admin refused the next call.
+  Exact per-answer timings were not captured.
+- **Local agents**: Claude Code and OpenCode authenticate with the same public client; the five redirect URIs (Claude
+  Desktop/mobile, Claude Code, OpenCode) are registered and each returns the login redirect.
 
 **Check the public surface** (no authentication):
 

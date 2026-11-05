@@ -223,11 +223,12 @@ starts fresh from `main`. T070 builds on both.
 
 ### Gates (must pass before Phase 3)
 
-- [x] T024 Protocol gate, **superseded 2026-11-06**: the authorization-code flow test and the production checks (both
-  discovery documents, the 401 pointer, the login bridge, the nine registered tools) replace the local MCP Inspector gate.
-- [x] T025 Token gate, **superseded 2026-11-06**: `McpAuthorizationServerTest` asserts the access-token claims and the
-  10-minute lifetime, refresh issuance/rotation and reuse refusal; production answers invalid codes and refresh tokens with
-  `invalid_grant`.
+- [x] T024 **OBSOLETE 2026-11-06**: the Keycloak-era MCP Inspector gate was replaced by the authorization-code flow test
+  and the production checks (both discovery documents, the 401 pointer, the login bridge, the nine registered tools).
+- [x] T025 **OBSOLETE 2026-11-06**: `McpAuthorizationServerTest` asserts the access-token claims and the 10-minute
+  lifetime, refresh issuance/rotation and reuse refusal; production answers invalid codes and refresh tokens with
+  `invalid_grant`. The Keycloak admin-console checks are history.
+
 
 **Checkpoint**: foundation ready; T075 passes and T024/T025 are superseded by it and by the production checks. The pre-019
 run (2026-11-04, throwaway Keycloak) is history: it recorded the metadata document, the 401 pointer, `initialize` (server
@@ -378,8 +379,8 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 - [x] T055 Record the outcomes in `specs/021-jordylab-mcp-server/research.md` R1, R2 and R6. The Keycloak-era
   Inspector/token gates are superseded (T024/T025); production confirmed the stateless endpoint, the sign-in and the refresh
   behaviour on 2026-11-06.
-- [x] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web`, `app-boot`, `refs`, `secret-scan`.
-  If T074 is accepted, `test-frontend` and `e2e-web` cover the login change.
+- [x] T056 The CI set passed on PR #220 (the connector) and PR #223 (the local agents): `test-backend`, `test-frontend`,
+  `e2e-web`, `app-boot`, `refs`, `secret-scan` and `licence-check` were green.
 
 ---
 
@@ -414,8 +415,9 @@ endpoint.
 - [x] T062 **OPERATIONS**: quickstart step 4 (Claude Desktop connects with client `jordylab-mcp-connector`, nine read-only tools
   listed). Check that the browser passes through `/login` and returns to the authorization request (T074). Check that a
   refresh after a deploy works (T078, option A). Record the result in `docs/runbook.md`. This is Jordy's action in Claude.
-- [x] T063 **OPERATIONS**: quickstart step 5 (the ten questions, five catalog and five finance, each compared with its screen). Record
-  any difference and the time each answer took (SC-002) in `docs/runbook.md`.
+- [x] T063 **OPERATIONS**: quickstart step 5 (the ten questions, five catalog and five finance, each compared with its screen).
+  The owner validated them on 2026-11-06 with no differences reported. Exact per-answer timings were not captured; the
+  runbook records the owner confirmation, not a stopwatch log.
 - [x] T064 **OPERATIONS**: quickstart step 6 (Claude mobile over mobile data). Record it in `docs/runbook.md`. This closes
   the mobile assumption in the spec.
 - [x] T065 **OPERATIONS**: quickstart step 7 (read-only check: ask for changes, then compare the web app, the AI call count

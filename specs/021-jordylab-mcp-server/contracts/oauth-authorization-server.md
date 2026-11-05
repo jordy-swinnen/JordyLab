@@ -74,5 +74,7 @@ whatever the token's remaining lifetime (the per-call account check).
 
 ## Verification
 
-The integration test drives the whole flow (session sign-in → authorize → code → token) and asserts the audience, `sub`,
-`roles`, the token lifetime and that a guest is refused. The live checks are quickstart steps 3 and 4.
+The integration test `McpAuthorizationServerTest` drives the whole flow (session sign-in → authorize → code → token) and
+asserts the audience, `sub`, `roles`, `scope`, the 10-minute lifetime, refresh issuance/rotation and the reused-token
+refusal; a guest is refused at the authorization request. `McpSecurityTest` covers the audience refusal, the 401 pointer,
+the `/api` refusal and the revoked-admin tool refusal. The live checks are quickstart steps 3 and 4.
