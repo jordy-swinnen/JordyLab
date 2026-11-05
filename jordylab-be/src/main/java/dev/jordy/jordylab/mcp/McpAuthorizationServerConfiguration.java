@@ -86,7 +86,11 @@ import java.util.UUID;
 public class McpAuthorizationServerConfiguration {
 
     static final String CLIENT_ID = "jordylab-mcp-connector";
-    static final String REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback";
+    static final String CLAUDE_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback";
+    static final String CLAUDE_CODE_REDIRECT_URI = "http://localhost:19877/callback";
+    static final String CLAUDE_CODE_LOOPBACK_REDIRECT_URI = "http://127.0.0.1:19877/callback";
+    static final String OPENCODE_REDIRECT_URI = "http://127.0.0.1:19876/mcp/oauth/callback";
+    static final String OPENCODE_LOCALHOST_REDIRECT_URI = "http://localhost:19876/mcp/oauth/callback";
     static final String SCOPE = "jordylab.mcp";
     static final String SCHEMA = "mcp";
 
@@ -136,7 +140,11 @@ public class McpAuthorizationServerConfiguration {
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri(REDIRECT_URI)
+                .redirectUri(CLAUDE_REDIRECT_URI)
+                .redirectUri(CLAUDE_CODE_REDIRECT_URI)
+                .redirectUri(CLAUDE_CODE_LOOPBACK_REDIRECT_URI)
+                .redirectUri(OPENCODE_REDIRECT_URI)
+                .redirectUri(OPENCODE_LOCALHOST_REDIRECT_URI)
                 .scope(SCOPE)
                 .clientSettings(ClientSettings.builder()
                         .requireProofKey(true)

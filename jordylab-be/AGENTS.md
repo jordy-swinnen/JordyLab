@@ -417,10 +417,14 @@ class SomeObjectTestBuilder {
   only the `mcp` root (`McpToolPage`, `McpToolException`) and the Spring AI `@McpTool` annotation.
 - `McpAuthorizationServerConfiguration` runs Spring Authorization Server for `/oauth2/**` and
   `/.well-known/oauth-authorization-server`: one public client `jordylab-mcp-connector` (authorization code + refresh,
-  PKCE S256 only, redirect `https://claude.ai/api/mcp/auth_callback`, consent off), JWT access tokens of 10 minutes with
+  PKCE S256 only, the Claude callback plus the Claude Code and OpenCode loopback callbacks, consent off), JWT access
+  tokens of 10 minutes with
   `aud=jordylab-mcp`, `sub` equal to the account UUID and `roles`, and a 30-day rotating refresh token stored in
   `mcp.oauth2_authorization` (Flyway `V20261104001__mcp_oauth_tables.sql`). The signing key is generated at start-up, so a
-  deploy invalidates access tokens; the stored refresh token renews them.
+  deploy invalidates access tokens; the stored refresh token renews them. The local agent callbacks are
+  `http://localhost:19877/callback` / `http://127.0.0.1:19877/callback` (Claude Code, fixed by `.mcp.json`) and
+  `http://127.0.0.1:19876/mcp/oauth/callback` / `http://localhost:19876/mcp/oauth/callback` (OpenCode, fixed by
+  `opencode.json`). Change a port in both the client and the tool config or OAuth sign-in fails with a redirect mismatch.
 - **Two library gaps are intentional.** Spring Authorization Server issues no refresh token to a public client on the
   authorization-code grant, and its public-client authentication only covers the PKCE code request.
   `PublicClientRefreshTokenGenerator` issues the connector's refresh token, and

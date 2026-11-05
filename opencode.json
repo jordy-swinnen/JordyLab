@@ -32,6 +32,16 @@
       "type": "remote",
       "url": "https://mcp.linear.app/mcp",
       "enabled": true
+    },
+    "jordylab": {
+      "type": "remote",
+      "url": "https://jordylab.be/mcp",
+      "enabled": true,
+      "oauth": {
+        "clientId": "jordylab-mcp-connector",
+        "callbackPort": 19876,
+        "scope": "jordylab.mcp"
+      }
     }
   },
   "agent": {

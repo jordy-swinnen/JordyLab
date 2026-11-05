@@ -151,8 +151,9 @@ layout already names.
 
 ## Delivery slices (input to `/speckit-tasks`)
 1. **Authorization server** (new): `McpAuthorizationServerConfiguration` with Spring Authorization Server, one registered
-   public client (`jordylab-mcp-connector`, authorization_code + refresh_token, PKCE S256, the Claude callback, consent
-   off), a JWK source, the token customizer (`aud` `jordylab-mcp`, `sub` = account id, `roles`), the authorization
+   public client (`jordylab-mcp-connector`, authorization_code + refresh_token, PKCE S256, the Claude callback plus the
+   Claude Code/OpenCode loopback callbacks, consent off), a JWK source, the token customizer (`aud` `jordylab-mcp`, `sub` =
+   account id, `roles`), the authorization
    endpoint's entry point to `/login?returnUrl=…`, and the Flyway migration for the `mcp` schema. Gate: an
    authorization-code flow test reaches a token with the audience and `admin`.
 2. **The `/mcp` chain on AS tokens**: replace the issuer-based decoder with the AS JWKS, keep the audience validator, map

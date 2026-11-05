@@ -33,3 +33,5 @@ Agents (run automatically by Claude):
 
 MCP servers:
 - `nx-mcp` — configured in `.mcp.json` (repo root; also defines the `github` MCP server)
+- `jordylab` — the read-only connector at `https://jordylab.be/mcp`, public client `jordylab-mcp-connector`, local callback
+  port 19877; run `/mcp` and authenticate with the admin account

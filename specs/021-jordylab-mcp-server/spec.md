@@ -175,9 +175,9 @@ inbox before and after. All are unchanged, and no new Linear issue exists.
   using a single public HTTPS address on `https://jordylab.be`.
 - **FR-002**: Connecting MUST use the existing JordyLab account through the browser sign-in that Claude uses for remote
   connectors, served by JordyLab's own OAuth 2.1 authorization server against one pre-registered public client
-  (`jordylab-mcp-connector`, authorization code with PKCE S256, the Claude callback as its only redirect URI). Jordy
-  enters that client's identifier in Claude. No secret is copied into Claude, and the server MUST NOT accept anonymous
-  client registration.
+  (`jordylab-mcp-connector`, authorization code with PKCE S256, the Claude callback plus the fixed loopback callbacks for
+  Claude Code and OpenCode). Jordy enters that client's identifier in the client. No secret is copied into Claude, and the
+  server MUST NOT accept anonymous client registration.
 - **FR-003**: Only an account holding the `admin` role MUST be able to connect or call any tool. A guest, a pending
   or revoked account and the scan client's role MUST all be refused, and the refusal MUST reveal no data.
 - **FR-004**: Revoking the account or the admin role MUST stop access on the next tool call, without an extra
