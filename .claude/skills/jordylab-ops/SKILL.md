@@ -1,6 +1,6 @@
 ---
 name: jordylab-ops
-description: JordyLab production operations — OVH VPS + Docker Compose, Tailscale SSH, GitHub Actions deploys (by commit sha or release tag), rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), Keycloak admin via kcadm, pgBackRest backups, TLS via Caddy. Load before running, proposing or explaining anything that touches the live host, the deploy pipeline, prod secrets or the prod Keycloak realm.
+description: JordyLab production operations — OVH VPS + Docker Compose, Tailscale SSH, GitHub Actions deploys (by commit sha or release tag), rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), identity/user administration, pgBackRest backups, TLS via Caddy. Load before running, proposing or explaining anything that touches the live host, the deploy pipeline, prod secrets or the prod identity data.
 ---
 
 # JordyLab production operations
@@ -27,7 +27,7 @@ fallback; the narrative of the move is in `specs/020-compose-deployment/` and th
    (`compose.yaml`, `Caddyfile`, `prod.env`, secrets) needs Jordy's yes even when it reaches production through a merge,
    and so does a Flyway migration or a realm change.
 3. **Secrets never pass through the conversation.** Never print, echo, `cat`, or decrypt secret values to the screen.
-   Pipe values (`… | gh secret set …`), run `kcadm` inside the Keycloak container using the env vars already there, use
+   Pipe values (`… | gh secret set …`), never select password hashes or machine-token hashes in `psql`, use
    `gitleaks --redact`, and filter logs with `grep -v -i -E 'password|secret'`. Never read `/opt/jordylab/env/prod.env`.
 4. **Production changes go through Git** (PR → merge → Build → deploy). A live `docker compose up -d` with a changed
    value is fine to *test* a fix quickly, but the same change must land in the repo, or the next deploy undoes it.
@@ -50,23 +50,23 @@ fallback; the narrative of the move is in `specs/020-compose-deployment/` and th
 | Admin network | Tailscale; server = `jordylab-vps` (`100.93.81.41`, tag `tag:jordylab-vps`, key expiry disabled)                             |
 | CI access     | Tailscale node tag `tag:ci`, allowed to the server on `tcp:22` only, then SSH as `jordylab-deploy` (docker group, no sudo)   |
 | Stack         | Docker Compose project `jordylab` from `/opt/jordylab/compose/compose.yaml`, env file `/opt/jordylab/env/prod.env`           |
-| Live release  | `/opt/jordylab/state/current-release` (a tag or `sha-<sha>`), previous in `previous-release`; images `ghcr.io/jordy-swinnen/jordylab-{backend,frontend,keycloak}:<release>` |
+| Live release  | `/opt/jordylab/state/current-release` (a tag or `sha-<sha>`), previous in `previous-release`; images `ghcr.io/jordy-swinnen/jordylab-{backend,frontend}:<release>` |
 | Backups       | pgBackRest → OVH Object Storage, bucket `jordylab-cnpg-backups`, path `/pgbackrest`, `https://s3.gra.io.cloud.ovh.net`        |
 | CI/CD         | `Build` on every push; a green `main` build deploys through `Deploy to Production (Compose)` while `AUTO_DEPLOY` is `true`; a manual run takes a commit sha or release tag (no approval) |
 | TLS           | Caddy, Let's Encrypt HTTP-01 on port 80 (contact `jordy.swinnen@pm.me`); certificate data in the `jordylab_caddy-data` volume  |
 | Secrets       | SOPS + age; private key at `~/Library/Application Support/sops/age/keys.txt` (+ password manager + GitHub env secret)          |
 
 Versions at the cutover (2026-11-03): Caddy 2.11.7, PostgreSQL 16.15 with pgvector (base image pinned by digest),
-pgBackRest 2.60.0, Keycloak 26.7.4, ntfy v2.28.0, backend/frontend images from GHCR.
+pgBackRest 2.60.0, ntfy v2.28.0, backend/frontend images from GHCR.
 
 ## Architecture
 
 ```
 Internet ──► VPS :80/:443 (ufw: 22, 80, 443 public)
-             └─ Docker Compose project `jordylab` (network 172.28.0.0/16; only caddy publishes ports)
+             └─ Docker Compose project `jordylab` (only caddy publishes ports)
                   caddy ──► /                                     frontend  (nginx :8080, Angular build)
-                        ──► /api, /.well-known/assetlinks.json    backend   (Spring Boot :8080)
-                        ──► /auth/realms/jordylab|resources|.well-known  keycloak (:8080, management :9000)
+                        ──► /api, /webauthn, /login/webauthn,
+                            /.well-known/assetlinks.json           backend   (Spring Boot :8080)
                         ──► /ntfy (prefix stripped)               ntfy      (:80)
                         http → https redirect; TLS via Let's Encrypt HTTP-01
                   postgres  (jordylab-postgres:pg16-pgbackrest, data in jordylab_postgres-data)
@@ -79,51 +79,44 @@ Laptop / CI ──Tailscale SSH──► host :22 (CI node tag:ci may reach tcp:
 
 | Path                                                             | What                                                                                     | Applied by                                    |
 |------------------------------------------------------------------|------------------------------------------------------------------------------------------|-----------------------------------------------|
-| `deploy/compose/compose.yaml`                                    | The six services, volumes, memory limits, the fixed subnet                                | Mirrored to `/opt/jordylab/compose` per deploy |
+| `deploy/compose/compose.yaml`                                    | The five services, volumes, memory limits                                                | Mirrored to `/opt/jordylab/compose` per deploy |
 | `deploy/compose/Caddyfile`                                       | Public routes, redirect, certificate issuance                                            | Same mirror                                   |
 | `deploy/compose/env/prod.env.example`                            | The environment template (`render-env.sh` produces the real file)                        | Deploy                                        |
 | `deploy/compose/postgres/`                                       | Production Postgres image: pgvector base + pgBackRest, both pinned                       | Built on the host, first `up`                 |
 | `deploy/compose/pgbackrest/pgbackrest.conf`                      | pgBackRest stanza (S3 GRA, `/pgbackrest`, 30 days)                                        | Baked into the Postgres image                 |
 | `deploy/compose/host/*.timer`, `*.service`                       | The backup timers (diff Mon–Sat 03:00, full Sun 04:00 UTC)                                | Installed once on the host                    |
 | `deploy/compose/scripts/render-env.sh`                           | Decrypts SOPS on the runner and renders `prod.env`                                        | Deploy workflow                               |
-| `deploy/compose/scripts/deploy-release.sh`                       | Pulls and restarts backend/frontend/keycloak, checks the site, restores on failure        | Deploy workflow, over SSH                     |
+| `deploy/compose/scripts/deploy-release.sh`                       | Pulls and restarts backend/frontend, checks the site, restores on failure                 | Deploy workflow, over SSH                     |
 | `deploy/scripts/deploy-decision.sh`, `smoke-check.sh`            | Target resolution and the public smoke checks                                             | Deploy workflow                               |
 | `deploy/k8s/`, `deploy/host/`                                    | The retired k3s material, kept only for the rebuild fallback (spec 020 R14)               | Nothing applies it                            |
 | `.sops.yaml`                                                     | age public key + `encrypted_regex: ^(data\|stringData)$`                                  | sops                                          |
 | `.github/workflows/build.yml`, `deploy-prod-compose.yml`         | CI/CD                                                                                     | GitHub                                        |
 
-Secrets in `deploy/k8s/overlays/prod/secrets.sops.yaml`: `jordylab-secrets` (Keycloak bootstrap admin,
-`KEYCLOAK_BACKEND_CLIENT_SECRET`, AI keys, S3 keys, `POSTGRES_SUPERUSER_PASSWORD`, Steam/IGDB/TheGamesDB, `NTFY_TOKEN`),
-`jordylab-db-app` and `jordylab-db-keycloak` (basic-auth pairs). The same file feeds `prod.env` and the Keycloak/Postgres
-containers through the rendered environment.
+Secrets in `deploy/k8s/overlays/prod/secrets.sops.yaml`: `jordylab-secrets` (`IDENTITY_BOOTSTRAP_ADMIN_*`, AI keys,
+S3 keys, `POSTGRES_SUPERUSER_PASSWORD`, Steam/IGDB/TheGamesDB, `NTFY_TOKEN`) and `jordylab-db-app` (basic-auth pair).
+The same file feeds `prod.env` through the rendered environment.
 
 ## How the pieces fit (things that must stay true)
 
 - **Only Caddy publishes ports** (80, 443). Everything else is internal to the Compose network; ports in `compose.yaml`
   for other services would be a regression.
-- **Caddy routes by whole segment**: `/api` and `/api/*` to the backend, `/auth/realms/jordylab*`, `/auth/resources*`
-  and `/auth/.well-known*` to Keycloak, `/ntfy` with the prefix stripped, everything else (including `/apis` and
-  `/auth/admin`) to the Angular app.
-- **The admin console and `/auth/admin/**` are not public.** The backend reaches Keycloak's Admin API over
-  `KEYCLOAK_INTERNAL_URL` (`http://keycloak:8080/auth`); a public `/auth/admin/` URL answers with the SPA's HTML.
+- **Caddy routes by whole segment**: `/api` and `/api/*`, the exact `/webauthn` and `/login/webauthn` ceremony paths and
+  `/.well-known/assetlinks.json` to the backend, `/ntfy` with the prefix stripped, everything else (including `/apis`) to
+  the Angular app.
 - **One secrets file, one render**: `render-env.sh` produces `prod.env` on the runner from
   `deploy/k8s/overlays/prod/secrets.sops.yaml`; the workflow writes it on the host (mode 600) and keeps the previous file
   as `prod.env.previous`. A rollback restores it.
 - **The DB owner is the Postgres superuser**: the `postgres` service initialises from `POSTGRES_SUPERUSER_PASSWORD`; the
-  app connects as `jordylab` (from `jordylab-db-app`), Keycloak as `keycloak` (from `jordylab-db-keycloak`), schema
-  `keycloak`. A first-boot init is the only time `POSTGRES_*` is honoured.
+  app connects as `jordylab` (from `jordylab-db-app`). A first-boot init is the only time `POSTGRES_*` is honoured.
 - **The Postgres image is built on the host**, not pulled: `jordylab-postgres:pg16-pgbackrest`, from
   `deploy/compose/postgres/Containerfile`. The base image is pinned by its **multi-arch manifest-list digest** (pinning a
   single-platform manifest broke the VPS build with `exec format error`, BUG-081) and pgBackRest by version.
 - **WAL archiving is on** (`archive_command=pgbackrest … archive-push`); the timers run `pgbackrest … --type=diff|full
   backup` inside the Postgres container and log to journald. Retention is time-based: 30 days of full backups.
-- **Keycloak build-time options are baked into the image**; runtime values come from `prod.env`
-  (`KC_HOSTNAME=https://jordylab.be/auth`, `KC_HTTP_RELATIVE_PATH=/auth`, `KC_HTTP_ENABLED=true`,
-  `KC_PROXY_HEADERS=xforwarded`, `KC_PROXY_TRUSTED_ADDRESSES=172.28.0.0/16`, `PRODUCTION_DOMAIN=jordylab.be`). Probes:
-  `:9000/health/{ready,live}`.
-- **Realm import runs once** (skipped when the realm exists). Later realm changes: admin console or `kcadm.sh`, recorded in
-  `deploy/keycloak/README.md` together with the realm-file change. `jordylab-backend` has `fullScopeAllowed=false`.
-- **`admin` is a composite of `guest` + `gamecatalog-scanner`**; `mobile-release-publisher` is retired with the native app.
+- **Identity is in the backend**: sessions in `identity.spring_session` survive a rollout; revoke/delete ends them on the
+  next request. The first admin on a fresh database comes from `IDENTITY_BOOTSTRAP_ADMIN_*` and is ignored once accounts
+  exist. Passkeys need `IDENTITY_WEBAUTHN_RP_ID=jordylab.be` and `IDENTITY_WEBAUTHN_ALLOWED_ORIGINS=https://jordylab.be`
+  (defaults in `application.yaml`) and the Caddy routes above. Break-glass: `docs/runbook.md` §25.
 - **Backend probes** `/actuator/health/{liveness,readiness}` are `permitAll`; `/actuator/info` reports the built commit.
 - **Frontend image** copies `dist/apps/jordylab/browser` (Angular application builder output) into nginx.
 - **Deploy workflow**: `deploy-prod-compose.yml`, called by `build.yml` for a green `main` build while `AUTO_DEPLOY` is
@@ -160,7 +153,7 @@ df -h /; df -h /var/lib/docker
 
 ```bash
 $COMPOSE ps
-$COMPOSE logs --tail=100 backend                   # frontend | keycloak | caddy | postgres | ntfy
+$COMPOSE logs --tail=100 backend                   # frontend | caddy | postgres | ntfy
 $COMPOSE logs -f backend
 $COMPOSE logs --since=15m backend | grep -i -E "error|exception"
 cat /opt/jordylab/state/current-release /opt/jordylab/state/previous-release
@@ -181,7 +174,7 @@ cd /opt/jordylab/compose && sudo -u jordylab-deploy docker compose \
   --env-file /opt/jordylab/env/prod.env -f compose.yaml config -q   # validates
 # On the Mac, against the template (no secrets needed):
 docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q
-$COMPOSE pull backend frontend keycloak
+$COMPOSE pull backend frontend
 ```
 
 The workflow mirrors `deploy/compose/` to `/opt/jordylab/compose` with `rsync --delete`; nothing host-side writes there.
@@ -208,7 +201,7 @@ and the live release on the host.
 Check images exist and are public (anonymous pull):
 
 ```bash
-for img in backend frontend keycloak; do
+for img in backend frontend; do
   T=$(curl -s "https://ghcr.io/token?scope=repository:jordy-swinnen/jordylab-$img:pull" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("token",""))')
   printf '%s: ' $img; curl -s -H "Authorization: Bearer $T" "https://ghcr.io/v2/jordy-swinnen/jordylab-$img/tags/list" | head -c 300; echo
 done
@@ -254,32 +247,23 @@ delete <name> --env production`). The workflow also pins the host's ed25519 fing
 Tailscale CI credential: admin console → Settings → *Trust credentials* → OAuth, scope **Keys → Auth Keys → Write**
 only, tag `tag:ci`. The secret is shown once; revoke the old credential after replacing it.
 
-### Keycloak
+### Identity and users
 
-The admin console is not public. Use `kcadm` in the container, logging in with the bootstrap admin env vars (no password
-on screen):
+Accounts, grants, sessions, reset requests and machine tokens are managed in **Settings → Users / Machines**. There is no
+identity container or admin console. A locked-out admin follows `docs/runbook.md` §25 (break-glass: a BCrypt hash and one
+`UPDATE identity.user_account`).
+
+Read-only checks (never select `password_hash`, token hashes or session attributes):
 
 ```bash
 ssh ubuntu@100.93.81.41
 export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
-$COMPOSE exec -T keycloak bash -c '
-K=/opt/keycloak/bin/kcadm.sh; C="--config /tmp/kc.cfg"
-$K config credentials $C --server http://localhost:8080/auth --realm master \
-  --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null 2>&1 && echo LOGIN_OK
-# examples — pick what you need:
-$K add-roles -r jordylab $C --uusername <email> --rolename admin
-$K get-roles -r jordylab $C --uusername <email> --effective --fields name --format csv --noquotes
-$K get client-scopes -r jordylab $C --fields name
-ID=$($K get clients -r jordylab -q clientId=jordylab-host $C --fields id --format csv --noquotes)
-$K get clients/$ID/default-client-scopes -r jordylab $C --fields name --format csv --noquotes'
+$COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select username, role, status from identity.user_account order by username"
+$COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select principal_name, count(*) from identity.spring_session group by principal_name"
+$COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select name, scope, revoked_at is not null from identity.machine_token order by created_at desc"
 ```
 
-If the UI console is really needed, open a local forward to the container (`ssh -L 8080:127.0.0.1:8080` plus a temporary
-`socat` sidecar bound to `127.0.0.1` in the Compose network) — that is a mutation of the running stack, so ask first.
-
-New users self-register (e-mail = username, password ≥ 12 chars) and have no role until an admin grants one; they must
-log out/in to get the new role in their token. The bootstrap admin is temporary — replace it with a permanent
-`master`-realm admin via the console.
+A machine token is shown once at creation; if it is lost, revoke it and add the machine again.
 
 ### Database and backups (pgBackRest)
 
@@ -325,15 +309,14 @@ Tailscale policy: `tagOwners` for `tag:jordylab-vps` and `tag:ci`; grants: membe
 dig +short jordylab.be @1.1.1.1                   # → 57.129.163.110
 curl -sI http://jordylab.be | head -3             # 301 → https
 curl -sI https://jordylab.be/ | head -3           # 200
-curl -s https://jordylab.be/auth/realms/jordylab/.well-known/openid-configuration | head -c 200
-curl -s -o /dev/null -w '%{http_code}\n' https://jordylab.be/auth/admin/   # must NOT be Keycloak
+curl -s -o /dev/null -w '%{http_code}\n' https://jordylab.be/api/identity/auth/csrf   # 204
+curl -s -o /dev/null -w '%{http_code}\n' https://jordylab.be/auth/realms/jordylab     # 404: the old identity route is gone
 sudo nmap -Pn -p- -T4 --max-rate 200 57.129.163.110                        # only 22, 80, 443 open
 ```
 
 ## Open items
 
-- Remove the retired `KUBE_*` environment secrets.
-- Replace Keycloak's temporary bootstrap admin with a permanent admin.
+- Remove the retired `KUBE_*` environment secrets and the unused legacy DB role Secret from SOPS/cluster.
 - Restrict the OVH Object Storage user to the single bucket (currently project-wide operator role).
 - ntfy subdomain if attachments / web push are needed.
 - Turn on VPS auto-renewal at OVH; watch domain renewal.

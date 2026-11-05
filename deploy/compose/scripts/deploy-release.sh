@@ -56,8 +56,8 @@ compose() {
 # Callers run these inside an if condition, where set -e is off, so each failure is returned explicitly.
 start_release() {
   export JORDYLAB_RELEASE=$1
-  compose pull backend frontend keycloak || return 1
-  compose up -d --wait --wait-timeout 600 backend frontend keycloak || return 1
+  compose pull backend frontend || return 1
+  compose up -d --wait --wait-timeout 600 --remove-orphans backend frontend || return 1
 }
 
 # Checks the public site through Caddy on this host, using the real certificate and routes.
