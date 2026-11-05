@@ -84,6 +84,22 @@ describe('LoginComponent', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/games/grid');
   });
 
+  it('loads an oauth2 return path with a full page load instead of the router', async () => {
+    returnUrl = '/oauth2/authorize?client_id=jordylab-mcp-connector&state=abc';
+    spectator = createComponent();
+    const backendReturn = vi
+      .spyOn(spectator.component as unknown as { returnToBackend(url: string): void }, 'returnToBackend')
+      .mockImplementation(() => undefined);
+    spectator.typeInElement('jordy', '[data-testid="login-username"]');
+    spectator.typeInElement('pw', '[data-testid="login-password"]');
+    spectator.click('[data-testid="login-submit"]');
+    await spectator.fixture.whenStable();
+
+    expect(backendReturn).toHaveBeenCalledWith('/oauth2/authorize?client_id=jordylab-mcp-connector&state=abc');
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    backendReturn.mockRestore();
+  });
+
   it('never returns to an external address', async () => {
     returnUrl = 'https://evil.example';
     spectator = createComponent();
