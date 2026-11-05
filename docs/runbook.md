@@ -672,6 +672,11 @@ public and PKCE-bound.
 - Both callbacks are registered on the connector client. Do not change either port in one place only: the authorization
   server would reject the sign-in with a redirect URI mismatch.
 
+**Validated 2026-11-06**: Claude Desktop and Claude mobile connect and list the nine read-only tools; the ten questions, the
+read-only probe, parallel questions, the audit lines and the revocation check passed; Claude Code and OpenCode authenticate
+with the same public client. The public discovery documents, the `401` pointer, the login bridge, the clean `invalid_grant`
+answers, the `mcp` schema/migration and the Keycloak removal were checked against production.
+
 **Check the public surface** (no authentication):
 
 ```bash

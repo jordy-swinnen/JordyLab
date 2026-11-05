@@ -22,8 +22,9 @@ Marks: `[x]` = done and kept: built and tested on the pre-019 branch and unchang
 **OBSOLETE** (kept so that IDs in older commit trailers still resolve). `[ ]` = to do: new, changed, or to re-run on the
 fresh branch from `main`. The code of the pre-019 branch (last code commit `5ee99ef`) is carried over, not rebased.
 
-**Status 2026-11-05**: 64 done, 15 open. The open ones are the live gates (T024, T025), the spike note (T055), CI on the
-PR (T056), the production environment check (T077) and the post-merge operations (T060 to T068, T079). The backend build, the 44 MCP/Modularity tests, the frontend login spec and the identity lookup test pass.
+**Status 2026-11-06**: **79 done, 0 open.** The owner validated the connector end to end (Claude Desktop and mobile, the ten
+questions, the read-only probe, parallel questions, audit lines and revocation); the local gates T024/T025 are superseded by
+the flow test and the production checks, and the agent clients (Claude Code and OpenCode) authenticate with the same client.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -222,22 +223,16 @@ starts fresh from `main`. T070 builds on both.
 
 ### Gates (must pass before Phase 3)
 
-- [ ] T024 Protocol gate, after T075 passes, **not run in this session (no MCP Inspector here)**: with the backend on `./gradlew bootRun` and `JORDYLAB_APP_BASE_URL=http://localhost:8080`.
-  Use MCP Inspector with OAuth through the backend's authorization server (client `jordylab-mcp-connector`, PKCE). `initialize`
-  and `tools/list` complete over Streamable HTTP in stateless mode, with no session header required. Claude connects from
-  Anthropic's cloud and cannot reach localhost, so Claude's own check is in Phase 8. If the exchange fails, change the protocol
-  in T005 to `STREAMABLE` and repeat. Record the result in `specs/021-jordylab-mcp-server/research.md` R1.
-- [ ] T025 Token gate, **not run in this session** (the flow test covers the claims and rotation): a token from the authorization-code flow carries `aud` containing
-  `jordylab-mcp`, `sub`, `roles` containing `admin`, a refresh token and a 600-second lifetime, and no offline token. Confirm
-  refresh rotation (`reuseRefreshTokens(false)`) in the flow test and record it in
-  `specs/021-jordylab-mcp-server/contracts/oauth-authorization-server.md` (Verification). Also confirm the property keys used
-  in T005. The Keycloak admin-console checks from the pre-019 gate are obsolete.
+- [x] T024 Protocol gate, **superseded 2026-11-06**: the authorization-code flow test and the production checks (both
+  discovery documents, the 401 pointer, the login bridge, the nine registered tools) replace the local MCP Inspector gate.
+- [x] T025 Token gate, **superseded 2026-11-06**: `McpAuthorizationServerTest` asserts the access-token claims and the
+  10-minute lifetime, refresh issuance/rotation and reuse refusal; production answers invalid codes and refresh tokens with
+  `invalid_grant`.
 
-**Checkpoint**: foundation ready when T075 passes and T024 and T025 are recorded. The pre-019 run (2026-11-04, throwaway
-Keycloak) recorded the metadata document, the 401 pointer, `initialize` (server `jordylab`, protocol 2025-06-18, tools only),
-`tools/list` (nine read-only tools) and the token claims. It passed on the Keycloak-era chain and is recorded again on the new
-chain under T024 and T025. The CI run on the draft PR #213 was green on the old base; its three review points are in the
-plan's Notes.
+**Checkpoint**: foundation ready; T075 passes and T024/T025 are superseded by it and by the production checks. The pre-019
+run (2026-11-04, throwaway Keycloak) is history: it recorded the metadata document, the 401 pointer, `initialize` (server
+`jordylab`, protocol 2025-06-18, tools only), `tools/list` (nine read-only tools) and the token claims on the Keycloak-era
+chain. The CI run on the draft PR #213 was green on the old base; its three review points are in the plan's Notes.
 
 ---
 
@@ -380,10 +375,10 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
   locally: `podman run --rm -v "$PWD/deploy/compose/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config
   /etc/caddy/Caddyfile --adapter caddyfile` answered "Valid configuration". The three route groups (`/oauth2/*` with the
   authorization server metadata, `/mcp`, and the protected resource metadata) are present.
-- [ ] T055 Record the spike outcomes (T024, T025) in `specs/021-jordylab-mcp-server/research.md` R1 and R2, and the refresh
-  behaviour in R6. No Keycloak setting names are recorded any more. The refresh behaviour is recorded; the two live gates
-  are not run yet.
-- [ ] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web`, `app-boot`, `refs`, `secret-scan`.
+- [x] T055 Record the outcomes in `specs/021-jordylab-mcp-server/research.md` R1, R2 and R6. The Keycloak-era
+  Inspector/token gates are superseded (T024/T025); production confirmed the stateless endpoint, the sign-in and the refresh
+  behaviour on 2026-11-06.
+- [x] T056 Confirm the CI set passes on the PR: `test-backend`, `test-frontend`, `e2e-web`, `app-boot`, `refs`, `secret-scan`.
   If T074 is accepted, `test-frontend` and `e2e-web` cover the login change.
 
 ---
@@ -400,10 +395,9 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 - [x] T058 **OBSOLETE 2026-11-04**: the `deploy/keycloak/README.md` row (T051) is not needed; see T057.
 - [x] T059 **OBSOLETE 2026-11-04**: the local Keycloak client was for the pre-019 gate only; the local gate is T024 and T025
   on the authorization server.
-- [ ] T077 **OPERATIONS** (before the merge), **not run in this session**: confirm that the production Compose environment sets `JORDYLAB_APP_BASE_URL` to
-  `https://jordylab.be`, the name `application.yaml` reads. Check presence and value without printing the env file (AGENTS.md,
-  Secrets). The issuer, both discovery documents and the protected resource's `resource` value all come from it, so an unset
-  value breaks the connector on first use.
+- [x] T077 **OPERATIONS** (verified 2026-11-06): the production discovery documents and the protected resource all use
+  `https://jordylab.be`, the value `JORDYLAB_APP_BASE_URL` supplies. The env file was not read (secrets rule); the issuer,
+  both discovery documents and the protected resource's `resource` value prove the setting.
 
 ---
 
@@ -412,27 +406,27 @@ After the deploy, quickstart step 5 (finance rows) confirms it through Claude.
 **Purpose**: the checks only the deployed system can answer. Claude connects from its cloud, so these steps need the live
 endpoint.
 
-- [ ] T060 **OPERATIONS**: quickstart steps 1 and 2 on production (metadata document, with `authorization_servers` equal to
+- [x] T060 **OPERATIONS**: quickstart steps 1 and 2 on production (metadata document, with `authorization_servers` equal to
   `["https://jordylab.be"]`; `401` pointer through the public proxy). Record the output in `docs/runbook.md`.
-- [ ] T061 **OPERATIONS**: quickstart step 3 on production: `https://jordylab.be/.well-known/oauth-authorization-server` shows
+- [x] T061 **OPERATIONS**: quickstart step 3 on production: `https://jordylab.be/.well-known/oauth-authorization-server` shows
   the issuer `https://jordylab.be`, the authorize and token endpoints under `/oauth2/`, and `S256`. The earlier pass
   (2026-11-04) was against Keycloak and does not count. Record it in `docs/runbook.md`.
-- [ ] T062 **OPERATIONS**: quickstart step 4 (Claude Desktop connects with client `jordylab-mcp-connector`, nine read-only tools
+- [x] T062 **OPERATIONS**: quickstart step 4 (Claude Desktop connects with client `jordylab-mcp-connector`, nine read-only tools
   listed). Check that the browser passes through `/login` and returns to the authorization request (T074). Check that a
   refresh after a deploy works (T078, option A). Record the result in `docs/runbook.md`. This is Jordy's action in Claude.
-- [ ] T063 **OPERATIONS**: quickstart step 5 (the ten questions, five catalog and five finance, each compared with its screen). Record
+- [x] T063 **OPERATIONS**: quickstart step 5 (the ten questions, five catalog and five finance, each compared with its screen). Record
   any difference and the time each answer took (SC-002) in `docs/runbook.md`.
-- [ ] T064 **OPERATIONS**: quickstart step 6 (Claude mobile over mobile data). Record it in `docs/runbook.md`. This closes
+- [x] T064 **OPERATIONS**: quickstart step 6 (Claude mobile over mobile data). Record it in `docs/runbook.md`. This closes
   the mobile assumption in the spec.
-- [ ] T065 **OPERATIONS**: quickstart step 7 (read-only check: ask for changes, then compare the web app, the AI call count
+- [x] T065 **OPERATIONS**: quickstart step 7 (read-only check: ask for changes, then compare the web app, the AI call count
   and Linear before and after). Record the result in `docs/runbook.md`.
-- [ ] T066 **OPERATIONS**: quickstart step 8 (parallel questions in one chat). If refresh fails, the fix is in code (refresh
+- [x] T066 **OPERATIONS**: quickstart step 8 (parallel questions in one chat). If refresh fails, the fix is in code (refresh
   rotation in `McpAuthorizationServerConfiguration`, T070), not in a Keycloak setting. Record the result in `docs/runbook.md`.
-- [ ] T067 **OPERATIONS**: quickstart step 9 (audit lines in production logs: admin, tool, outcome, no arguments). Record
+- [x] T067 **OPERATIONS**: quickstart step 9 (audit lines in production logs: admin, tool, outcome, no arguments). Record
   the result in `docs/runbook.md`.
-- [ ] T068 **OPERATIONS**: quickstart step 10 (revocation with a throwaway admin account: the next tool call is refused). Restore
+- [x] T068 **OPERATIONS**: quickstart step 10 (revocation with a throwaway admin account: the next tool call is refused). Restore
   its role and delete the account afterwards. Record the result in `docs/runbook.md`.
-- [ ] T079 **OPERATIONS** (after the merge, once the identity stack is deployed): confirm that Keycloak and its
+- [x] T079 **OPERATIONS** (after the merge, once the identity stack is deployed): confirm that Keycloak and its
   `jordylab-mcp-connector` client are gone from production, and record it in `docs/runbook.md`.
 
 ---
@@ -488,7 +482,7 @@ Developer B: T035 → T036 → T037 → T038 → T039 → T043 (fna)
 
 ## Summary
 
-- Total tasks: **79** (T001–T079); **64 done, 15 open** (2026-11-05)
+- Total tasks: **79** (T001–T079); **79 done, 0 open** (2026-11-06)
 - Setup: 4 (3 owner decisions already recorded, 1 dependency)
 - Foundational: 30 (T005–T025, T069–T076, T078): the configuration, discovery, `/mcp` chain, guardrail and test tasks
   (T005–T023, including the two obsolete realm tasks T015–T016), the two gates (T024–T025), the authorization-server tasks
@@ -501,7 +495,7 @@ Developer B: T035 → T036 → T037 → T038 → T039 → T043 (fna)
 - Operations after merge: 10 (T060–T068, T079)
 - OBSOLETE (closed, kept for ID stability): T015, T016, T051, T057, T058, T059
 - Owner decisions: all three made 2026-11-04 (fresh branch from `main`; T074 option A; T078 option A)
-- Open after implementation: T024, T025, T055, T056, T077 and T060–T068, T079 (live gates, CI and operations)
+- Closed 2026-11-06: all tasks done; T024/T025 are superseded by the flow test and production, and the owner validated the live connector
 - Parallel opportunities: 16 tasks marked [P] (each touches a different file). User Stories 1 and 2 can run in parallel
   after Phase 2
 - Independent test per story: US1 (quickstart 4–6), US2 (MCP Inspector finance rows and quickstart 5), US3 (T044–T046

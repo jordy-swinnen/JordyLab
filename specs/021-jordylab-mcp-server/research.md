@@ -20,7 +20,9 @@ it stands on 2026-11-03.
   JSON-RPC handler (protocol drift); the community MCP Security library (its own docs mark it work in progress).
 - **Confirmed 2026-11-04** on the stateless server (against a throwaway Keycloak test realm, before spec 019 landed): `initialize` returns the server name
   `jordylab`, and `tools/list` returns the nine tools. `McpConnectorIntegrationTest` holds both. MCP Inspector against the
-  dev stack (T024) and Claude's own check after the deploy (Phase 8) are still open.
+  dev stack (T024) was superseded by the authorization-code flow test and the production checks.
+- **Confirmed in production 2026-11-06**: the stateless endpoint registers nine tools, the 401 pointer and both discovery
+  documents are live, and Claude Desktop/mobile plus Claude Code and OpenCode connect through it.
 
 ## R2. Sign-in: Spring Authorization Server inside the backend
 
@@ -36,6 +38,9 @@ it stands on 2026-11-03.
   sign-in, and the account model the tools already use is the same one the connector authenticates against.
 - **Rejected**: keeping Keycloak (removed by spec 019); a static request-header token (a long-lived shared credential,
   and Claude's static-credential support is limited); a hosted identity provider (a new dependency and a new secret).
+- **Confirmed in production 2026-11-06**: the login bridge returns the browser to the authorization request, the five
+  registered callbacks (Claude Desktop/mobile, Claude Code, OpenCode) are accepted, and the token endpoint answers invalid
+  codes and refresh tokens with a clean `invalid_grant`.
 
 ## R3. Tokens: audience, roles and the per-call account check
 
