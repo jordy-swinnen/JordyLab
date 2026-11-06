@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /** The one {@code answer} event of a LibBot stream (spec 013 contracts/libbot-api.md). */
 public record LibBotAnswerResponse(LibBotOutcome outcome, String language, String text, List<String> applied,
-        Unknown unknown, List<Reference> references) {
+        Unknown unknown, List<Reference> references, String answerModel) {
 
     public record Unknown(int count, String note) {
     }

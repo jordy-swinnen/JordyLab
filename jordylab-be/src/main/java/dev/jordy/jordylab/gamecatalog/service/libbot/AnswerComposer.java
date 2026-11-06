@@ -24,6 +24,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AnswerComposer {
 
+    /** How much of a game's description a row carries: enough context, without paying for a whole blurb per candidate. */
+    static final int MAX_ROW_DESCRIPTION_CHARACTERS = 400;
+
     /** The composed answer and the call that produced it (for authorship and cost). */
     public record Composition(LibBotAnswer answer, AiCallResult call) {
     }
@@ -94,7 +97,19 @@ public class AnswerComposer {
         }
 
         return candidate.gameId() + " | " + candidate.title() + " | " + String.join(", ", candidate.platforms())
-                + " | " + String.join("; ", facts) + " | " + votes + " | "
-                + (candidate.description() == null ? "" : candidate.description().replace('\n', ' '));
+                + " | " + String.join("; ", facts) + " | " + votes + " | " + descriptionForRow(candidate.description());
+    }
+
+    /** The description on one line, cut to [MAX_ROW_DESCRIPTION_CHARACTERS] so the prompt stays small and fast. */
+    private static String descriptionForRow(String description) {
+        if (description == null) {
+            return "";
+        }
+        String singleLine = description.replace('\n', ' ');
+        if (singleLine.length() <= MAX_ROW_DESCRIPTION_CHARACTERS) {
+            return singleLine;
+        }
+
+        return singleLine.substring(0, MAX_ROW_DESCRIPTION_CHARACTERS - 3) + "...";
     }
 }

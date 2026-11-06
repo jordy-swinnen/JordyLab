@@ -136,7 +136,7 @@ public class LibBotController {
         return new LibBotAnswerResponse(result.outcome(), result.language().code(), result.text(), result.applied(),
                 result.unknown() == null ? null
                         : new LibBotAnswerResponse.Unknown(result.unknown().count(), result.unknown().note()),
-                references);
+                references, result.answerModel());
     }
 
     private void send(SseEmitter emitter, AtomicBoolean connected, String name, Object data) {
