@@ -48,8 +48,8 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 
 ## Backlog (Linear)
 
-Ideas and new bugs are logged in Linear (team `JOR`), not in files: use the `linear-capture` skill ("log an idea", "make
-a ticket for …", "turn this plan into tickets"; it previews, checks duplicates and creates in Triage with one App and
+Ideas and new bugs are logged in Linear (team `JOR`), not in files: use the `linear-ticket-logging` skill ("log an idea", "make
+a ticket for …", "turn this plan into tickets"; it previews, checks duplicates and creates in Backlog with one App and
 one Type label). `docs/testing/bug-log.md` stays as history and the campaign's log-first rule; `BUG-###` references stay
 valid. Specs, plans and tasks stay in git. Setup, labels, states and the connector steps for the Claude apps are in
 `docs/linear.md` (spec `specs/015-linear-backlog/`).
@@ -58,7 +58,7 @@ valid. Specs, plans and tasks stay in git. Setup, labels, states and the connect
 
 Every commit subject starts with its Linear ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
 `Refs:` trailer naming the SpecKit artefact (`Refs: 015/T004`, `Refs: 011 BUG-020`, or `Refs: NO-CODE`). No ticket yet?
-Create one first with the `linear-capture` skill. Pull requests use `.github/pull_request_template.md` and a linking
+Create one first with the `linear-ticket-logging` skill. Pull requests use `.github/pull_request_template.md` and a linking
 word (`Fixes JOR-23` finishes the ticket, `Refs JOR-23` does not). The full rules, the `Refs:` token table and examples
 are in `.github/instructions/commits-and-pull-requests.instructions.md`, loaded by Claude Code (`CLAUDE.md`) and OpenCode
 (`opencode.json`). Enforced by `.githooks/commit-msg` locally (enable once per clone:

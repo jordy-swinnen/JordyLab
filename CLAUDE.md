@@ -12,7 +12,7 @@ Skills (invoke with `/skill-name`):
 - `/ai-endpoint` — wire up a ResilientAiService integration for a module
 - `/angular-signal-store` — generate an NgRx-free signal-based state service for an Angular domain
 - `/angular-test` — Angular/Vitest testing conventions (mocking, spec structure, mock fixtures)
-- `/linear-capture` — log an idea, bug or ticket (or turn a plan into tickets) in Linear, in Triage, with duplicate check and preview
+- `/linear-ticket-logging` — log an idea, bug or ticket (or turn a plan into tickets) in Linear, in Backlog, with duplicate check and preview
 - `/linear-triage` — go through the Linear Triage inbox: propose labels, project and duplicates, apply what Jordy confirms
 - `/linear-sync-drafts` — mirror specs, drafts and open bugs into Linear and keep them in step
 - `/speckit-taskstoissues` — customised: turns a spec's tasks into a Linear project, milestones and one issue per user story
@@ -20,6 +20,7 @@ Skills (invoke with `/skill-name`):
 - `/agent-handover` — hand work over between Claude Code and OpenCode (wrap up, update tasks/bug log, write
   `HANDOFF-next-agent.md`, print the prompt for the other tool, stop); also used by the agent taking over
 - `/refresh-agent-models` — re-curate the Planner, Reviewer and Worker agent models and effort levels for OpenCode (OpenCode Go) and Claude Code using the Artificial Analysis leaderboards
+- `/model-harness-recommendations` — recommend a model per harness and cost level for SpecKit Plan and Build steps (method only; reads current prices and scores each time)
 - `trading-guard` — background rules for the trading module (human-in-the-loop enforcement, not user-invocable)
 - `jordylab-ops` — production operations knowledge (VPS + k3s, deploys/approvals/rollbacks, SOPS secrets edited in
   IntelliJ, identity/user administration, CNPG backups); the single source of truth, shared natively with OpenCode
