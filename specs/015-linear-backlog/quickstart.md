@@ -32,7 +32,7 @@ Expected: every script ends with `… 0 failed`.
 
 ## 3. Capture (US1)
 
-1. In Claude Code say: "log an idea: show playtime per console in the Game Catalog". An issue appears in Triage of
+1. In Claude Code say: "log an idea: show playtime per console in the Game Catalog". An issue appears in Backlog of
    `JOR` with App = Game Catalog, Type = Idea; the reply holds the link. Say it again: the existing issue is shown and
    nothing new is created without a yes.
 2. Repeat in OpenCode and in Claude on the phone (connector, with the ticket conventions block from `docs/linear.md`
@@ -40,7 +40,7 @@ Expected: every script ends with `… 0 failed`.
 3. Say "make a ticket for adding a retry button to the scan client" (Type = Feature) and "make a chore ticket to bump
    the Gradle wrapper" (Type = Chore): each gets the matching Type label.
 4. Describe a small plan of three pieces of work and say "turn this into tickets": a table is proposed, nothing exists
-   in Linear yet; approve two of three and exactly those two appear in Triage, linked to each other, with every link in
+   in Linear yet; approve two of three and exactly those two appear in Backlog, linked to each other, with every link in
    the reply.
 5. With the Linear sign-in revoked: the reply says so and repeats the content.
 

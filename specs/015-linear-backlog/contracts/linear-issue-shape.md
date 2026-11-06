@@ -1,11 +1,11 @@
 # Contract: shape of issues the skills create
 
-Applies to `linear-capture`, `linear-sync-drafts`, `linear-triage` and `speckit-taskstoissues`. Issue text is written for
+Applies to `linear-ticket-logging`, `linear-sync-drafts`, `linear-triage` and `speckit-taskstoissues`. Issue text is written for
 a reader who has not seen the chat. Never include secrets, tokens, e-mail addresses or other personal data.
 
 ## Always
 
-- Team `JOR`. State: Triage for captured items; *Drafted* / *Specified* / *Done* for migrated drafts as decided.
+- Team `JOR`. State: Backlog for captured items (Triage only when Jordy asks, and for what the idea box creates); *Drafted* / *Specified* / *Done* for migrated drafts as decided.
 - Exactly one label from the App group and one from the Type group (ask when unsure; never invent a label).
 - The reply to the user ends with the issue link; a failed creation says so and repeats the content.
 

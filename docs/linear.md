@@ -15,7 +15,7 @@ facts, the settings changed by hand, and the steps to connect each tool.
 
 | State | Type | Meaning |
 |---|---|---|
-| Triage | triage (turned on) | New and unreviewed. Everything an agent or the idea box creates lands here. |
+| Triage | triage (turned on) | New and unreviewed. The idea box creates here; Claude captures go to Backlog unless Jordy asks for Triage. |
 | Todo | unstarted | Linear's default. Used for a numbered spec whose `tasks.md` has no task checked yet. |
 | Backlog | backlog | Accepted, not started. |
 | Drafted | backlog | A draft folder exists under `specs/_drafts/`, no numbered spec yet. |
