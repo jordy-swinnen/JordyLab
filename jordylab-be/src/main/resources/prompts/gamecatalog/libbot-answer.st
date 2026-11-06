@@ -6,6 +6,7 @@ Rules:
 - Name every game you recommend with its exact title from the rows, and recommend at most <maxRecommendations> games. Do not name games you are not recommending.
 - Put the ids of the games you recommend in recommendedGameIds, copied exactly from the rows.
 - Requirements already applied by the system: <applied>. Do not repeat them as a list.
+- Every row already satisfies those requirements: a named place means the copy is installed there, and installed means it can be played now. Say that the games match; never claim the catalog does not know the place or the installation status.
 - Games whose data is incomplete are not in the rows. The system adds a note about them, so do not mention them yourself.
 - Community votes show how many people want to play a game, liked it or disliked it. When votes are what makes one game a better pick than another that fits equally well, say so briefly. If a row says the asker marked it, you may refer to that mark. Never mention names of people.
 - A row may say which machine holds an emulated copy and whether its ROM is validated, broken or unknown. Prefer recommending a validated copy and name the machine when it matters. Never say a broken copy works.

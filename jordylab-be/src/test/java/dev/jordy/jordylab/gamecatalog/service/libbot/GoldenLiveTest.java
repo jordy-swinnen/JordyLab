@@ -79,10 +79,18 @@ class GoldenLiveTest {
     record Verdict(GoldenCase goldenCase, boolean passed, String failure) {
     }
 
+    private static void requireGateway() {
+        boolean present = StringUtils.hasText(System.getenv("OPENROUTER_API_KEY"));
+        if (Boolean.parseBoolean(System.getenv("GOLDEN_LIVE_REQUIRED"))) {
+            assertThat(present).as("OPENROUTER_API_KEY is required for the CI gate").isTrue();
+        } else {
+            Assumptions.assumeTrue(present, "OPENROUTER_API_KEY is not set: the live tier needs the gateway");
+        }
+    }
+
     @Test
     void theRealModelsAnswerTheGoldenQuestions() {
-        Assumptions.assumeTrue(StringUtils.hasText(System.getenv("OPENROUTER_API_KEY")),
-                "OPENROUTER_API_KEY is not set: the live tier needs the gateway");
+        requireGateway();
         AtomicInteger inputTokens = new AtomicInteger();
         AtomicInteger outputTokens = new AtomicInteger();
         List<Verdict> verdicts = new ArrayList<>();
@@ -117,8 +125,7 @@ class GoldenLiveTest {
      */
     @Test
     void theRealModelWritesStoreBlurbsThatPassTheQualityValidator() throws java.io.IOException {
-        Assumptions.assumeTrue(StringUtils.hasText(System.getenv("OPENROUTER_API_KEY")),
-                "OPENROUTER_API_KEY is not set: the live tier needs the gateway");
+        requireGateway();
         String systemPrompt = new org.springframework.core.io.ClassPathResource("prompts/gamecatalog/enrichment.st")
                 .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         List<GoldenFixtures.DescriptionSample> samples = GoldenFixtures.loadDescriptionSamples().stream()
@@ -156,7 +163,12 @@ class GoldenLiveTest {
 
     private static String descriptionOf(String content) {
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(content.trim()).path("description").asText(null);
+            String trimmed = content.trim();
+            if (trimmed.startsWith("```")) {
+                trimmed = trimmed.replaceFirst("^```[a-zA-Z]*\\s*", "").replaceFirst("\\s*```$", "");
+            }
+
+            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(trimmed).path("description").asText(null);
         } catch (java.io.IOException exception) {
             return null;
         }
@@ -170,6 +182,10 @@ class GoldenLiveTest {
             SoftAssertions softly = new SoftAssertions();
             harness.check(goldenCase, result, softly);
             List<String> problems = softly.errorsCollected().stream().map(Throwable::getMessage).toList();
+            if (!problems.isEmpty()) {
+                System.out.println("      applied=" + result.applied() + " outcome=" + result.outcome()
+                        + " text=" + result.text());
+            }
 
             return new Verdict(goldenCase, problems.isEmpty(), String.join(" | ", problems));
         } catch (RuntimeException exception) {

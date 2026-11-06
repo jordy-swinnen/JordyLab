@@ -58,8 +58,8 @@ final class GoldenFixtures {
     }
 
     record Expect(LibBotOutcome outcome, String language, List<String> applied, Integer minReferences,
-            Integer maxReferences, List<String> referenceTitlesSubsetOf, Integer unknownCount,
-            List<String> textContains, List<String> textMustNotContain, Integer composeCalls) {
+            Integer maxReferences, List<String> referenceTitlesSubsetOf, List<String> referenceTitlesMustExclude,
+            Integer unknownCount, List<String> textContains, List<String> textMustNotContain, Integer composeCalls) {
     }
 
     private GoldenFixtures() {

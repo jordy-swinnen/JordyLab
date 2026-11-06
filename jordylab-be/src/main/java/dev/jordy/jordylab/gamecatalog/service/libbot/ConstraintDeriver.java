@@ -27,14 +27,16 @@ public class ConstraintDeriver {
         List<AppliedConstraint> applied = new ArrayList<>();
         Integer partySize = facts.partySize();
         boolean groupPlay = partySize != null && partySize >= 2;
-        boolean alone = !groupPlay && (Boolean.TRUE.equals(facts.playingAlone()) || Integer.valueOf(1).equals(partySize));
+        boolean playingAlone = Boolean.TRUE.equals(facts.playingAlone()) || Integer.valueOf(1).equals(partySize);
+        boolean alone = !groupPlay && playingAlone;
+        boolean impossible = groupPlay && playingAlone;
         boolean online = Boolean.TRUE.equals(facts.online());
 
         if (groupPlay) {
             applied.add(AppliedConstraint.of(Kind.MIN_LOCAL_PLAYERS, String.valueOf(partySize)));
             applied.add(AppliedConstraint.of(Kind.LOCAL_MULTIPLAYER));
         }
-        if (alone) {
+        if (playingAlone) {
             applied.add(AppliedConstraint.of(Kind.SINGLE_PLAYER));
         }
         if (online) {
@@ -44,9 +46,15 @@ public class ConstraintDeriver {
         platforms.forEach(platform -> applied.add(AppliedConstraint.of(Kind.PLATFORM, platform)));
         List<String> places = knownPlaces(facts.places(), vocabulary);
         places.forEach(place -> applied.add(AppliedConstraint.of(Kind.PLACE, place)));
-        if (facts.installStatus() == InstallFilter.INSTALLED) {
+        InstallFilter installStatus = facts.installStatus();
+        if (installStatus == InstallFilter.INSTALLED && !places.isEmpty()) {
+            // A place already means "an installed copy on that host"; the extra chip adds nothing and the model often
+            // adds it to "what is on the living room PC?" (JOR-88).
+            installStatus = null;
+        }
+        if (installStatus == InstallFilter.INSTALLED) {
             applied.add(AppliedConstraint.of(Kind.INSTALLED));
-        } else if (facts.installStatus() == InstallFilter.NOT_INSTALLED) {
+        } else if (installStatus == InstallFilter.NOT_INSTALLED) {
             applied.add(AppliedConstraint.of(Kind.NOT_INSTALLED));
         }
         List<String> genres = cleanGenres(facts.genres());
@@ -70,12 +78,12 @@ public class ConstraintDeriver {
         }
 
         Constraints constraints = new Constraints(groupPlay ? partySize : null, groupPlay, alone, online, platforms,
-                places, facts.installStatus(), genres, yearMin, yearMax, facts.markFilter(), facts.markScope(),
+                places, installStatus, genres, yearMin, yearMax, facts.markFilter(), facts.markScope(),
                 facts.likeMyLiked(), blankToNull(facts.semanticQuery()));
         Integer largest = vocabulary.largestKnownGroup();
         boolean exceeds = groupPlay && largest != null && partySize > largest;
 
-        return new Derivation(constraints, List.copyOf(applied), exceeds, largest);
+        return new Derivation(constraints, List.copyOf(applied), exceeds, largest, impossible);
     }
 
     private List<String> knownPlatforms(List<String> mentioned, LibraryVocabulary vocabulary) {

@@ -124,6 +124,34 @@ class ConstraintDeriverTest {
     }
 
     @Test
+    void aPlaceDropsTheRedundantInstalledChip() {
+        Facts facts = new Facts(null, null, null, null, List.of("Living room PC"), InstallFilter.INSTALLED, null, null,
+                null, null, null, null, null, null);
+
+        Derivation derivation = deriver.derive(facts, VOCABULARY);
+
+        assertSoftly(softly -> {
+            softly.assertThat(derivation.constraints().installStatus()).isNull();
+            softly.assertThat(derivation.applied()).containsExactly(AppliedConstraint.of(Kind.PLACE, "Living room PC"));
+        });
+    }
+
+    @Test
+    void singlePlayerForAGroupIsImpossibleAndSaysSoWithoutSearching() {
+        Facts facts = new Facts(8, true, null, null, null, null, null, null, null, null, null, null, null, null);
+
+        Derivation derivation = deriver.derive(facts, VOCABULARY);
+
+        assertSoftly(softly -> {
+            softly.assertThat(derivation.impossible()).isTrue();
+            softly.assertThat(derivation.applied()).containsExactly(
+                    AppliedConstraint.of(Kind.MIN_LOCAL_PLAYERS, "8"),
+                    AppliedConstraint.of(Kind.LOCAL_MULTIPLAYER),
+                    AppliedConstraint.of(Kind.SINGLE_PLAYER));
+        });
+    }
+
+    @Test
     void yearsAreSwappedWhenGivenBackwards() {
         Facts backwards = new Facts(null, null, null, null, null, null, null, 1999, 1990, null, null, null, null, null);
 
