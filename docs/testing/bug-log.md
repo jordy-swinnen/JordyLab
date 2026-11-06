@@ -1230,7 +1230,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Verified on prod: pending
 
 ### BUG-080: Library shows scene-release folder names as titles and a ".dec" file as a second game
-- Status: OPEN
+- Status: FIXED-LOCAL (JOR-73) — the client strips scene-release suffixes; a `.dec` file is not a game. A real rescan on the source machine is the production verification.
 - Severity: S4 (cosmetic and a duplicate entry; nothing breaks)
 - Area/spec: gamecatalog scanner and title cleaning / 013 (one entry per game)
 - Env found: prod (jordylab.be, admin), 2026-11-02
@@ -1239,10 +1239,10 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   1. Open https://jordylab.be/games/grid (Status: Installed, 226 games), page 1.
 - Expected (cite spec/story): one clean title per game.
 - Actual (logs/screenshot, secrets redacted): PSP games from the cachyos-htpc EmuDeck source appear under their release-group folder names ("BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP", "Daxter USA PSN PSP-PLAYASiA", "Dissidia 012 Duodecim Final Fantasy USA PSP-PSPKiNG", "Final Fantasy Tactics The War Of The Lions USA PSP-pSyPSP", "Crisis Core Final Fantasy 7" with an initials placeholder cover), and "Demon's Souls .dec" is listed as a second PlayStation 3 game next to "Demon's Souls".
-- Root cause: probable, not confirmed: the scanner's filename normalisation does not strip the scene tags of PSP release folders, and a `.dec` file inside a PS3 game folder is read as its own game.
-- Fix (PR / commit / tag): none yet.
-- Regression test added: none yet.
-- Verified on prod: pending
+- Root cause: the scanner's filename normalisation kept scene-release suffixes. A `.dec` file is not in the client's ROM extension set, so the duplicate entry comes from an older scan and disappears on the next scan; the frozen client now also strips a `.dec` suffix defensively.
+- Fix (PR / commit / tag): JOR-73 — a conservative scene-suffix rule in `gamecatalog-scanner/src/jordylab_scan/normalize.py` and its server mirror `TextSanitizer.stripSceneReleaseTags`, used by `EmuDeckLibraryParser`. Only a trailing run of scene tags ending in `<platform>-<group>` is removed, so "Born in the USA" stays.
+- Regression test added: `test_grouping.py` (the four reported PSP names, "Born in the USA", a `.dec` file), `EmuDeckLibraryParserTest`, `TextSanitizerTest`; the frozen client is regenerated.
+- Verified on prod: pending a real rescan on cachyos-htpc
 
 ### BUG-081: The Postgres base image was pinned to the arm64 manifest digest, so the image cannot build on the amd64 VPS
 - Status: FIXED-LOCAL (found and fixed during the cutover window 2026-11-03; verification is the window's T032 build on the VPS)
