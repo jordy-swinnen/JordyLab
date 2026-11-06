@@ -182,6 +182,12 @@ describe('GameDetailComponent', () => {
     expect(askLink?.getAttribute('href')).toContain('attach=1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f');
   });
 
+  it('hides the exclusion action from guests', () => {
+    show(aGameDetailMock());
+
+    expect(spectator.query('[data-testid="exclude-game"]')).toBeNull();
+  });
+
   it('forwards the refresh actions to the store', () => {
     isAdmin.set(true);
     show(aGameDetailMock({ platforms: [aPlatformChipMock({ name: 'Steam', family: 'STEAM' })] }));
