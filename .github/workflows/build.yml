@@ -92,6 +92,26 @@ jobs:
         working-directory: jordylab-fe
         run: bunx nx run-many --target=test --all --coverage
 
+  # The live tier of the LibBot golden set (spec 013 FR-018, JOR-88): 31 real-model questions and 4 generated descriptions.
+  # It runs on main only (it costs tokens) and gates build-and-push, so a regression stops an automatic deploy. The gate is
+  # 90 % overall and 100 % on the hard rules; the recorded replay tier still runs in test-backend.
+  golden-live:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Run the live LibBot golden tier
+        working-directory: jordylab-be
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: ./gradlew goldenLive --no-daemon
+
   # Boots the *built* app in headless Chrome and requires the login page to render: the only check on the real start-up
   # path (main.ts -> pre-bootstrap auth -> bootstrapApplication). Unit tests could not see the rc12 blank page (NG0201,
   # spec 011 BUG-056). Chrome is preinstalled on ubuntu-latest; the script has no dependencies.
@@ -173,7 +193,7 @@ jobs:
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -ignore 'unexpected key "queue" for "concurrency" section'
 
   build-and-push:
-    needs: [secret-scan, licence-check, test-backend, test-frontend, app-boot, e2e-web]
+    needs: [secret-scan, licence-check, test-backend, test-frontend, app-boot, e2e-web, golden-live]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

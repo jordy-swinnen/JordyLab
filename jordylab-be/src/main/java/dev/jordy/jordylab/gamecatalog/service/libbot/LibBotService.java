@@ -15,9 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * LibBot (spec 013): interpret, derive, retrieve, compose, in that order, with the rules in Java and the model only
@@ -110,11 +112,15 @@ public class LibBotService {
         List<Candidate> referenced = referencedGames(interpretation, attached, ask.userSubject());
         Derivation derivation = deriver.derive(interpretation.facts(), vocabulary);
         List<String> applied = messages.applied(derivation.applied(), language);
+        if (derivation.impossible()) {
+            return new LibBotResult(LibBotOutcome.NO_MATCH, language, messages.noMatch(language), applied, null,
+                    List.of());
+        }
         onStage.accept(LibBotStage.SEARCHING);
         boolean askingAboutGames = interpretation.intent() == Intent.GAME_QUESTION && !referenced.isEmpty();
         RetrievalResult retrieval = askingAboutGames ? new RetrievalResult(List.of(), 0, 0, List.of(), false)
                 : retriever.retrieve(derivation.constraints(), ask.userSubject());
-        List<Candidate> candidates = merge(referenced, retrieval.confirmed());
+        List<Candidate> candidates = candidatesFor(interpretation, derivation, referenced, retrieval);
         LibBotResult.Unknown unknown = retrieval.unknownCount() == 0 ? null : new LibBotResult.Unknown(
                 retrieval.unknownCount(), messages.unknownNote(
                         retrieval.unknownCount() - retrieval.unknownFlagCount(), retrieval.unknownFlagCount(),
@@ -163,6 +169,28 @@ public class LibBotService {
 
         return limited.equals(attached.stream().map(Candidate::gameId).toList()) ? attached
                 : retriever.describeVisible(limited, userSubject);
+    }
+
+    /**
+     * A follow-up that asks a structural question about the games named before ("which of those are installed?", "which
+     * of them are on the Switch?") only answers with the referenced games that also satisfy the new filter. Without this
+     * the referenced games bypassed the filter and the answer could name a game that is not installed (JOR-88).
+     */
+    private List<Candidate> candidatesFor(QuestionInterpretation interpretation, Derivation derivation,
+            List<Candidate> referenced, RetrievalResult retrieval) {
+        if (interpretation.intent() != Intent.FOLLOW_UP || referenced.isEmpty() || !hasStructuralFilter(derivation)) {
+            return merge(referenced, retrieval.confirmed());
+        }
+        Set<UUID> matching = retrieval.confirmed().stream().map(Candidate::gameId).collect(Collectors.toSet());
+
+        return referenced.stream().filter(candidate -> matching.contains(candidate.gameId())).toList();
+    }
+
+    private boolean hasStructuralFilter(Derivation derivation) {
+        Constraints constraints = derivation.constraints();
+
+        return constraints.installStatus() != null || !constraints.platforms().isEmpty()
+                || !constraints.places().isEmpty();
     }
 
     /** Referenced games first, then the search results, each game once, within the candidate limit. */

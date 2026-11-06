@@ -156,7 +156,12 @@ class GoldenLiveTest {
 
     private static String descriptionOf(String content) {
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(content.trim()).path("description").asText(null);
+            String trimmed = content.trim();
+            if (trimmed.startsWith("```")) {
+                trimmed = trimmed.replaceFirst("^```[a-zA-Z]*\\s*", "").replaceFirst("\\s*```$", "");
+            }
+
+            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(trimmed).path("description").asText(null);
         } catch (java.io.IOException exception) {
             return null;
         }
@@ -170,6 +175,10 @@ class GoldenLiveTest {
             SoftAssertions softly = new SoftAssertions();
             harness.check(goldenCase, result, softly);
             List<String> problems = softly.errorsCollected().stream().map(Throwable::getMessage).toList();
+            if (!problems.isEmpty()) {
+                System.out.println("      applied=" + result.applied() + " outcome=" + result.outcome()
+                        + " text=" + result.text());
+            }
 
             return new Verdict(goldenCase, problems.isEmpty(), String.join(" | ", problems));
         } catch (RuntimeException exception) {

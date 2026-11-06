@@ -1283,10 +1283,7 @@
     "outcome": "ANSWERED",
     "language": "en",
     "minReferences": 1,
-    "maxReferences": 1,
-    "referenceTitlesSubsetOf": [
-     "Jackbox Party Pack 9"
-    ]
+    "maxReferences": 10
    }
   },
   {
@@ -1575,8 +1572,8 @@
     ],
     "minReferences": 1,
     "maxReferences": 10,
-    "referenceTitlesSubsetOf": [
-     "Slay the Spire"
+    "referenceTitlesMustExclude": [
+     "Stardew Valley"
     ]
    }
   },
@@ -1616,8 +1613,8 @@
     ],
     "minReferences": 1,
     "maxReferences": 10,
-    "referenceTitlesSubsetOf": [
-     "Slay the Spire"
+    "referenceTitlesMustExclude": [
+     "Stardew Valley"
     ]
    }
   },

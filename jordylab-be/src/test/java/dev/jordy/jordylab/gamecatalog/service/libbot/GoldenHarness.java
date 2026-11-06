@@ -100,6 +100,10 @@ final class GoldenHarness {
             softly.assertThat(result.references().stream().map(Candidate::title).toList())
                     .as("reference titles").isSubsetOf(expect.referenceTitlesSubsetOf());
         }
+        if (expect.referenceTitlesMustExclude() != null) {
+            softly.assertThat(result.references().stream().map(Candidate::title).toList())
+                    .as("excluded reference titles").doesNotContainAnyElementsOf(expect.referenceTitlesMustExclude());
+        }
         if (expect.unknownCount() != null) {
             softly.assertThat(result.unknown()).as("unknown-data note present").isNotNull();
             if (result.unknown() != null) {
