@@ -11,18 +11,19 @@ that's actually merged produces a publishable image.
 The backend image also receives the commit it was built from as a build argument, and reports it on
 `/actuator/info`. That is how "what is live?" gets an answer that is not a guess (spec 019, FR-017).
 
-The Build publishes images; it deploys nothing. Production is the Docker Compose stack on the VPS (spec 020),
-and k3s was retired at the cutover.
+The Build publishes images; while `AUTO_DEPLOY` is `true` it then calls the Compose workflow with that commit. Production is
+the Docker Compose stack on the VPS (spec 020), and k3s was retired at the cutover.
 
-## `deploy-prod-compose.yml` — a deploy you start
+## `deploy-prod-compose.yml` — the deploy
 
-Deploying is by hand: *Deploy to Production (Compose)* → *Run workflow* with a target. The target is a full
+A green `main` build deploys by itself while the repository variable `AUTO_DEPLOY` is `true` (spec 020 T062).
+A manual run works with or without it: *Deploy to Production (Compose)* → *Run workflow* with a target. The target is a full
 commit sha or a release tag `vX.Y.Z` / `vX.Y.Z-rcN`, and it maps to the image tag `sha-<sha>` or the tag
 itself, so a sha deploy runs exactly the images its Build published. Nothing is rebuilt and nothing is
 retagged.
 
-No approval is needed: the `production` environment is there for its secrets. Deploys are manual because
-automatic deploys were paused at the cutover; spec 020's T062 decides when they return.
+No approval is needed: the `production` environment is there for its secrets. Set `AUTO_DEPLOY` to anything
+else to pause automatic deploys; manual runs are unaffected.
 
 Before it touches the host, the workflow resolves the target with `deploy/scripts/deploy-decision.sh` and
 refuses one it cannot resolve: a sha outside the history, a tag that does not exist, or a missing image
@@ -44,8 +45,8 @@ refuses one it cannot resolve: a sha outside the history, a tag that does not ex
 
 By hand: run the workflow with an older commit sha or release tag. An older target is allowed, which is
 what makes it a rollback. A failed deploy rolls back by itself (step 5). A rollback stays live until the
-next deploy, because automatic deploys are off; revert the bad commit so the next deploy does not put it
-back.
+next deploy. While `AUTO_DEPLOY` is `true`, a green `main` build deploys by itself, so revert the bad commit
+before that happens, or pause automatic deploys while you do.
 
 ## Hands-on
 

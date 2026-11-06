@@ -185,7 +185,7 @@ $COMPOSE ps
 **(operator step — do not create these yourself)**
 
 1. In the GitHub repo settings, create a `production` Environment for its secrets. It has **no** required reviewer:
-   deploys are started by hand and run without an approval (spec 019 FR-002, spec 020).
+   a deploy runs without an approval, whether it is started by hand or by a green `main` build (spec 020).
 2. Environment secrets the Compose deploy workflow needs:
    - `SOPS_AGE_KEY` — the private key from §7. It renders `prod.env` on the runner, never on the host.
    - `DEPLOY_SSH_KEY` — the private key of the `jordylab-deploy` user on the VPS (spec 020 T023; the public half is in
@@ -196,8 +196,8 @@ $COMPOSE ps
    mismatch before it connects.
 4. No k3s credential is used any more. Production runs on Docker Compose (spec 020), k3s is stopped and disabled, and the
    retired pipeline's `KUBE_*` environment secrets have been removed from the `production` environment.
-5. Automatic deploys are on since the pipeline was rewired (spec 020 T062). The repository variable `AUTO_DEPLOY` gates
-   them: `true` deploys a green `main` build by itself, anything else pauses that, and manual runs are unaffected.
+5. Automatic deploys are on since the pipeline was rewired (spec 020 T062); the repository variable `AUTO_DEPLOY` gates
+   them (§10).
 
 ## 10. Deploy
 
@@ -265,8 +265,9 @@ The script pulls, restarts and checks the site, and restores the live release it
 
 Three things to know before you roll back:
 
-- **A rollback stays live until the next deploy.** Automatic deploys are off (T062), so nothing overwrites it by itself.
-  Revert the bad commit on `main` so the next deploy does not put it back.
+- **A rollback stays live until the next deploy.** While `AUTO_DEPLOY` is `true` a green `main` build deploys by itself
+  and can put the bad commit back, so revert it on `main` first; set `AUTO_DEPLOY` to anything else to pause automatic
+  deploys while you do.
 - **A rollback restores the environment file that was live before the last deploy** (`prod.env.previous`). A secret changed
   in the failed deploy therefore goes back too; for a secret rotation (§13), roll forward instead.
 - **The database is not rolled back.** See the subsection below.
@@ -453,7 +454,8 @@ The rollback path was exercised the same day: the older sha `9cc83c4` went live 
 
 ### The flow
 
-1. Merge to `main`: the Build publishes the three `sha-<commit>` images and deploys nothing.
+1. Merge to `main`: the Build publishes the three `sha-<commit>` images and, while `AUTO_DEPLOY` is `true`, calls the
+   Compose workflow with that commit (§10).
 2. Deploy a target by hand: a full commit sha, or a release tag (§10). A sha needs no tag and no retag.
 3. A tag is only a label: `git tag v0.1.0 <sha>` and `git push origin v0.1.0` deploys nothing by itself. Tags are `vX.Y.Z`
    or `vX.Y.Z-rcN`; minor and patch ≤ 99, rc ≤ 98.
