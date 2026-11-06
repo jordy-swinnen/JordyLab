@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -95,6 +96,14 @@ class IdentityRoleMatrixTest {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/gamecatalog/libbot/quota").with(IdentityTestAuthentication.asGuest()))
                 .andExpect(status().isOk());
+        mockMvc.perform(get("/api/gamecatalog/exclusions").with(IdentityTestAuthentication.asGuest()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/exclude", UUID.randomUUID())
+                        .with(IdentityTestAuthentication.asGuest()).with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/gamecatalog/games/{id}/exclude", UUID.randomUUID())
+                        .with(IdentityTestAuthentication.asGuest()).with(csrf()))
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/settings/ai-models").with(IdentityTestAuthentication.asGuest()))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/identity/users").with(IdentityTestAuthentication.asGuest()))
@@ -109,6 +118,14 @@ class IdentityRoleMatrixTest {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/gamecatalog/games").with(IdentityTestAuthentication.asAdmin()))
                 .andExpect(status().isOk());
+        mockMvc.perform(get("/api/gamecatalog/exclusions").with(IdentityTestAuthentication.asAdmin()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/exclude", UUID.randomUUID())
+                        .with(IdentityTestAuthentication.asAdmin()).with(csrf()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/gamecatalog/games/{id}/exclude", UUID.randomUUID())
+                        .with(IdentityTestAuthentication.asAdmin()).with(csrf()))
+                .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/fna/portfolio").with(IdentityTestAuthentication.asAdmin()))
                 .andExpect(status().isOk());
     }
