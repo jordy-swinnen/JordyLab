@@ -21,8 +21,11 @@ import java.util.UUID;
 
 public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRepository {
 
+    /** The games the admin hid from the catalog, alphabetically (JOR-97). */
+    List<Game> findByExcludedTrueOrderByTitleAsc();
+
     /** Backlog of games still awaiting AI enrichment; available games first, deterministic data first. */
-    @Query("SELECT g FROM Game g WHERE g.enrichmentStatus = :status "
+    @Query("SELECT g FROM Game g WHERE g.enrichmentStatus = :status AND g.excluded = false "
             + "AND (EXISTS (SELECT 1 FROM GameInstallation gi WHERE gi.game = g) OR " + CONSOLE_ENTRY + ") "
             + "AND (g.steamAppId IS NULL OR g.metadataStatus <> 'PENDING') "
             + "ORDER BY CASE WHEN " + AVAILABLE_NOW + " THEN 0 ELSE 1 END, g.createdDate")
@@ -30,6 +33,7 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
 
     /** Backlog of Steam games still awaiting deterministic metadata; available games first. */
     @Query("SELECT g FROM Game g WHERE g.metadataStatus = :status AND g.steamAppId IS NOT NULL "
+            + "AND g.excluded = false "
             + "ORDER BY CASE WHEN " + AVAILABLE_NOW + " THEN 0 ELSE 1 END, g.createdDate")
     List<Game> findMetadataBacklog(@Param("status") MetadataStatus status, Pageable pageable);
 
@@ -60,13 +64,13 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
      * categories carry none). Available games first; games parked at the attempt ceiling drop out until a manual refresh
      * resets them.
      */
-    @Query("SELECT g FROM Game g WHERE g.multiplayerAttempts < :maxAttempts "
+    @Query("SELECT g FROM Game g WHERE g.multiplayerAttempts < :maxAttempts AND g.excluded = false "
             + "AND (g.multiplayerSource = 'UNKNOWN' OR (g.maxLocalPlayers IS NULL "
             + "AND (g.localMultiplayer IS NULL OR g.localMultiplayer = true))) "
             + "ORDER BY CASE WHEN " + AVAILABLE_NOW + " THEN 0 ELSE 1 END, g.createdDate")
     List<Game> findMultiplayerBacklog(@Param("maxAttempts") int maxAttempts, Pageable pageable);
 
-    @Query("SELECT COUNT(g) FROM Game g WHERE g.multiplayerAttempts < :maxAttempts "
+    @Query("SELECT COUNT(g) FROM Game g WHERE g.multiplayerAttempts < :maxAttempts AND g.excluded = false "
             + "AND (g.multiplayerSource = 'UNKNOWN' OR (g.maxLocalPlayers IS NULL "
             + "AND (g.localMultiplayer IS NULL OR g.localMultiplayer = true)))")
     long countMultiplayerBacklog(@Param("maxAttempts") int maxAttempts);
@@ -74,7 +78,7 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
 
     List<Game> findByMetadataStatus(MetadataStatus status);
 
-    @Query("SELECT COUNT(g) FROM Game g WHERE g.enrichmentStatus IN :statuses "
+    @Query("SELECT COUNT(g) FROM Game g WHERE g.enrichmentStatus IN :statuses AND g.excluded = false "
             + "AND (EXISTS (SELECT 1 FROM GameInstallation gi WHERE gi.game = g) OR " + CONSOLE_ENTRY + ") "
             + "AND (g.steamAppId IS NULL OR g.metadataStatus <> 'PENDING')")
     long countEnrichmentBacklog(@Param("statuses") Collection<EnrichmentStatus> statuses);
@@ -109,10 +113,16 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
     /** Platforms present in visible games: installed copies, the Steam library, and consoles. */
     @Query(value = "SELECT DISTINCT p.platform FROM ("
             + "SELECT gi.platform AS platform FROM gamecatalog.game_installation gi "
-            + "JOIN gamecatalog.scan_source s ON s.id = gi.source_id WHERE gi.presence = 'INSTALLED' AND s.enabled = true "
-            + "UNION SELECT 'Steam' WHERE EXISTS (SELECT 1 FROM gamecatalog.game_library_entry WHERE removed_at IS NULL) "
+            + "JOIN gamecatalog.scan_source s ON s.id = gi.source_id "
+            + "JOIN gamecatalog.game g ON g.id = gi.game_id "
+            + "WHERE gi.presence = 'INSTALLED' AND s.enabled = true AND g.excluded = false "
+            + "UNION SELECT 'Steam' WHERE EXISTS (SELECT 1 FROM gamecatalog.game_library_entry le "
+            + "JOIN gamecatalog.game lg ON lg.id = le.game_id "
+            + "WHERE le.removed_at IS NULL AND lg.excluded = false) "
             + "UNION SELECT c.platform FROM gamecatalog.console c "
-            + "JOIN gamecatalog.console_game_entry e ON e.console_id = c.id) p ORDER BY p.platform", nativeQuery = true)
+            + "JOIN gamecatalog.console_game_entry e ON e.console_id = c.id "
+            + "JOIN gamecatalog.game cg ON cg.id = e.game_id WHERE cg.excluded = false) p ORDER BY p.platform",
+            nativeQuery = true)
     List<String> findVisiblePlatforms();
 
     /** Every visible game, the target of an admin's "refresh game data" run. */
@@ -125,7 +135,8 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
     List<UUID> findVisibleIdsWithoutStoreDescription();
 
     /** Games with an installed copy on the given source, enabled or not: what the source holds. */
-    @Query("SELECT COUNT(g) FROM Game g WHERE EXISTS (SELECT 1 FROM GameInstallation si WHERE si.game = g "
+    @Query("SELECT COUNT(g) FROM Game g WHERE g.excluded = false "
+            + "AND EXISTS (SELECT 1 FROM GameInstallation si WHERE si.game = g "
             + "AND si.source.id = :sourceId AND si.presence = 'INSTALLED')")
     long countInstalledOnSource(@Param("sourceId") UUID sourceId);
 
@@ -133,7 +144,8 @@ public interface GameRepository extends JpaRepository<Game, UUID>, GameFilterRep
      * Games that would stop being visible if the given source were turned off: installed on it and in no other visible
      * place (another enabled source, an active Steam library entry, a console). Nothing is deleted by turning a source off.
      */
-    @Query("SELECT COUNT(g) FROM Game g WHERE EXISTS (SELECT 1 FROM GameInstallation si WHERE si.game = g "
+    @Query("SELECT COUNT(g) FROM Game g WHERE g.excluded = false "
+            + "AND EXISTS (SELECT 1 FROM GameInstallation si WHERE si.game = g "
             + "AND si.source.id = :sourceId AND si.presence = 'INSTALLED') "
             + "AND NOT EXISTS (SELECT 1 FROM GameInstallation oi WHERE oi.game = g AND oi.presence = 'INSTALLED' "
             + "AND oi.source.enabled = true AND oi.source.id <> :sourceId) "

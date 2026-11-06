@@ -9,6 +9,7 @@ import { aLibBotQuotaMock } from './mocks/libbot-quota.model.mock';
 import { aPlaceOptionMock } from './mocks/place-option.model.mock';
 import { aPlatformChipMock } from './mocks/platform-chip.model.mock';
 import { aSourcesOverviewMock } from './mocks/sources-overview.model.mock';
+import { aGameExclusionMock } from './mocks/game-exclusion.model.mock';
 import { aRefreshRunMock } from './mocks/refresh-run.model.mock';
 
 describe('GameCatalogApiService', () => {
@@ -19,8 +20,7 @@ describe('GameCatalogApiService', () => {
     spectator = createService();
   });
 
-  it('requests the games page without optional params', () => {
-    const expectedPage: GamesPage = {
+  it('requests the games page without optional params', () => {    const expectedPage: GamesPage = {
       content: [aGameSummaryMock()],
       page: 0,
       size: 60,
@@ -185,6 +185,24 @@ describe('GameCatalogApiService', () => {
     spectator
       .expectOne('/api/gamecatalog/sources', HttpMethod.GET)
       .flush(aSourcesOverviewMock({ sources: expectedSources }));
+  });
+
+  it('requests the exclusions', () => {
+    spectator.service.getExclusions().subscribe((exclusions) => {
+      expect(exclusions).toEqual([aGameExclusionMock()]);
+    });
+
+    spectator
+      .expectOne('/api/gamecatalog/exclusions', HttpMethod.GET)
+      .flush([aGameExclusionMock()]);
+  });
+
+  it('excludes and includes a game', () => {
+    const id = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f';
+    spectator.service.excludeGame(id).subscribe();
+    spectator.expectOne(`/api/gamecatalog/games/${id}/exclude`, HttpMethod.POST).flush(null);
+    spectator.service.includeGame(id).subscribe();
+    spectator.expectOne(`/api/gamecatalog/games/${id}/exclude`, HttpMethod.DELETE).flush(null);
   });
 
   it('asks for the games behind one health count', () => {

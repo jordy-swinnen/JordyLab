@@ -1,6 +1,9 @@
 <lib-source-manager-view
   [sources]="sources()"
   [health]="health()"
+  [exclusions]="exclusions()"
+  [exclusionsLoading]="exclusionsLoading()"
+  [exclusionPending]="exclusionPending()"
   [healthExceptions]="healthExceptions()"
   [loadingExceptions]="loadingExceptions()"
   [loading]="loading()"
@@ -23,6 +26,7 @@
   (renameHost)="onRenameHost($event)"
   (showExceptions)="onShowExceptions($event)"
   (showPlayerCountGames)="onShowPlayerCountGames($event)"
+  (includeExcluded)="onIncludeExcluded($event)"
   (hideExceptions)="onHideExceptions()"
   (downloadClient)="onDownloadClient($event)"
   (syncOwnedLibrary)="onSyncOwnedLibrary()"
@@ -40,5 +44,11 @@
     (cancelAi)="onCancelAiRefresh()"
     (stopRun)="onStopRefresh($event)"
     (dismissError)="onDismissRefreshError()"
+  />
+  <lib-exclusions-panel
+    [exclusions]="exclusions()"
+    [loading]="exclusionsLoading()"
+    [pending]="exclusionPending()"
+    (include)="onIncludeExcluded($event)"
   />
 </lib-source-manager-view>

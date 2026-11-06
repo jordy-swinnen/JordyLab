@@ -9,6 +9,7 @@ import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.DescriptionResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.FactSourcesResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameExclusionResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameSummaryResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlacesResponse;
@@ -23,6 +24,7 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformsResponse;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkContent;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkService;
 import dev.jordy.jordylab.gamecatalog.service.CatalogRefreshService;
+import dev.jordy.jordylab.gamecatalog.service.GameExclusionService;
 import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
 import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -68,6 +71,9 @@ class GameCatalogControllerTest {
 
     @MockitoBean
     private CatalogRefreshService catalogRefreshService;
+
+    @MockitoBean
+    private GameExclusionService gameExclusionService;
 
     @Test
     void gamesReturnsPaginatedSummaries() throws Exception {
@@ -303,6 +309,40 @@ class GameCatalogControllerTest {
         when(artworkService.loadVisibleArtwork(GAME_ID)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/gamecatalog/games/{id}/artwork", GAME_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void exclusionsListTheHiddenGames() throws Exception {
+        when(gameExclusionService.list()).thenReturn(List.of(new GameExclusionResponse(GAME_ID, "Portal 2",
+                List.of("Steam"), Instant.parse("2026-11-06T10:00:00Z"))));
+
+        mockMvc.perform(get("/api/gamecatalog/exclusions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(GAME_ID.toString()))
+                .andExpect(jsonPath("$[0].title").value("Portal 2"))
+                .andExpect(jsonPath("$[0].platforms[0]").value("Steam"));
+    }
+
+    @Test
+    void excludingAndIncludingAGameReturnNoContent() throws Exception {
+        when(gameExclusionService.exclude(GAME_ID)).thenReturn(true);
+        when(gameExclusionService.include(GAME_ID)).thenReturn(true);
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/exclude", GAME_ID))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/gamecatalog/games/{id}/exclude", GAME_ID))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void excludingAnUnknownGameIsNotFound() throws Exception {
+        when(gameExclusionService.exclude(GAME_ID)).thenReturn(false);
+        when(gameExclusionService.include(GAME_ID)).thenReturn(false);
+
+        mockMvc.perform(post("/api/gamecatalog/games/{id}/exclude", GAME_ID))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/gamecatalog/games/{id}/exclude", GAME_ID))
                 .andExpect(status().isNotFound());
     }
 

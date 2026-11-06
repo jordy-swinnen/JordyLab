@@ -6,6 +6,7 @@ import {
   HealthExceptions,
   HealthKind,
   PlayerCountReason,
+  GameExclusion,
   HideImpact,
   LibraryHealth,
   LibraryStatus,
@@ -21,6 +22,9 @@ export class ScanSourceStore {
 
   readonly #sources = signal<ScanSource[]>([]);
   readonly #health = signal<LibraryHealth | null>(null);
+  readonly #exclusions = signal<GameExclusion[]>([]);
+  readonly #exclusionsLoading = signal(true);
+  readonly #exclusionPending = signal<string | null>(null);
   readonly #healthExceptions = signal<HealthExceptions | null>(null);
   readonly #loadingExceptions = signal<HealthKind | null>(null);
   readonly #loading = signal(true);
@@ -37,6 +41,9 @@ export class ScanSourceStore {
 
   readonly sources = this.#sources.asReadonly();
   readonly health = this.#health.asReadonly();
+  readonly exclusions = this.#exclusions.asReadonly();
+  readonly exclusionsLoading = this.#exclusionsLoading.asReadonly();
+  readonly exclusionPending = this.#exclusionPending.asReadonly();
   /** The games behind one health count while the admin is looking at them. */
   readonly healthExceptions = this.#healthExceptions.asReadonly();
   readonly loadingExceptions = this.#loadingExceptions.asReadonly();
@@ -56,6 +63,7 @@ export class ScanSourceStore {
 
   constructor() {
     this.load();
+    this.loadExclusions();
     this.loadLibraryStatus();
   }
 
@@ -77,6 +85,45 @@ export class ScanSourceStore {
         this.#health.set(overview?.health ?? null);
         this.#loading.set(false);
       });
+  }
+
+  loadExclusions(): void {
+    this.#exclusionsLoading.set(true);
+    this.#api
+      .getExclusions()
+      .pipe(
+        catchError(() => {
+          this.#error.set('Failed to load excluded games.');
+
+          return of([]);
+        })
+      )
+      .subscribe((exclusions) => {
+        this.#exclusions.set(exclusions);
+        this.#exclusionsLoading.set(false);
+      });
+  }
+
+  /** Shows an excluded game again; the catalog and the health counts reload with it. */
+  includeExcluded(gameId: string, onIncluded?: () => void): void {
+    if (this.#exclusionPending()) {
+      return;
+    }
+    this.#exclusionPending.set(gameId);
+    this.#error.set(null);
+
+    this.#api.includeGame(gameId).subscribe({
+      next: () => {
+        this.#exclusionPending.set(null);
+        this.loadExclusions();
+        this.load();
+        onIncluded?.();
+      },
+      error: () => {
+        this.#exclusionPending.set(null);
+        this.#error.set('Failed to include the game again.');
+      },
+    });
   }
 
   showHealthExceptions(kind: HealthKind, reason: PlayerCountReason | null = null): void {

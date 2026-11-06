@@ -12,10 +12,11 @@ describe('GameDetailStore', () => {
   const refreshGameMetadata = vi.fn<GameCatalogApiService['refreshGameMetadata']>();
   const refreshGameEnrichment = vi.fn<GameCatalogApiService['refreshGameEnrichment']>();
   const setRomStatus = vi.fn<GameCatalogApiService['setRomStatus']>();
+  const excludeGame = vi.fn<GameCatalogApiService['excludeGame']>();
 
   const createService = createServiceFactory({
     service: GameDetailStore,
-    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment, setRomStatus } }],
+    providers: [{ provide: GameCatalogApiService, useValue: { getGame, refreshGameMetadata, refreshGameEnrichment, setRomStatus, excludeGame } }],
   });
 
   beforeEach(() => {
@@ -23,6 +24,7 @@ describe('GameDetailStore', () => {
     refreshGameMetadata.mockReset();
     refreshGameEnrichment.mockReset();
     setRomStatus.mockReset();
+    excludeGame.mockReset();
     spectator = createService();
   });
 
@@ -76,8 +78,32 @@ describe('GameDetailStore', () => {
     expect(spectator.service.loading()).toBe(false);
   });
 
-  it('discards the previous game and state when loading another one', () => {
-    getGame.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 404 })));
+  it('excludes the loaded game and reports success', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    excludeGame.mockReturnValue(of(undefined));
+    let excluded: boolean | undefined;
+
+    spectator.service.exclude().subscribe((value) => (excluded = value));
+
+    expect(excludeGame).toHaveBeenCalledWith(aGameDetailMock().id);
+    expect(excluded).toBe(true);
+    expect(spectator.service.excluding()).toBe(false);
+  });
+
+  it('reports a failed exclusion without throwing', () => {
+    getGame.mockReturnValue(of(aGameDetailMock()));
+    spectator.service.load('abc');
+    excludeGame.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    let excluded: boolean | undefined;
+
+    spectator.service.exclude().subscribe((value) => (excluded = value));
+
+    expect(excluded).toBe(false);
+    expect(spectator.service.error()).toBe('Failed to exclude this game.');
+  });
+
+  it('discards the previous game and state when loading another one', () => {    getGame.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 404 })));
     spectator.service.load('missing');
     getGame.mockReturnValue(of(aGameDetailMock()));
 

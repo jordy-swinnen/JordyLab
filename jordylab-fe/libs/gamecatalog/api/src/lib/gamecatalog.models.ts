@@ -423,6 +423,14 @@ export interface SourcesOverview {
   health: LibraryHealth;
 }
 
+/** A game the admin hid from the catalog; it can be shown again from Sources → Exclusions (JOR-97). */
+export interface GameExclusion {
+  id: string;
+  title: string;
+  platforms: string[];
+  excludedAt: string | null;
+}
+
 export type RefreshRunKind = 'DATA' | 'AI';
 
 export type RefreshRunStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'STOPPED' | 'INTERRUPTED';

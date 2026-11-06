@@ -1,0 +1,42 @@
+<section class="mb-2 mt-12" aria-labelledby="exclusions-heading" data-testid="exclusions-panel">
+  <h2 id="exclusions-heading" class="section-title mb-5">Exclusions</h2>
+
+  @if (loading()) {
+    <p class="label" data-testid="exclusions-loading">Loading excluded games…</p>
+  } @else if (exclusions().length === 0) {
+    <p class="text-sm text-secondary-foreground" data-testid="exclusions-empty">
+      No games are excluded. Use “Exclude from catalog” on a game's page to hide it here.
+    </p>
+  } @else {
+    <p class="label mb-3" data-testid="exclusions-count">
+      {{ exclusions().length }} {{ exclusions().length === 1 ? 'game' : 'games' }} hidden from the catalog
+    </p>
+    <ul class="flex flex-col gap-2">
+      @for (game of exclusions(); track game.id) {
+        <li
+          class="panel flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+          [attr.data-testid]="'exclusion-' + game.id"
+        >
+          <div class="min-w-0">
+            <p class="font-medium text-foreground">{{ game.title }}</p>
+            <p class="label mt-1">
+              {{ game.platforms.length ? game.platforms.join(' · ') : 'No platform' }}
+              @if (game.excludedAt) {
+                · excluded {{ game.excludedAt | date: 'MMM d, y' }}
+              }
+            </p>
+          </div>
+          <button
+            type="button"
+            class="h-11 cursor-pointer rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
+            [disabled]="pending() === game.id"
+            [attr.data-testid]="'include-excluded-' + game.id"
+            (click)="include.emit(game.id)"
+          >
+            {{ pending() === game.id ? 'Including…' : 'Include again' }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
