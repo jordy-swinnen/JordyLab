@@ -120,7 +120,7 @@ The apps cannot read `.mcp.json`, so they use the Linear connector:
 
 ### Ticket conventions for the Claude apps
 
-Keep this block in sync with `.claude/skills/linear-capture/SKILL.md` (spec 015 FR-006b).
+Keep this block in sync with `.claude/skills/linear-ticket-logging/SKILL.md` (spec 015 FR-006b).
 
 ```text
 When I ask you to log an idea, bug, improvement, feature or chore, or to turn a conversation or plan into tickets,
@@ -249,5 +249,5 @@ To recreate this setup in a new workspace:
 
 Done by hand: states, label groups' first creation by the owner or an agent through the connector, saved views, the
 GitHub integration settings, the sign-ins. Done by an agent through the connector: labels, issues, projects, comments,
-and everything the `linear-capture` and `linear-sync-drafts` skills do. Estimated time on a fresh workspace: well under
+and everything the `linear-ticket-logging` and `linear-sync-drafts` skills do. Estimated time on a fresh workspace: well under
 an hour, most of it the sign-ins and the views.
