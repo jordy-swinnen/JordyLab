@@ -1,7 +1,8 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HlmSkeletonComponent } from '@spartan-ng/ui-skeleton-helm';
 import { EmptyStateComponent, ErrorStateComponent } from '@jordylab-fe/shared/layout';
+import { ConfirmDialogComponent } from '../dialogs/confirm-dialog.component';
 import {
   bannerUrl,
   coverUrl,
@@ -35,6 +36,7 @@ import { coverInitials, coverPlateClass } from '../cover';
     RomChipComponent,
     SourceLabelComponent,
     StatusChipComponent,
+    ConfirmDialogComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './game-detail-view.component.html',
@@ -46,6 +48,7 @@ export class GameDetailViewComponent {
   error = input.required<string | null>();
   refreshingMetadata = input.required<boolean>();
   refreshingEnrichment = input.required<boolean>();
+  excluding = input(false);
   canAdminister = input.required<boolean>();
   savingRomStatus = input<ReadonlySet<string>>(new Set());
   romStatusError = input<string | null>(null);
@@ -55,6 +58,7 @@ export class GameDetailViewComponent {
   reload = output<void>();
   refreshMetadata = output<void>();
   refreshEnrichment = output<void>();
+  exclude = output<void>();
   markToggle = output<MarkType>();
   romStatusChange = output<{ installationId: string; status: RomStatus }>();
   romStatusErrorDismiss = output<void>();
@@ -63,6 +67,16 @@ export class GameDetailViewComponent {
   protected readonly bannerUrl = bannerUrl;
   protected readonly initials = coverInitials;
   protected readonly plateClass = coverPlateClass;
+  protected readonly excludeOpen = signal(false);
+
+  protected requestExclude(): void {
+    this.excludeOpen.set(true);
+  }
+
+  protected confirmExclude(): void {
+    this.excludeOpen.set(false);
+    this.exclude.emit();
+  }
 
   /** Labels of the hosts holding an installed copy: the display name an admin chose, else the hostname. */
   protected hostLabels(game: GameDetail): string[] {

@@ -14,6 +14,7 @@ import {
 import {
   HealthExceptions,
   HealthKind,
+  GameExclusion,
   HideImpact,
   LibraryHealth,
   LibraryStatus,
@@ -56,6 +57,9 @@ export type ScanClientType = 'steam' | 'emudeck';
 export class SourceManagerViewComponent {
   sources = input.required<ScanSource[]>();
   health = input.required<LibraryHealth | null>();
+  exclusions = input.required<GameExclusion[]>();
+  exclusionsLoading = input.required<boolean>();
+  exclusionPending = input.required<string | null>();
   healthExceptions = input.required<HealthExceptions | null>();
   loadingExceptions = input.required<HealthKind | null>();
   loading = input.required<boolean>();
@@ -71,6 +75,7 @@ export class SourceManagerViewComponent {
   lastLibraryRun = input.required<LibrarySyncRun | null>();
 
   toggleSource = output<ScanSource>();
+  includeExcluded = output<string>();
   confirmDisable = output<void>();
   cancelDisable = output<void>();
   editHostName = output<string>();

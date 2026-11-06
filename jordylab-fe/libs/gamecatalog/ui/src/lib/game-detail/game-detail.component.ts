@@ -1,6 +1,6 @@
 import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { GameDetailStore, MarkStore, MarkType, RomStatus } from '@jordylab-fe/gamecatalog/api';
+import { ActivatedRoute, Router } from '@angular/router';
+import { GameDetailStore, GameLibraryStore, MarkStore, MarkType, RomStatus } from '@jordylab-fe/gamecatalog/api';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { GameDetailViewComponent } from './game-detail-view.component';
 
@@ -13,7 +13,9 @@ import { GameDetailViewComponent } from './game-detail-view.component';
 })
 export class GameDetailComponent {
   readonly #route = inject(ActivatedRoute);
+  readonly #router = inject(Router);
   readonly #store = inject(GameDetailStore);
+  readonly #library = inject(GameLibraryStore);
   readonly #marks = inject(MarkStore);
 
   /** The loaded game with this session's mark change on top, so a tap shows at once. */
@@ -35,6 +37,7 @@ export class GameDetailComponent {
   readonly refreshingEnrichment = this.#store.refreshingEnrichment;
   readonly savingRomStatus = this.#store.savingRomStatus;
   readonly romStatusError = this.#store.romStatusError;
+  readonly excluding = this.#store.excluding;
   /** Refresh and regenerate call admin-only endpoints (006 FR-002); guests get read-only. */
   readonly canAdminister = inject(AuthService).isAdmin;
 
@@ -67,5 +70,14 @@ export class GameDetailComponent {
 
   onRefreshEnrichment(): void {
     this.#store.refreshEnrichment();
+  }
+
+  onExclude(): void {
+    this.#store.exclude().subscribe((excluded) => {
+      if (excluded) {
+        this.#library.reload();
+        this.#router.navigate(['/games/grid']);
+      }
+    });
   }
 }

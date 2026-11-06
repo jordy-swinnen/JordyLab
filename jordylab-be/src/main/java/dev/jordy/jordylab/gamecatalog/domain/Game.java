@@ -54,6 +54,11 @@ public class Game extends BaseEntity<Game> {
     @Enumerated(EnumType.STRING)
     private TitleSource titleSource;
 
+    /** Hidden from every catalog surface; installations and library entries stay (JOR-97). */
+    private boolean excluded;
+
+    private Instant excludedAt;
+
     private String genre;
 
     private String genres;
@@ -316,6 +321,18 @@ public class Game extends BaseEntity<Game> {
         this.metadataAttempts = 0;
     }
 
+    /** Hides the game from every catalog surface; its installations and library entries stay (JOR-97). */
+    public void exclude(Instant at) {
+        this.excluded = true;
+        this.excludedAt = at;
+    }
+
+    /** Shows an excluded game again; the next scan or auto-fill may fill its data as usual. */
+    public void include() {
+        this.excluded = false;
+        this.excludedAt = null;
+    }
+
     public void applyCoverArtwork(ArtworkStatus status, String coverRef) {
         this.coverStatus = status;
         this.coverRef = coverRef;
@@ -369,8 +386,8 @@ public class Game extends BaseEntity<Game> {
                 multiplayerSource = MultiplayerSource.UNKNOWN;
             }
 
-            return new Game(id, steamAppId, igdbGameId, title, titleKey, titleSource, genre, genres, developer,
-                    publisher, releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer,
+            return new Game(id, steamAppId, igdbGameId, title, titleKey, titleSource, excluded, excludedAt, genre, genres,
+                    developer, publisher, releaseYear, maxLocalPlayers, onlineMultiplayer, singlePlayer, localMultiplayer,
                     splitScreen, multiplayerSource, multiplayerAttempts, maxLocalPlayersSource, playerCountGap, description,
                     enrichmentStatus,
                     enrichmentAttempts, metadataStatus, metadataAttempts, coverStatus, coverRef, bannerStatus,

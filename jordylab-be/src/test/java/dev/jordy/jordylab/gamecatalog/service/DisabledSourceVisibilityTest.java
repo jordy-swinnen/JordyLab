@@ -5,10 +5,12 @@ import dev.jordy.jordylab.gamecatalog.domain.ScanSource;
 import dev.jordy.jordylab.gamecatalog.domain.SourceType;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameFilter;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameExclusionResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformChip;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.SourceEnabledResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +24,9 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
  * back on brings everything back as it was.
  */
 class DisabledSourceVisibilityTest extends ModuleScenarioSupport {
+
+    @Autowired
+    private GameExclusionService gameExclusionService;
 
     private ScanSource sourceOf(String hostname, SourceType type) {
         return hostRepository.findByHostnameIgnoreCase(hostname)
@@ -85,6 +90,36 @@ class DisabledSourceVisibilityTest extends ModuleScenarioSupport {
         assertSoftly(softly -> {
             softly.assertThat(visibleTitles()).containsExactly("Celeste", "Hades");
             softly.assertThat(gameQueryService.getGameDetail(hades.getId(), null).orElseThrow().places()).hasSize(2);
+        });
+    }
+
+    @Test
+    void anExcludedGameIsHiddenEverywhereAndCanBeIncludedAgain() {
+        scanService.submitScan(emuDeckScan("htpc", "Super Mario World"));
+        UUID id = onlyGame().getId();
+
+        assertThat(gameExclusionService.exclude(id)).isTrue();
+
+        assertSoftly(softly -> {
+            softly.assertThat(visibleTitles()).isEmpty();
+            softly.assertThat(gameQueryService.getGameDetail(id, null)).isEmpty();
+            softly.assertThat(gameQueryService.getPlatforms().platforms()).isEmpty();
+            softly.assertThat(gameRepository.count()).isEqualTo(1);
+            softly.assertThat(gameInstallationRepository.count()).isEqualTo(1);
+            softly.assertThat(gameExclusionService.list()).extracting(GameExclusionResponse::title)
+                    .containsExactly("Super Mario World");
+        });
+
+        assertThat(gameExclusionService.include(id)).isTrue();
+        assertThat(visibleTitles()).containsExactly("Super Mario World");
+    }
+
+    @Test
+    void excludingAnUnknownGameChangesNothing() {
+        assertSoftly(softly -> {
+            softly.assertThat(gameExclusionService.exclude(UUID.randomUUID())).isFalse();
+            softly.assertThat(gameExclusionService.include(UUID.randomUUID())).isFalse();
+            softly.assertThat(gameExclusionService.list()).isEmpty();
         });
     }
 

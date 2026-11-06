@@ -67,6 +67,7 @@ export type {
   HealthKind,
   HealthExceptions,
   SourcesOverview,
+  GameExclusion,
   LibrarySyncRun,
   LibrarySourceStatus,
   LibraryStatus,
@@ -106,6 +107,7 @@ export { aGameSummaryMock } from './lib/mocks/game-summary.model.mock';
 export { aGamesPageMock } from './lib/mocks/games-page.model.mock';
 export { aLibraryHealthMock, aPlayerCountsHealthMock } from './lib/mocks/library-health.model.mock';
 export { aSourcesOverviewMock } from './lib/mocks/sources-overview.model.mock';
+export { aGameExclusionMock } from './lib/mocks/game-exclusion.model.mock';
 export { aHostMock } from './lib/mocks/host.model.mock';
 export { aScanSourceMock } from './lib/mocks/scan-source.model.mock';
 export { aLibrarySyncRunMock } from './lib/mocks/library-sync-run.model.mock';

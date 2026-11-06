@@ -12,6 +12,7 @@ import {
   ConsoleImpact,
   ConsoleSearchResult,
   GameDetail,
+  GameExclusion,
   GameSource,
   GamesPage,
   HealthExceptions,
@@ -120,6 +121,18 @@ export class GameCatalogApiService {
 
   getSources(): Observable<SourcesOverview> {
     return this.#http.get<SourcesOverview>('/api/gamecatalog/sources');
+  }
+
+  getExclusions(): Observable<GameExclusion[]> {
+    return this.#http.get<GameExclusion[]>('/api/gamecatalog/exclusions');
+  }
+
+  excludeGame(id: string): Observable<void> {
+    return this.#http.post<void>(`/api/gamecatalog/games/${id}/exclude`, null);
+  }
+
+  includeGame(id: string): Observable<void> {
+    return this.#http.delete<void>(`/api/gamecatalog/games/${id}/exclude`);
   }
 
   getHealthExceptions(kind: HealthKind, reason?: PlayerCountReason): Observable<HealthExceptions> {

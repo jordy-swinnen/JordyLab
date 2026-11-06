@@ -501,6 +501,22 @@ class GameTest {
     }
 
     @Test
+    void excludeAndInclude() {
+        Game game = GameTestBuilder.aDefaultGame();
+        Instant excludedAt = Instant.parse("2026-11-06T10:00:00Z");
+
+        game.exclude(excludedAt);
+
+        assertThat(game.isExcluded()).isTrue();
+        assertThat(game.getExcludedAt()).isEqualTo(excludedAt);
+
+        game.include();
+
+        assertThat(game.isExcluded()).isFalse();
+        assertThat(game.getExcludedAt()).isNull();
+    }
+
+    @Test
     void equals() {
         EqualsVerifier.forClass(Game.class)
                 .usingGetClass()

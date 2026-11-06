@@ -1,7 +1,8 @@
 import { signal } from '@angular/core';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { aGameDetailMock, aPlatformChipMock, GameDetail, GameDetailStore, MarkStore } from '@jordylab-fe/gamecatalog/api';
+import { of } from 'rxjs';
+import { aGameDetailMock, aPlatformChipMock, GameDetail, GameDetailStore, GameLibraryStore, MarkStore } from '@jordylab-fe/gamecatalog/api';
 import { AuthService } from '@jordylab-fe/shared/auth';
 import { GameDetailComponent } from './game-detail.component';
 
@@ -14,11 +15,14 @@ describe('GameDetailComponent', () => {
   const refreshingEnrichment = signal(false);
   const savingRomStatus = signal<ReadonlySet<string>>(new Set());
   const romStatusError = signal<string | null>(null);
+  const excluding = signal(false);
   const setRomStatus = vi.fn<GameDetailStore['setRomStatus']>();
   const dismissRomStatusError = vi.fn<GameDetailStore['dismissRomStatusError']>();
   const load = vi.fn<GameDetailStore['load']>();
   const refreshMetadata = vi.fn<GameDetailStore['refreshMetadata']>();
   const refreshEnrichment = vi.fn<GameDetailStore['refreshEnrichment']>();
+  const exclude = vi.fn<GameDetailStore['exclude']>();
+  const reloadLibrary = vi.fn<GameLibraryStore['reload']>();
   const isAdmin = signal(false);
   const markPendingIds = signal<ReadonlySet<string>>(new Set());
   const markError = signal<string | null>(null);
@@ -39,11 +43,13 @@ describe('GameDetailComponent', () => {
     refreshingEnrichment: refreshingEnrichment.asReadonly(),
     savingRomStatus: savingRomStatus.asReadonly(),
     romStatusError: romStatusError.asReadonly(),
+    excluding: excluding.asReadonly(),
     setRomStatus,
     dismissRomStatusError,
     load,
     refreshMetadata,
     refreshEnrichment,
+    exclude,
   };
 
   let spectator: Spectator<GameDetailComponent>;
@@ -53,6 +59,7 @@ describe('GameDetailComponent', () => {
     providers: [
       provideRouter([]),
       { provide: GameDetailStore, useValue: storeMock },
+      { provide: GameLibraryStore, useValue: { reload: reloadLibrary } },
       { provide: MarkStore, useValue: markStoreMock },
       { provide: AuthService, useValue: { isAdmin: isAdmin.asReadonly() } },
       {
@@ -65,6 +72,8 @@ describe('GameDetailComponent', () => {
   });
 
   beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = vi.fn();
+    HTMLDialogElement.prototype.close = vi.fn();
     game.set(null);
     loading.set(true);
     notFound.set(false);
@@ -73,11 +82,14 @@ describe('GameDetailComponent', () => {
     refreshingEnrichment.set(false);
     savingRomStatus.set(new Set());
     romStatusError.set(null);
+    excluding.set(false);
     setRomStatus.mockReset();
     dismissRomStatusError.mockReset();
     load.mockReset();
     refreshMetadata.mockReset();
     refreshEnrichment.mockReset();
+    exclude.mockReset();
+    reloadLibrary.mockReset();
     isAdmin.set(false);
     markPendingIds.set(new Set());
     markError.set(null);
@@ -184,8 +196,22 @@ describe('GameDetailComponent', () => {
     expect(refreshEnrichment).toHaveBeenCalled();
   });
 
-  it('shows a refreshing label while a refresh is in flight', () => {
+  it('asks for confirmation and excludes the game', () => {
     isAdmin.set(true);
+    show(aGameDetailMock());
+    exclude.mockReturnValue(of(true));
+    const navigate = vi.spyOn(spectator.inject(Router), 'navigate').mockResolvedValue(true);
+
+    spectator.click('[data-testid="exclude-game"]');
+    expect(spectator.query('[data-testid="confirm-dialog"]')).toBeTruthy();
+    spectator.click('[data-testid="confirm-dialog-confirm"]');
+
+    expect(exclude).toHaveBeenCalled();
+    expect(reloadLibrary).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(['/games/grid']);
+  });
+
+  it('shows a refreshing label while a refresh is in flight', () => {    isAdmin.set(true);
     show(aGameDetailMock({ platforms: [aPlatformChipMock({ name: 'Steam', family: 'STEAM' })] }));
     refreshingMetadata.set(true);
     refreshingEnrichment.set(true);

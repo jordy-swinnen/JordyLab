@@ -5,8 +5,11 @@ import {
   aLibraryHealthMock,
   aLibraryStatusMock,
   aLibrarySyncRunMock,
+  aGameExclusionMock,
   aPlayerCountsHealthMock,
   aScanSourceMock,
+  GameExclusion,
+  GameLibraryStore,
   HealthExceptions,
   HealthKind,
   LibraryHealth,
@@ -28,6 +31,13 @@ const A_TOKEN = ['eyJfake', 'x'.repeat(24), 'y'.repeat(24)].join('.');
 describe('SourceManagerComponent', () => {
   const sources = signal<ScanSource[]>([]);
   const health = signal<LibraryHealth | null>(null);
+  const exclusions = signal<GameExclusion[]>([]);
+  const exclusionsLoading = signal(false);
+  const exclusionPending = signal<string | null>(null);
+  const includeExcluded = vi.fn<ScanSourceStore['includeExcluded']>();
+  const reloadLibrary = vi.fn<GameLibraryStore['reload']>();
+  const load = vi.fn<ScanSourceStore['load']>();
+  const loadExclusions = vi.fn<ScanSourceStore['loadExclusions']>();
   const healthExceptions = signal<HealthExceptions | null>(null);
   const loadingExceptions = signal<HealthKind | null>(null);
   const showHealthExceptions = vi.fn<ScanSourceStore['showHealthExceptions']>();
@@ -57,6 +67,12 @@ describe('SourceManagerComponent', () => {
   const storeMock = {
     sources: sources.asReadonly(),
     health: health.asReadonly(),
+    exclusions: exclusions.asReadonly(),
+    exclusionsLoading: exclusionsLoading.asReadonly(),
+    exclusionPending: exclusionPending.asReadonly(),
+    includeExcluded,
+    load,
+    loadExclusions,
     healthExceptions: healthExceptions.asReadonly(),
     loadingExceptions: loadingExceptions.asReadonly(),
     showHealthExceptions,
@@ -115,6 +131,7 @@ describe('SourceManagerComponent', () => {
     providers: [
       provideRouter([]),
       { provide: ScanSourceStore, useValue: storeMock },
+      { provide: GameLibraryStore, useValue: { reload: reloadLibrary } },
       { provide: RefreshRunStore, useValue: refreshRunStoreMock },
     ],
   });
@@ -122,6 +139,13 @@ describe('SourceManagerComponent', () => {
   beforeEach(() => {
     sources.set([]);
     health.set(null);
+    exclusions.set([]);
+    exclusionsLoading.set(false);
+    exclusionPending.set(null);
+    includeExcluded.mockReset();
+    reloadLibrary.mockReset();
+    load.mockReset();
+    loadExclusions.mockReset();
     healthExceptions.set(null);
     loadingExceptions.set(null);
     showHealthExceptions.mockReset();
@@ -593,6 +617,24 @@ describe('SourceManagerComponent', () => {
 
       spectator.click('[data-testid="health-exceptions"] button');
       expect(hideHealthExceptions).toHaveBeenCalled();
+    });
+
+    it('shows the exclusions and includes one again', () => {
+      exclusions.set([aGameExclusionMock()]);
+      spectator.detectChanges();
+
+      expect(spectator.query('[data-testid="exclusions-count"]')).toHaveText('1 game hidden from the catalog');
+      expect(spectator.query('[data-testid="exclusion-game-1"]')).toHaveText('Proton 9.0');
+      spectator.click('[data-testid="include-excluded-game-1"]');
+
+      expect(includeExcluded).toHaveBeenCalledWith('game-1', expect.any(Function));
+    });
+
+    it('says when no games are excluded', () => {
+      exclusions.set([]);
+      spectator.detectChanges();
+
+      expect(spectator.query('[data-testid="exclusions-empty"]')).toHaveText('No games are excluded. Use “Exclude from catalog” on a game\'s page to hide it here.');
     });
 
     it('shows where the player counts come from and how many are unknown', () => {

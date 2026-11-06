@@ -1,21 +1,39 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { HealthKind, PlayerCountReason, RefreshRun, RefreshRunStore, ScanSource, ScanSourceStore } from '@jordylab-fe/gamecatalog/api';
+import {
+  GameLibraryStore,
+  HealthKind,
+  PlayerCountReason,
+  RefreshRun,
+  RefreshRunStore,
+  ScanSource,
+  ScanSourceStore,
+} from '@jordylab-fe/gamecatalog/api';
+import { ExclusionsPanelComponent } from './exclusions-panel.component';
 import { RefreshPanelComponent } from './refresh-panel.component';
 import { ScanClientType, SourceManagerViewComponent } from './source-manager-view.component';
 
 @Component({
   selector: 'lib-source-manager',
   standalone: true,
-  imports: [SourceManagerViewComponent, RefreshPanelComponent],
+  imports: [SourceManagerViewComponent, RefreshPanelComponent, ExclusionsPanelComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './source-manager.component.html',
 })
 export class SourceManagerComponent {
   readonly #store = inject(ScanSourceStore);
   readonly #refreshRuns = inject(RefreshRunStore);
+  readonly #library = inject(GameLibraryStore);
+
+  constructor() {
+    this.#store.load();
+    this.#store.loadExclusions();
+  }
 
   readonly sources = this.#store.sources;
   readonly health = this.#store.health;
+  readonly exclusions = this.#store.exclusions;
+  readonly exclusionsLoading = this.#store.exclusionsLoading;
+  readonly exclusionPending = this.#store.exclusionPending;
   readonly healthExceptions = this.#store.healthExceptions;
   readonly loadingExceptions = this.#store.loadingExceptions;
   readonly loading = this.#store.loading;
@@ -65,6 +83,10 @@ export class SourceManagerComponent {
 
   onShowPlayerCountGames(reason: PlayerCountReason): void {
     this.#store.showHealthExceptions('PLAYER_COUNT', reason);
+  }
+
+  onIncludeExcluded(gameId: string): void {
+    this.#store.includeExcluded(gameId, () => this.#library.reload());
   }
 
   onHideExceptions(): void {

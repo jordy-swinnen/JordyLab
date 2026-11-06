@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { catchError, finalize, map, Observable, of } from 'rxjs';
 import { GameCatalogApiService } from './gamecatalog-api.service';
 import { GameDetail, RomStatus } from './gamecatalog.models';
 import { MarkStore } from './mark.store';
@@ -18,6 +18,7 @@ export class GameDetailStore {
   readonly #refreshingEnrichment = signal(false);
   readonly #savingRomStatus = signal<ReadonlySet<string>>(new Set());
   readonly #romStatusError = signal<string | null>(null);
+  readonly #excluding = signal(false);
 
   readonly game = this.#game.asReadonly();
   readonly loading = this.#loading.asReadonly();
@@ -28,6 +29,7 @@ export class GameDetailStore {
   /** Copies (by installation id) whose ROM status is being saved. */
   readonly savingRomStatus = this.#savingRomStatus.asReadonly();
   readonly romStatusError = this.#romStatusError.asReadonly();
+  readonly excluding = this.#excluding.asReadonly();
 
   load(id: string): void {
     this.#game.set(null);
@@ -81,6 +83,27 @@ export class GameDetailStore {
 
   dismissRomStatusError(): void {
     this.#romStatusError.set(null);
+  }
+
+  /** Hides this game from the catalog; the caller navigates away on success. */
+  exclude(): Observable<boolean> {
+    const id = this.#game()?.id;
+    if (!id || this.#excluding()) {
+      return of(false);
+    }
+
+    this.#excluding.set(true);
+    this.#error.set(null);
+
+    return this.#api.excludeGame(id).pipe(
+      map(() => true),
+      catchError(() => {
+        this.#error.set('Failed to exclude this game.');
+
+        return of(false);
+      }),
+      finalize(() => this.#excluding.set(false)),
+    );
   }
 
   #doneSaving(installationId: string): void {

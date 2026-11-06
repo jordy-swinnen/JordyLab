@@ -20,8 +20,9 @@ public final class GameVisibility {
     /** The game is on at least one console. */
     public static final String CONSOLE_ENTRY = "EXISTS (SELECT 1 FROM ConsoleGameEntry vce WHERE vce.game = g)";
 
-    /** The full rule. */
-    public static final String VISIBLE = "(" + INSTALLED_COPY + " OR " + ACTIVE_LIBRARY_ENTRY + " OR " + CONSOLE_ENTRY + ")";
+    /** The full rule: a place, unless the admin excluded the game (JOR-97). */
+    public static final String VISIBLE = "(" + INSTALLED_COPY + " OR " + ACTIVE_LIBRARY_ENTRY + " OR " + CONSOLE_ENTRY
+            + ") AND g.excluded = false";
 
     /** Playable right now: an installed copy on an enabled source or a console (library-only games are not). */
     public static final String AVAILABLE_NOW = "(" + INSTALLED_COPY + " OR " + CONSOLE_ENTRY + ")";

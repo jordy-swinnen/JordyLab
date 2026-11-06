@@ -324,7 +324,30 @@
                 >
                   {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
                 </button>
+                <button
+                  type="button"
+                  class="inline-flex h-11 items-center rounded-xl border border-destructive/40 px-4 text-[14px] font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  [disabled]="excluding()"
+                  data-testid="exclude-game"
+                  (click)="requestExclude()"
+                >
+                  {{ excluding() ? 'Excluding…' : 'Exclude from catalog' }}
+                </button>
               </div>
+              <lib-confirm-dialog
+                heading="Exclude this game?"
+                confirmLabel="Exclude"
+                [warning]="true"
+                [open]="excludeOpen()"
+                (confirmed)="confirmExclude()"
+                (cancelled)="excludeOpen.set(false)"
+              >
+                <p>
+                  It disappears from the library, search, LibBot and the health counts. Its installations stay where they
+                  are, so a re-scan does not bring it back.
+                </p>
+                <p class="mt-2">You can show it again in Sources → Exclusions.</p>
+              </lib-confirm-dialog>
               }
               <a
                 [routerLink]="['/games/libbot']"
@@ -362,14 +385,39 @@
               }
             </p>
             @if (canAdminister()) {
-              <button
-                type="button"
-                class="mt-4 inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
-                [disabled]="refreshingEnrichment()"
-                (click)="refreshEnrichment.emit()"
+              <div class="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  class="inline-flex h-10 items-center rounded-xl border border-input px-4 text-[14px] font-semibold transition-colors hover:bg-card disabled:opacity-50"
+                  [disabled]="refreshingEnrichment()"
+                  (click)="refreshEnrichment.emit()"
+                >
+                  {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-11 items-center rounded-xl border border-destructive/40 px-4 text-[14px] font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  [disabled]="excluding()"
+                  data-testid="exclude-game"
+                  (click)="requestExclude()"
+                >
+                  {{ excluding() ? 'Excluding…' : 'Exclude from catalog' }}
+                </button>
+              </div>
+              <lib-confirm-dialog
+                heading="Exclude this game?"
+                confirmLabel="Exclude"
+                [warning]="true"
+                [open]="excludeOpen()"
+                (confirmed)="confirmExclude()"
+                (cancelled)="excludeOpen.set(false)"
               >
-                {{ refreshingEnrichment() ? 'Regenerating…' : 'Regenerate description' }}
-              </button>
+                <p>
+                  It disappears from the library, search, LibBot and the health counts. Its installations stay where they
+                  are, so a re-scan does not bring it back.
+                </p>
+                <p class="mt-2">You can show it again in Sources → Exclusions.</p>
+              </lib-confirm-dialog>
             }
             <a
               [routerLink]="['/games/libbot']"

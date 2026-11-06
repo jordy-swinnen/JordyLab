@@ -5,6 +5,7 @@ import { GameCatalogApiService } from './gamecatalog-api.service';
 import { HealthExceptions, LibraryStatus, SourcesOverview } from './gamecatalog.models';
 import { ScanSourceStore } from './scan-source.store';
 import { aHostMock } from './mocks/host.model.mock';
+import { aGameExclusionMock } from './mocks/game-exclusion.model.mock';
 import { aScanSourceMock } from './mocks/scan-source.model.mock';
 import { aSourcesOverviewMock } from './mocks/sources-overview.model.mock';
 import { aLibraryHealthMock } from './mocks/library-health.model.mock';
@@ -12,6 +13,8 @@ import { aLibraryHealthMock } from './mocks/library-health.model.mock';
 describe('ScanSourceStore', () => {
   let spectator: SpectatorService<ScanSourceStore>;
   const getSources = vi.fn<GameCatalogApiService['getSources']>();
+  const getExclusions = vi.fn<GameCatalogApiService['getExclusions']>();
+  const includeGame = vi.fn<GameCatalogApiService['includeGame']>();
   const getHealthExceptions = vi.fn<GameCatalogApiService['getHealthExceptions']>();
   const setSourceEnabled = vi.fn<GameCatalogApiService['setSourceEnabled']>();
   const getHideImpact = vi.fn<GameCatalogApiService['getHideImpact']>();
@@ -28,6 +31,8 @@ describe('ScanSourceStore', () => {
         provide: GameCatalogApiService,
         useValue: {
           getSources,
+          getExclusions,
+          includeGame,
           getHealthExceptions,
           setSourceEnabled,
           getHideImpact,
@@ -44,6 +49,10 @@ describe('ScanSourceStore', () => {
   beforeEach(() => {
     getSources.mockReset();
     getSources.mockReturnValue(of(aSourcesOverviewMock()));
+    getExclusions.mockReset();
+    getExclusions.mockReturnValue(of([]));
+    includeGame.mockReset();
+    includeGame.mockReturnValue(of(undefined));
     setHostDisplayName.mockReset();
     getHideImpact.mockReset();
     getHideImpact.mockReturnValue(of({ hiddenGames: 87, stillVisibleElsewhere: 5 }));
@@ -64,6 +73,26 @@ describe('ScanSourceStore', () => {
       expect(spectator.service.sources()).toEqual([aScanSourceMock()]);
       expect(spectator.service.loading()).toBe(false);
       expect(spectator.service.error()).toBeNull();
+    });
+
+    it('loads the exclusions on construction', () => {
+      getExclusions.mockReturnValue(of([aGameExclusionMock()]));
+
+      spectator = createService();
+
+      expect(spectator.service.exclusions()).toEqual([aGameExclusionMock()]);
+      expect(spectator.service.exclusionsLoading()).toBe(false);
+    });
+
+    it('includes an excluded game again and reloads the list and the health', () => {
+      getExclusions.mockReturnValueOnce(of([aGameExclusionMock()])).mockReturnValue(of([]));
+      spectator = createService();
+
+      spectator.service.includeExcluded('game-1');
+
+      expect(includeGame).toHaveBeenCalledWith('game-1');
+      expect(spectator.service.exclusions()).toEqual([]);
+      expect(getSources).toHaveBeenCalledTimes(2);
     });
 
     it('exposes the library health that comes with the sources', () => {

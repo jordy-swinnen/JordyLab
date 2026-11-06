@@ -5,11 +5,13 @@ import dev.jordy.jordylab.gamecatalog.domain.MarkType;
 import dev.jordy.jordylab.gamecatalog.domain.RomStatus;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameFilter;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameDetailResponse;
+import dev.jordy.jordylab.gamecatalog.rest.controller.model.GameExclusionResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.GamesPageResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlacesResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.PlatformsResponse;
 import dev.jordy.jordylab.gamecatalog.service.ArtworkService;
 import dev.jordy.jordylab.gamecatalog.service.CatalogRefreshService;
+import dev.jordy.jordylab.gamecatalog.service.GameExclusionService;
 import dev.jordy.jordylab.gamecatalog.service.GameQueryService;
 import dev.jordy.jordylab.gamecatalog.service.MetadataNotSupportedException;
 import jakarta.validation.constraints.Max;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +51,7 @@ public class GameCatalogController {
     private final GameQueryService gameQueryService;
     private final ArtworkService artworkService;
     private final CatalogRefreshService catalogRefreshService;
+    private final GameExclusionService gameExclusionService;
     private final CurrentUserResolver currentUserResolver;
 
     @GetMapping("/games")
@@ -127,6 +131,23 @@ public class GameCatalogController {
                         .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic())
                         .body(content.bytes()))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/exclusions")
+    public List<GameExclusionResponse> getExclusions() {
+        return gameExclusionService.list();
+    }
+
+    @PostMapping("/games/{id}/exclude")
+    public ResponseEntity<Void> exclude(@PathVariable UUID id) {
+        return gameExclusionService.exclude(id) ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/games/{id}/exclude")
+    public ResponseEntity<Void> include(@PathVariable UUID id) {
+        return gameExclusionService.include(id) ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     @ExceptionHandler(MetadataNotSupportedException.class)
