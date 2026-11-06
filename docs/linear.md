@@ -125,8 +125,8 @@ Keep this block in sync with `.claude/skills/linear-ticket-logging/SKILL.md` (sp
 ```text
 When I ask you to log an idea, bug, improvement, feature or chore, or to turn a conversation or plan into tickets,
 use the Linear connector with these rules:
-- Team JOR. Always set the status to Triage explicitly when creating (never leave it on the default, which is
-  Backlog), and check the reply shows Triage.
+- Team JOR. Set the status to Backlog explicitly when creating, then check that the reply shows Backlog. Use Triage
+  only when I ask for an item to be parked there.
 - Give every issue exactly one label from the App group (Game Catalog, Finance News, Garmin, Mobile, Recipe, Trading,
   Platform) and exactly one from the Type group (Bug, Feature, Improvement, Idea, Chore). Use those exact names. Ask
   me when unsure; never invent a label.

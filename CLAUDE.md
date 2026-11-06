@@ -20,6 +20,7 @@ Skills (invoke with `/skill-name`):
 - `/agent-handover` — hand work over between Claude Code and OpenCode (wrap up, update tasks/bug log, write
   `HANDOFF-next-agent.md`, print the prompt for the other tool, stop); also used by the agent taking over
 - `/refresh-agent-models` — re-curate the Planner, Reviewer and Worker agent models and effort levels for OpenCode (OpenCode Go) and Claude Code using the Artificial Analysis leaderboards
+- `/model-harness-recommendations` — recommend a model per harness and cost level for SpecKit Plan and Build steps (method only; reads current prices and scores each time)
 - `trading-guard` — background rules for the trading module (human-in-the-loop enforcement, not user-invocable)
 - `jordylab-ops` — production operations knowledge (VPS + k3s, deploys/approvals/rollbacks, SOPS secrets edited in
   IntelliJ, identity/user administration, CNPG backups); the single source of truth, shared natively with OpenCode
