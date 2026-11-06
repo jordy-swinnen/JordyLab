@@ -110,6 +110,7 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOLDEN_LIVE_REQUIRED: "true"
         run: ./gradlew goldenLive --no-daemon
 
   # Boots the *built* app in headless Chrome and requires the login page to render: the only check on the real start-up
