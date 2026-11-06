@@ -63,7 +63,7 @@ Useful variations for a single run:
 
 ## Step 6: Branch, commit, PR
 
-1. Branch `jordyswinnen/jor-<n>-...` (from the Linear ticket's branch name) from an up-to-date `main`. If an open PR for this work exists, update it instead of opening another (one PR per piece of work).
+1. Branch `feature/jor-<n>-...` (git flow, as the `start-ticket` skill names it) from an up-to-date `main`. If an open PR for this work exists, update it instead of opening another (one PR per piece of work).
 2. Ensure a Linear ticket exists in team `JOR` (use the `linear-capture` skill if none exists). Commit subject `JOR-<n>: refresh planner/reviewer/worker models (YYYY-MM-DD)`, under 72 characters, and the trailer `Refs: NO-CODE`. Never use `--no-verify`.
 3. Write the PR body to a file (no shell heredocs) following `.github/pull_request_template.md`. Paste the decide Markdown output as the evidence, and list each excluded model with its reason. Then run `gh pr create --base main --title "JOR-<n>: refresh planner/reviewer/worker models (YYYY-MM-DD)" --body-file <file>`. Never push to `main`, never merge, never enable auto-merge.
 

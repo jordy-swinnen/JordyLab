@@ -156,7 +156,7 @@ use the Linear connector with these rules:
 
 | You write | Effect |
 |---|---|
-| The key in the **branch name** (Linear's "copy branch name": `jordyswinnen/jor-23-…`) | links the PR; *In Progress* on open |
+| The key in the **branch name** (`feature/jor-23-…` or `bugfix/jor-23-…`, git flow as the `start-ticket` skill names it) | links the PR; *In Progress* on open |
 | The key in the **PR title** with no linking word | links the PR; **merge moves the ticket to *Done*** (PR #159 did this to JOR-23 by mistake) |
 | `Fixes JOR-23`, `Closes`, `Resolves`, `Completes`, `Implements` in the description | links; merge moves to *Done* |
 | `Part of JOR-23`, `Refs JOR-23`, `Towards JOR-23` in the description | links; merge leaves the ticket open (PR #160 and #162 kept JOR-15 and JOR-22 open) |

@@ -55,8 +55,8 @@ with a ticket.
     the ticket to *Done* (PR #159 did this to JOR-23 by mistake). A PR that does not finish its ticket must say
     `Part of JOR-n` (or `Refs JOR-n`) in the description; Linear then leaves the ticket open (PR #160 did this for
     JOR-15 and JOR-22). Put the key of the ticket the PR finishes in the title.
-  - Linear also links a PR whose **branch name** contains the key (`jordyswinnen/jor-23-…`, from Linear's "copy branch
-    name"), and moves the ticket to *In Progress* when the PR opens.
+  - Linear also links a PR whose **branch name** contains the key (`feature/jor-23-…` or `bugfix/jor-23-…`, the git flow
+    names the `start-ticket` skill uses), and moves the ticket to *In Progress* when the PR opens.
 - **One pull request per spec** (spec, plan, tasks and implementation on one branch), several tickets allowed.
 - Never put secrets or personal data in a message or description.
 - An agent ends its PR description with the attribution line its host gives it.
