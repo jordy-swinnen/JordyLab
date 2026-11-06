@@ -44,6 +44,7 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 - After completing a plan or task, always test the end-to-end flow of the features built or changed. Test only the scope that was touched — avoid full-suite integration tests unless the change warrants it.
 - Switching between Claude Code and OpenCode mid-work: use the `agent-handover` skill (`/agent-handover` in both tools). The outgoing agent wraps up, writes `HANDOFF-next-agent.md` next to the spec and prints a prompt for the other tool; the incoming agent takes over from that file.
 - Drafts live in `specs/_drafts/<short-name>/` and carry **no numbers or codes** — not in folder names, titles, requirement or priority labels (use High/Medium/Low), and no references to other features by number. Drafts are written in any order; SpecKit assigns the spec number when a draft is specified. Name other features by what they are.
+- **Keeping the drawing and status current.** When a feature's last task is checked, or something is replaced, dropped or deployed differently, the same change updates: the architecture drawing in `README.md` (the Mermaid block, edited as text); the matching row and end-goal entry in `docs/status.md`; and `docs/ai-workflow.md` if the agent tooling, models or pipeline changed. Do it in the same change as the work, not later. Claude Code reads this file through `CLAUDE.md` and OpenCode reads it directly, so the rule holds in both tools.
 
 ## Backlog (Linear)
 
@@ -122,6 +123,8 @@ Read these on-demand when working on related tasks — do not load all at once.
 | `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
 | `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
 | `docs/research/spring-ai-architecture.md` | Designing or reviewing an AI feature in depth (the short rules are in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md`) |
+| `docs/status.md` | Asked what is built, replaced or planned, or after a feature ships or is replaced |
+| `docs/ai-workflow.md` | Changing agents, skills, models or the pipeline, or asked how work moves from idea to production |
 
 Other reference docs (infrastructure guide, project setup, project overview) are planned but not
 yet written — do not cite them as if they exist. Add a row here only once the file is actually
