@@ -25,6 +25,29 @@ _CONTROL_PATTERN = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")
 _WHITESPACE_PATTERN = re.compile(r"\s+")
 _PAREN_GROUP_PATTERN = re.compile(r"\(.*?\)")
 
+# Scene release suffixes, e.g. "BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP". Only a run of scene tags
+# ending in "<platform>-<group>" at the very end is removed, so a title such as "Born in the USA" stays.
+_SCENE_TAG = (
+    r"(?:USA|EUR|JPN|JAP|WORLD|NTSC|PAL|MULTi\d?|PROPER|READNFO|REPACK|RERIP|FIX|"
+    r"PSN|PSP|PS2|PS3|PSX|PSV|NDS|N3DS|GBA|GBC|GB|SNES|NES|N64|GC|WIIU|WII|SWITCH|"
+    r"XBOX|X360|XBX|PC)"
+)
+_SCENE_SUFFIX_PATTERN = re.compile(
+    r"\s+" + _SCENE_TAG + r"(?:\s+" + _SCENE_TAG + r")*\s*-\s*[A-Za-z0-9]+$",
+    re.IGNORECASE,
+)
+_DEC_SUFFIX_PATTERN = re.compile(r"\s+\.?dec$", re.IGNORECASE)
+
+
+def strip_scene_release_tags(raw_title):
+    """Remove a scene release suffix and a decrypted-image suffix from an EmuDeck title."""
+    if raw_title is None:
+        return None
+    cleaned = _SCENE_SUFFIX_PATTERN.sub("", raw_title)
+    cleaned = _DEC_SUFFIX_PATTERN.sub("", cleaned)
+
+    return _WHITESPACE_PATTERN.sub(" ", cleaned).strip()
+
 
 def extension(relpath):
     """Lower-cased extension including the dot, or ``None`` when absent."""
@@ -61,7 +84,7 @@ def title_from_filename(relpath):
     basename = _PAREN_GROUP_PATTERN.sub("", basename)
     basename = _WHITESPACE_PATTERN.sub(" ", basename)
 
-    return basename.strip()
+    return strip_scene_release_tags(basename).strip()
 
 
 def sanitize_title(raw_title):

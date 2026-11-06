@@ -134,13 +134,13 @@ public class EmuDeckLibraryParser implements LibraryParser {
             basename = basename.substring(0, dot);
         }
 
-        return basename
+        return TextSanitizer.stripSceneReleaseTags(basename
                 .replace('_', ' ')
                 .replace("[", "(")
                 .replace("]", ")")
                 .replaceAll("\\(.*?\\)", "")
                 .replaceAll("\\s+", " ")
-                .trim();
+                .trim());
     }
 
     private static String platformFor(String emulator) {

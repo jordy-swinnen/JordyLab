@@ -47,6 +47,28 @@ class EmuDeckLibraryParserTest {
     }
 
     @Test
+    void stripsSceneReleaseSuffixesFromPspTitles() {
+        ScanRequest request = request(
+                entry("psp/BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP.iso"),
+                entry("psp/Daxter USA PSN PSP-PLAYASiA.iso"),
+                entry("psp/Dissidia 012 Duodecim Final Fantasy USA PSP-PSPKiNG.iso"),
+                entry("psp/Final Fantasy Tactics The War Of The Lions USA PSP-pSyPSP.iso"));
+
+        assertThat(parser.parse(request)).extracting(GamePayload::title).containsExactly(
+                "BurnOut",
+                "Daxter",
+                "Dissidia 012 Duodecim Final Fantasy",
+                "Final Fantasy Tactics The War Of The Lions");
+    }
+
+    @Test
+    void keepsARegionWordThatIsPartOfTheTitle() {
+        ScanRequest request = request(entry("psp/Born in the USA.iso"));
+
+        assertThat(parser.parse(request).get(0).title()).isEqualTo("Born in the USA");
+    }
+
+    @Test
     void replacesUnderscoresWithSpaces() {
         ScanRequest request = request(entry("snes/Super_Mario_World.smc"));
 

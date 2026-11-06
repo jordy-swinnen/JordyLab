@@ -242,3 +242,43 @@ def test_ps3_game_folder_directly_under_the_root_has_no_platform_and_is_skipped(
     _, games = build_emudeck([root])
 
     assert games == []
+
+
+def test_scene_release_suffixes_are_stripped_from_psp_titles(tmp_path):
+    root = tmp_path
+    _write(root / "psp" / "BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP.iso")
+    _write(root / "psp" / "Daxter USA PSN PSP-PLAYASiA.iso")
+    _write(root / "psp" / "Dissidia 012 Duodecim Final Fantasy USA PSP-PSPKiNG.iso")
+    _write(root / "psp" / "Final Fantasy Tactics The War Of The Lions USA PSP-pSyPSP.iso")
+
+    _, games = build_emudeck([root])
+
+    assert {game[0]: game[1] for game in games} == {
+        "psp/BurnOut USA MULTi5 PROPER READNFO PSP-MUPSP.iso": "BurnOut",
+        "psp/Daxter USA PSN PSP-PLAYASiA.iso": "Daxter",
+        "psp/Dissidia 012 Duodecim Final Fantasy USA PSP-PSPKiNG.iso": (
+            "Dissidia 012 Duodecim Final Fantasy"
+        ),
+        "psp/Final Fantasy Tactics The War Of The Lions USA PSP-pSyPSP.iso": (
+            "Final Fantasy Tactics The War Of The Lions"
+        ),
+    }
+
+
+def test_a_region_word_alone_in_a_title_is_kept(tmp_path):
+    root = tmp_path
+    _write(root / "psp" / "Born in the USA.iso")
+
+    _, games = build_emudeck([root])
+
+    assert games[0][1] == "Born in the USA"
+
+
+def test_a_dec_file_is_not_a_game(tmp_path):
+    root = tmp_path
+    _write(root / "ps3" / "Demon's Souls (USA)" / "PS3_GAME" / "USRDIR" / "EBOOT.BIN")
+    _write(root / "ps3" / "Demon's Souls.dec")
+
+    _, games = build_emudeck([root])
+
+    assert games == [("ps3/Demon's Souls (USA)", "Demon's Souls", "PlayStation 3")]
