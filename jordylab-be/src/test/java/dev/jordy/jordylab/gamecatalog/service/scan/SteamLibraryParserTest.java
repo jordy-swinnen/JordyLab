@@ -88,6 +88,30 @@ class SteamLibraryParserTest {
     }
 
     @Test
+    void skipsSteamToolsAndRuntimesByNameEvenWhenTheirAppIdIsUnknown() {
+        String proton = """
+                "AppState"
+                {
+                    "appid" "999999999"
+                    "name"  "Proton 9.0"
+                }
+                """;
+        String runtime = """
+                "AppState"
+                {
+                    "appid" "999999998"
+                    "name"  "Steam Linux Runtime 4.0"
+                }
+                """;
+
+        ScanRequest request = request(Map.of(
+                "steamapps/appmanifest_999999999.acf", proton,
+                "steamapps/appmanifest_999999998.acf", runtime));
+
+        assertThat(parser.parse(request)).isEmpty();
+    }
+
+    @Test
     void returnsNoGamesWhenThereAreNoManifests() {
         assertSoftly(softly -> {
             softly.assertThat(parser.parse(request(Map.of()))).isEmpty();
