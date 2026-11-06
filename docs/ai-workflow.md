@@ -112,8 +112,6 @@ logged as handoffs in [docs/linear.md](linear.md).
 
 ## Known drift
 
-- The header of `deploy-prod-compose.yml` says automatic deploys are off. `build.yml` runs them on a green `main` when
-  the repository variable `AUTO_DEPLOY` is `true`, and it is `true`. Trust the workflow logic, and fix the header.
 - The same role uses a different model in each tool (see the table). The reviewer difference is intended; the rest is
   for `refresh-agent-models` to settle.
 - OpenCode defines planner, reviewer and worker in `opencode.json`, not as files in `.opencode/agents/`, so the agent
