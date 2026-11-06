@@ -1197,21 +1197,20 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Source probe (2026-11-01): of the 44 games without a count, 15 are console games and 29 are Steam games. TheGamesDB matched all 15 console games with a count (13 where its entries agree, 2 where they disagree, so those stay unknown) and is unreliable for Steam games (nine matched games say 1 player). ScreenScraper (terms do not cover a personal app), LaunchBox, the libretro max-users lists, Wikidata and Co-Optimus were dropped; MobyGames refuses automated reads. The multiplayer-player-counts draft now holds the measured table; the Steam games and source errors move to the curated-player-counts draft. Still open.
 
 ### BUG-078: Two extra TCP ports (31460, 32531) are public on the VPS besides 22, 80 and 443
-- Status: OPEN (deferred 2026-11-02: the owner does not want time spent on it now; whether it needs a fix is decided under the Linear ticket for moving production from k3s to Docker Compose, JOR-31)
+- Status: VERIFIED-PROD (2026-11-06, after the k3s → Compose cutover): only 22, 80 and 443 are public; 31460 and 32531 are closed.
 - Severity: S3 (a hardening gap, no secret or application reachable through the ports; both answer with a plain 404)
 - Area/spec: prod network / 008 (FR-019, SC-008, T074)
 - Env found: prod, 2026-11-02, owner-approved TCP connect scan from the agent's Mac
 - Coverage rows: 008-FR-019, 008-SC-008
 - Steps to reproduce:
-  1. `nc -z -w 3 57.129.163.110 31460` and `... 32531` from outside the VPS (or a rate-limited connect scan of 1 to 1024 and 30000 to 32767; a fast scan is dropped by the VPS and gives wrong results).
+  1. `nc -z -G 3 57.129.163.110 31460` and `... 32531` from outside the VPS (or a rate-limited connect scan of 1 to 1024 and 30000 to 32767; a fast scan is dropped by the VPS and gives wrong results).
   2. `curl -I http://57.129.163.110:31460/` and `curl -skI https://57.129.163.110:32531/`.
 - Expected (cite spec/story): 008 FR-019 / SC-008 — only 22 (restricted), 80 and 443 are public; `docs/runbook.md` §2 sets `ufw` to deny everything else.
-- Actual (logs/screenshot, secrets redacted): 22, 80, 443, **31460** (HTTP 404, `text/plain`, `X-Content-Type-Options: nosniff`) and **32531** (HTTP/2 404) accept connections. Sending `Host: jordylab.be` (or that SNI) gets the same 404, so no application, Keycloak or actuator content is reachable through them. 6443 is not reachable. UDP (flannel 8472, Tailscale 41641) was not scanned.
-- Root cause: confirmed 2026-11-03 from the cluster (`kubectl get svc -A`): the `kube-system/traefik` `LoadBalancer` service holds NodePorts 32531→80 (`web`) and 31460→443 (`websecure`), and kube-proxy publishes NodePorts on the node address; `ufw` filters the host's INPUT chain, not forwarded NodePort traffic.
-- Fix (PR / commit / tag): to decide with the owner (cluster change): `allocateLoadBalancerNodePorts: false` on the Traefik service via its HelmChartConfig (k3s ServiceLB does not need them), or a rule that drops the 30000–32767 range from the public interface; then rerun the scan.
-- Regression test added: none yet; the port scan of `specs/008-ovh-k8s-deployment/quickstart.md` ("Security check") is the check, rerun after the fix.
-- Verified on prod: pending
-- Pre-cutover baseline (2026-11-03, spec 020 T017): both ports still open, recorded in `specs/020-compose-deployment/quickstart.md` step 10 with the commands of record; T054 reruns the same commands after the cutover and shows the ports gone with k3s — the move itself is the fix, per the deferral above.
+- Actual (logs/screenshot, secrets redacted): before the cutover, 22, 80, 443, **31460** (HTTP 404, `text/plain`, `X-Content-Type-Options: nosniff`) and **32531** (HTTP/2 404) accepted connections. Sending `Host: jordylab.be` (or that SNI) got the same 404, so no application, Keycloak or actuator content was reachable through them. 6443 was not reachable. UDP (flannel 8472, Tailscale 41641) was not scanned.
+- Root cause: confirmed 2026-11-03 from the cluster (`kubectl get svc -A`): the `kube-system/traefik` `LoadBalancer` service held NodePorts 32531→80 (`web`) and 31460→443 (`websecure`), and kube-proxy publishes NodePorts on the node address; `ufw` filters the host's INPUT chain, not forwarded NodePort traffic.
+- Fix (PR / commit / tag): the move from k3s to Docker Compose (spec 020) removed the Traefik `LoadBalancer` service and its NodePorts; Caddy publishes only 80 and 443.
+- Regression test added: none automated; the port scan of `specs/008-ovh-k8s-deployment/quickstart.md` ("Security check") and `specs/020-compose-deployment/quickstart.md` step 10 are the checks, rerun after the cutover.
+- Verified on prod: 2026-11-06 from the agent's Mac: `nc -z -G 3 57.129.163.110 443` → open; `... 31460` and `... 32531` → closed. The pre-cutover baseline (2026-11-03, spec 020 T017) had both ports open; the cutover removed them.
 
 ### BUG-079: LibBot answers take 5 to 18 seconds on production, the spec asks for 10 seconds or less
 - Status: FIXING (JOR-72) — the `typesafe/jev-router` setting from BUG-075 is reverted by migration, the composing row is capped, and the answer names its model; production re-measurement is pending.
