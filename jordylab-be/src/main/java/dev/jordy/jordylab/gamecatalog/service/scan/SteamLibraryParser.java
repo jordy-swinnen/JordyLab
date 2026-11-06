@@ -63,6 +63,10 @@ public class SteamLibraryParser implements LibraryParser {
                 log.info("Skipping unparseable Steam manifest '{}' (no title)", relpath);
                 continue;
             }
+            if (ToolExclusion.isToolName(title)) {
+                log.info("Skipping Steam tool/runtime manifest '{}' (name '{}')", relpath, title);
+                continue;
+            }
 
             games.add(new GamePayload(appId, TextSanitizer.sanitizeTitle(title), SourceType.STEAM.platform(), null));
         }
