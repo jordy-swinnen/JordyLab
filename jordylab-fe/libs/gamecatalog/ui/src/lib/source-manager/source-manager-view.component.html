@@ -287,6 +287,12 @@
           ·
           <span data-testid="player-counts-unknown">{{ playerCounts.unknown }} unknown</span>
         </p>
+        @if (playerCounts.flagUnknown > 0) {
+          <p class="mb-3 text-sm text-muted-foreground" data-testid="player-counts-flag-unknown">
+            {{ playerCounts.flagUnknown }} games have no local-multiplayer data at all, so their player count cannot be
+            checked.
+          </p>
+        }
         <p class="mb-3 text-sm text-muted-foreground" data-testid="player-counts-source-state">
           @if (!playerCounts.theGamesDb.configured) {
             TheGamesDB is not configured (no key), so only IGDB fills player counts.

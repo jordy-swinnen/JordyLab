@@ -117,7 +117,7 @@ class ScanSourceControllerTest {
     @Test
     void theSourcesCarryThePlayerCountBlockWithTheStateOfTheSecondSource() throws Exception {
         LibraryHealthResponse.PlayerCounts playerCounts = new LibraryHealthResponse.PlayerCounts(105,
-                Map.of(PlayerCountSource.IGDB, 61L, PlayerCountSource.THEGAMESDB, 13L), 31,
+                Map.of(PlayerCountSource.IGDB, 61L, PlayerCountSource.THEGAMESDB, 13L), 31, 40,
                 Map.of(PlayerCountReason.STEAM_NO_SOURCE, 29L, PlayerCountReason.ENTRIES_DISAGREE, 2L),
                 new LibraryHealthResponse.SourceState(true, Instant.parse("2026-11-02T08:00:00Z"), "ALLOWANCE_LOW", 18));
         when(scanSourceService.listSources()).thenReturn(new SourcesResponse(List.of(),
@@ -128,6 +128,7 @@ class ScanSourceControllerTest {
                 .andExpect(jsonPath("$.health.playerCounts.localMultiplayerGames").value(105))
                 .andExpect(jsonPath("$.health.playerCounts.filled.THEGAMESDB").value(13))
                 .andExpect(jsonPath("$.health.playerCounts.unknown").value(31))
+                .andExpect(jsonPath("$.health.playerCounts.flagUnknown").value(40))
                 .andExpect(jsonPath("$.health.playerCounts.unknownByReason.ENTRIES_DISAGREE").value(2))
                 .andExpect(jsonPath("$.health.playerCounts.theGamesDb.configured").value(true))
                 .andExpect(jsonPath("$.health.playerCounts.theGamesDb.pauseReason").value("ALLOWANCE_LOW"))

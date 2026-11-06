@@ -297,7 +297,43 @@ class MultiplayerServiceTest {
         multiplayerService.derivePending(BATCH);
 
         assertThat(game.getMultiplayerAttempts()).isEqualTo(1);
-        verify(platformService, never()).platformsOf(game.getId());
+        verify(theGamesDbClient, never()).lookup("Mario Party 6", game.getTitleKey(), "GameCube");
+    }
+
+    @Test
+    void anUnknownFlagAsksIgdbForTheGamesOwnPlatformFirst() {
+        Game game = Game.builder().title("Mario Party 7").build();
+        stubBacklog(game);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(platformService.platformsOf(game.getId())).thenReturn(List.of("GameCube"));
+        when(igdbClient.resolveMultiplayerMode("Mario Party 7", List.of(21L)))
+                .thenReturn(Optional.of(new IgdbClient.MultiplayerMode(true, true, false, 4)));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+            softly.assertThat(game.getMultiplayerSource()).isEqualTo(MultiplayerSource.IGDB);
+        });
+        verify(igdbClient).resolveMultiplayerMode("Mario Party 7", List.of(21L));
+    }
+
+    @Test
+    void aConsoleGameWithAnIgdbIdUsesItInsteadOfSearchingByTitle() {
+        Game game = Game.builder().title("Mario Party 7").igdbGameId("2334").build();
+        stubBacklog(game);
+        when(igdbClient.isConfigured()).thenReturn(true);
+        when(igdbClient.fetchMultiplayerModes(List.of(2334L)))
+                .thenReturn(java.util.Map.of(2334L, new IgdbClient.MultiplayerMode(true, true, false, 4)));
+
+        multiplayerService.derivePending(BATCH);
+
+        assertSoftly(softly -> {
+            softly.assertThat(game.getLocalMultiplayer()).isTrue();
+            softly.assertThat(game.getMaxLocalPlayers()).isEqualTo(4);
+        });
+        verify(igdbClient, never()).resolveMultiplayerMode("Mario Party 7");
     }
 
     @Test

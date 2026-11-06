@@ -169,6 +169,7 @@ class LibraryHealthServiceTest {
             softly.assertThat(counts.filled()).containsEntry(PlayerCountSource.IGDB, 2L)
                     .containsEntry(PlayerCountSource.THEGAMESDB, 1L);
             softly.assertThat(counts.unknown()).isEqualTo(4);
+            softly.assertThat(counts.flagUnknown()).isEqualTo(1);
             softly.assertThat(counts.unknownByReason()).containsEntry(PlayerCountReason.STEAM_NO_SOURCE, 1L)
                     .containsEntry(PlayerCountReason.ENTRIES_DISAGREE, 1L)
                     .containsEntry(PlayerCountReason.NO_MATCH, 1L)

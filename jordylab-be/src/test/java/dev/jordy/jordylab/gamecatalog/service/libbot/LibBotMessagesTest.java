@@ -36,6 +36,19 @@ class LibBotMessagesTest {
     }
 
     @Test
+    void theUnknownNoteKeepsFlagUnknownApartFromCountUnknown() {
+        assertSoftly(softly -> {
+            softly.assertThat(messages.unknownNote(0, 3, 6, Language.EN))
+                    .contains("3 more games").contains("local multiplayer").doesNotContain("player count");
+            softly.assertThat(messages.unknownNote(2, 3, 6, Language.EN))
+                    .contains("2 more games").contains("player count")
+                    .contains("3 more games").contains("local multiplayer");
+            softly.assertThat(messages.unknownNote(0, 2, null, Language.NL))
+                    .contains("2 andere spellen").contains("lokale multiplayer");
+        });
+    }
+
+    @Test
     void thousandsAreNotGroupedSoNumbersStayReadableInChips() {
         assertThat(messages.unknownNote(1200, null, Language.EN)).contains("1,200");
     }

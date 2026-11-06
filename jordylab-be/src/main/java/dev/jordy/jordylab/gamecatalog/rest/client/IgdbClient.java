@@ -98,29 +98,56 @@ public class IgdbClient {
      * counts too ("Need for Speed - Carbon - Collector's Edition" → "Need for Speed: Carbon").
      */
     public List<Long> findGameIdsByTitle(String title) {
+        return findGameIdsByTitle(title, List.of());
+    }
+
+    /**
+     * The same matches, but entries that IGDB lists on one of {@code platformIgdbIds} come first. The same title exists
+     * on several platforms with different multiplayer data, so a platform-qualified match is the better one to try
+     * first; titles on another platform remain as the fallback. An empty platform list keeps the plain title order.
+     */
+    public List<Long> findGameIdsByTitle(String title, List<Long> platformIgdbIds) {
         if (!isConfigured() || !StringUtils.hasText(title)) {
             return List.of();
         }
-        String query = "search \"" + escapeQuery(title) + "\"; fields name; "
+        String query = "search \"" + escapeQuery(title) + "\"; fields name,platforms; "
                 + "where version_parent = null & game_type = 0; limit " + MAX_SEARCH_RESULTS + ";";
         JsonNode response = post("/games", query);
         if (response == null || !response.isArray()) {
             return List.of();
         }
         String normalized = normalizeTitle(title);
-        List<Long> exact = new ArrayList<>();
-        List<Long> baseTitles = new ArrayList<>();
+        List<Long> exactOnPlatform = new ArrayList<>();
+        List<Long> exactElsewhere = new ArrayList<>();
+        List<Long> baseOnPlatform = new ArrayList<>();
+        List<Long> baseElsewhere = new ArrayList<>();
         for (JsonNode game : response) {
             String name = normalizeTitle(game.path("name").asText(null));
+            boolean onPlatform = isOnPlatform(game, platformIgdbIds);
             if (normalized.equals(name)) {
-                exact.add(game.path("id").asLong());
+                (onPlatform ? exactOnPlatform : exactElsewhere).add(game.path("id").asLong());
             } else if (isBaseTitleOf(name, normalized)) {
-                baseTitles.add(game.path("id").asLong());
+                (onPlatform ? baseOnPlatform : baseElsewhere).add(game.path("id").asLong());
             }
         }
-        exact.addAll(baseTitles);
+        exactOnPlatform.addAll(exactElsewhere);
+        exactOnPlatform.addAll(baseOnPlatform);
+        exactOnPlatform.addAll(baseElsewhere);
 
-        return exact;
+        return exactOnPlatform;
+    }
+
+    private boolean isOnPlatform(JsonNode game, List<Long> platformIgdbIds) {
+        if (platformIgdbIds == null || platformIgdbIds.isEmpty()) {
+            return false;
+        }
+        for (JsonNode platform : game.path("platforms")) {
+            if (platformIgdbIds.contains(platform.asLong())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** True when the scanned title is an edition of the IGDB title ("portal2" is not an edition of "portal"). */
@@ -347,7 +374,12 @@ public class IgdbClient {
      * exist — never how many players fit.
      */
     public Optional<MultiplayerMode> resolveMultiplayerMode(String title) {
-        List<Long> igdbGameIds = findGameIdsByTitle(title);
+        return resolveMultiplayerMode(title, List.of());
+    }
+
+    /** The same resolution, preferring entries IGDB lists on one of the given platform ids (see findGameIdsByTitle). */
+    public Optional<MultiplayerMode> resolveMultiplayerMode(String title, List<Long> platformIgdbIds) {
+        List<Long> igdbGameIds = findGameIdsByTitle(title, platformIgdbIds);
         if (igdbGameIds.isEmpty()) {
             return Optional.empty();
         }

@@ -402,6 +402,7 @@ export interface PlayerCountsHealth {
   localMultiplayerGames: number;
   filled: Record<PlayerCountSource, number>;
   unknown: number;
+  flagUnknown: number;
   unknownByReason: Record<PlayerCountReason, number>;
   theGamesDb: PlayerCountSourceState;
 }

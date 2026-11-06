@@ -112,11 +112,12 @@ public class LibBotService {
         List<String> applied = messages.applied(derivation.applied(), language);
         onStage.accept(LibBotStage.SEARCHING);
         boolean askingAboutGames = interpretation.intent() == Intent.GAME_QUESTION && !referenced.isEmpty();
-        RetrievalResult retrieval = askingAboutGames ? new RetrievalResult(List.of(), 0, List.of(), false)
+        RetrievalResult retrieval = askingAboutGames ? new RetrievalResult(List.of(), 0, 0, List.of(), false)
                 : retriever.retrieve(derivation.constraints(), ask.userSubject());
         List<Candidate> candidates = merge(referenced, retrieval.confirmed());
         LibBotResult.Unknown unknown = retrieval.unknownCount() == 0 ? null : new LibBotResult.Unknown(
-                retrieval.unknownCount(), messages.unknownNote(retrieval.unknownCount(),
+                retrieval.unknownCount(), messages.unknownNote(
+                        retrieval.unknownCount() - retrieval.unknownFlagCount(), retrieval.unknownFlagCount(),
                         derivation.constraints().minLocalPlayers(), language));
         if (candidates.isEmpty()) {
             return new LibBotResult(LibBotOutcome.NO_MATCH, language, noMatchText(derivation, retrieval, language),

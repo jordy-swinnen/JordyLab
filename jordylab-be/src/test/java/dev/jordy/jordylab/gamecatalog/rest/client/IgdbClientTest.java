@@ -115,6 +115,41 @@ class IgdbClientTest {
     }
 
     @Test
+    void platformMatchesAreRankedBeforeSameNamedGamesOnOtherPlatforms() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 1, "name": "Mario Party 7", "platforms": [21]},
+                  {"id": 2, "name": "Mario Party 7", "platforms": [8]} ]
+                """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("""
+                [ {"game": 1, "platform": 21, "offlinecoop": true, "offlinemax": 8},
+                  {"game": 2, "platform": 8, "offlinecoop": true, "offlinemax": 4} ]
+                """)));
+
+        Optional<IgdbClient.MultiplayerMode> mode = igdbClient.resolveMultiplayerMode("Mario Party 7", List.of(21L));
+
+        assertThat(mode).isPresent();
+        assertThat(mode.get().maxLocalPlayers()).isEqualTo(8);
+        verify(postRequestedFor(urlPathEqualTo("/v4/games"))
+                .withRequestBody(containing("fields name,platforms")));
+    }
+
+    @Test
+    void aPlatformMatchWithoutModesFallsBackToTheSameTitleElsewhere() {
+        stubFor(post(urlPathEqualTo("/v4/games")).willReturn(json("""
+                [ {"id": 1, "name": "Mario Party 7", "platforms": [21]},
+                  {"id": 2, "name": "Mario Party 7", "platforms": [8]} ]
+                """)));
+        stubFor(post(urlPathEqualTo("/v4/multiplayer_modes")).willReturn(json("""
+                [ {"game": 2, "platform": 8, "offlinecoop": true, "offlinemax": 4} ]
+                """)));
+
+        Optional<IgdbClient.MultiplayerMode> mode = igdbClient.resolveMultiplayerMode("Mario Party 7", List.of(21L));
+
+        assertThat(mode).isPresent();
+        assertThat(mode.get().maxLocalPlayers()).isEqualTo(4);
+    }
+
+    @Test
     void gameModesFlagsFillGamesWithoutMultiplayerModes() {
         stubFor(post(urlPathEqualTo("/v4/games"))
                 .withRequestBody(containing("search \"Mario Party 7\""))

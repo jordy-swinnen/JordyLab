@@ -5,6 +5,7 @@ export function aPlayerCountsHealthMock(overrides: Partial<PlayerCountsHealth> =
     localMultiplayerGames: 105,
     filled: { IGDB: 61, THEGAMESDB: 13 },
     unknown: 31,
+    flagUnknown: 40,
     unknownByReason: {
       STEAM_NO_SOURCE: 29,
       ENTRIES_DISAGREE: 2,
