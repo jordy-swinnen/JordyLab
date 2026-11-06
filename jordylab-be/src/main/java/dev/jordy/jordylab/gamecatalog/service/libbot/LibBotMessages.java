@@ -41,11 +41,27 @@ public class LibBotMessages {
 
     /** The note that says how many games could not be checked; mentions the party size when that was the requirement. */
     public String unknownNote(int count, Integer partySize, Language language) {
+        return unknownNote(count, 0, partySize, language);
+    }
+
+    /**
+     * The note with the two kinds of unknown data kept apart: games known to be local multiplayer without a player count,
+     * and games whose local-multiplayer flag itself is unknown (JOR-83). Both are left out of the answer.
+     */
+    public String unknownNote(int countWithoutFlag, int flagUnknown, Integer partySize, Language language) {
+        if (flagUnknown > 0 && countWithoutFlag > 0) {
+            return text(language, "unknown.flag", flagUnknown) + " "
+                    + (partySize != null ? text(language, "unknown.players", countWithoutFlag, partySize)
+                            : text(language, "unknown.generic", countWithoutFlag));
+        }
+        if (flagUnknown > 0) {
+            return text(language, "unknown.flag", flagUnknown);
+        }
         if (partySize != null) {
-            return text(language, "unknown.players", count, partySize);
+            return text(language, "unknown.players", countWithoutFlag, partySize);
         }
 
-        return text(language, "unknown.generic", count);
+        return text(language, "unknown.generic", countWithoutFlag);
     }
 
     public String noMatch(Language language) {

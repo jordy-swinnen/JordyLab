@@ -28,6 +28,8 @@ public interface LibraryHealthRepository extends Repository<Game, UUID> {
     /** A visible game flagged local multiplayer: the games a player count is wanted for. */
     String LOCAL_MULTIPLAYER = VISIBLE + " AND g.localMultiplayer = true";
     String NO_PLAYER_COUNT = LOCAL_MULTIPLAYER + " AND g.maxLocalPlayers IS NULL";
+    /** A visible game whose local-multiplayer flag itself is unknown (JOR-83). */
+    String FLAG_UNKNOWN = VISIBLE + " AND g.localMultiplayer IS NULL";
     String STEAM_GAME = "g.steamAppId IS NOT NULL";
     String CONSOLE_GAME = "g.steamAppId IS NULL";
 
@@ -84,6 +86,9 @@ public interface LibraryHealthRepository extends Repository<Game, UUID> {
 
     @Query("SELECT COUNT(g) FROM Game g WHERE " + NO_PLAYER_COUNT + " AND " + CONSOLE_GAME + " AND g.playerCountGap IS NULL")
     long countConsoleNotLookedUp();
+
+    @Query("SELECT COUNT(g) FROM Game g WHERE " + FLAG_UNKNOWN)
+    long countFlagUnknown();
 
     @Query("SELECT g.id AS id, g.title AS title FROM Game g WHERE " + NO_PLAYER_COUNT + " AND " + CONSOLE_GAME
             + " AND g.playerCountGap IS NULL ORDER BY LOWER(g.title)")

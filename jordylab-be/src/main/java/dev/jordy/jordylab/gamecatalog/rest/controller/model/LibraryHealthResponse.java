@@ -14,10 +14,11 @@ public record LibraryHealthResponse(long totalGames, long gamesWithoutCover, lon
 
     /**
      * The visible games flagged local multiplayer: how many there are, how many each source filled, and how many have
-     * no count, by reason. {@code unknown} is the sum of {@code unknownByReason}.
+     * no count, by reason. {@code unknown} is the sum of {@code unknownByReason}. {@code flagUnknown} counts the visible
+     * games whose local-multiplayer flag itself is unknown (JOR-83), separately from games with a missing player count.
      */
     public record PlayerCounts(long localMultiplayerGames, Map<PlayerCountSource, Long> filled, long unknown,
-            Map<PlayerCountReason, Long> unknownByReason, SourceState theGamesDb) {
+            long flagUnknown, Map<PlayerCountReason, Long> unknownByReason, SourceState theGamesDb) {
     }
 
     /** The second source's state: configured, paused until when and why, and the last monthly allowance seen. */

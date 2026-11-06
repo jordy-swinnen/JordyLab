@@ -159,6 +159,7 @@ class CandidateRetrieverTest {
         assertSoftly(softly -> {
             softly.assertThat(titles(result.confirmed())).containsExactly("Eight Players");
             softly.assertThat(result.unknownCount()).isEqualTo(2);
+            softly.assertThat(result.unknownFlagCount()).isEqualTo(1);
             softly.assertThat(titles(result.unknownSamples())).containsExactlyInAnyOrder("Local Without Count",
                     "Nothing Known");
             softly.assertThat(result.unknownSamples()).allMatch(candidate -> !candidate.confirmed());

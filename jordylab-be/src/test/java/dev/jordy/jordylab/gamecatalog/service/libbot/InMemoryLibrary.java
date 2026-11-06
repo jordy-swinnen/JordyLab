@@ -40,6 +40,7 @@ class InMemoryLibrary implements CandidateSource {
         boolean asked = GoldenHarness.USER.equals(userSubject);
         List<GoldenGame> confirmed = new ArrayList<>();
         List<GoldenGame> unknown = new ArrayList<>();
+        int unknownFlagCount = 0;
         for (GoldenGame game : games) {
             if (!structurallyAllowed(game, constraints) || !markAllowed(game, constraints, asked) || !playable(game)) {
                 continue;
@@ -50,6 +51,9 @@ class InMemoryLibrary implements CandidateSource {
                 confirmed.add(game);
             } else if (verdict == Verdict.UNKNOWN) {
                 unknown.add(game);
+                if (constraints.minLocalPlayers() != null && game.localMultiplayer() == null) {
+                    unknownFlagCount++;
+                }
             }
         }
         Comparator<GoldenGame> ranking = Comparator
@@ -57,7 +61,7 @@ class InMemoryLibrary implements CandidateSource {
                 .reversed().thenComparing(game -> game.title().toLowerCase(Locale.ROOT));
 
         return new RetrievalResult(confirmed.stream().sorted(ranking).limit(MAX_CANDIDATES)
-                .map(game -> candidate(game, true, asked)).toList(), unknown.size(),
+                .map(game -> candidate(game, true, asked)).toList(), unknown.size(), unknownFlagCount,
                 unknown.stream().sorted(ranking).limit(MAX_UNKNOWN_SAMPLES).map(game -> candidate(game, false, asked))
                         .toList(), false);
     }

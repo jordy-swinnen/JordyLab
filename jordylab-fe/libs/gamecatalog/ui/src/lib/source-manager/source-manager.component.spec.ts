@@ -602,6 +602,9 @@ describe('SourceManagerComponent', () => {
       expect(spectator.query('[data-testid="player-counts-igdb"]')).toHaveText('61 from IGDB');
       expect(spectator.query('[data-testid="player-counts-thegamesdb"]')).toHaveText('13 from TheGamesDB');
       expect(spectator.query('[data-testid="player-counts-unknown"]')).toHaveText('31 unknown');
+      expect(spectator.query('[data-testid="player-counts-flag-unknown"]')).toHaveText(
+        '40 games have no local-multiplayer data at all, so their player count cannot be checked.',
+      );
       expect(spectator.query('[data-testid="player-count-reason-STEAM_NO_SOURCE"]')).toHaveText('29');
       expect(spectator.query('[data-testid="player-count-reason-ENTRIES_DISAGREE"]')).toHaveText('2');
       expect(spectator.query('[data-testid="player-count-reason-NO_MATCH"]')).toBeNull();

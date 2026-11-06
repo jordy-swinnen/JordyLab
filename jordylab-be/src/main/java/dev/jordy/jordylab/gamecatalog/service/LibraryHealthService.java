@@ -85,7 +85,7 @@ public class LibraryHealthService {
         long unknown = unknownByReason.values().stream().mapToLong(Long::longValue).sum();
 
         return new LibraryHealthResponse.PlayerCounts(healthRepository.countLocalMultiplayer(), filled, unknown,
-                unknownByReason, sourceState());
+                healthRepository.countFlagUnknown(), unknownByReason, sourceState());
     }
 
     private LibraryHealthResponse.SourceState sourceState() {

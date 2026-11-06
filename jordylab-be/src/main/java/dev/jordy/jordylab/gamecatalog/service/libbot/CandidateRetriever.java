@@ -68,12 +68,16 @@ public class CandidateRetriever implements CandidateSource {
         rows = withinMarkPreferences(rows, constraints, myMarks);
         List<CandidateRow> confirmed = new ArrayList<>();
         List<CandidateRow> unknown = new ArrayList<>();
+        int unknownFlagCount = 0;
         for (CandidateRow row : rows) {
             Verdict verdict = FactMatcher.match(factsOf(row), constraints);
             if (verdict == Verdict.CONFIRMED) {
                 confirmed.add(row);
             } else if (verdict == Verdict.UNKNOWN) {
                 unknown.add(row);
+                if (constraints.minLocalPlayers() != null && row.getLocalMultiplayer() == null) {
+                    unknownFlagCount++;
+                }
             }
         }
         Playability playability = playabilityOf(Stream.concat(confirmed.stream(), unknown.stream())
@@ -93,7 +97,8 @@ public class CandidateRetriever implements CandidateSource {
                 .limit(properties.maxUnknownTitles()).toList();
         List<Candidate> unknownSamples = describe(unknownRanked, false, Map.of(), Map.of(), myMarks, playability);
 
-        return new RetrievalResult(confirmedCandidates, unknown.size(), unknownSamples, ranking.semantic());
+        return new RetrievalResult(confirmedCandidates, unknown.size(), unknownFlagCount, unknownSamples,
+                ranking.semantic());
     }
 
     /** The visible games among {@code gameIds} as confirmed candidates (a game the conversation or page points at). */

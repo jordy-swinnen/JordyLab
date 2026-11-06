@@ -6,6 +6,8 @@ import dev.jordy.jordylab.gamecatalog.domain.MetadataStatus;
 import dev.jordy.jordylab.gamecatalog.domain.MultiplayerSource;
 import dev.jordy.jordylab.gamecatalog.domain.PlayerCountGap;
 import dev.jordy.jordylab.gamecatalog.domain.PlayerCountSource;
+import dev.jordy.jordylab.gamecatalog.domain.PlatformCatalog;
+import dev.jordy.jordylab.gamecatalog.domain.PlatformEntry;
 import dev.jordy.jordylab.gamecatalog.domain.repository.GameRepository;
 import dev.jordy.jordylab.gamecatalog.rest.client.IgdbClient;
 import dev.jordy.jordylab.gamecatalog.rest.client.SteamAppDetailsClient;
@@ -21,6 +23,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -161,8 +164,9 @@ public class MultiplayerService {
         if (!igdbClient.isConfigured()) {
             return false;
         }
-        Optional<IgdbClient.MultiplayerMode> mode = igdbModeByTitle.computeIfAbsent(game.getTitle(),
-                igdbClient::resolveMultiplayerMode);
+        Optional<IgdbClient.MultiplayerMode> knownId = modeByIgdbId(game);
+        Optional<IgdbClient.MultiplayerMode> mode = knownId.isPresent() ? knownId
+                : modeByTitle(game, igdbModeByTitle);
         if (mode.isEmpty()) {
             return false;
         }
@@ -171,6 +175,54 @@ public class MultiplayerService {
                 mode.get().maxLocalPlayers(), MultiplayerSource.IGDB);
 
         return !needsMultiplayerData(game);
+    }
+
+    /**
+     * A console game added through IGDB already carries its IGDB id; use it instead of searching by title again. A
+     * missing or malformed id falls through to the title search.
+     */
+    private Optional<IgdbClient.MultiplayerMode> modeByIgdbId(Game game) {
+        if (!StringUtils.hasText(game.getIgdbGameId())) {
+            return Optional.empty();
+        }
+        try {
+            long igdbGameId = Long.parseLong(game.getIgdbGameId());
+            return Optional.ofNullable(igdbClient.fetchMultiplayerModes(List.of(igdbGameId)).get(igdbGameId));
+        } catch (NumberFormatException malformed) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * The title search, qualified by the game's platforms when its local-multiplayer flag is still unknown: the same
+     * title can exist on several platforms with different modes, so a match on the game's own platform is tried first.
+     * A flagged game only needs its count, and the title alone is enough there.
+     */
+    private Optional<IgdbClient.MultiplayerMode> modeByTitle(Game game,
+            Map<String, Optional<IgdbClient.MultiplayerMode>> igdbModeByTitle) {
+        List<Long> platformIgdbIds = game.getLocalMultiplayer() == null ? igdbPlatformIds(game) : List.of();
+        String key = platformIgdbIds.isEmpty() ? game.getTitleKey() : game.getTitleKey() + "|" + platformIgdbIds;
+        if (platformIgdbIds.isEmpty()) {
+            return igdbModeByTitle.computeIfAbsent(key, ignored -> igdbClient.resolveMultiplayerMode(game.getTitle()));
+        }
+
+        return igdbModeByTitle.computeIfAbsent(key,
+                ignored -> igdbClient.resolveMultiplayerMode(game.getTitle(), platformIgdbIds));
+    }
+
+    private List<Long> igdbPlatformIds(Game game) {
+        List<String> platforms = platformService.platformsOf(game.getId());
+        if (platforms == null) {
+            return List.of();
+        }
+
+        return platforms.stream()
+                .map(PlatformCatalog::find)
+                .flatMap(Optional::stream)
+                .map(PlatformEntry::igdbPlatformId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     /**
