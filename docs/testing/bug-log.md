@@ -1214,7 +1214,7 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
 - Pre-cutover baseline (2026-11-03, spec 020 T017): both ports still open, recorded in `specs/020-compose-deployment/quickstart.md` step 10 with the commands of record; T054 reruns the same commands after the cutover and shows the ports gone with k3s — the move itself is the fix, per the deferral above.
 
 ### BUG-079: LibBot answers take 5 to 18 seconds on production, the spec asks for 10 seconds or less
-- Status: OPEN
+- Status: FIXING (JOR-72) — the `typesafe/jev-router` setting from BUG-075 is reverted by migration, the composing row is capped, and the answer names its model; production re-measurement is pending.
 - Severity: S3 (the answers are correct and cited; the wait is long, not wrong)
 - Area/spec: gamecatalog LibBot / 013 (SC-006, FR-014)
 - Env found: prod (jordylab.be, admin), 2026-11-02, latest published release `v0.0.1-rc29`; the deployed tag was not read from the cluster
@@ -1224,10 +1224,11 @@ Secrets are always redacted as `<redacted>`. Test plan and coverage matrix: [e2e
   2. Ask ten different questions in a row ("Which games support local multiplayer?", "There are 6 people here tonight, what should we play?", "Which co-op games can I play on the Switch?", "Which Nintendo 64 games do I have?", "Do I have any racing games?", "Welke games hebben lokale multiplayer?", "Do I own any Final Fantasy games?", ...) and time each from pressing Ask to the Ask button becoming active again.
 - Expected (cite spec/story): 013 SC-006: 95% of questions show progress within 1 second and have a complete answer within 10 seconds.
 - Actual (logs/screenshot, secrets redacted): complete answers took 8.9, 14.1, 10.3, 11.0, 14.0, 18.3, 14.4, 15.0, 7.8 and 5.2 seconds (median about 12.5; 3 of 10 within 10 seconds). The first answer showed its stages ("Understood", "Searching your library", "Writing the answer") straight away. The measurement ran in a hidden browser pane, so each value can be up to one second too high; that does not explain the gap.
-- Root cause: not investigated. Two model calls run per question (interpret, then write) through the gateway on the router model chosen on Settings → AI Models; the time per call was not measured.
-- Fix (PR / commit / tag): none yet.
-- Regression test added: none yet.
-- Verified on prod: pending
+- Reproduced again 2026-11-06 with the permanent agent account (a direct SSE client): 8.61 s, 11.04 s and 25.50 s for the first three questions, with the first stage within 0.26 s. The golden live run on the same day, which uses the code defaults (Claude Haiku), takes about 1.5 to 2.5 seconds per model call, so the production model selection is the difference.
+- Root cause: the `gamecatalog.chat.query`/`answer` model saved on Settings → AI Models was `typesafe/jev-router`, a BUG-075 workaround for the invalid-JSON schema bug that BUG-076 fixed. The router adds 5 to 20 seconds for the two sequential LibBot calls. The composing prompt also carries up to 15 full descriptions, which made the slow call larger than needed.
+- Fix (PR / commit / tag): JOR-72 — migration `V20261106001` deletes only the saved `typesafe/jev-router` setting (the code default, Claude Haiku, applies again); `AnswerComposer.row` caps a description at 400 characters; the SSE answer carries `answerModel`, so a future slow answer names the model that wrote it.
+- Regression test added: `AnswerComposerTest` caps a long description; the model name is carried through `LibBotResult` and `LibBotAnswerResponse`.
+- Verified on prod: pending the deploy and a fresh 10-question run
 
 ### BUG-080: Library shows scene-release folder names as titles and a ".dec" file as a second game
 - Status: FIXED-LOCAL (JOR-73) — the client strips scene-release suffixes; a `.dec` file is not a game. A real rescan on the source machine is the production verification.

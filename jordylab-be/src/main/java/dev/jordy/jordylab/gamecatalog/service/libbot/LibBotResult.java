@@ -5,10 +5,16 @@ import java.util.List;
 /**
  * A finished LibBot reply, before it is shaped for HTTP. {@code applied} are the requirement chips in the question's
  * language; {@code unknown} is present only when games with unknown data could have matched; {@code references} are
- * empty unless the outcome is {@code ANSWERED}.
+ * empty unless the outcome is {@code ANSWERED}. {@code answerModel} is the model the provider reported for the
+ * composing call (null when no model was called), so a slow answer can be traced to its model.
  */
 public record LibBotResult(LibBotOutcome outcome, Language language, String text, List<String> applied,
-        Unknown unknown, List<Candidate> references) {
+        Unknown unknown, List<Candidate> references, String answerModel) {
+
+    public LibBotResult(LibBotOutcome outcome, Language language, String text, List<String> applied, Unknown unknown,
+            List<Candidate> references) {
+        this(outcome, language, text, applied, unknown, references, null);
+    }
 
     public LibBotResult {
         applied = applied == null ? List.of() : List.copyOf(applied);

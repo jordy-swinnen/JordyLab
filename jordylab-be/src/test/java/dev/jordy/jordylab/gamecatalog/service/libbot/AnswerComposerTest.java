@@ -75,6 +75,16 @@ class AnswerComposerTest {
     }
 
     @Test
+    void aLongDescriptionIsCappedSoThePromptStaysSmall() {
+        Candidate longDescription = jackbox().toBuilder().description("x".repeat(1000)).build();
+
+        String row = AnswerComposer.row(longDescription);
+        String description = row.substring(row.lastIndexOf(" | ") + 3);
+
+        assertThat(description).hasSize(AnswerComposer.MAX_ROW_DESCRIPTION_CHARACTERS).endsWith("...");
+    }
+
+    @Test
     void theAnswerPromptCarriesTheLanguageTheAppliedRequirementsAndTheRows() throws IOException {
         ReplayAiService aiService = new ReplayAiService(null, mapper.readTree("""
                 {"text":"Jackbox Party Pack 9 fits.","recommendedGameIds":["00000000-0000-0000-0000-000000000003"]}

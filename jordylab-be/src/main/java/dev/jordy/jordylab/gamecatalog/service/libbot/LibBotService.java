@@ -129,7 +129,8 @@ public class LibBotService {
         List<Candidate> references = validator.validReferences(composition.answer(), candidates);
         LibBotOutcome outcome = references.isEmpty() ? LibBotOutcome.NO_MATCH : LibBotOutcome.ANSWERED;
 
-        return new LibBotResult(outcome, language, composition.answer().text(), applied, unknown, references);
+        return new LibBotResult(outcome, language, composition.answer().text(), applied, unknown, references,
+                composition.call().answeredModel());
     }
 
     private String noMatchText(Derivation derivation, RetrievalResult retrieval, Language language) {

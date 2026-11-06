@@ -319,6 +319,8 @@ export interface LibBotAnswer {
   applied: string[];
   unknown: { count: number; note: string } | null;
   references: LibBotReference[];
+  /** The model that wrote the answer, as the provider reported it; null when no model was called. */
+  answerModel?: string | null;
 }
 
 export interface LibBotQuota {
