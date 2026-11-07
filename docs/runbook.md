@@ -36,6 +36,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 25. [Break-glass: an admin locked out](#25-break-glass-an-admin-locked-out)
 26. [MCP connector (Claude Desktop and mobile)](#26-mcp-connector-claude-desktop-and-mobile)
 27. [Agent test account](#27-agent-test-account)
+28. [Kaneo, the backlog](#28-kaneo-the-backlog)
 
 ---
 
@@ -751,3 +752,57 @@ startup fail instead of touching that account.
   ```
 - **Rotate**: write a new value (12+ characters) into `AGENT_TEST_PASSWORD` in SOPS and deploy; the next backend start
   applies it. To disable the account, set both values empty and deploy.
+
+---
+
+## 28. Kaneo, the backlog
+
+Kaneo is the self-hosted backlog that replaces Linear (spec 022). It runs at `https://kaneo.jordylab.be` as its own
+service. It is not part of the application release: a Kaneo outage never blocks or rolls back a deploy.
+
+**What runs where**
+- The `kaneo` service in `compose.yaml` (no published port). Caddy routes `kaneo.jordylab.be` to it.
+- Its role and database `kaneo` live in the existing Postgres. `scripts/ensure-kaneo-database.sh` creates them and sets
+  the role's password from `KANEO_DB_PASSWORD`. The existing backups cover them.
+- After a successful release, the deploy's "Start Kaneo (best effort)" step runs that script and starts Kaneo. It
+  does nothing while `KANEO_AUTH_SECRET` or `KANEO_DB_PASSWORD` is empty, and it only warns on failure.
+
+**First start (owner)**
+1. The DNS record `kaneo.jordylab.be` must exist (done 2026-11-07, see `specs/022-kaneo-backlog/owner-steps.md`).
+2. Add the Kaneo keys to the encrypted secrets file before the merge that brings the deploy (HANDOFF-02).
+3. After the first deploy, open `https://kaneo.jordylab.be`. The first account is created while registration is closed:
+   the trial showed this works for the first user only, after which the sign-up page leads to the login page.
+4. Check that no one else can register: a second sign-up must not create an account.
+
+**Health and logs**
+- `docker compose ... ps kaneo` shows the container's health; the health path is `/api/health` (answers
+  `{"status":"ok"}`).
+- `docker compose ... logs --tail=100 kaneo` for errors.
+
+**Closing or reopening registration**
+- Closed by default: `KANEO_DISABLE_REGISTRATION` is `true` unless the repository variable says otherwise. Change it with
+  `gh variable set KANEO_DISABLE_REGISTRATION --body true` (or `false`), then run a deploy. The variable reaches the
+  environment file at the next render.
+
+**Rotating**
+- `KANEO_AUTH_SECRET`: a new value signs everyone out. Change it in the secrets file and deploy.
+- `KANEO_DB_PASSWORD`: change it in the secrets file and deploy; the database step resets the role's password.
+- The Kaneo API key used by the backend is created in Kaneo (Settings, Account, API keys) and stored as the production
+  environment secret `KANEO_API_KEY` (`gh secret set KANEO_API_KEY --env production`). Revoke it in Kaneo when it is no
+  longer used; deleting it stops every client that uses it at once.
+
+**Upgrades**
+1. Read the Kaneo release notes for every version between the pin and the target; security notes first.
+2. Take a backup: `pgbackrest --stanza=jordylab --type=diff backup` (see section 22).
+3. Change the image tag and digest in `compose.yaml` in a pull request, merge, and deploy.
+4. Check `/api/health` and sign in.
+5. To roll back, restore the previous pin through a deploy of the previous commit. If the new version changed the
+   schema in a way the old one cannot read, restore the `kaneo` database from the backup taken in step 2.
+
+**Open points (not yet verified on production)**
+- `TRUSTED_PROXIES` is not set. The stack's network is `172.28.0.0/16`; set it only after checking how Kaneo parses it.
+- `DISABLE_WORKSPACE_CREATION` is the repository variable `KANEO_DISABLE_WORKSPACE_CREATION` (default `true`). Whether
+  the first sign-in can create the first workspace with this on is tested on a trial before the merge; if it cannot,
+  set the variable to `false` (`gh variable set KANEO_DISABLE_WORKSPACE_CREATION --body false`), deploy, and record the
+  result here.
+- The GitHub App matrix (T010) and the Claude Code and Claude app checks run on production after the first deploy.

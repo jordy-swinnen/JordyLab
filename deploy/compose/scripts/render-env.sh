@@ -15,6 +15,7 @@ readonly secrets_file="${SECRETS_FILE:-deploy/k8s/overlays/prod/secrets.sops.yam
 # in its error messages.
 render_program=$(
   cat <<'PY'
+import os
 import sys
 
 try:
@@ -34,6 +35,9 @@ LITERALS = [
     ("LANGFUSE_CAPTURE_CONTENT", "true"),
     ("SPRINGDOC_API_DOCS_ENABLED", "false"),
     ("SPRINGDOC_SWAGGER_UI_ENABLED", "false"),
+    # Kaneo's database role and name (spec 022, research R6). The role's password is a secret (SOFT_SECRET_VALUES).
+    ("KANEO_DB_NAME", "kaneo"),
+    ("KANEO_DB_USER", "kaneo"),
 ]
 
 # (variable, Secret, key in that Secret, required). A required variable fails the render when empty.
@@ -61,6 +65,26 @@ SECRET_VALUES = [
     ("IGDB_CLIENT_ID", "jordylab-secrets", "IGDB_CLIENT_ID", False),
     ("IGDB_CLIENT_SECRET", "jordylab-secrets", "IGDB_CLIENT_SECRET", False),
     ("THEGAMESDB_API_KEY", "jordylab-secrets", "THEGAMESDB_API_KEY", False),
+]
+
+# Kaneo secrets (spec 022). Unlike SECRET_VALUES, a missing Secret or key renders as an empty value instead of failing:
+# the application deploy must keep working before the owner adds these keys (HANDOFF-02, HANDOFF-03), and the Kaneo step
+# on the host starts nothing while they are empty. An existing key that is misspelt still fails through SECRET_VALUES.
+SOFT_SECRET_VALUES = [
+    ("KANEO_AUTH_SECRET", "jordylab-secrets", "KANEO_AUTH_SECRET"),
+    ("KANEO_DB_PASSWORD", "jordylab-secrets", "KANEO_DB_PASSWORD"),
+    ("KANEO_GITHUB_APP_ID", "jordylab-secrets", "KANEO_GITHUB_APP_ID"),
+    ("KANEO_GITHUB_WEBHOOK_SECRET", "jordylab-secrets", "KANEO_GITHUB_WEBHOOK_SECRET"),
+    ("KANEO_GITHUB_PRIVATE_KEY_BASE64", "jordylab-secrets", "KANEO_GITHUB_PRIVATE_KEY_BASE64"),
+]
+
+# Settings that are not secret and come from GitHub repository variables, passed in by the workflow. An unset or empty
+# variable takes the default, so the first deploy after this change renders the same values as before.
+ENVIRONMENT_SETTINGS = [
+    ("BACKLOG_PROVIDER", "linear"),
+    ("KANEO_DISABLE_REGISTRATION", "true"),
+    ("KANEO_DISABLE_WORKSPACE_CREATION", "true"),
+    ("KANEO_MEM_LIMIT", "768m"),
 ]
 
 
@@ -100,6 +124,17 @@ def main():
         if required and value == "":
             fail(f"{name} is empty but required")
         lines.append(format_line(name, value))
+    for name, secret_name, key in SOFT_SECRET_VALUES:
+        raw = secrets.get(secret_name, {}).get(key)
+        if raw is None:
+            value = ""
+        elif isinstance(raw, bool) or not isinstance(raw, (str, int)):
+            fail(f"{name} is not a plain string in the secrets file")
+        else:
+            value = str(raw)
+        lines.append(format_line(name, value))
+    for name, default in ENVIRONMENT_SETTINGS:
+        lines.append(format_line(name, os.environ.get(name, "") or default))
     sys.stdout.write("\n".join(lines) + "\n")
 
 

@@ -72,4 +72,21 @@ Keycloak's build-time options (`KC_DB`, `KC_HEALTH_ENABLED`, `KC_METRICS_ENABLED
 - Settings that are not secret and have one fixed value (for example `POSTGRES_URL`, `KC_PROXY_TRUSTED_ADDRESSES`) are written by `scripts/render-env.sh` from its own list, so a change is reviewed in git. The secret-backed names come from the SOPS file.
 - `JORDYLAB_RELEASE` is not in this file. `scripts/deploy-release.sh` exports it for the GHCR image tags.
 - The file on the host is mode 600 and is never echoed in a log or a job summary.
-- A variable that is absent from the render fails `render-env.sh`; an empty value fails it too, except where the table above says a value is optional (for example the API keys, which the application already treats as unset).
+- A variable that is absent from the render fails `render-env.sh`; an empty value fails it too, except where the table above says a value is optional (for example the API keys, which the application already treats as unset). The Kaneo secrets (below) are the one exception: an absent key renders empty, so the application deploy keeps working until the owner adds them.
+
+## Kaneo, the backlog (spec 022)
+
+Kaneo is not part of the application release: `deploy-release.sh` starts only `backend` and `frontend`. Its names are read by `render-env.sh` and by the Compose file's `kaneo` service.
+
+| Variable | Source | Notes |
+|----------|--------|-------|
+| `KANEO_AUTH_SECRET` | `jordylab-secrets` → `KANEO_AUTH_SECRET` | soft: absent renders empty; the host step does not start Kaneo while it is empty |
+| `KANEO_DB_PASSWORD` | `jordylab-secrets` → `KANEO_DB_PASSWORD` | soft; the role's password, set by `ensure-kaneo-database.sh` |
+| `KANEO_GITHUB_APP_ID`, `KANEO_GITHUB_WEBHOOK_SECRET`, `KANEO_GITHUB_PRIVATE_KEY_BASE64` | `jordylab-secrets` | soft; from the GitHub App (HANDOFF-03), after the first deploy |
+| `KANEO_DB_NAME`, `KANEO_DB_USER` | literals in `render-env.sh` | `kaneo`, `kaneo` |
+| `KANEO_DISABLE_REGISTRATION` | repository variable | default `true` |
+| `KANEO_DISABLE_WORKSPACE_CREATION` | repository variable | default `true`: no extra workspaces on the Kaneo instance |
+| `KANEO_MEM_LIMIT` | repository variable | default `768m` |
+| `BACKLOG_PROVIDER` | repository variable | default `linear` until the cutover; read by the backend once the Kaneo client exists |
+
+An unset or empty repository variable takes the default. Soft secrets never make the render fail; every other secret keeps the strict rule above.

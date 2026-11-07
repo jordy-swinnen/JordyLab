@@ -179,6 +179,14 @@ jobs:
         run: bash deploy/scripts/tests/deploy-decision-cases.sh
       - name: Run the backup freshness fixtures
         run: bash deploy/scripts/tests/backup-freshness-cases.sh
+      # Spec 022: the Kaneo database step, its Kaneo smoke check, and the Kaneo part of the environment render.
+      # The render test needs PyYAML, as the deploy job's render does.
+      - name: Run the Kaneo fixtures
+        run: |
+          bash deploy/compose/scripts/tests/ensure-kaneo-database-cases.sh
+          bash deploy/scripts/tests/smoke-check-kaneo-cases.sh
+          python3 -m pip install --quiet pyyaml
+          bash deploy/compose/scripts/tests/render-env-kaneo-cases.sh
       # actionlint 1.7.12 does not know concurrency.queue (GitHub supports it; deploy-prod-compose.yml needs queue: max).
       - name: Lint the workflows
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -ignore 'unexpected key "queue" for "concurrency" section'
