@@ -204,6 +204,7 @@ jobs:
           # Kaneo settings from repository variables (spec 022). Unset means the render default (see render-env.sh).
           BACKLOG_PROVIDER: ${{ vars.BACKLOG_PROVIDER }}
           KANEO_DISABLE_REGISTRATION: ${{ vars.KANEO_DISABLE_REGISTRATION }}
+          KANEO_DISABLE_WORKSPACE_CREATION: ${{ vars.KANEO_DISABLE_WORKSPACE_CREATION }}
           KANEO_MEM_LIMIT: ${{ vars.KANEO_MEM_LIMIT }}
         run: |
           set -o pipefail

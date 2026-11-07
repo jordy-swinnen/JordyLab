@@ -32,6 +32,8 @@ services:
       POSTGRES_USER: kaneo
       POSTGRES_PASSWORD: ${TRIAL_DB_PASSWORD:?run.sh sets this}
       DISABLE_REGISTRATION: "true"
+      # Same as production (spec 022): the trial tests whether the first user can still create a workspace with this on.
+      DISABLE_WORKSPACE_CREATION: "true"
     ports:
       - "127.0.0.1:${TRIAL_HOST_PORT:?run.sh sets this}:5173"
     healthcheck:

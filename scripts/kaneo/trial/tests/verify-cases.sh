@@ -82,10 +82,20 @@ expect() {
   fi
 }
 
+# Called indirectly through expect "$@", which shellcheck cannot follow (SC2329).
+# shellcheck disable=SC2329
 log_has() { grep -q -F -- "$1" "$state/log"; }
+# Called indirectly through expect "$@", which shellcheck cannot follow (SC2329).
+# shellcheck disable=SC2329
 no_compose_up() { ! grep -q -F -- " up -d" "$state/log"; }
+# Called indirectly through expect "$@", which shellcheck cannot follow (SC2329).
+# shellcheck disable=SC2329
 output_has() { grep -q -F -- "$1" <<<"$output"; }
+# Called indirectly through expect "$@", which shellcheck cannot follow (SC2329).
+# shellcheck disable=SC2329
 output_clean() { ! grep -q -E 'PASSWORD|SECRET' <<<"$output"; }
+# Called indirectly through expect "$@", which shellcheck cannot follow (SC2329).
+# shellcheck disable=SC2329
 no_dev_stack() { ! grep -q -F -- "jordylab-be" "$state/log"; }
 
 # A. Refuses to run outside /Users or /private/tmp on macOS, before any runtime call.
@@ -111,9 +121,9 @@ expect "up prints no password or secret" "output names a secret: $output" output
 
 # C. up writes nothing into the trial folder (no keys or passwords on disk).
 reset_state
-before="$(ls -A "$trial" | sort)"
+before="$(find "$trial" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort)"
 invoke up
-after="$(ls -A "$trial" | sort)"
+after="$(find "$trial" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort)"
 expect "up writes nothing into the trial folder" "before: $before / after: $after" test "$before" = "$after"
 
 # D. up refuses while labelled resources of an earlier trial remain.
