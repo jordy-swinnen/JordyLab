@@ -15,6 +15,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,9 @@ class FnaRepositoryTest {
 
     @Autowired
     private BriefingRepository briefingRepository;
+
+    @Autowired
+    private PositionPriceHistoryRepository historyRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -207,5 +211,48 @@ class FnaRepositoryTest {
         PortfolioPosition reloaded = positionRepository.findById(saved.getId()).orElseThrow();
 
         assertThat(reloaded.getShareCount()).isEqualByComparingTo("0.002106");
+    }
+
+    @Test
+    void upsertDailyPriceWritesADayOnceAndReplacesItsValueOnASecondWrite() {
+        recordDay("ASML.AS", LocalDate.of(2026, 11, 6), "1250.0000", Instant.parse("2026-11-06T16:00:00Z"));
+        recordDay("ASML.AS", LocalDate.of(2026, 11, 6), "1260.0000", Instant.parse("2026-11-06T16:30:00Z"));
+        entityManager.clear();
+
+        List<PositionPriceHistory> rows = historyRepository.findAllByPriceSymbolOrderByPriceDateAsc("ASML.AS");
+
+        assertSoftly(softly -> {
+            softly.assertThat(rows).hasSize(1);
+            softly.assertThat(rows.getFirst().getPriceInEuro()).isEqualByComparingTo("1260.0000");
+        });
+    }
+
+    @Test
+    void windowQueryReturnsAscendingRowsFromTheStartDate() {
+        recordDay("ASML.AS", LocalDate.of(2026, 10, 30), "1200.0000", Instant.parse("2026-11-06T16:00:00Z"));
+        recordDay("ASML.AS", LocalDate.of(2026, 11, 4), "1000.0000", Instant.parse("2026-11-06T16:00:00Z"));
+        recordDay("ASML.AS", LocalDate.of(2026, 11, 6), "1010.0000", Instant.parse("2026-11-06T16:00:00Z"));
+        entityManager.clear();
+
+        List<PositionPriceHistory> rows = historyRepository
+                .findAllByPriceSymbolAndPriceDateGreaterThanEqualOrderByPriceDateAsc("ASML.AS", LocalDate.of(2026, 11, 1));
+
+        assertThat(rows).extracting(PositionPriceHistory::getPriceDate)
+                .containsExactly(LocalDate.of(2026, 11, 4), LocalDate.of(2026, 11, 6));
+    }
+
+    @Test
+    void newestRowQueryReturnsTheLatestRecordedDate() {
+        recordDay("ASML.AS", LocalDate.of(2026, 11, 4), "1000.0000", Instant.parse("2026-11-06T16:00:00Z"));
+        recordDay("ASML.AS", LocalDate.of(2026, 11, 6), "1010.0000", Instant.parse("2026-11-06T16:00:00Z"));
+        entityManager.clear();
+
+        Optional<PositionPriceHistory> newest = historyRepository.findFirstByPriceSymbolOrderByPriceDateDesc("ASML.AS");
+
+        assertThat(newest).map(PositionPriceHistory::getPriceDate).contains(LocalDate.of(2026, 11, 6));
+    }
+
+    private void recordDay(String priceSymbol, LocalDate priceDate, String priceInEuro, Instant recordedAt) {
+        historyRepository.upsertDailyPrice(UUID.randomUUID(), priceSymbol, priceDate, new BigDecimal(priceInEuro), recordedAt);
     }
 }

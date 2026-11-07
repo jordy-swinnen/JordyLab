@@ -11,5 +11,14 @@
     (deletePosition)="deletePosition($event)"
     (addWishlistItem)="addWishlistItem($event)"
     (deleteWishlistItem)="deleteWishlistItem($event)"
+    [openedPositionId]="openedPositionId()"
+    [history]="history()"
+    [historyLoading]="historyLoading()"
+    [historyError]="historyError()"
+    [historyPeriod]="historyPeriod()"
+    (openHistory)="openHistory($event)"
+    (closeHistory)="closeHistory()"
+    (historyPeriodSelected)="selectHistoryPeriod($event)"
+    (historyRetry)="retryHistory()"
   />
 }

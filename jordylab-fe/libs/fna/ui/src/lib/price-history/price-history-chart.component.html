@@ -1,0 +1,33 @@
+@if (coordinates().length > 1) {
+  <svg
+    [attr.viewBox]="viewBox"
+    role="img"
+    [attr.aria-label]="label()"
+    class="block h-auto w-full"
+  >
+    <line
+      [attr.x1]="horizontalMargin"
+      [attr.x2]="viewWidth - horizontalMargin"
+      [attr.y1]="baselineY"
+      [attr.y2]="baselineY"
+      class="stroke-border"
+      stroke-width="1"
+    />
+    <polyline
+      [attr.points]="polyline()"
+      fill="none"
+      class="stroke-series-1"
+      stroke-width="2"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+    @if (endPoint(); as end) {
+      <circle
+        [attr.cx]="end.x"
+        [attr.cy]="end.y"
+        [attr.r]="endDotRadius"
+        class="fill-series-1"
+      />
+    }
+  </svg>
+}

@@ -1,6 +1,14 @@
 import { computed, signal } from '@angular/core';
 import { createComponentFactory, Spectator } from '@ngneat/spectator/vitest';
-import { aPortfolioPositionMock, aWishlistItemMock, PortfolioPosition, WishlistItem, PortfolioStore } from '@jordylab-fe/fna/api';
+import {
+  aPortfolioPositionMock,
+  aWishlistItemMock,
+  PortfolioPosition,
+  PriceHistory,
+  PortfolioStore,
+  PriceHistoryStore,
+  WishlistItem,
+} from '@jordylab-fe/fna/api';
 import { PortfolioManagerComponent } from './portfolio-manager.component';
 
 describe('PortfolioManagerComponent', () => {
@@ -19,8 +27,11 @@ describe('PortfolioManagerComponent', () => {
     positionRows: computed(() =>
       positions().map((position) => ({
         ...position,
-        value: position.lastPrice === null ? null : position.shareCount * position.lastPrice,
-      }))
+        value:
+          position.lastPrice === null
+            ? null
+            : position.shareCount * position.lastPrice,
+      })),
     ),
     error: error.asReadonly(),
     wishlistError: wishlistError.asReadonly(),
@@ -31,9 +42,11 @@ describe('PortfolioManagerComponent', () => {
         }
 
         return sum;
-      }, 0)
+      }, 0),
     ),
-    hasAnyPrices: computed(() => positions().some((position) => position.lastPrice !== null)),
+    hasAnyPrices: computed(() =>
+      positions().some((position) => position.lastPrice !== null),
+    ),
     load: vi.fn(),
     upsertPosition,
     removePosition,
@@ -41,9 +54,26 @@ describe('PortfolioManagerComponent', () => {
     removeWishlistItem,
   };
 
+  const priceHistory = signal<PriceHistory | null>(null);
+  const priceHistoryLoading = signal(false);
+  const priceHistoryError = signal<string | null>(null);
+  const loadPriceHistory = vi.fn();
+  const clearPriceHistory = vi.fn();
+
+  const priceHistoryMock = {
+    history: priceHistory.asReadonly(),
+    isLoading: priceHistoryLoading.asReadonly(),
+    error: priceHistoryError.asReadonly(),
+    load: loadPriceHistory,
+    clear: clearPriceHistory,
+  };
+
   const createComponent = createComponentFactory({
     component: PortfolioManagerComponent,
-    providers: [{ provide: PortfolioStore, useValue: storeMock }],
+    providers: [
+      { provide: PortfolioStore, useValue: storeMock },
+      { provide: PriceHistoryStore, useValue: priceHistoryMock },
+    ],
   });
 
   let spectator: Spectator<PortfolioManagerComponent>;
@@ -53,10 +83,15 @@ describe('PortfolioManagerComponent', () => {
     wishlist.set([]);
     error.set(null);
     wishlistError.set(null);
+    priceHistory.set(null);
+    priceHistoryLoading.set(false);
+    priceHistoryError.set(null);
     upsertPosition.mockClear();
     removePosition.mockClear();
     addWishlistItem.mockClear();
     removeWishlistItem.mockClear();
+    loadPriceHistory.mockClear();
+    clearPriceHistory.mockClear();
     spectator = createComponent();
   });
 
@@ -69,26 +104,40 @@ describe('PortfolioManagerComponent', () => {
   it('displays populated positions', () => {
     positions.set([
       aPortfolioPositionMock(),
-      aPortfolioPositionMock({ id: 'p2', ticker: 'KBC', shareCount: 5, lastPrice: null, lastPriceFetchedAt: null }),
+      aPortfolioPositionMock({
+        id: 'p2',
+        ticker: 'KBC',
+        shareCount: 5,
+        lastPrice: null,
+        lastPriceFetchedAt: null,
+      }),
     ]);
     spectator.detectChanges();
 
     expect(spectator.query('td')).toHaveText('ABI');
-    expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
+    expect(spectator.query('[data-testid="total-worth"]')).toHaveText(
+      '€705.00',
+    );
   });
 
   it('shows each position value as shares times last price, in the total-worth colour', () => {
-    positions.set([aPortfolioPositionMock({ shareCount: 0.137, lastPrice: 73805.21 })]);
+    positions.set([
+      aPortfolioPositionMock({ shareCount: 0.137, lastPrice: 73805.21 }),
+    ]);
     spectator.detectChanges();
 
     const value = spectator.query('[data-testid="row-value"]');
 
     expect(value).toHaveText('€10,111.31');
-    expect(spectator.query('[data-testid="row-price"]')).toHaveText('€73,805.21');
+    expect(spectator.query('[data-testid="row-price"]')).toHaveText(
+      '€73,805.21',
+    );
   });
 
   it('shows a dash for the value of an unpriced position', () => {
-    positions.set([aPortfolioPositionMock({ lastPrice: null, lastPriceFetchedAt: null })]);
+    positions.set([
+      aPortfolioPositionMock({ lastPrice: null, lastPriceFetchedAt: null }),
+    ]);
     spectator.detectChanges();
 
     expect(spectator.query('[data-testid="row-value"]')).toBeNull();
@@ -106,7 +155,9 @@ describe('PortfolioManagerComponent', () => {
     error.set('Failed to load portfolio.');
     spectator.detectChanges();
 
-    expect(spectator.query('div.text-destructive')).toHaveText('Failed to load portfolio.');
+    expect(spectator.query('div.text-destructive')).toHaveText(
+      'Failed to load portfolio.',
+    );
   });
 
   it('adds a position via the store', () => {
@@ -128,7 +179,13 @@ describe('PortfolioManagerComponent', () => {
   it('draws an allocation bar with a slice per priced position', () => {
     positions.set([
       aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' }),
-      aPortfolioPositionMock({ id: 'p2', ticker: 'KBC', shareCount: 5, lastPrice: null, lastPriceFetchedAt: null }),
+      aPortfolioPositionMock({
+        id: 'p2',
+        ticker: 'KBC',
+        shareCount: 5,
+        lastPrice: null,
+        lastPriceFetchedAt: null,
+      }),
     ]);
     spectator.detectChanges();
 
@@ -140,17 +197,27 @@ describe('PortfolioManagerComponent', () => {
   });
 
   it('shows every digit of a small crypto position and values it with them', () => {
-    positions.set([aPortfolioPositionMock({ ticker: 'BTC-EUR', shareCount: 0.002106, lastPrice: 76318.08 })]);
+    positions.set([
+      aPortfolioPositionMock({
+        ticker: 'BTC-EUR',
+        shareCount: 0.002106,
+        lastPrice: 76318.08,
+      }),
+    ]);
     spectator.detectChanges();
 
     expect(spectator.query('tbody')?.textContent).toContain('0.002106');
-    expect(spectator.query('[data-testid="row-value"]')?.textContent?.trim()).toBe('€160.73');
+    expect(
+      spectator.query('[data-testid="row-value"]')?.textContent?.trim(),
+    ).toBe('€160.73');
   });
 
   it('lets the shares field take fractions', () => {
     spectator.detectChanges();
 
-    expect(spectator.query('input[aria-label="Shares"]')?.getAttribute('step')).toBe('any');
+    expect(
+      spectator.query('input[aria-label="Shares"]')?.getAttribute('step'),
+    ).toBe('any');
   });
 
   it('shows the wishlist empty state when nothing is on the wishlist', () => {
@@ -160,7 +227,10 @@ describe('PortfolioManagerComponent', () => {
   });
 
   it('renders a wishlist row per wishlist item', () => {
-    wishlist.set([aWishlistItemMock(), aWishlistItemMock({ id: 'w2', ticker: 'SAP' })]);
+    wishlist.set([
+      aWishlistItemMock(),
+      aWishlistItemMock({ id: 'w2', ticker: 'SAP' }),
+    ]);
     spectator.detectChanges();
 
     const rows = spectator.queryAll('[data-testid="wishlist-row"]');
@@ -173,7 +243,12 @@ describe('PortfolioManagerComponent', () => {
   it('shows the wishlist price and a dash when the wishlist item is unpriced', () => {
     wishlist.set([
       aWishlistItemMock({ id: 'w1', ticker: 'ASML', lastPrice: 642.8 }),
-      aWishlistItemMock({ id: 'w2', ticker: 'SAP', lastPrice: null, lastPriceFetchedAt: null }),
+      aWishlistItemMock({
+        id: 'w2',
+        ticker: 'SAP',
+        lastPrice: null,
+        lastPriceFetchedAt: null,
+      }),
     ]);
     spectator.detectChanges();
 
@@ -184,11 +259,15 @@ describe('PortfolioManagerComponent', () => {
   });
 
   it('keeps wishlist items out of total worth, allocation and the position count', () => {
-    positions.set([aPortfolioPositionMock({ shareCount: 10, lastPrice: 70.5 })]);
+    positions.set([
+      aPortfolioPositionMock({ shareCount: 10, lastPrice: 70.5 }),
+    ]);
     wishlist.set([aWishlistItemMock({ lastPrice: 642.8 })]);
     spectator.detectChanges();
 
-    expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
+    expect(spectator.query('[data-testid="total-worth"]')).toHaveText(
+      '€705.00',
+    );
     expect(spectator.element).toHaveText('1 position');
     expect(spectator.queryAll('ul li')).toHaveLength(1);
   });
@@ -199,9 +278,11 @@ describe('PortfolioManagerComponent', () => {
     spectator.detectChanges();
 
     expect(spectator.query('[data-testid="wishlist-error"]')).toHaveText(
-      'This ticker is already in your portfolio.'
+      'This ticker is already in your portfolio.',
     );
-    expect(spectator.query('[data-testid="total-worth"]')).toHaveText('€705.00');
+    expect(spectator.query('[data-testid="total-worth"]')).toHaveText(
+      '€705.00',
+    );
     expect(spectator.query('[data-testid="wishlist-row"]')).toBeNull();
   });
 
@@ -243,6 +324,55 @@ describe('PortfolioManagerComponent', () => {
     expect(upsertPosition).not.toHaveBeenCalled();
   });
 
+  it('opens the price history under a held position and loads it for the default year', () => {
+    positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
+    spectator.detectChanges();
+
+    clickButton('History');
+    spectator.detectChanges();
+
+    expect(loadPriceHistory).toHaveBeenCalledWith('p1', 'ONE_YEAR');
+    expect(spectator.query('[data-testid="price-history-panel"]')).toBeTruthy();
+  });
+
+  it('reloads the open holding when a different period is chosen', () => {
+    positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
+    spectator.detectChanges();
+    clickButton('History');
+
+    clickButton('3M');
+
+    expect(loadPriceHistory).toHaveBeenLastCalledWith('p1', 'THREE_MONTHS');
+  });
+
+  it('closes the history and forgets it', () => {
+    positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
+    spectator.detectChanges();
+    clickButton('History');
+    spectator.detectChanges();
+
+    clickButton('Close');
+    spectator.detectChanges();
+
+    expect(clearPriceHistory).toHaveBeenCalledOnce();
+    expect(spectator.query('[data-testid="price-history-panel"]')).toBeNull();
+  });
+
+  it('retries a failed history load for the open holding', () => {
+    positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
+    spectator.detectChanges();
+    clickButton('History');
+    priceHistoryError.set(
+      "Couldn't load the price history. Try again in a moment.",
+    );
+    spectator.detectChanges();
+    loadPriceHistory.mockClear();
+
+    clickButton('Try again');
+
+    expect(loadPriceHistory).toHaveBeenCalledWith('p1', 'ONE_YEAR');
+  });
+
   function clickButton(label: string): void {
     const button = spectator
       .queryAll('button')
@@ -254,6 +384,7 @@ describe('PortfolioManagerComponent', () => {
 
     spectator.click(button);
   }
+
   it('loads the portfolio again when the error state is retried', () => {
     storeMock.load.mockClear();
     error.set('Failed to load portfolio.');

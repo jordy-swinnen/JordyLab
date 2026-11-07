@@ -3,6 +3,7 @@ package dev.jordy.jordylab.fna.rest.controller;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingErrorDto;
 import dev.jordy.jordylab.fna.service.ArticleAlreadyQueuedException;
 import dev.jordy.jordylab.fna.service.BriefingGenerationException;
+import dev.jordy.jordylab.fna.service.PositionNotHeldException;
 import dev.jordy.jordylab.fna.service.TickerAlreadyHeldException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,12 @@ public class FnaExceptionHandler {
     @ExceptionHandler(TickerAlreadyHeldException.class)
     public ResponseEntity<ErrorBody> handleTickerAlreadyHeld(TickerAlreadyHeldException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorBody("TICKER_ALREADY_HELD"));
+    }
+
+    /** The position is unknown or a wishlist item: there is no price history to show (spec 023, FR-001). */
+    @ExceptionHandler(PositionNotHeldException.class)
+    public ResponseEntity<ErrorBody> handlePositionNotHeld(PositionNotHeldException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorBody("POSITION_NOT_HELD"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

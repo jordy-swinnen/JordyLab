@@ -1,8 +1,11 @@
 package dev.jordy.jordylab.fna.rest.controller;
 
+import dev.jordy.jordylab.fna.domain.PriceHistoryPeriod;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.service.BriefingGenerationException;
 import dev.jordy.jordylab.fna.service.FnaService;
+import dev.jordy.jordylab.fna.service.PositionNotHeldException;
+import dev.jordy.jordylab.fna.service.PriceHistoryService;
 import dev.jordy.jordylab.fna.service.TickerAlreadyHeldException;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
 import org.junit.jupiter.api.Test;
@@ -42,6 +45,9 @@ class FnaControllerTest {
 
     @MockitoBean
     private dev.jordy.jordylab.fna.service.ManualArticleSubmissionService manualArticleSubmissionService;
+
+    @MockitoBean
+    private PriceHistoryService priceHistoryService;
 
     @Test
     void queuesAManualArticleAndReturnsTheCreatedArticle() throws Exception {
@@ -98,6 +104,45 @@ class FnaControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(fnaService).removePosition(POSITION_ID);
+    }
+
+    @Test
+    void getPriceHistoryReturnsTheRecordedWindowWithItsSummary() throws Exception {
+        when(priceHistoryService.readWindow(POSITION_ID, PriceHistoryPeriod.ONE_YEAR))
+                .thenReturn(PriceHistoryDtoTestBuilder.aDefaultPriceHistoryDto());
+
+        mockMvc.perform(get("/api/fna/portfolio/{id}/price-history", POSITION_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("AVAILABLE"))
+                .andExpect(jsonPath("$.points.length()").value(2))
+                .andExpect(jsonPath("$.summary.changePercent").value(25.0))
+                .andExpect(jsonPath("$.recommendation").doesNotExist());
+    }
+
+    @Test
+    void getPriceHistoryPassesTheRequestedPeriodAndReportsNoHistoryYet() throws Exception {
+        when(priceHistoryService.readWindow(POSITION_ID, PriceHistoryPeriod.MAX))
+                .thenReturn(PriceHistoryDtoTestBuilder.aNoHistoryPriceHistoryDto());
+
+        mockMvc.perform(get("/api/fna/portfolio/{id}/price-history", POSITION_ID).param("period", "MAX"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NO_HISTORY_YET"));
+    }
+
+    @Test
+    void getPriceHistoryReturns404WhenThePositionIsAWishlistItem() throws Exception {
+        when(priceHistoryService.readWindow(POSITION_ID, PriceHistoryPeriod.ONE_YEAR))
+                .thenThrow(new PositionNotHeldException(POSITION_ID));
+
+        mockMvc.perform(get("/api/fna/portfolio/{id}/price-history", POSITION_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.reason").value("POSITION_NOT_HELD"));
+    }
+
+    @Test
+    void getPriceHistoryReturns400ForAnUnknownPeriod() throws Exception {
+        mockMvc.perform(get("/api/fna/portfolio/{id}/price-history", POSITION_ID).param("period", "FOREVER"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

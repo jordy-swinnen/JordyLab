@@ -1,0 +1,158 @@
+<section
+  class="border-t border-border px-5 py-6 sm:px-7"
+  aria-labelledby="price-history-heading"
+  [attr.aria-busy]="isLoading()"
+  data-testid="price-history-panel"
+>
+  <div class="flex items-center justify-between gap-3">
+    <h3
+      #heading
+      id="price-history-heading"
+      tabindex="-1"
+      class="section-title text-foreground focus-visible:outline-none"
+    >
+      {{ ticker() }}
+    </h3>
+    <button
+      hlmBtn
+      variant="ghost"
+      size="sm"
+      type="button"
+      class="h-11 text-muted-foreground hover:text-foreground"
+      (click)="closed.emit()"
+    >
+      Close
+    </button>
+  </div>
+
+  <div role="group" aria-label="Period" class="mt-4 flex gap-1">
+    @for (choice of periodChoices; track choice.period) {
+      <button
+        type="button"
+        class="h-11 flex-1 rounded-[10px] border border-input px-2 text-sm font-semibold"
+        [class.bg-foreground]="selectedPeriod() === choice.period"
+        [class.text-background]="selectedPeriod() === choice.period"
+        [class.text-secondary-foreground]="selectedPeriod() !== choice.period"
+        [attr.aria-pressed]="selectedPeriod() === choice.period"
+        (click)="periodSelected.emit(choice.period)"
+      >
+        {{ choice.label }}
+      </button>
+    }
+  </div>
+
+  <div class="mt-5">
+    @if (error(); as message) {
+      <lib-error-state [message]="message" (retry)="retried.emit()" />
+    } @else if (history(); as loaded) {
+      @if (loaded.summary; as summary) {
+        <lib-price-history-chart
+          [points]="loaded.points"
+          [label]="chartLabel(summary)"
+        />
+        <div
+          class="mt-2 flex justify-between text-[13px] tabular-nums text-muted-foreground"
+        >
+          <span>{{ summary.startDate | date: 'd MMM y' }}</span>
+          <span>{{ summary.endDate | date: 'd MMM y' }}</span>
+        </div>
+        @if (startsAfterWindow()) {
+          <p class="mt-2 text-[13px] text-secondary-foreground">
+            History starts on {{ loaded.dataStartDate | date: 'd MMM y' }}.
+          </p>
+        }
+        <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
+          <div>
+            <dt class="label">Start</dt>
+            <dd
+              class="mt-0.5 text-[17px] font-semibold tabular-nums text-foreground"
+            >
+              €{{ summary.startPriceInEuro | number: '1.2-2' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="label">End</dt>
+            <dd
+              class="mt-0.5 text-[17px] font-semibold tabular-nums text-foreground"
+            >
+              €{{ summary.endPriceInEuro | number: '1.2-2' }}
+            </dd>
+          </div>
+          <div class="col-span-2">
+            <dt class="label">Change</dt>
+            <dd
+              class="mt-0.5 text-[17px] font-semibold tabular-nums text-foreground"
+            >
+              @if (
+                summary.changeInEuro !== null && summary.changePercent !== null
+              ) {
+                {{ summary.changeInEuro >= 0 ? '+' : '−' }}€{{
+                  absolute(summary.changeInEuro) | number: '1.2-2'
+                }}
+                ({{ summary.changePercent >= 0 ? '+' : '−'
+                }}{{ absolute(summary.changePercent) | number: '1.2-2' }}%)
+              } @else {
+                <span class="text-[14px] font-normal text-secondary-foreground">
+                  Not enough history yet to show a change.
+                </span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="label">Highest</dt>
+            <dd
+              class="mt-0.5 text-[17px] font-semibold tabular-nums text-foreground"
+            >
+              €{{ summary.highestPriceInEuro | number: '1.2-2' }}
+            </dd>
+          </div>
+          <div>
+            <dt class="label">Lowest</dt>
+            <dd
+              class="mt-0.5 text-[17px] font-semibold tabular-nums text-foreground"
+            >
+              €{{ summary.lowestPriceInEuro | number: '1.2-2' }}
+            </dd>
+          </div>
+        </dl>
+      } @else {
+        <div
+          class="rounded-[14px] border border-dashed border-input px-[18px] py-6 text-center"
+        >
+          <p class="text-[17px] font-semibold text-foreground">
+            No price history yet.
+          </p>
+          <p
+            class="mt-2 text-[14.5px] leading-[1.55] text-secondary-foreground"
+          >
+            Prices are recorded at each refresh. A new holding fills in after
+            the next refresh.
+          </p>
+        </div>
+      }
+    } @else if (isLoading()) {
+      <div class="space-y-4" aria-hidden="true">
+        <div
+          class="h-40 animate-pulse rounded-xl bg-secondary motion-reduce:animate-none"
+        ></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            class="h-[18px] w-3/4 animate-pulse rounded bg-secondary motion-reduce:animate-none"
+          ></div>
+          <div
+            class="h-[18px] w-3/4 animate-pulse rounded bg-secondary motion-reduce:animate-none"
+          ></div>
+          <div
+            class="col-span-2 h-[18px] w-full animate-pulse rounded bg-secondary motion-reduce:animate-none"
+          ></div>
+          <div
+            class="h-[18px] w-3/4 animate-pulse rounded bg-secondary motion-reduce:animate-none"
+          ></div>
+          <div
+            class="h-[18px] w-3/4 animate-pulse rounded bg-secondary motion-reduce:animate-none"
+          ></div>
+        </div>
+      </div>
+    }
+  </div>
+</section>
