@@ -10,7 +10,8 @@ holds. Status is updated here, with the date.
 - **What:** add an `A` record for `kaneo` pointing at the VPS IPv4 `57.129.163.110`.
 - **When:** before the merge, so the first deploy can issue the certificate.
 - **Done when:** `dig +short kaneo.jordylab.be @1.1.1.1` prints `57.129.163.110`.
-- **Status:** open.
+- **Status:** done (2026-11-07). Added in OVH as an A record through Actions → Add sub-domain (the zone has no separate
+  "Add an entry" button in this view). Checked through 1.1.1.1 and 8.8.8.8; the apex record was not changed.
 
 ## HANDOFF-02: SOPS secrets for Kaneo (edit in IntelliJ)
 
