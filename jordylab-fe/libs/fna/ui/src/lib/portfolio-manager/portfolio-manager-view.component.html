@@ -244,10 +244,16 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-border bg-secondary">
-            <th class="label px-7 py-4 text-left font-medium">Ticker</th>
+            <th class="label px-4 py-4 text-left font-medium sm:px-7">
+              Ticker
+            </th>
             <th class="label px-4 py-4 text-right font-medium">Last price</th>
-            <th class="label px-4 py-4 text-right font-medium">Updated</th>
-            <th class="px-7 py-4"></th>
+            <th
+              class="label hidden px-4 py-4 text-right font-medium sm:table-cell"
+            >
+              Updated
+            </th>
+            <th class="px-4 py-4 sm:px-7"></th>
           </tr>
         </thead>
         <tbody>
@@ -256,7 +262,7 @@
               class="group border-b border-border transition-colors duration-150 hover:bg-secondary/60"
               data-testid="wishlist-row"
             >
-              <td class="px-7 py-5">
+              <td class="px-4 py-5 sm:px-7">
                 <span class="text-[17px] font-medium text-foreground">{{
                   item.ticker
                 }}</span>
@@ -273,7 +279,7 @@
                 }
               </td>
               <td
-                class="px-4 py-5 text-right text-[13px] text-muted-foreground"
+                class="hidden px-4 py-5 text-right text-[13px] text-muted-foreground sm:table-cell"
               >
                 @if (item.lastPriceFetchedAt) {
                   {{ item.lastPriceFetchedAt | date: 'short' }}
@@ -281,7 +287,7 @@
                   <span>—</span>
                 }
               </td>
-              <td class="px-7 py-5 text-right">
+              <td class="px-4 py-5 text-right sm:px-7">
                 @if (promotingId() === item.id) {
                   <span
                     class="inline-flex flex-wrap items-center justify-end gap-2"
@@ -317,7 +323,9 @@
                     </button>
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-2">
+                  <span
+                    class="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1"
+                  >
                     <button
                       hlmBtn
                       variant="ghost"
