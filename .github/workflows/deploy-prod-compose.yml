@@ -201,6 +201,10 @@ jobs:
         if: steps.decide.outputs.decision != 'superseded'
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          # Kaneo settings from repository variables (spec 022). Unset means the render default (see render-env.sh).
+          BACKLOG_PROVIDER: ${{ vars.BACKLOG_PROVIDER }}
+          KANEO_DISABLE_REGISTRATION: ${{ vars.KANEO_DISABLE_REGISTRATION }}
+          KANEO_MEM_LIMIT: ${{ vars.KANEO_MEM_LIMIT }}
         run: |
           set -o pipefail
           python3 -m venv /tmp/render-venv
@@ -235,6 +239,32 @@ jobs:
         id: smoke
         if: steps.decide.outputs.decision != 'superseded'
         run: workflow-src/deploy/scripts/smoke-check.sh --base-url https://jordylab.be
+
+      # Spec 022 (FR-008): Kaneo is not part of the application release. Once the release is verified, this step
+      # prepares Kaneo's database and starts Kaneo, but only when its secrets are in the environment file. It only
+      # warns: it never fails the job and never changes the release state files, and it runs after the rollback
+      # decision, so it can never trigger one. No secret is printed; the checks read names only.
+      - name: Start Kaneo (best effort)
+        id: kaneo
+        if: steps.decide.outputs.decision != 'superseded' && steps.smoke.outcome == 'success'
+        run: |
+          if ! ssh jordylab-vps "grep -qE \"^KANEO_AUTH_SECRET='.+'\" /opt/jordylab/env/prod.env && grep -qE \"^KANEO_DB_PASSWORD='.+'\" /opt/jordylab/env/prod.env"; then
+            echo "::warning::Kaneo is not started: its secrets are not in the environment file yet (spec 022, HANDOFF-02)"
+            exit 0
+          fi
+          if ! ssh jordylab-vps /opt/jordylab/compose/scripts/ensure-kaneo-database.sh; then
+            echo "::warning::Kaneo's database step failed; Kaneo was not started (the release is not affected)"
+            exit 0
+          fi
+          if ! ssh jordylab-vps 'docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml up -d kaneo'; then
+            echo "::warning::Kaneo did not start (the release is not affected)"
+            exit 0
+          fi
+          if ! curl -fsS --retry 10 --retry-delay 6 --retry-all-errors --max-time 15 https://kaneo.jordylab.be/api/health > /dev/null; then
+            echo "::warning::Kaneo started, but its health check did not answer (the release is not affected)"
+            exit 0
+          fi
+          echo "Kaneo is up"
 
       # Contract step 8: automatic rollback, only after the host was touched. deploy-release.sh acts only
       # when TARGET is still the live release (a refused or self-restored deploy is a no-op), and it exits 1

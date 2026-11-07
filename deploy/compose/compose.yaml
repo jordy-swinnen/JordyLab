@@ -143,6 +143,40 @@ services:
       timeout: 5s
       retries: 10
 
+  # Kaneo, the backlog (spec 022). Not part of the application release: deploy-release.sh starts only backend and
+  # frontend, so Kaneo cannot block or roll back a release. The Kaneo step on the host starts it once its secrets are in
+  # the environment file (HANDOFF-02). It publishes no port: Caddy reaches it on the Compose network.
+  # The ${...:-} defaults keep the file valid while the secrets are not added yet; a container started without them stops
+  # and is restarted, which is why the host step does not start it until they are set.
+  kaneo:
+    image: ghcr.io/usekaneo/kaneo:2.49.0@sha256:cd1826b1aba3ce736015cadf6f6c975d923aac00f4b6aaa7aedb29bc722dae49
+    restart: unless-stopped
+    mem_limit: ${KANEO_MEM_LIMIT:-768m}
+    logging: *logging
+    environment:
+      AUTH_SECRET: ${KANEO_AUTH_SECRET:-}
+      KANEO_CLIENT_URL: https://kaneo.jordylab.be
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${KANEO_DB_NAME:-kaneo}
+      POSTGRES_USER: ${KANEO_DB_USER:-kaneo}
+      POSTGRES_PASSWORD: ${KANEO_DB_PASSWORD:-}
+      DISABLE_REGISTRATION: ${KANEO_DISABLE_REGISTRATION:-true}
+      DISABLE_WORKSPACE_CREATION: "true"
+      DISABLE_GUEST_ACCESS: "true"
+      GITHUB_APP_ID: ${KANEO_GITHUB_APP_ID:-}
+      GITHUB_WEBHOOK_SECRET: ${KANEO_GITHUB_WEBHOOK_SECRET:-}
+      GITHUB_PRIVATE_KEY_BASE64: ${KANEO_GITHUB_PRIVATE_KEY_BASE64:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Kaneo's own health path, as its Compose quick start uses it (127.0.0.1, not localhost: see BUG-082 for busybox).
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5173/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
 volumes:
   postgres-data:
   artwork:

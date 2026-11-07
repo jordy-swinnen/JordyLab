@@ -49,3 +49,9 @@ jordylab.be {
 		reverse_proxy frontend:8080
 	}
 }
+
+# Kaneo, the backlog (spec 022). Its own address, served over HTTPS like the application. Caddy does not wait for
+# Kaneo to start: while the container is down, only this address answers with a bad gateway.
+kaneo.jordylab.be {
+	reverse_proxy kaneo:5173
+}
