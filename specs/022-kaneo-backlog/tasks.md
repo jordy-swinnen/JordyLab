@@ -102,38 +102,38 @@ restore drill brings the `kaneo` database back, and the application services are
 
 ### Tests and build [B]
 
-- [ ] T013 [P] [US2] Write `deploy/scripts/tests/ensure-kaneo-database-cases.sh` first: with a fake `docker` on `PATH`, assert
+- [X] T013 [P] [US2] Write `deploy/scripts/tests/ensure-kaneo-database-cases.sh` first: with a fake `docker` on `PATH`, assert
       that the script sends its SQL on stdin, that the password never appears in the arguments, that a second run does not
       fail, and that a missing variable stops it with a clear message.
-- [ ] T014 [P] [US2] Write `deploy/scripts/tests/smoke-check-kaneo-cases.sh` first: `smoke-check.sh --kaneo-url <url>` prints
+- [X] T014 [P] [US2] Write `deploy/scripts/tests/smoke-check-kaneo-cases.sh` first: `smoke-check.sh --kaneo-url <url>` prints
       a warning and exits 0 when Kaneo (or, if the trial found a safe probe, the closed-registration probe) fails, and still
       exits 1 when an application check fails.
-- [ ] T015 [US2] Implement `deploy/compose/scripts/ensure-kaneo-database.sh` per `contracts/deployment.md` (role and database if
+- [X] T015 [US2] Implement `deploy/compose/scripts/ensure-kaneo-database.sh` per `contracts/deployment.md` (role and database if
       missing, password reset, `REVOKE CONNECT ... FROM PUBLIC`, SQL on stdin, nothing printed).
-- [ ] T016 [US2] Extend `deploy/scripts/smoke-check.sh` with the optional Kaneo health check (and the closed-registration probe
+- [X] T016 [US2] Extend `deploy/scripts/smoke-check.sh` with the optional Kaneo health check (and the closed-registration probe
       if T011 found one) that warns only (T014 passes). If no safe probe exists, T022 documents the manual check instead.
-- [ ] T017 [US2] Add the `kaneo` service to `deploy/compose/compose.yaml` exactly as in `contracts/deployment.md`: tag and digest
+- [X] T017 [US2] Add the `kaneo` service to `deploy/compose/compose.yaml` exactly as in `contracts/deployment.md`: tag and digest TRUSTED_PROXIES is not set yet (open point in the runbook).
       taken from the registry (the same pin as the trial, recorded in `research.md` R1), `mem_limit: ${KANEO_MEM_LIMIT:-768m}`,
       log rotation, health check, `depends_on: postgres`, no `ports`, Caddy's `depends_on` unchanged. First read the Compose
       network range on the host with `docker network inspect` (OPERATIONS, read-only) for `TRUSTED_PROXIES`; add the `kaneo`
       volume only if the trial showed one is needed.
-- [ ] T018 [P] [US2] Add the site block `kaneo.jordylab.be -> kaneo:5173` to `deploy/compose/Caddyfile`; validate it with the
+- [X] T018 [P] [US2] Add the site block `kaneo.jordylab.be -> kaneo:5173` to `deploy/compose/Caddyfile`; validate it with the
       Caddy image (`caddy validate`).
-- [ ] T019 [US2] Add the Kaneo names to `deploy/compose/env/prod.env.example` and their sources to
+- [X] T019 [US2] Add the Kaneo names to `deploy/compose/env/prod.env.example` and their sources to
       `deploy/compose/scripts/render-env.sh`: SOPS secrets `KANEO_AUTH_SECRET`, `KANEO_DB_PASSWORD` and the three GitHub App
       values; literals `KANEO_DB_NAME`, `KANEO_DB_USER` and the backend-side names; and values read from the environment the
       workflow provides, with defaults when unset: the repository variables `KANEO_DISABLE_REGISTRATION` (default `true`),
       `KANEO_MEM_LIMIT` (default `768m`), `BACKLOG_PROVIDER`, and the production environment secret `KANEO_API_KEY` (may be
       empty). Add the same rows to `specs/020-compose-deployment/contracts/env-contract.md`. Extend the render script's tests if
       any exist; it must never print a value.
-- [ ] T020 [US2] In `.github/workflows/deploy-prod-compose.yml` (1) pass `vars.BACKLOG_PROVIDER`, `vars.KANEO_DISABLE_REGISTRATION`,
+- [X] T020 [US2] In `.github/workflows/deploy-prod-compose.yml` (1) pass `vars.BACKLOG_PROVIDER`, `vars.KANEO_DISABLE_REGISTRATION`,
       `vars.KANEO_MEM_LIMIT` and `secrets.KANEO_API_KEY` to the `render-env.sh` step as environment variables, and (2) add the
       best-effort Kaneo step after the application deploy and smoke check: `ensure-kaneo-database.sh`, `docker compose up -d
       kaneo`, health wait, Kaneo smoke check; every failure is a `::warning::` plus a job-summary line and never changes the job
       result or touches the release state files.
-- [ ] T021 [US2] Validate locally: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml
+- [ ] T021 [US2] Validate locally: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml — partly done (2026-11-07): every related suite passes and the compose file and Caddyfile validate; shellcheck is not installed here, so it was not run.
       config -q`, `shellcheck` on the new scripts, `bash deploy/scripts/tests/*-cases.sh`, `bash scripts/mcp/tests/*` unaffected.
-- [ ] T022 [US2] Add a "Kaneo" section to `docs/runbook.md` (and its Contents): deploy, first-user bootstrap per the trial, closing
+- [X] T022 [US2] Add a "Kaneo" section to `docs/runbook.md` (and its Contents): deploy, first-user bootstrap per the trial, closing
       registration with `gh variable set KANEO_DISABLE_REGISTRATION --body true`, the manual closed-registration check after
       every deploy that touches Kaneo's configuration (if there is no automatic probe), upgrade procedure
       (`contracts/deployment.md`), restore drill, rotating `KANEO_AUTH_SECRET` and the API key, resizing with

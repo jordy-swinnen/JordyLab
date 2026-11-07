@@ -32,7 +32,9 @@ holds. Status is updated here, with the date.
   ```
 
 - **Done when:** the keys above exist in the encrypted file and `DECRYPT_OK` prints.
-- **Status:** open. The first two can be added before HANDOFF-03; the GitHub values need HANDOFF-03 first.
+- **Status:** on hold until the deployment code is in the PR (2026-11-07). Nothing reads these keys yet: the repository has
+  no Kaneo service, Caddy site or deploy step. The render step fails on a missing required value, so add the two keys
+  just before the merge. The GitHub values can wait for HANDOFF-03.
 
 ## HANDOFF-03: GitHub App for Kaneo
 
@@ -44,7 +46,8 @@ holds. Status is updated here, with the date.
 - **Keep:** the App ID, the webhook secret, and the private key (PEM). Turn the PEM into base64 in your terminal and add it
   with HANDOFF-02. Do not paste any of them into chat.
 - **Done when:** the App is installed on the repository and its three values are in the encrypted file.
-- **Status:** open.
+- **Status:** after the first deploy (2026-11-07). It is needed for the GitHub check (T010), not for the deploy. Confirm
+  when the compose service is written that Kaneo starts without these values.
 
 ## HANDOFF-04: Kaneo API key for the backend (after the first deploy)
 
