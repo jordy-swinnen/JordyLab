@@ -83,6 +83,7 @@ Kaneo is not part of the application release: `deploy-release.sh` starts only `b
 | `KANEO_AUTH_SECRET` | `jordylab-secrets` → `KANEO_AUTH_SECRET` | soft: absent renders empty; the host step does not start Kaneo while it is empty |
 | `KANEO_DB_PASSWORD` | `jordylab-secrets` → `KANEO_DB_PASSWORD` | soft; the role's password, set by `ensure-kaneo-database.sh` |
 | `KANEO_GITHUB_APP_ID`, `KANEO_GITHUB_WEBHOOK_SECRET`, `KANEO_GITHUB_PRIVATE_KEY_BASE64` | `jordylab-secrets` | soft; from the GitHub App (HANDOFF-03), after the first deploy |
+| `KANEO_API_KEY` | `jordylab-secrets` → `KANEO_API_KEY` | soft; the backend's key for the Kaneo API, passed to the `backend` service (spec 022) |
 | `KANEO_DB_NAME`, `KANEO_DB_USER` | literals in `render-env.sh` | `kaneo`, `kaneo` |
 | `KANEO_DISABLE_REGISTRATION` | repository variable | default `true` |
 | `KANEO_DISABLE_WORKSPACE_CREATION` | repository variable | default `true`: no extra workspaces on the Kaneo instance |

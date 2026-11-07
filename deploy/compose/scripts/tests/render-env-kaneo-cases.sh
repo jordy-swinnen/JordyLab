@@ -87,6 +87,7 @@ check "renders the Kaneo auth secret" has_line "KANEO_AUTH_SECRET='soft-kaneo_au
 check "renders the Kaneo database password" has_line "KANEO_DB_PASSWORD='soft-kaneo_db_password'"
 check "renders the Kaneo database name as a literal" has_line "KANEO_DB_NAME='kaneo'"
 check "renders the Kaneo database user as a literal" has_line "KANEO_DB_USER='kaneo'"
+check "renders the Kaneo API key" has_line "KANEO_API_KEY='soft-kaneo_api_key'"
 
 # 2. The Kaneo keys absent from the secrets file: the render still succeeds, with empty values.
 build_fixture no-kaneo

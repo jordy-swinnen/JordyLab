@@ -76,6 +76,8 @@ SOFT_SECRET_VALUES = [
     ("KANEO_GITHUB_APP_ID", "jordylab-secrets", "KANEO_GITHUB_APP_ID"),
     ("KANEO_GITHUB_WEBHOOK_SECRET", "jordylab-secrets", "KANEO_GITHUB_WEBHOOK_SECRET"),
     ("KANEO_GITHUB_PRIVATE_KEY_BASE64", "jordylab-secrets", "KANEO_GITHUB_PRIVATE_KEY_BASE64"),
+    # The backend's key for the Kaneo API (spec 022). Kept in SOPS, so the backend's environment holds it like the others.
+    ("KANEO_API_KEY", "jordylab-secrets", "KANEO_API_KEY"),
 ]
 
 # Settings that are not secret and come from GitHub repository variables, passed in by the workflow. An unset or empty
