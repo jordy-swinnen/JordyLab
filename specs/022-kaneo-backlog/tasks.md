@@ -78,7 +78,7 @@ and `quickstart.md` steps 1-3, ends in "go" or "no-go", and `run.sh verify` show
 - [ ] T009 [US1] Connect Claude Code (`/mcp`), OpenCode (`opencode mcp auth`) and a Claude app custom connector (via a tunnel) — partly done (2026-11-07): OpenCode connected and checked; Claude Code and the Claude app are verified after the merge against https://kaneo.jordylab.be (see trial-results.md, T009).
       to the trial's `/api/mcp`. Per tool record how it signed in and that list, create, update, comment and
       `get_task_by_ticket_id` work. If the Claude apps cannot authorise it, record "no-go".
-- [ ] T010 [US1] On a scratch GitHub repository install a GitHub App for the trial and run cases A-G of the matrix in
+- [ ] T010 [US1] On a scratch GitHub repository install a GitHub App for the trial and run cases A-G of the matrix in — moved after the merge (owner decision, 2026-11-07): run on production against a scratch repository, see trial-results.md.
       `contracts/board-conventions.md` (branch push, PR open, merge). Record the webhook path, whether commit messages
       link, the branch regex that accepts `jordyswinnen/jor-23-x` and `jor-23-x`, and which cases finish a ticket.
 - [ ] T011 [US1] Write `specs/022-kaneo-backlog/trial-results.md` (observed answers, importer losses, go/no-go). Update the

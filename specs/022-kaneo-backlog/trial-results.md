@@ -217,6 +217,36 @@ has not yet decided on one.
 - Remove the `kaneo-trial` entry from `~/.config/opencode/opencode.jsonc`, then `opencode mcp logout kaneo-trial`.
 - `scripts/kaneo/trial/run.sh down` and `verify`, then revoke the Kaneo API key.
 
+## GitHub App matrix (T010): cannot run on the trial
+
+GitHub App webhooks need a public HTTPS address. The trial was on `127.0.0.1` and has been torn down, so the matrix cannot
+run there. Options, for the owner to choose:
+1. **On production after the merge and the first deploy**, against a scratch repository. The matrix then runs before the
+   import and the cutover. No public trial is needed.
+2. **A short-lived tunnel** to a trial stack, which exposes it publicly while it runs. Not done.
+
+The steps for the owner are in `owner-steps.md` (HANDOFF-03).
+
+**Decision (owner, 2026-11-07): option 1.** The GitHub App matrix runs on production after the merge and the first deploy, against a scratch repository, before the import and the cutover. No tunnel.
+
+## Go/no-go recommendation (T011, for the owner's sign-off)
+
+**Recommendation: go, with two conditions.** The evidence from the trial:
+- Ticket numbers are kept (85 tasks, `JOR-n` as in Linear; the highest is 99; new tickets continue from it).
+- A `Triage` column can be created; the Backlog and Drafted states are distinct in the data but share a view (the fix-up
+  restores Drafted).
+- Labels are complete on every task (170 pairs, equal to Linear); the board's label filters are correct within each view.
+- Registration: the first account is created while registration is closed; a second sign-up is refused.
+- The client contract works (T008): numbers, idempotent labels, moves between columns, search, errors.
+- MCP: OpenCode connects through the standard OAuth flow, and a tool call works.
+
+**Conditions:**
+1. The GitHub App matrix (T010) runs on production before the import, against a scratch repository.
+2. Claude Code and the Claude app are verified on production after the first deploy (Claude Code refuses sign-in over plain HTTP).
+
+Neither condition is a no-go trigger. The no-go triggers in User Story 1 (keys cannot be kept, no Triage equivalent, the
+Claude apps cannot authorise) are not met. **Sign-off is the owner's:** the decision is recorded here when given.
+
 ## Teardown record (2026-11-07)
 
 - **API key revoked.** The stored key still worked when checked, so it had not been revoked. The owner's key list is only
