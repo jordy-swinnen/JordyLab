@@ -118,6 +118,23 @@ test.describe('No sideways scrolling on a phone', () => {
         expect(box).not.toBeNull();
         expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
       });
+
+      // Holdings are checked the same way as wishlist rows; each width adds its own holding ticker because the e2e database
+      // is shared by every test of a run.
+      test('the History button of a holding is on the screen', async ({ page }) => {
+        const holdingTicker = { 360: 'ABI', 390: 'SAP', 430: 'SIE' }[width];
+        await page.goto('/fna/portfolio');
+        await page.getByRole('textbox', { name: 'Ticker', exact: true }).fill(holdingTicker);
+        await page.getByRole('spinbutton', { name: 'Shares', exact: true }).fill('2');
+        await page.getByRole('button', { name: 'Add position', exact: true }).click();
+
+        const historyButton = page.getByRole('button', { name: `History for ${holdingTicker}`, exact: true });
+        await expect(historyButton).toBeVisible();
+        const box = await historyButton.boundingBox();
+
+        expect(box).not.toBeNull();
+        expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+      });
     });
   }
 });
