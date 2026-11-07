@@ -32,6 +32,10 @@ for name, secret, key, in [(p[0], p[1], p[2]) for p in pairs]:
 for name, secret, key in soft:
     if mode == "no-kaneo" and key.startswith("KANEO_"):
         continue
+    if mode == "null-github" and key.startswith("KANEO_GITHUB_"):
+        # The placeholders on main: YAML null, which the render must treat as empty.
+        secrets.setdefault(secret, {})[key] = "null"
+        continue
     secrets.setdefault(secret, {})[key] = "soft-" + key.lower()
 if mode == "no-anthropic":
     secrets["jordylab-secrets"].pop("ANTHROPIC_API_KEY", None)
@@ -91,6 +95,15 @@ check "renders while the Kaneo keys are not added yet" ok
 check "an absent Kaneo auth secret renders empty" has_line "KANEO_AUTH_SECRET=''"
 check "an absent Kaneo password renders empty" has_line "KANEO_DB_PASSWORD=''"
 check "the application values still render" has_line "POSTGRES_PASSWORD='value-password'"
+
+# 2b. The GitHub App keys added as YAML null (the placeholders on main): they render empty, the rest still renders.
+build_fixture null-github
+render
+check "renders while the GitHub App keys are null placeholders" ok
+check "a null GitHub App ID renders empty" has_line "KANEO_GITHUB_APP_ID=''"
+check "a null webhook secret renders empty" has_line "KANEO_GITHUB_WEBHOOK_SECRET=''"
+check "a null private key renders empty" has_line "KANEO_GITHUB_PRIVATE_KEY_BASE64=''"
+check "the Kaneo auth secret still renders beside them" has_line "KANEO_AUTH_SECRET='soft-kaneo_auth_secret'"
 
 # 3. Existing keys stay strict: a misspelt optional key still fails the render.
 build_fixture no-anthropic
