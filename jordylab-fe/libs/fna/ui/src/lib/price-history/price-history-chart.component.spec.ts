@@ -56,4 +56,76 @@ describe('PriceHistoryChartComponent', () => {
       'Euro price from 7 Nov 2025 to 6 Nov 2026',
     );
   });
+
+  describe('hovering', () => {
+    /** The chart is 320 units wide and mapped to a 320 px box, so a client X equals a chart X. */
+    const chartOf = (): SVGSVGElement => {
+      const svg = spectator.query<SVGSVGElement>('svg');
+      if (!svg) {
+        throw new Error('the chart is not drawn');
+      }
+      vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        width: 320,
+      } as DOMRect);
+
+      return svg;
+    };
+
+    const readoutOf = (): Element | null =>
+      spectator.query('[data-testid="price-history-readout"]');
+
+    it('shows the exact euro price and date of the point under the pointer', () => {
+      spectator = createComponent({
+        props: { points: threePoints, label: 'Euro price' },
+      });
+      const svg = chartOf();
+
+      svg.dispatchEvent(new MouseEvent('pointermove', { clientX: 160 }));
+      spectator.detectChanges();
+
+      expect(readoutOf()?.textContent).toContain('€1,100.00');
+      expect(readoutOf()?.textContent).toContain('2 Mar 2026');
+    });
+
+    it('snaps to the nearest recorded point when the pointer falls between two', () => {
+      spectator = createComponent({
+        props: { points: threePoints, label: 'Euro price' },
+      });
+      const svg = chartOf();
+
+      svg.dispatchEvent(new MouseEvent('pointermove', { clientX: 240 }));
+      spectator.detectChanges();
+
+      expect(readoutOf()?.textContent).toContain('€1,250.00');
+      expect(readoutOf()?.textContent).toContain('6 Nov 2026');
+    });
+
+    it('pins the readout to the left edge at the first point so it stays on the chart', () => {
+      spectator = createComponent({
+        props: { points: threePoints, label: 'Euro price' },
+      });
+      const svg = chartOf();
+
+      svg.dispatchEvent(new MouseEvent('pointermove', { clientX: 0 }));
+      spectator.detectChanges();
+
+      expect(readoutOf()?.textContent).toContain('€1,000.00');
+      expect(readoutOf()).toHaveStyle({ transform: 'translateX(0)' });
+    });
+
+    it('removes the readout when the pointer leaves the chart', () => {
+      spectator = createComponent({
+        props: { points: threePoints, label: 'Euro price' },
+      });
+      const svg = chartOf();
+      svg.dispatchEvent(new MouseEvent('pointermove', { clientX: 160 }));
+      spectator.detectChanges();
+
+      svg.dispatchEvent(new MouseEvent('pointerleave'));
+      spectator.detectChanges();
+
+      expect(readoutOf()).toBeNull();
+    });
+  });
 });

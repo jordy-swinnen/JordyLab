@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * The recorded euro history of one held position for one period (spec 023, contracts/price-history-api.md). It carries
+ * The recorded euro history of one tracked position for one period (spec 023, contracts/price-history-api.md). It carries
  * no field that expresses a recommendation (FR-009).
  */
 public record PriceHistoryDto(

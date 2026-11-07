@@ -11,7 +11,7 @@ GET /api/fna/portfolio/{id}/price-history?period=ONE_YEAR
 
 | Part | Rule |
 |---|---|
-| `{id}` | The held position's UUID (the `id` field of `GET /api/fna/portfolio`). |
+| `{id}` | The position's UUID: the `id` of a holding (`GET /api/fna/portfolio`) or of a wishlist item (`GET /api/fna/wishlist`). |
 | `period` | Optional. One of `ONE_MONTH`, `THREE_MONTHS`, `ONE_YEAR`, `MAX`. Defaults to `ONE_YEAR`. |
 | Auth | Admin session. Covered by the existing `/api/fna/**` → `hasRole("admin")` rule. Sends no CSRF token: it is a GET. |
 
@@ -84,13 +84,13 @@ An unknown `period` value. Spring's default binding error; no custom body.
 ### 404 Not Found
 
 ```json
-{ "code": "POSITION_NOT_HELD" }
+{ "reason": "POSITION_NOT_FOUND" }
 ```
 
-The id is unknown, or it belongs to a wishlist item (no share count). The page treats this as an error state and does not show a chart.
+The id matches no tracked position. Wishlist items have history like holdings, so a wishlist id never returns this. The page treats it as an error state and does not show a chart.
 
 ## Not part of this contract
 
 - No write operations. The history is recorded by the refresh job, not by callers.
-- No wishlist history. A wishlist id returns `404 POSITION_NOT_HELD`.
+- Wishlist items have history like holdings: a wishlist id returns `200`, not a `404`.
 - Not exposed through the MCP connector in this feature.

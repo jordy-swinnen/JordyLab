@@ -96,11 +96,25 @@ export class PortfolioManagerViewComponent {
     }));
   });
 
+  /** The open history belongs to a holding or to a wishlist item, and its panel sits under that table. */
+  protected readonly openedInHoldings = computed(() =>
+    this.positions().some(
+      (position) => position.id === this.openedPositionId(),
+    ),
+  );
+
+  protected readonly openedInWishlist = computed(() =>
+    this.wishlist().some((item) => item.id === this.openedPositionId()),
+  );
+
   protected readonly openedTicker = computed(
     () =>
       this.positions().find(
         (position) => position.id === this.openedPositionId(),
-      )?.ticker ?? '',
+      )?.ticker ??
+      this.wishlist().find((item) => item.id === this.openedPositionId())
+        ?.ticker ??
+      '',
   );
 
   newTicker = signal('');

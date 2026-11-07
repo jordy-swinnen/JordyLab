@@ -4,7 +4,7 @@ import dev.jordy.jordylab.fna.domain.PriceHistoryPeriod;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.service.BriefingGenerationException;
 import dev.jordy.jordylab.fna.service.FnaService;
-import dev.jordy.jordylab.fna.service.PositionNotHeldException;
+import dev.jordy.jordylab.fna.service.PositionNotFoundException;
 import dev.jordy.jordylab.fna.service.PriceHistoryService;
 import dev.jordy.jordylab.fna.service.TickerAlreadyHeldException;
 import dev.jordy.jordylab.shared.ai.ProviderFailureReason;
@@ -130,13 +130,13 @@ class FnaControllerTest {
     }
 
     @Test
-    void getPriceHistoryReturns404WhenThePositionIsAWishlistItem() throws Exception {
+    void getPriceHistoryReturns404WhenThePositionIsUnknown() throws Exception {
         when(priceHistoryService.readWindow(POSITION_ID, PriceHistoryPeriod.ONE_YEAR))
-                .thenThrow(new PositionNotHeldException(POSITION_ID));
+                .thenThrow(new PositionNotFoundException(POSITION_ID));
 
         mockMvc.perform(get("/api/fna/portfolio/{id}/price-history", POSITION_ID))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.reason").value("POSITION_NOT_HELD"));
+                .andExpect(jsonPath("$.reason").value("POSITION_NOT_FOUND"));
     }
 
     @Test

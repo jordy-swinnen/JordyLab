@@ -36,7 +36,8 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 /**
- * Records and reads the euro price history of held positions (spec 023, research sections 2 to 5). History is keyed by the
+ * Records and reads the euro price history of tracked positions, held or wishlisted (spec 023, research sections 2 to 5).
+ * History is keyed by the
  * Yahoo price symbol, so positions that share a symbol share rows. Reads never call the price source.
  */
 @Slf4j
@@ -59,10 +60,10 @@ public class PriceHistoryService {
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
-    /** Writes the refreshed price of a held position as today's value. Wishlist items get no history (spec 023). */
+    /** Writes the refreshed price of a tracked position as today's value, held or wishlisted (spec 023). */
     @Transactional
     public void recordTodaysPrice(PortfolioPosition position) {
-        if (!position.isHeld() || position.getPriceSymbol() == null || !isStorable(position.getLastPrice())) {
+        if (position.getPriceSymbol() == null || !isStorable(position.getLastPrice())) {
             return;
         }
         historyRepository.upsertDailyPrice(UUID.randomUUID(), position.getPriceSymbol(), today(),
@@ -70,11 +71,11 @@ public class PriceHistoryService {
     }
 
     /**
-     * Pulls the ten-year daily history of a held position whose symbol has no day before today. The refresh records
-     * today's price before this runs, so checking for any row would skip the backfill for every new holding.
+     * Pulls the ten-year daily history of a tracked position whose symbol has no day before today. The refresh records
+     * today's price before this runs, so checking for any row would skip the backfill for every new holding or wishlist item.
      */
     public void backfillIfMissing(PortfolioPosition position) {
-        if (!position.isHeld() || position.getPriceSymbol() == null) {
+        if (position.getPriceSymbol() == null) {
             return;
         }
         if (historyRepository.existsByPriceSymbolAndPriceDateBefore(position.getPriceSymbol(), today())) {
@@ -84,12 +85,12 @@ public class PriceHistoryService {
     }
 
     /**
-     * Re-pulls the history of held positions whose newest row is older than the previous weekday (gap repair). One
+     * Re-pulls the history of tracked positions whose newest row is older than the previous weekday (gap repair). One
      * symbol failing is logged and the others still run; a rate limit stops the pass.
      */
     public void repairStaleSymbols() {
         LocalDate expectedNewestDay = previousWeekday(today());
-        for (PortfolioPosition position : positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()) {
+        for (PortfolioPosition position : positionRepository.findAllByOrderByTickerAsc()) {
             if (position.getPriceSymbol() != null && isStale(position.getPriceSymbol(), expectedNewestDay)) {
                 try {
                     storeDailyHistory(position.getPriceSymbol());
@@ -102,12 +103,11 @@ public class PriceHistoryService {
         }
     }
 
-    /** The recorded history of a held position for a period. Empty rows give {@code NO_HISTORY_YET}. */
+    /** The recorded history of a tracked position for a period. Empty rows give {@code NO_HISTORY_YET}. */
     @Transactional(readOnly = true)
     public PriceHistoryDto readWindow(UUID positionId, PriceHistoryPeriod period) {
         PortfolioPosition position = positionRepository.findById(positionId)
-                .filter(PortfolioPosition::isHeld)
-                .orElseThrow(() -> new PositionNotHeldException(positionId));
+                .orElseThrow(() -> new PositionNotFoundException(positionId));
         LocalDate windowStartDate = period.windowStartDate(today());
         List<PriceHistoryPointDto> points = recordedRows(position.getPriceSymbol(), windowStartDate).stream()
                 .map(row -> new PriceHistoryPointDto(row.getPriceDate(), row.getPriceInEuro()))

@@ -1,33 +1,72 @@
 @if (coordinates().length > 1) {
-  <svg
-    [attr.viewBox]="viewBox"
-    role="img"
-    [attr.aria-label]="label()"
-    class="block h-auto w-full"
-  >
-    <line
-      [attr.x1]="horizontalMargin"
-      [attr.x2]="viewWidth - horizontalMargin"
-      [attr.y1]="baselineY"
-      [attr.y2]="baselineY"
-      class="stroke-border"
-      stroke-width="1"
-    />
-    <polyline
-      [attr.points]="polyline()"
-      fill="none"
-      class="stroke-series-1"
-      stroke-width="2"
-      stroke-linejoin="round"
-      stroke-linecap="round"
-    />
-    @if (endPoint(); as end) {
-      <circle
-        [attr.cx]="end.x"
-        [attr.cy]="end.y"
-        [attr.r]="endDotRadius"
-        class="fill-series-1"
+  <div class="relative">
+    <svg
+      [attr.viewBox]="viewBox"
+      role="img"
+      [attr.aria-label]="label()"
+      class="block h-auto w-full touch-pan-y"
+      (pointermove)="pointerMoved($event)"
+      (pointerdown)="pointerMoved($event)"
+      (pointerleave)="pointerLeft()"
+      (pointercancel)="pointerLeft()"
+    >
+      <line
+        [attr.x1]="horizontalMargin"
+        [attr.x2]="viewWidth - horizontalMargin"
+        [attr.y1]="baselineY"
+        [attr.y2]="baselineY"
+        class="stroke-border"
+        stroke-width="1"
       />
+      <polyline
+        [attr.points]="polyline()"
+        fill="none"
+        class="stroke-series-1"
+        stroke-width="2"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      />
+      @if (endPoint(); as end) {
+        <circle
+          [attr.cx]="end.x"
+          [attr.cy]="end.y"
+          [attr.r]="endDotRadius"
+          class="fill-series-1"
+        />
+      }
+      @if (hovered(); as marker) {
+        <line
+          [attr.x1]="marker.x"
+          [attr.x2]="marker.x"
+          [attr.y1]="verticalMargin"
+          [attr.y2]="baselineY"
+          class="stroke-muted-foreground"
+          stroke-width="1"
+          stroke-dasharray="3 3"
+        />
+        <circle
+          [attr.cx]="marker.x"
+          [attr.cy]="marker.y"
+          [attr.r]="endDotRadius"
+          class="fill-series-1 stroke-card"
+          stroke-width="2"
+        />
+      }
+    </svg>
+    @if (hovered(); as marker) {
+      <div
+        class="pointer-events-none absolute top-0 whitespace-nowrap rounded-[10px] border border-border bg-card px-3 py-2 text-xs shadow-sm"
+        data-testid="price-history-readout"
+        [style.left.%]="marker.leftPercent"
+        [style.transform]="marker.transform"
+      >
+        <p class="text-[15px] font-semibold tabular-nums text-foreground">
+          €{{ marker.priceInEuro | number: '1.2-2' }}
+        </p>
+        <p class="tabular-nums text-muted-foreground">
+          {{ marker.date | date: 'd MMM y' }}
+        </p>
+      </div>
     }
-  </svg>
+  </div>
 }
