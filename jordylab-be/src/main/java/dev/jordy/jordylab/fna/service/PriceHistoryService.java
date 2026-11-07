@@ -63,13 +63,16 @@ public class PriceHistoryService {
                 position.getLastPrice(), clock.instant());
     }
 
-    /** Pulls the ten-year daily history of a held position whose symbol has no rows yet. */
+    /**
+     * Pulls the ten-year daily history of a held position whose symbol has no day before today. The refresh records
+     * today's price before this runs, so checking for any row would skip the backfill for every new holding.
+     */
     @Transactional
     public void backfillIfMissing(PortfolioPosition position) {
         if (!position.isHeld() || position.getPriceSymbol() == null) {
             return;
         }
-        if (historyRepository.existsByPriceSymbol(position.getPriceSymbol())) {
+        if (historyRepository.existsByPriceSymbolAndPriceDateBefore(position.getPriceSymbol(), today())) {
             return;
         }
         storeDailyHistory(position.getPriceSymbol());

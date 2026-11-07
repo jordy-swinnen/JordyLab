@@ -43,6 +43,7 @@ class PriceHistoryServiceTest {
     private static final LocalDate WEDNESDAY = LocalDate.of(2026, 11, 4);
     private static final LocalDate THURSDAY = LocalDate.of(2026, 11, 5);
     private static final LocalDate FRIDAY = LocalDate.of(2026, 11, 6);
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 7);
 
     @Mock
     private PositionPriceHistoryRepository historyRepository;
@@ -87,7 +88,7 @@ class PriceHistoryServiceTest {
 
     @Test
     void backfillStoresEveryRecordedCloseOfAEuroListing() {
-        when(historyRepository.existsByPriceSymbol(SYMBOL)).thenReturn(false);
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore(SYMBOL, TODAY)).thenReturn(false);
         when(chartClient.fetchDailyHistory(SYMBOL)).thenReturn(Optional.of(new YahooDailyHistory("EUR", List.of(
                 new YahooBar(WEDNESDAY, new BigDecimal("1000.00")),
                 new YahooBar(THURSDAY, null),
@@ -110,7 +111,7 @@ class PriceHistoryServiceTest {
 
     @Test
     void backfillConvertsForeignClosesWithTheRateOfTheSameDayCarriedForwardOverGaps() {
-        when(historyRepository.existsByPriceSymbol("AAPL")).thenReturn(false);
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore("AAPL", TODAY)).thenReturn(false);
         when(chartClient.fetchDailyHistory("AAPL")).thenReturn(Optional.of(new YahooDailyHistory("USD", List.of(
                 new YahooBar(WEDNESDAY, new BigDecimal("200")),
                 new YahooBar(FRIDAY, new BigDecimal("210"))))));
@@ -134,20 +135,20 @@ class PriceHistoryServiceTest {
 
     @Test
     void backfillStoresNothingWhenTheCurrencyHasNoRateHistory() {
-        when(historyRepository.existsByPriceSymbol("AAPL")).thenReturn(false);
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore("AAPL", TODAY)).thenReturn(false);
         when(chartClient.fetchDailyHistory("AAPL")).thenReturn(Optional.of(new YahooDailyHistory("USD", List.of(
                 new YahooBar(WEDNESDAY, new BigDecimal("200"))))));
         when(chartClient.fetchDailyHistory("USDEUR=X")).thenReturn(Optional.empty());
 
         service.backfillIfMissing(PortfolioPositionTestBuilder.aPortfolioPosition().ticker("AAPL").priceSymbol("AAPL").build());
 
-        verify(historyRepository).existsByPriceSymbol("AAPL");
+        verify(historyRepository).existsByPriceSymbolAndPriceDateBefore("AAPL", TODAY);
         verifyNoMoreInteractions(historyRepository);
     }
 
     @Test
     void backfillSkipsASymbolThatAlreadyHasRows() {
-        when(historyRepository.existsByPriceSymbol(SYMBOL)).thenReturn(true);
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore(SYMBOL, TODAY)).thenReturn(true);
 
         service.backfillIfMissing(heldPosition());
 
@@ -165,7 +166,7 @@ class PriceHistoryServiceTest {
 
     @Test
     void backfillPassesARateLimitOnSoTheRefreshCycleCanStop() {
-        when(historyRepository.existsByPriceSymbol(SYMBOL)).thenReturn(false);
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore(SYMBOL, TODAY)).thenReturn(false);
         when(chartClient.fetchDailyHistory(SYMBOL)).thenThrow(new PriceSourceRateLimitedException(SYMBOL, null));
         PortfolioPosition held = heldPosition();
 

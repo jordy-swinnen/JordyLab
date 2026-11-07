@@ -29,7 +29,8 @@ public interface PositionPriceHistoryRepository extends JpaRepository<PositionPr
                          @Param("priceInEuro") BigDecimal priceInEuro,
                          @Param("recordedAt") Instant recordedAt);
 
-    boolean existsByPriceSymbol(String priceSymbol);
+    /** True when the symbol has a day before {@code priceDate}: today's row, written by the refresh, does not count. */
+    boolean existsByPriceSymbolAndPriceDateBefore(String priceSymbol, LocalDate priceDate);
 
     List<PositionPriceHistory> findAllByPriceSymbolOrderByPriceDateAsc(String priceSymbol);
 

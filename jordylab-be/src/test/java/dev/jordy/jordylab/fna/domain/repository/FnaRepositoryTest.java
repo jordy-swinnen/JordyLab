@@ -252,6 +252,18 @@ class FnaRepositoryTest {
         assertThat(newest).map(PositionPriceHistory::getPriceDate).contains(LocalDate.of(2026, 11, 6));
     }
 
+    @Test
+    void todaysRowAloneDoesNotCountAsBackfilledHistory() {
+        LocalDate today = LocalDate.of(2026, 11, 7);
+        recordDay("ASML.AS", today, "1283.6000", Instant.parse("2026-11-07T01:30:00Z"));
+        entityManager.clear();
+
+        assertSoftly(softly -> {
+            softly.assertThat(historyRepository.existsByPriceSymbolAndPriceDateBefore("ASML.AS", today)).isFalse();
+            softly.assertThat(historyRepository.existsByPriceSymbolAndPriceDateBefore("ASML.AS", today.plusDays(1))).isTrue();
+        });
+    }
+
     private void recordDay(String priceSymbol, LocalDate priceDate, String priceInEuro, Instant recordedAt) {
         historyRepository.upsertDailyPrice(UUID.randomUUID(), priceSymbol, priceDate, new BigDecimal(priceInEuro), recordedAt);
     }
