@@ -177,12 +177,12 @@ the VPS (`import-report.md`).
       line written once for spec tickets (and not duplicated on a second run), dry run writes nothing, a run is idempotent,
       pacing stays at or below 40 writes a minute (inject a fake clock), a 429 waits `Retry-After`, a 401 stops, tickets
       lacking an App or Type label are listed.
-- [ ] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract"
+- [ ] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
       (`--dry-run` default, keys only from the environment, nothing printed but counts and ticket keys; spec link mapping
       from `repo_inventory.sh`); T030 passes.
 - [ ] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
 - [ ] T033 [US3] OWNER [D]: announce the freeze (Claude project instructions and the Linear welcome note), make sure every piece
-      of work in flight already has its `JOR-n`, create a new read-only Linear key in the shell.
+      of work in flight already has its `JOR-n`, the fix-up reads the Linear export from T034, so it needs no Linear key (decided 2026-11-07).
 - [ ] T034 [US3] OPERATIONS [D]: take a full Linear export (JSON) and store it in the Object Storage bucket under a separate prefix;
       verify it opens and its issue count equals Linear's (FR-018).
 - [ ] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
