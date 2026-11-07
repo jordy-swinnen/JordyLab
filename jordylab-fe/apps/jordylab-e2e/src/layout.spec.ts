@@ -113,6 +113,8 @@ test.describe('No sideways scrolling on a phone', () => {
 
         const historyButton = page.getByRole('button', { name: `History for ${wishlistTicker}`, exact: true });
         await expect(historyButton).toBeVisible();
+        const table = page.getByRole('region', { name: 'Wishlist table', exact: true });
+        expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
         const box = await historyButton.boundingBox();
 
         expect(box).not.toBeNull();
@@ -130,6 +132,8 @@ test.describe('No sideways scrolling on a phone', () => {
 
         const historyButton = page.getByRole('button', { name: `History for ${holdingTicker}`, exact: true });
         await expect(historyButton).toBeVisible();
+        const table = page.getByRole('region', { name: 'Positions table', exact: true });
+        expect(await table.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
         const box = await historyButton.boundingBox();
 
         expect(box).not.toBeNull();

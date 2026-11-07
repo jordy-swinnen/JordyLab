@@ -109,6 +109,7 @@
                 </span>
                 <span
                   class="mt-1 block text-[13px] tabular-nums text-muted-foreground sm:hidden"
+                  ><span class="sr-only">Shares: </span
                   >{{ position.shareCount | number: '1.0-10' }}</span
                 >
               </td>
@@ -131,12 +132,15 @@
                 @if (position.value !== null) {
                   <span
                     class="mt-1 block text-[13px] font-medium tabular-nums text-foreground sm:hidden"
-                    >€{{ position.value | number: '1.2-2' }}</span
+                    ><span class="sr-only">Value: </span>€{{
+                      position.value | number: '1.2-2'
+                    }}</span
                   >
                 }
                 @if (position.lastPriceFetchedAt) {
                   <span
                     class="mt-1 block text-[12px] text-muted-foreground sm:hidden"
+                    ><span class="sr-only">Updated: </span
                     >{{ position.lastPriceFetchedAt | date: 'short' }}</span
                   >
                 }
