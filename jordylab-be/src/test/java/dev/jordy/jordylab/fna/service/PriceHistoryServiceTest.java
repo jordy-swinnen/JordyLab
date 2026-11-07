@@ -86,12 +86,19 @@ class PriceHistoryServiceTest {
     }
 
     @Test
-    void recordTodaysPriceLeavesWishlistItemsWithoutHistory() {
-        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition().priceSymbol(SYMBOL).build();
+    void recordTodaysPriceStoresAWishlistItemTheSameWayAsAHolding() {
+        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition()
+                .ticker("KBC")
+                .priceSymbol("KBC.BR")
+                .lastPrice(new BigDecimal("117.40"))
+                .build();
+        ArgumentCaptor<UUID> generatedIds = ArgumentCaptor.forClass(UUID.class);
 
         service.recordTodaysPrice(wishlistItem);
 
-        verifyNoInteractions(historyRepository);
+        verify(historyRepository).upsertDailyPrice(generatedIds.capture(), eq("KBC.BR"),
+                eq(TODAY), eq(new BigDecimal("117.4000")), eq(NOW));
+        assertThat(generatedIds.getAllValues()).doesNotContainNull();
     }
 
     @Test
@@ -164,12 +171,18 @@ class PriceHistoryServiceTest {
     }
 
     @Test
-    void backfillLeavesWishlistItemsAlone() {
+    void backfillStoresTheHistoryOfAWishlistItem() {
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore(SYMBOL, TODAY)).thenReturn(false);
+        when(chartClient.fetchDailyHistory(SYMBOL)).thenReturn(Optional.of(new YahooDailyHistory("EUR", List.of(
+                new YahooBar(FRIDAY, new BigDecimal("1010.00"))))));
         PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition().priceSymbol(SYMBOL).build();
+        ArgumentCaptor<UUID> generatedIds = ArgumentCaptor.forClass(UUID.class);
 
         service.backfillIfMissing(wishlistItem);
 
-        verifyNoInteractions(historyRepository, chartClient);
+        verify(historyRepository).upsertDailyPrice(generatedIds.capture(), eq(SYMBOL),
+                eq(FRIDAY), eq(new BigDecimal("1010.0000")), eq(NOW));
+        assertThat(generatedIds.getAllValues()).doesNotContainNull();
     }
 
     @Test
@@ -184,7 +197,7 @@ class PriceHistoryServiceTest {
 
     @Test
     void repairRefetchesASymbolWhoseNewestRowIsOlderThanThePreviousWeekday() {
-        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of(heldPosition()));
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(heldPosition()));
         when(historyRepository.findFirstByPriceSymbolOrderByPriceDateDesc(SYMBOL)).thenReturn(Optional.of(
                 PositionPriceHistoryTestBuilder.aPositionPriceHistory().priceDate(WEDNESDAY).build()));
         when(chartClient.fetchDailyHistory(SYMBOL)).thenReturn(Optional.of(new YahooDailyHistory("EUR", List.of(
@@ -200,7 +213,7 @@ class PriceHistoryServiceTest {
 
     @Test
     void repairLeavesASymbolAloneWhenItsNewestRowIsCurrent() {
-        when(positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()).thenReturn(List.of(heldPosition()));
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(heldPosition()));
         when(historyRepository.findFirstByPriceSymbolOrderByPriceDateDesc(SYMBOL)).thenReturn(Optional.of(
                 PositionPriceHistoryTestBuilder.aPositionPriceHistory().priceDate(FRIDAY).build()));
 
@@ -271,12 +284,29 @@ class PriceHistoryServiceTest {
     }
 
     @Test
-    void readWindowRejectsAWishlistItem() {
-        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition().build();
+    void readWindowServesTheRecordedHistoryOfAWishlistItem() {
+        PortfolioPosition wishlistItem = PortfolioPositionTestBuilder.aWishlistPosition().priceSymbol(SYMBOL).build();
         when(positionRepository.findById(wishlistItem.getId())).thenReturn(Optional.of(wishlistItem));
+        when(historyRepository.findAllByPriceSymbolAndPriceDateGreaterThanEqualOrderByPriceDateAsc(SYMBOL,
+                LocalDate.of(2025, 11, 7))).thenReturn(List.of(
+                PositionPriceHistoryTestBuilder.aPositionPriceHistory().priceDate(FRIDAY)
+                        .priceInEuro(new BigDecimal("1250.00")).build()));
 
-        assertThatThrownBy(() -> service.readWindow(wishlistItem.getId(), PriceHistoryPeriod.ONE_YEAR))
-                .isInstanceOf(PositionNotHeldException.class);
+        PriceHistoryDto history = service.readWindow(wishlistItem.getId(), PriceHistoryPeriod.ONE_YEAR);
+
+        assertSoftly(softly -> {
+            softly.assertThat(history.status()).isEqualTo(PriceHistoryStatus.AVAILABLE);
+            softly.assertThat(history.points()).hasSize(1);
+        });
+    }
+
+    @Test
+    void readWindowRejectsAnUnknownPosition() {
+        UUID unknownPositionId = UUID.fromString("88888888-0000-0000-0000-000000000008");
+        when(positionRepository.findById(unknownPositionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.readWindow(unknownPositionId, PriceHistoryPeriod.ONE_YEAR))
+                .isInstanceOf(PositionNotFoundException.class);
     }
 
     @Test

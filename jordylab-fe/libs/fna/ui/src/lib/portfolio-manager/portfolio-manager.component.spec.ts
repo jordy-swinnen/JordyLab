@@ -335,6 +335,19 @@ describe('PortfolioManagerComponent', () => {
     expect(spectator.query('[data-testid="price-history-panel"]')).toBeTruthy();
   });
 
+  it('opens the price history under a wishlist item and loads it for the default year', () => {
+    wishlist.set([aWishlistItemMock({ id: 'w1', ticker: 'ASML' })]);
+    spectator.detectChanges();
+
+    clickButton('History');
+    spectator.detectChanges();
+
+    expect(loadPriceHistory).toHaveBeenCalledWith('w1', 'ONE_YEAR');
+    expect(spectator.query('[data-testid="price-history-panel"]')).toHaveText(
+      'ASML',
+    );
+  });
+
   it('reloads the open holding when a different period is chosen', () => {
     positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
     spectator.detectChanges();

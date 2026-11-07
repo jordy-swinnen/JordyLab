@@ -6,7 +6,7 @@
 
 ## Summary
 
-Show each held position's euro price history on the Portfolio page: a period choice (one month, three months, one year or maximum), an inline SVG line chart, and the figures as text (change, high, low). The history is recorded in our database. The existing 30-minute price refresh adds today's price, and a one-time pull from the same Yahoo chart endpoint backfills past daily closes. The page reads only recorded history and never calls Yahoo. Non-euro listings are converted at each day's euro rate. There is no new dependency and no recommendation logic.
+Show each position's euro price history (holdings and wishlist items) on the Portfolio page: a period choice (one month, three months, one year or maximum), an inline SVG line chart, and the figures as text (change, high, low). The history is recorded in our database. The existing 30-minute price refresh adds today's price, and a one-time pull from the same Yahoo chart endpoint backfills past daily closes. The page reads only recorded history and never calls Yahoo. Non-euro listings are converted at each day's euro rate. There is no new dependency and no recommendation logic.
 
 ## Technical Context
 
@@ -83,14 +83,14 @@ jordylab-be/src/main/java/dev/jordy/jordylab/fna/
 │   ├── client/YahooFinanceChartClient.java        NEW   daily closes and FX series, same endpoint as quotes
 │   └── controller/
 │       ├── FnaController.java                     CHANGED   GET /api/fna/portfolio/{id}/price-history
-│       ├── FnaExceptionHandler.java               CHANGED   PositionNotHeldException → 404 POSITION_NOT_HELD
+│       ├── FnaExceptionHandler.java               CHANGED   PositionNotFoundException → 404 POSITION_NOT_FOUND
 │       └── model/
 │           ├── PriceHistoryDto.java               NEW
 │           ├── PriceHistoryPointDto.java          NEW
 │           └── PriceHistorySummaryDto.java        NEW
 ├── service/
 │   ├── PriceHistoryService.java                   NEW   record today, backfill, read a window
-│   ├── PositionNotHeldException.java              NEW
+│   ├── PositionNotFoundException.java             NEW
 │   └── StockPriceService.java                     CHANGED   refresh also records history; quote call moves to the client
 └── util/PriceHistorySummaryCalculator.java        NEW   @UtilityClass, pure window statistics
 
@@ -116,7 +116,7 @@ jordylab-fe/libs/fna/ui/src/lib/
 ├── portfolio-manager/
 │   ├── portfolio-manager.component.ts            CHANGED   container: selected position, opens history
 │   ├── portfolio-manager-view.component.ts       CHANGED   inputs and outputs for the panel
-│   └── portfolio-manager-view.component.html     CHANGED   History button per held row, panel under the table
+│   └── portfolio-manager-view.component.html     CHANGED   History button per row (holdings and wishlist), panel under the table the row belongs to
 └── price-history/                                NEW
     ├── price-history-panel.component.ts/.html     presentational: period buttons, figures, close
     ├── price-history-chart.component.ts/.html     presentational: inline SVG line chart

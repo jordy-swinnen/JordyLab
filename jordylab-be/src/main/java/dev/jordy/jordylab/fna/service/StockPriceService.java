@@ -21,7 +21,8 @@ import java.util.Optional;
  * Prices portfolio positions in euro. The user types a plain name (KBC, MEUD, BTC); the Yahoo Finance symbol that
  * actually quotes it in euro is looked up once ({@link #resolve}) and remembered on the position, because the same
  * letters mean different things on different markets (plain BTC is a US-dollar ETF, Bitcoin in euro is BTC-EUR).
- * After each refresh the held positions' price history is recorded and backfilled ({@link PriceHistoryService}).
+ * After each refresh the price history of every tracked position, held or wishlisted, is recorded and backfilled
+ * ({@link PriceHistoryService}).
  */
 @Slf4j
 @Service
@@ -105,7 +106,7 @@ public class StockPriceService {
     }
 
     /**
-     * Records today's price for a held position. A history write must not stop the price refresh of the other positions,
+     * Records today's price for a tracked position. A history write must not stop the price refresh of the other positions,
      * so a failure here is logged and the cycle continues.
      */
     private void recordHistory(PortfolioPosition position) {

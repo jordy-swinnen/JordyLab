@@ -165,7 +165,7 @@
         </tbody>
       </table>
     </div>
-    @if (openedPositionId()) {
+    @if (openedInHoldings()) {
       <lib-price-history-panel
         id="price-history-panel"
         [ticker]="openedTicker()"
@@ -323,6 +323,24 @@
                       variant="ghost"
                       size="sm"
                       class="h-11 text-muted-foreground hover:text-foreground"
+                      data-testid="wishlist-history"
+                      aria-controls="price-history-panel"
+                      [attr.aria-label]="'History for ' + item.ticker"
+                      [attr.aria-expanded]="openedPositionId() === item.id"
+                      [attr.data-history-button]="item.id"
+                      (click)="
+                        openedPositionId() === item.id
+                          ? closeHistoryPanel()
+                          : openHistory.emit(item.id)
+                      "
+                    >
+                      History
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      class="h-11 text-muted-foreground hover:text-foreground"
                       (click)="startPromoting(item)"
                     >
                       Promote
@@ -344,6 +362,19 @@
         </tbody>
       </table>
     </div>
+    @if (openedInWishlist()) {
+      <lib-price-history-panel
+        id="price-history-panel"
+        [ticker]="openedTicker()"
+        [history]="history()"
+        [isLoading]="historyLoading()"
+        [error]="historyError()"
+        [selectedPeriod]="historyPeriod()"
+        (periodSelected)="historyPeriodSelected.emit($event)"
+        (closed)="closeHistoryPanel()"
+        (retried)="historyRetry.emit()"
+      />
+    }
   }
 
   <!-- Add to wishlist form -->

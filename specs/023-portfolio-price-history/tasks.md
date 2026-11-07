@@ -200,6 +200,16 @@ Task: "PriceHistorySummaryDto in jordylab-be/src/main/java/dev/jordy/jordylab/fn
 
 ---
 
+## Follow-up: wishlist history and hover readout (JOR-98)
+
+Added after the first release: the wishlist gets the same history as holdings, and the chart shows the exact price under the pointer. T022 and T023 are kept as written; `PositionNotHeldException` became `PositionNotFoundException` (T059).
+
+- [X] T059 [FU] Drop the held-only rule in `PriceHistoryService` (recording, backfill, gap repair and reads cover every tracked position); repair uses `findAllByOrderByTickerAsc`. Rename the exception to `PositionNotFoundException`, answered as 404 `POSITION_NOT_FOUND`
+- [X] T060 [FU] Show a **History** button on every wishlist row and open the panel under the wishlist table; the panel moves to whichever table holds the open position (`portfolio-manager-view.component.ts` and `.html`)
+- [X] T061 [FU] Add the hover readout to `price-history-chart.component.ts` and `.html`: the nearest recorded point, a dashed crosshair, a dot, its date and euro price (two decimals), pinned to the chart edge near either end; cleared on pointer leave (FR-015)
+- [X] T062 [FU] Tests: `PriceHistoryServiceTest` (wishlist recorded, backfilled and read; unknown id rejected), `FnaControllerTest` (404 `POSITION_NOT_FOUND`), `price-history-chart.component.spec.ts` (nearest point, values, edge pin, leave), `portfolio-manager.component.spec.ts` (wishlist History opens and loads)
+- [ ] T063 [FU] Check the hover readout by mouse and by touch, and the 375-pixel layout, in a real browser. The built-in browser pane refused localhost during this change, so the wishlist History button is covered by the e2e journey `portfolio-history.spec.ts` and the readout by the chart spec only; the real-browser check is still open
+
 ## Notes
 
 - Java follows AGENTS.md: explicit types, no `var`, a blank line before each `return`, public methods before package-private before private

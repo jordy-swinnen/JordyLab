@@ -54,7 +54,7 @@ public class FnaController {
     }
 
     /**
-     * Recorded euro price history of a held position (spec 023). Reads recorded rows only, so a view never calls the
+     * Recorded euro price history of a tracked position, held or wishlisted (spec 023). Reads recorded rows only, so a view never calls the
      * price source.
      */
     @GetMapping("/portfolio/{id}/price-history")

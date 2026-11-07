@@ -73,7 +73,8 @@ Also check the error cases:
 | Request | Expected |
 |---|---|
 | `period=FOREVER` | `400` |
-| The id of a wishlist item | `404` with `{"code": "POSITION_NOT_HELD"}` |
+| An id that matches no position | `404` with `{"reason": "POSITION_NOT_FOUND"}` |
+| The id of a wishlist item | `200` with the same history as a holding |
 | A position that has no price symbol yet | `200` with `status: NO_HISTORY_YET` |
 
 ## 5. Check the page
