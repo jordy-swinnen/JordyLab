@@ -57,6 +57,40 @@ describe('PriceHistoryChartComponent', () => {
     );
   });
 
+  it('draws a soft area under the line down to the baseline', () => {
+    spectator = createComponent({
+      props: { points: threePoints, label: 'Euro price' },
+    });
+
+    const area = spectator.query('path');
+
+    expect(area?.getAttribute('d')).toContain('Z');
+    expect(area?.getAttribute('fill')).toMatch(/^url\(#price-area-\d+\)$/);
+  });
+
+  it('labels the price axis with round values across the period', () => {
+    spectator = createComponent({
+      props: { points: threePoints, label: 'Euro price' },
+    });
+
+    const text = spectator.element.textContent ?? '';
+
+    expect(text).toContain('1,000');
+    expect(text).toContain('1,300');
+  });
+
+  it('labels the date axis with the start, middle and end dates', () => {
+    spectator = createComponent({
+      props: { points: threePoints, label: 'Euro price' },
+    });
+
+    const text = spectator.element.textContent ?? '';
+
+    expect(text).toContain('7 Nov 25');
+    expect(text).toContain('2 Mar 26');
+    expect(text).toContain('6 Nov 26');
+  });
+
   describe('hovering', () => {
     /** The chart is 320 units wide and mapped to a 320 px box, so a client X equals a chart X. */
     const chartOf = (): SVGSVGElement => {

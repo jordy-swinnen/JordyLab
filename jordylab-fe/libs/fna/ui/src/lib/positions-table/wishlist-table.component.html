@@ -1,0 +1,163 @@
+<div
+  class="mt-5 overflow-x-auto"
+  tabindex="0"
+  role="region"
+  aria-label="Wishlist table"
+>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border bg-secondary">
+        <th class="label px-4 py-4 text-left font-medium sm:px-7">Ticker</th>
+        <th class="label px-4 py-4 text-right font-medium">Last price</th>
+        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+          Updated
+        </th>
+        <th class="px-4 py-4 sm:px-7"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of wishlist(); track item.id) {
+        @if (openedPositionId() === item.id) {
+          <tr
+            class="history-row"
+            animate.enter="row-enter"
+            animate.leave="row-leave"
+          >
+            <td
+              colspan="4"
+              class="relative border-y border-input bg-secondary p-0"
+            >
+              <span
+                aria-hidden="true"
+                class="absolute inset-y-0 left-0 z-10 w-[3px] bg-series-1"
+              ></span>
+              <lib-price-history-panel
+                id="price-history-panel"
+                [ticker]="item.ticker"
+                [history]="history()"
+                [isLoading]="historyLoading()"
+                [error]="historyError()"
+                [selectedPeriod]="historyPeriod()"
+                (periodSelected)="historyPeriodSelected.emit($event)"
+                (closed)="closeHistoryPanel()"
+                (retried)="historyRetry.emit()"
+              />
+            </td>
+          </tr>
+        } @else {
+          <tr
+            class="group border-b border-border transition-colors duration-150 hover:bg-secondary/60"
+            data-testid="wishlist-row"
+            animate.enter="row-enter"
+            animate.leave="row-leave"
+          >
+            <td class="px-4 py-5 sm:px-7">
+              <span class="text-[17px] font-medium text-foreground">{{
+                item.ticker
+              }}</span>
+            </td>
+            <td class="px-4 py-5 text-right">
+              @if (item.lastPrice !== null) {
+                <span
+                  class="text-[15px] tabular-nums text-secondary-foreground"
+                >
+                  €{{ item.lastPrice | number: '1.2-2' }}
+                </span>
+              } @else {
+                <span class="text-muted-foreground">—</span>
+              }
+              @if (item.lastPriceFetchedAt) {
+                <span
+                  class="mt-1 block text-[12px] text-muted-foreground sm:hidden"
+                  >{{ item.lastPriceFetchedAt | date: 'short' }}</span
+                >
+              }
+            </td>
+            <td
+              class="hidden px-4 py-5 text-right text-[13px] text-muted-foreground sm:table-cell"
+            >
+              @if (item.lastPriceFetchedAt) {
+                {{ item.lastPriceFetchedAt | date: 'short' }}
+              } @else {
+                <span>—</span>
+              }
+            </td>
+            <td class="px-4 py-5 text-right sm:px-7">
+              @if (promotingId() === item.id) {
+                <span
+                  class="inline-flex flex-wrap items-center justify-end gap-2"
+                >
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    aria-label="Promote shares"
+                    class="h-11 w-28 rounded-xl border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder="Shares"
+                    [value]="promoteShares() ?? ''"
+                    (input)="
+                      promoteShares.set(+$any($event.target).value || null)
+                    "
+                  />
+                  <button
+                    hlmBtn
+                    size="sm"
+                    class="h-11"
+                    (click)="confirmPromoting(item)"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    class="h-11"
+                    (click)="cancelPromoting()"
+                  >
+                    Cancel
+                  </button>
+                </span>
+              } @else {
+                <span
+                  class="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1"
+                >
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    class="h-11 text-muted-foreground hover:text-foreground"
+                    data-testid="wishlist-history"
+                    aria-controls="price-history-panel"
+                    [attr.aria-label]="'History for ' + item.ticker"
+                    [attr.data-history-button]="item.id"
+                    (click)="openHistory.emit(item.id)"
+                  >
+                    History
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    class="h-11 text-muted-foreground hover:text-foreground"
+                    (click)="startPromoting(item)"
+                  >
+                    Promote
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    class="h-11 text-muted-foreground hover:text-destructive"
+                    (click)="deleteWishlistItem.emit(item.id)"
+                  >
+                    Remove
+                  </button>
+                </span>
+              }
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

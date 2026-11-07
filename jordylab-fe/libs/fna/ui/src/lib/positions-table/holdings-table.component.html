@@ -1,0 +1,158 @@
+<div
+  class="overflow-x-auto"
+  tabindex="0"
+  role="region"
+  aria-label="Positions table"
+>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border bg-secondary">
+        <th class="label px-3 py-4 text-left font-medium sm:px-7">Ticker</th>
+        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+          Shares
+        </th>
+        <th class="label px-3 py-4 text-right font-medium sm:px-4">
+          Last price
+        </th>
+        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+          Value
+        </th>
+        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+          Updated
+        </th>
+        <th class="px-3 py-4 sm:px-7"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (position of positions(); track position.id; let i = $index) {
+        @if (openedPositionId() === position.id) {
+          <tr
+            class="history-row"
+            animate.enter="row-enter"
+            animate.leave="row-leave"
+          >
+            <td
+              colspan="6"
+              class="relative border-y border-input bg-secondary p-0"
+            >
+              <span
+                aria-hidden="true"
+                class="absolute inset-y-0 left-0 z-10 w-[3px] bg-series-1"
+              ></span>
+              <lib-price-history-panel
+                id="price-history-panel"
+                [ticker]="position.ticker"
+                [history]="history()"
+                [isLoading]="historyLoading()"
+                [error]="historyError()"
+                [selectedPeriod]="historyPeriod()"
+                (periodSelected)="historyPeriodSelected.emit($event)"
+                (closed)="closeHistoryPanel()"
+                (retried)="historyRetry.emit()"
+              />
+            </td>
+          </tr>
+        } @else {
+          <tr
+            class="group border-b border-border transition-colors duration-150 hover:bg-secondary/60"
+            animate.enter="row-enter"
+            animate.leave="row-leave"
+          >
+            <td class="px-3 py-5 sm:px-7">
+              <span class="inline-flex items-center gap-3">
+                <span class="h-2.5 w-2.5 rounded-[3px]" [class]="swatch(i)">
+                </span>
+                <span class="text-[17px] font-medium text-foreground">{{
+                  position.ticker
+                }}</span>
+              </span>
+              <span
+                class="mt-1 block text-[13px] tabular-nums text-muted-foreground sm:hidden"
+                ><span class="sr-only">Shares: </span
+                >{{ position.shareCount | number: '1.0-10' }}</span
+              >
+            </td>
+            <td
+              class="hidden px-4 py-5 text-right text-[15px] tabular-nums text-secondary-foreground sm:table-cell"
+            >
+              {{ position.shareCount | number: '1.0-10' }}
+            </td>
+            <td class="px-3 py-5 text-right sm:px-4">
+              @if (position.lastPrice !== null) {
+                <span
+                  class="text-[15px] tabular-nums text-secondary-foreground"
+                  data-testid="row-price"
+                >
+                  €{{ position.lastPrice | number: '1.2-2' }}
+                </span>
+              } @else {
+                <span class="text-muted-foreground">—</span>
+              }
+              @if (position.value !== null) {
+                <span
+                  class="mt-1 block text-[13px] font-medium tabular-nums text-foreground sm:hidden"
+                  ><span class="sr-only">Value: </span>€{{
+                    position.value | number: '1.2-2'
+                  }}</span
+                >
+              }
+              @if (position.lastPriceFetchedAt) {
+                <span
+                  class="mt-1 block text-[12px] text-muted-foreground sm:hidden"
+                  ><span class="sr-only">Updated: </span
+                  >{{ position.lastPriceFetchedAt | date: 'short' }}</span
+                >
+              }
+            </td>
+            <td class="hidden px-4 py-5 text-right sm:table-cell">
+              @if (position.value !== null) {
+                <span
+                  class="text-lg font-medium tabular-nums text-foreground"
+                  data-testid="row-value"
+                >
+                  €{{ position.value | number: '1.2-2' }}
+                </span>
+              } @else {
+                <span class="text-muted-foreground">—</span>
+              }
+            </td>
+            <td
+              class="hidden px-4 py-5 text-right text-[13px] text-muted-foreground sm:table-cell"
+            >
+              @if (position.lastPriceFetchedAt) {
+                {{ position.lastPriceFetchedAt | date: 'short' }}
+              } @else {
+                <span>—</span>
+              }
+            </td>
+            <td class="px-3 py-5 text-right sm:px-7">
+              <button
+                hlmBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                class="h-11 text-muted-foreground hover:text-foreground"
+                data-testid="row-history"
+                aria-controls="price-history-panel"
+                [attr.aria-label]="'History for ' + position.ticker"
+                [attr.data-history-button]="position.id"
+                (click)="openHistory.emit(position.id)"
+              >
+                History
+              </button>
+              <button
+                hlmBtn
+                variant="ghost"
+                size="sm"
+                class="h-11 text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                (click)="deletePosition.emit(position.id)"
+              >
+                Remove
+              </button>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
