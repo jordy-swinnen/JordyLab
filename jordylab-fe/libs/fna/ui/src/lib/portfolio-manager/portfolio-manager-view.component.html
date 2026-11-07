@@ -1,4 +1,9 @@
-<lib-page-header title="Portfolio" [subtitle]="positions().length + (positions().length === 1 ? ' position' : ' positions')">
+<lib-page-header
+  title="Portfolio"
+  [subtitle]="
+    positions().length + (positions().length === 1 ? ' position' : ' positions')
+  "
+>
   @if (hasAnyPrices()) {
     <div class="text-right">
       <div class="label">Total worth</div>
@@ -54,89 +59,125 @@
       />
     </div>
   } @else {
-  <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Positions table">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-border bg-secondary">
-          <th class="label px-7 py-4 text-left font-medium">Ticker</th>
-          <th class="label px-4 py-4 text-right font-medium">Shares</th>
-          <th class="label px-4 py-4 text-right font-medium">
-            Last price
-          </th>
-          <th class="label px-4 py-4 text-right font-medium">Value</th>
-          <th class="label px-4 py-4 text-right font-medium">Updated</th>
-          <th class="px-7 py-4"></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (position of positions(); track position.id; let i = $index) {
-          <tr
-            class="group border-b border-border transition-colors duration-150 hover:bg-secondary/60"
-          >
-            <td class="px-7 py-5">
-              <span class="inline-flex items-center gap-3">
-                <span
-                  class="h-2.5 w-2.5 rounded-[3px]"
-                  [class]="swatch(i)"
-                ></span>
-                <span
-                  class="text-[17px] font-medium text-foreground"
-                  >{{ position.ticker }}</span
-                >
-              </span>
-            </td>
-            <td
-              class="px-4 py-5 text-right text-[15px] tabular-nums text-secondary-foreground"
-            >
-              {{ position.shareCount | number: '1.0-10' }}
-            </td>
-            <td class="px-4 py-5 text-right">
-              @if (position.lastPrice !== null) {
-                <span
-                  class="text-[15px] tabular-nums text-secondary-foreground"
-                  data-testid="row-price"
-                >
-                  €{{ position.lastPrice | number: '1.2-2' }}
-                </span>
-              } @else {
-                <span class="text-muted-foreground">—</span>
-              }
-            </td>
-            <td class="px-4 py-5 text-right">
-              @if (position.value !== null) {
-                <span
-                  class="text-lg font-medium tabular-nums text-foreground"
-                  data-testid="row-value"
-                >
-                  €{{ position.value | number: '1.2-2' }}
-                </span>
-              } @else {
-                <span class="text-muted-foreground">—</span>
-              }
-            </td>
-            <td class="px-4 py-5 text-right text-[13px] text-muted-foreground">
-              @if (position.lastPriceFetchedAt) {
-                {{ position.lastPriceFetchedAt | date: 'short' }}
-              } @else {
-                <span>—</span>
-              }
-            </td>
-            <td class="px-7 py-5 text-right">
-              <button
-                hlmBtn
-                variant="ghost"
-                size="sm"
-                class="h-11 text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
-                (click)="deletePosition.emit(position.id)"
-              >
-                Remove
-              </button>
-            </td>
+    <div
+      class="overflow-x-auto"
+      tabindex="0"
+      role="region"
+      aria-label="Positions table"
+    >
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border bg-secondary">
+            <th class="label px-7 py-4 text-left font-medium">Ticker</th>
+            <th class="label px-4 py-4 text-right font-medium">Shares</th>
+            <th class="label px-4 py-4 text-right font-medium">Last price</th>
+            <th class="label px-4 py-4 text-right font-medium">Value</th>
+            <th class="label px-4 py-4 text-right font-medium">Updated</th>
+            <th class="px-7 py-4"></th>
           </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          @for (position of positions(); track position.id; let i = $index) {
+            <tr
+              class="group border-b border-border transition-colors duration-150 hover:bg-secondary/60"
+            >
+              <td class="px-7 py-5">
+                <span class="inline-flex items-center gap-3">
+                  <span
+                    class="h-2.5 w-2.5 rounded-[3px]"
+                    [class]="swatch(i)"
+                  ></span>
+                  <span class="text-[17px] font-medium text-foreground">{{
+                    position.ticker
+                  }}</span>
+                </span>
+              </td>
+              <td
+                class="px-4 py-5 text-right text-[15px] tabular-nums text-secondary-foreground"
+              >
+                {{ position.shareCount | number: '1.0-10' }}
+              </td>
+              <td class="px-4 py-5 text-right">
+                @if (position.lastPrice !== null) {
+                  <span
+                    class="text-[15px] tabular-nums text-secondary-foreground"
+                    data-testid="row-price"
+                  >
+                    €{{ position.lastPrice | number: '1.2-2' }}
+                  </span>
+                } @else {
+                  <span class="text-muted-foreground">—</span>
+                }
+              </td>
+              <td class="px-4 py-5 text-right">
+                @if (position.value !== null) {
+                  <span
+                    class="text-lg font-medium tabular-nums text-foreground"
+                    data-testid="row-value"
+                  >
+                    €{{ position.value | number: '1.2-2' }}
+                  </span>
+                } @else {
+                  <span class="text-muted-foreground">—</span>
+                }
+              </td>
+              <td
+                class="px-4 py-5 text-right text-[13px] text-muted-foreground"
+              >
+                @if (position.lastPriceFetchedAt) {
+                  {{ position.lastPriceFetchedAt | date: 'short' }}
+                } @else {
+                  <span>—</span>
+                }
+              </td>
+              <td class="px-7 py-5 text-right">
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  class="h-11 text-muted-foreground hover:text-foreground"
+                  data-testid="row-history"
+                  aria-controls="price-history-panel"
+                  [attr.aria-label]="'History for ' + position.ticker"
+                  [attr.aria-expanded]="openedPositionId() === position.id"
+                  [attr.data-history-button]="position.id"
+                  (click)="
+                    openedPositionId() === position.id
+                      ? closeHistoryPanel()
+                      : openHistory.emit(position.id)
+                  "
+                >
+                  History
+                </button>
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="sm"
+                  class="h-11 text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                  (click)="deletePosition.emit(position.id)"
+                >
+                  Remove
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (openedPositionId()) {
+      <lib-price-history-panel
+        id="price-history-panel"
+        [ticker]="openedTicker()"
+        [history]="history()"
+        [isLoading]="historyLoading()"
+        [error]="historyError()"
+        [selectedPeriod]="historyPeriod()"
+        (periodSelected)="historyPeriodSelected.emit($event)"
+        (closed)="closeHistoryPanel()"
+        (retried)="historyRetry.emit()"
+      />
+    }
   }
 
   <!-- Add position form -->
@@ -163,8 +204,10 @@
       Add position
     </button>
     <p class="basis-full text-xs text-muted-foreground">
-      Just the name is enough (<span class="font-semibold">KBC</span>, <span class="font-semibold">MEUD</span>,
-      <span class="font-semibold">BTC</span>): JordyLab finds the euro listing for you.
+      Just the name is enough (<span class="font-semibold">KBC</span>,
+      <span class="font-semibold">MEUD</span>,
+      <span class="font-semibold">BTC</span>): JordyLab finds the euro listing
+      for you.
     </p>
   </div>
 </div>
@@ -192,7 +235,12 @@
       />
     </div>
   } @else {
-    <div class="mt-5 overflow-x-auto" tabindex="0" role="region" aria-label="Wishlist table">
+    <div
+      class="mt-5 overflow-x-auto"
+      tabindex="0"
+      role="region"
+      aria-label="Wishlist table"
+    >
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-border bg-secondary">
@@ -209,18 +257,24 @@
               data-testid="wishlist-row"
             >
               <td class="px-7 py-5">
-                <span class="text-[17px] font-medium text-foreground">{{ item.ticker }}</span>
+                <span class="text-[17px] font-medium text-foreground">{{
+                  item.ticker
+                }}</span>
               </td>
               <td class="px-4 py-5 text-right">
                 @if (item.lastPrice !== null) {
-                  <span class="text-[15px] tabular-nums text-secondary-foreground">
+                  <span
+                    class="text-[15px] tabular-nums text-secondary-foreground"
+                  >
                     €{{ item.lastPrice | number: '1.2-2' }}
                   </span>
                 } @else {
                   <span class="text-muted-foreground">—</span>
                 }
               </td>
-              <td class="px-4 py-5 text-right text-[13px] text-muted-foreground">
+              <td
+                class="px-4 py-5 text-right text-[13px] text-muted-foreground"
+              >
                 @if (item.lastPriceFetchedAt) {
                   {{ item.lastPriceFetchedAt | date: 'short' }}
                 } @else {
@@ -229,7 +283,9 @@
               </td>
               <td class="px-7 py-5 text-right">
                 @if (promotingId() === item.id) {
-                  <span class="inline-flex flex-wrap items-center justify-end gap-2">
+                  <span
+                    class="inline-flex flex-wrap items-center justify-end gap-2"
+                  >
                     <input
                       type="number"
                       step="any"
@@ -238,10 +294,27 @@
                       class="h-11 w-28 rounded-xl border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       placeholder="Shares"
                       [value]="promoteShares() ?? ''"
-                      (input)="promoteShares.set(+$any($event.target).value || null)"
+                      (input)="
+                        promoteShares.set(+$any($event.target).value || null)
+                      "
                     />
-                    <button hlmBtn size="sm" class="h-11" (click)="confirmPromoting(item)">Confirm</button>
-                    <button hlmBtn variant="ghost" size="sm" class="h-11" (click)="cancelPromoting()">Cancel</button>
+                    <button
+                      hlmBtn
+                      size="sm"
+                      class="h-11"
+                      (click)="confirmPromoting(item)"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      class="h-11"
+                      (click)="cancelPromoting()"
+                    >
+                      Cancel
+                    </button>
                   </span>
                 } @else {
                   <span class="inline-flex items-center gap-2">
@@ -288,12 +361,16 @@
       Add to wishlist
     </button>
     @if (wishlistError()) {
-      <p class="basis-full text-sm text-destructive" data-testid="wishlist-error">
+      <p
+        class="basis-full text-sm text-destructive"
+        data-testid="wishlist-error"
+      >
         {{ wishlistError() }}
       </p>
     }
     <p class="basis-full text-xs text-muted-foreground">
-      Stocks you don't own yet. They get advice in the briefing but never count towards your total worth.
+      Stocks you don't own yet. They get advice in the briefing but never count
+      towards your total worth.
     </p>
   </div>
 </div>

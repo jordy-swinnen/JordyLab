@@ -37,6 +37,7 @@ feature's task list in `specs/`. The rule that keeps this page current is in
 | Read-only MCP connector for Claude (admin only) | In progress | 15 (mostly production checks) |
 | Post-Keycloak housekeeping: secrets, database role, CI secrets | In progress | see the Replaced table |
 | Permanent agent test account, local and production | In progress | no task list |
+| Stock price history on the Portfolio page (spec 023) | In progress | 8 (see specs/023-portfolio-price-history/tasks.md) |
 
 ## Planned
 

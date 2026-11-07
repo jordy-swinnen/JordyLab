@@ -1,9 +1,27 @@
-import { Component, computed, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  output,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { PortfolioPositionRow, WishlistItem } from '@jordylab-fe/fna/api';
-import { EmptyStateComponent, PageHeaderComponent } from '@jordylab-fe/shared/layout';
+import {
+  PortfolioPositionRow,
+  PriceHistory,
+  PriceHistoryPeriod,
+  WishlistItem,
+} from '@jordylab-fe/fna/api';
+import {
+  EmptyStateComponent,
+  PageHeaderComponent,
+} from '@jordylab-fe/shared/layout';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
+import { PriceHistoryPanelComponent } from '../price-history';
 
 /** Swatch colours, assigned by row position so the allocation bar and the table agree. */
 const SWATCHES = [
@@ -23,7 +41,15 @@ interface AllocationSegment {
 @Component({
   selector: 'lib-portfolio-manager-view',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, HlmButtonDirective, EmptyStateComponent, PageHeaderComponent],
+  imports: [
+    FormsModule,
+    DatePipe,
+    DecimalPipe,
+    HlmButtonDirective,
+    EmptyStateComponent,
+    PageHeaderComponent,
+    PriceHistoryPanelComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager-view.component.html',
 })
@@ -33,11 +59,22 @@ export class PortfolioManagerViewComponent {
   wishlistError = input<string | null>(null);
   totalWorth = input.required<number>();
   hasAnyPrices = input.required<boolean>();
+  openedPositionId = input<string | null>(null);
+  history = input<PriceHistory | null>(null);
+  historyLoading = input(false);
+  historyError = input<string | null>(null);
+  historyPeriod = input<PriceHistoryPeriod>('ONE_YEAR');
 
   addPosition = output<{ ticker: string; shares: number }>();
   deletePosition = output<string>();
   addWishlistItem = output<string>();
   deleteWishlistItem = output<string>();
+  openHistory = output<string>();
+  closeHistory = output<void>();
+  historyPeriodSelected = output<PriceHistoryPeriod>();
+  historyRetry = output<void>();
+
+  readonly #host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly swatch = (index: number): string =>
     SWATCHES[index % SWATCHES.length];
@@ -58,6 +95,13 @@ export class PortfolioManagerViewComponent {
       percent: total === 0 ? 0 : ((position.value ?? 0) / total) * 100,
     }));
   });
+
+  protected readonly openedTicker = computed(
+    () =>
+      this.positions().find(
+        (position) => position.id === this.openedPositionId(),
+      )?.ticker ?? '',
+  );
 
   newTicker = signal('');
   newShares = signal<number | null>(null);
@@ -91,6 +135,19 @@ export class PortfolioManagerViewComponent {
   cancelPromoting(): void {
     this.promotingId.set(null);
     this.promoteShares.set(null);
+  }
+
+  /** Closing returns focus to the History button of the same holding, so keyboard users keep their place. */
+  closeHistoryPanel(): void {
+    const positionId = this.openedPositionId();
+    this.closeHistory.emit();
+    if (positionId) {
+      this.#host.nativeElement
+        .querySelector<HTMLButtonElement>(
+          `[data-history-button="${positionId}"]`,
+        )
+        ?.focus();
+    }
   }
 
   /** Moves a wishlist ticker into held positions, keeping the row (and its cached price) in place. */

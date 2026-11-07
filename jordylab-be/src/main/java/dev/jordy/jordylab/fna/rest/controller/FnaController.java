@@ -1,13 +1,16 @@
 package dev.jordy.jordylab.fna.rest.controller;
 
+import dev.jordy.jordylab.fna.domain.PriceHistoryPeriod;
 import dev.jordy.jordylab.fna.rest.controller.model.ArticleSummaryDto;
 import dev.jordy.jordylab.fna.rest.controller.model.BriefingDto;
 import dev.jordy.jordylab.fna.rest.controller.model.ManualArticleRequest;
 import dev.jordy.jordylab.fna.rest.controller.model.ManualArticleResponse;
 import dev.jordy.jordylab.fna.rest.controller.model.PortfolioPositionDto;
+import dev.jordy.jordylab.fna.rest.controller.model.PriceHistoryDto;
 import dev.jordy.jordylab.fna.rest.controller.model.WishlistItemDto;
 import dev.jordy.jordylab.fna.service.FnaService;
 import dev.jordy.jordylab.fna.service.ManualArticleSubmissionService;
+import dev.jordy.jordylab.fna.service.PriceHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +28,7 @@ public class FnaController {
 
     private final FnaService fnaService;
     private final ManualArticleSubmissionService manualArticleSubmissionService;
+    private final PriceHistoryService priceHistoryService;
 
     @GetMapping("/articles")
     public ResponseEntity<List<ArticleSummaryDto>> getArticles() {
@@ -47,6 +51,16 @@ public class FnaController {
         fnaService.removePosition(id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Recorded euro price history of a held position (spec 023). Reads recorded rows only, so a view never calls the
+     * price source.
+     */
+    @GetMapping("/portfolio/{id}/price-history")
+    public ResponseEntity<PriceHistoryDto> getPriceHistory(@PathVariable UUID id,
+                                                           @RequestParam(defaultValue = "ONE_YEAR") PriceHistoryPeriod period) {
+        return ResponseEntity.ok(priceHistoryService.readWindow(id, period));
     }
 
     /** Wishlist stocks (spec 016): tickers the investor is considering but does not own. */
