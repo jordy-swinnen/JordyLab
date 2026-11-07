@@ -1,0 +1,77 @@
+name: Golden live
+
+# The live tier of the LibBot golden set (spec 013 FR-018): real model calls, so every run spends tokens (JOR-100).
+# Three ways in:
+#   - build.yml, on a push to main, but only when the push changes AI code (decided in the first step below);
+#   - a manual run (workflow_dispatch), on demand;
+#   - a weekly run (schedule), to catch model drift without any code change.
+# Only the push path gates a deploy. A manual or weekly run reports a red result and deploys nothing.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays, 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  golden-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Manual and scheduled runs always run the live tier. A push runs it only when it changes AI code, or when the push
+      # cannot be diffed (a new branch or a force push), so an ordinary release skips it and pays no model tokens.
+      - name: Decide whether the live tier runs
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -u
+          if [ "$EVENT" != "push" ]; then
+            echo "Manual or scheduled run: the live tier runs."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "No usable base commit ($BEFORE): the live tier runs."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! changed=$(git diff --name-only "$BEFORE" "$AFTER"); then
+            echo "Could not diff the push: the live tier runs."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # AI code: the shared AI layer, LibBot, the enrichment service (its descriptions are in the golden set), the
+          # prompts, the model settings and the golden fixtures.
+          ai_paths='^(jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/|jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/libbot/|jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/service/EnrichmentService\.java|jordylab-be/src/main/resources/prompts/|jordylab-be/src/main/resources/libbot/|jordylab-be/src/main/resources/application\.yaml|jordylab-be/src/test/java/dev/jordy/jordylab/gamecatalog/service/libbot/|jordylab-be/src/test/resources/libbot/)'
+          if printf '%s\n' "$changed" | grep -E -q "$ai_paths"; then
+            echo "This push changes AI code: the live tier runs."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No AI code in this push: the live tier is skipped."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.decide.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Run the live LibBot golden tier
+        if: steps.decide.outputs.run == 'true'
+        working-directory: jordylab-be
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOLDEN_LIVE_REQUIRED: "true"
+        run: ./gradlew goldenLive --no-daemon
