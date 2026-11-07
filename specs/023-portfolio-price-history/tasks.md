@@ -202,7 +202,7 @@ Task: "PriceHistorySummaryDto in jordylab-be/src/main/java/dev/jordy/jordylab/fn
 
 ## Follow-up: wishlist history and hover readout (JOR-98)
 
-Added after the first release: the wishlist gets the same history as holdings, and the chart shows the exact price under the pointer. T022 and T023 are kept as written; `PositionNotHeldException` became `PositionNotFoundException` (T059).
+Added after the first release: the wishlist gets the same history as holdings, and the chart shows the exact price under the pointer. T014, T017, T022, T023 and T025 are kept as written, though they name the old exception and reason code; `PositionNotHeldException` became `PositionNotFoundException` (T059).
 
 - [X] T059 [FU] Drop the held-only rule in `PriceHistoryService` (recording, backfill, gap repair and reads cover every tracked position); repair uses `findAllByOrderByTickerAsc`. Rename the exception to `PositionNotFoundException`, answered as 404 `POSITION_NOT_FOUND`
 - [X] T060 [FU] Show a **History** button on every wishlist row and open the panel under the wishlist table; the panel moves to whichever table holds the open position (`portfolio-manager-view.component.ts` and `.html`)
