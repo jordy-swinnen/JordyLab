@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './support/fixtures';
 import { PAGES } from './support/pages';
 
-// No page may scroll sideways on a phone (spec 013 SC-019): the Android app shows this same web build. The check measures the
+// No page may scroll sideways on a phone (spec 013 SC-019): the installed phone app (a PWA, spec 018) shows this same web build. The check measures the
 // document and, when it fails, names the elements that stick out so the fix is one look away rather than a bisect.
 const PHONE_WIDTHS = [360, 390, 430] as const;
 
@@ -100,6 +100,23 @@ test.describe('No sideways scrolling on a phone', () => {
         await expect(page.getByRole('heading', { level: 2, name: 'Chrono Trigger' })).toBeVisible();
 
         expect(await offendersOf(page)).toEqual([]);
+      });
+
+      // offendersOf passes when the page itself does not scroll, even if a table clips content inside its own scroll box,
+      // so this measures the History button of a wishlist row against the screen edge. Each width adds its own ticker
+      // because the e2e database is shared by every test of a run.
+      test('the History button of a wishlist row is on the screen', async ({ page }) => {
+        const wishlistTicker = { 360: 'LMT', 390: 'RHM', 430: 'MEUD' }[width];
+        await page.goto('/fna/portfolio');
+        await page.getByRole('textbox', { name: 'Wishlist ticker', exact: true }).fill(wishlistTicker);
+        await page.getByRole('button', { name: 'Add to wishlist', exact: true }).last().click();
+
+        const historyButton = page.getByRole('button', { name: `History for ${wishlistTicker}`, exact: true });
+        await expect(historyButton).toBeVisible();
+        const box = await historyButton.boundingBox();
+
+        expect(box).not.toBeNull();
+        expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
       });
     });
   }
