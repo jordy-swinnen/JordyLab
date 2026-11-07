@@ -109,9 +109,12 @@ render
 check "BACKLOG_PROVIDER defaults to linear" has_line "BACKLOG_PROVIDER='linear'"
 check "KANEO_DISABLE_REGISTRATION defaults to true" has_line "KANEO_DISABLE_REGISTRATION='true'"
 check "KANEO_MEM_LIMIT defaults to 768m" has_line "KANEO_MEM_LIMIT='768m'"
+check "KANEO_DISABLE_WORKSPACE_CREATION defaults to true" has_line "KANEO_DISABLE_WORKSPACE_CREATION='true'"
 render BACKLOG_PROVIDER=kaneo KANEO_MEM_LIMIT=1g
 check "BACKLOG_PROVIDER follows the repository variable" has_line "BACKLOG_PROVIDER='kaneo'"
 check "KANEO_MEM_LIMIT follows the repository variable" has_line "KANEO_MEM_LIMIT='1g'"
+render KANEO_DISABLE_WORKSPACE_CREATION=false
+check "KANEO_DISABLE_WORKSPACE_CREATION follows the repository variable" has_line "KANEO_DISABLE_WORKSPACE_CREATION='false'"
 render BACKLOG_PROVIDER=
 check "an empty repository variable takes the default" has_line "BACKLOG_PROVIDER='linear'"
 

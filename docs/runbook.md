@@ -801,6 +801,8 @@ service. It is not part of the application release: a Kaneo outage never blocks 
 
 **Open points (not yet verified on production)**
 - `TRUSTED_PROXIES` is not set. The stack's network is `172.28.0.0/16`; set it only after checking how Kaneo parses it.
-- `DISABLE_WORKSPACE_CREATION` is `true`. If the owner cannot create the first workspace on the first sign-in, change it
-  and deploy, and record the result here.
+- `DISABLE_WORKSPACE_CREATION` is the repository variable `KANEO_DISABLE_WORKSPACE_CREATION` (default `true`). Whether
+  the first sign-in can create the first workspace with this on is tested on a trial before the merge; if it cannot,
+  set the variable to `false` (`gh variable set KANEO_DISABLE_WORKSPACE_CREATION --body false`), deploy, and record the
+  result here.
 - The GitHub App matrix (T010) and the Claude Code and Claude app checks run on production after the first deploy.
