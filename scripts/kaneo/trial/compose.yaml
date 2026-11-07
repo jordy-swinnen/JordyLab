@@ -1,0 +1,41 @@
+# Throwaway Kaneo stack for the go/no-go trial (spec 022, User Story 1, T005). Pinned by tag and digest, labelled, bound to
+# 127.0.0.1 only, with no volumes: `run.sh down` removes everything. The secrets come from the environment that run.sh sets
+# for each run (never written here, never printed). Kaneo settings follow its own Docker Compose quick start.
+x-trial-labels: &trial-labels
+  dev.jordylab.kaneo-trial: "true"
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    labels: *trial-labels
+    environment:
+      POSTGRES_DB: kaneo
+      POSTGRES_USER: kaneo
+      POSTGRES_PASSWORD: ${TRIAL_DB_PASSWORD:?run.sh sets this}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaneo -d kaneo"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  kaneo:
+    image: ghcr.io/usekaneo/kaneo:2.49.0@sha256:cd1826b1aba3ce736015cadf6f6c975d923aac00f4b6aaa7aedb29bc722dae49
+    labels: *trial-labels
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTH_SECRET: ${TRIAL_AUTH_SECRET:?run.sh sets this}
+      KANEO_CLIENT_URL: ${TRIAL_CLIENT_URL:?run.sh sets this}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: kaneo
+      POSTGRES_USER: kaneo
+      POSTGRES_PASSWORD: ${TRIAL_DB_PASSWORD:?run.sh sets this}
+      DISABLE_REGISTRATION: "true"
+    ports:
+      - "127.0.0.1:${TRIAL_HOST_PORT:?run.sh sets this}:5173"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5173/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60

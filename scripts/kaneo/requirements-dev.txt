@@ -1,0 +1,4 @@
+# Development-only dependencies for the Kaneo backlog tooling (spec 022, T003).
+# Python 3.12 is the target; the tests run with `python -I -m pytest scripts/kaneo/tests`.
+# pytest 9.1.1 was released 2026-06-19 (checked on PyPI 2026-11-07); 9.2.0 is newer than two weeks and not pinned yet.
+pytest==9.1.1
