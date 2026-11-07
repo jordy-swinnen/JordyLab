@@ -37,7 +37,7 @@ issues in **Backlog** and **Triage**-type states go to the project's Backlog (a 
 workspace, *Drafted* and *Specified* are Backlog-type states, and *Triage* is the Triage state, so they would all land in
 one undifferentiated Backlog and the draft/specified distinction would be lost.
 **Decision**: after the import, a small script (`scripts/kaneo/import-fixup.py`, dry run by default) reads each issue's
-original Linear state with the same read-only key and, through Kaneo's REST API, creates the columns Triage, Drafted and
+original Linear state from Linear's JSON export (decided 2026-11-07; no Linear key), and, through Kaneo's REST API, creates the columns Triage, Drafted and
 Specified (and Todo/In Progress/In Review if the importer did not), moves each ticket to the column named after its
 Linear state, and writes the `Spec: specs/<nnn-name>/` first line into the description of each spec ticket (the mapping from
 the repository inventory, `backlog-sync-drafts`' `repo_inventory.sh`, FR-016). Rate limit: 100 requests/minute per key, so the script paces itself (about 40 writes a minute). About 100
@@ -165,6 +165,8 @@ for the spec (User Story 1). No secret goes into `.mcp.json` or `opencode.json`.
 
 ## R15. Skills and the safety stop
 
+**Confirmed by the owner (2026-11-07):** the renamed skills keep the `backlog-*` names (`backlog-capture`, `backlog-triage`, `backlog-sync-drafts`).
+
 **Decision**: rename `linear-capture`, `linear-triage`, `linear-sync-drafts` to `backlog-capture`, `backlog-triage`,
 `backlog-sync-drafts`; keep `speckit-taskstoissues` (customised); update `agent-handover` and `refresh-agent-models`.
 Linear tool calls map to Kaneo tools (table in `contracts/agent-tooling.md`). Kaneo has no 250-issue cap, so the "stop at
@@ -193,7 +195,7 @@ That follow-up is the single deviation from "one pull request per spec"; **appro
 
 A labelled, self-cleaning script (`scripts/kaneo/trial/run.sh`), modelled on `jordylab-fe/e2e/run.sh`: its own Compose
 project name and label, its own Postgres, a verify-everything-is-gone step, never touching the `jordylab-be-*` dev stack.
-The read-only Linear key is read from an environment variable in the owner's shell and never written to a file in the repo.
+The fix-up reads Linear's JSON export from a file outside the repository (decided 2026-11-07); no Linear key is needed, so none is stored or read.
 On macOS it runs from a path under `/Users` or `/private/tmp`.
 
 ## R18. Capacity

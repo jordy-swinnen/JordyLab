@@ -4,7 +4,7 @@
 
 1. Announce the freeze (Claude project instructions, this repo's `docs/`); stop creating Linear tickets; make sure every
    piece of work in flight already has its `JOR-n`.
-2. Owner: a read-only Linear personal key in an environment variable of the local shell (never in a file in the repo).
+2. Owner: the Linear export (JSON) is taken before the import and stored outside the VPS (T034). The fix-up reads that file; no Linear key is needed for it.
 3. In Kaneo: Settings -> Workspace -> Import -> Linear. One run. Do **not** pre-create a project named `JOR`.
 4. Save the importer's own summary.
 5. `scripts/kaneo/import-fixup.py --dry-run`, read the plan, then run it for real (it creates the missing columns and moves
@@ -18,7 +18,7 @@
 
 | Item | Rule |
 |---|---|
-| Inputs | `LINEAR_API_KEY_READONLY` (env), `KANEO_BASE_URL`, `KANEO_API_KEY` (env); never printed or logged |
+| Inputs | the Linear export file (JSON, the full export stored off-host under FR-018), `KANEO_BASE_URL` and `KANEO_API_KEY` (env); never printed or logged. **No Linear key is used** (decided 2026-11-07: the key is revoked after the import, and the export holds the same data) |
 | Default | `--dry-run`: prints a table `JOR-n | Linear state | Kaneo column now | target column` and counts; no write |
 | Writes | create missing columns by slug; move tasks with the status-change endpoint the trial recorded (including into and out of the Backlog view); write `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (mapping from `repo_inventory.sh`); all idempotent (already in place = skip) |
 | Keys | the owner's Kaneo key only for this one run (short-lived, revoked afterwards); the backend's own key (least privilege if the trial shows scopes) is never used here |

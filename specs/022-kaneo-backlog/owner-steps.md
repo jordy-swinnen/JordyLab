@@ -38,13 +38,23 @@ holds. Status is updated here, with the date.
 
 ## HANDOFF-03: GitHub App for Kaneo
 
-- **Where:** GitHub, account `jordy-swinnen`: Settings → Developer settings → GitHub Apps → New GitHub App.
-- **Webhook URL:** the Kaneo instance's address, `https://kaneo.jordylab.be`, with the webhook path Kaneo's GitHub App page
-  gives. **This path is not confirmed yet.** It is checked in T010, which needs a reachable address (see the note below).
-- **Permissions and events:** the ones Kaneo's GitHub App page lists. Not read yet; read them at creation.
-- **Install** the App on `jordy-swinnen/JordyLab`.
-- **Keep:** the App ID, the webhook secret, and the private key (PEM). Turn the PEM into base64 in your terminal and add it
-  with HANDOFF-02. Do not paste any of them into chat.
+- **Where:** GitHub, account `jordy-swinnen`: Settings → Developer settings → GitHub Apps → New GitHub App. GitHub asks
+  for the account password (sudo mode) first; that is entered by you in the browser, never in chat.
+- **Settings, as Kaneo's setup page gives them** (read 2026-11-07 from kaneo.app/docs, setup.md):
+  - Name: unique on GitHub, for example `kaneo-jordylab`. Homepage URL: `https://kaneo.jordylab.be`.
+  - Webhook URL: `https://kaneo.jordylab.be/api/github-integration/webhook` (this path, not `/api/github/webhook`).
+  - Webhook secret: a random value you generate; the same value goes into `KANEO_GITHUB_WEBHOOK_SECRET`.
+  - Repository permissions: Issues read and write; Pull requests read; Contents read; Metadata read.
+  - Events to subscribe: Issues, Issue comments, Pull requests, Push.
+  - Keep the webhook active. Kaneo's docs say GitHub must reach the endpoint without signing in to the proxy.
+  - Account permissions: none documented.
+- **For the matrix now:** create the App with the webhook **inactive** and no secret typed; it is switched on with the URL and
+  secret when the production stack is up (T010). The webhook URL needs a public address, which the trial could not give.
+- **Install** the App on `jordy-swinnen/kaneo-matrix-scratch` (the scratch repository) for T010, and later on
+  `jordy-swinnen/JordyLab` for the production connection.
+- **Keep:** the App ID, the app slug (`GITHUB_APP_NAME`), the webhook secret, and the private key (PEM). Generate the key on
+  the App's settings page, then encode the PEM as base64 in your terminal (`base64 -i key.pem`) and add it with HANDOFF-02.
+  Do not paste any of them into chat.
 - **Done when:** the App is installed on the repository and its three values are in the encrypted file.
 - **Status:** after the first deploy (2026-11-07). It is needed for the GitHub check (T010), not for the deploy. Confirm
   when the compose service is written that Kaneo starts without these values.

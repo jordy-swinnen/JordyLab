@@ -4,9 +4,9 @@ Run these in order. Steps 1-3 are the throwaway local trial (User Story 1) and e
 `trial-results.md` in this folder. Steps 4-12 are production. Mark each with the date and the observed result.
 Never paste a key or token into this file.
 
-Prerequisites: Docker or Podman on the Mac; a read-only Linear personal key exported as `LINEAR_API_KEY_READONLY` in the
-shell (not in a file); a scratch GitHub repository with one open pull request you may merge; the repo checked out under
-`/Users` or `/private/tmp`.
+Prerequisites: Docker or Podman on the Mac; a read-only Linear personal key, typed into Kaneo's import form and revoked
+afterwards (the fix-up reads Linear's JSON export instead, so it needs no key); a scratch GitHub repository with one open
+pull request you may merge; the repo checked out under `/Users` or `/private/tmp`.
 
 ## Local trial
 

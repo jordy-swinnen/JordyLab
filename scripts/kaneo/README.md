@@ -12,7 +12,7 @@ Scripts for the move from Linear to a self-hosted Kaneo (spec `specs/022-kaneo-b
 
 ## Rules for everything in this folder
 
-- Keys come only from environment variables (`KANEO_API_KEY`, `LINEAR_API_KEY_READONLY`). Nothing here reads a key from a
+- Keys come only from environment variables (`KANEO_API_KEY`). The fix-up reads Linear's JSON export, not a Linear key. Nothing here reads a key from a
   file in the repository, and nothing prints a key, a token or a row of personal data. Output is counts and ticket keys.
 - Scripts that change the board default to a dry run and pace their writes to stay under Kaneo's limit of 100 requests a
   minute per key.
