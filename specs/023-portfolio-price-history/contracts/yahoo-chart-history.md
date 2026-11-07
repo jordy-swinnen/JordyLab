@@ -14,7 +14,7 @@ User-Agent: Mozilla/5.0 (compatible; JordyLab/1.0)
 |---|---|
 | `{symbol}` | A Yahoo symbol: a position's `priceSymbol` (for example `ASML.AS`), or an FX pair `<CCY>EUR=X` (for example `USDEUR=X`). Path-encoded, as in the quote call. |
 | `interval` | `1d`. |
-| `range` | `10y`, from `fetchDailyCloses`. With `interval=1d`, longer ranges return monthly bars (verified), so they are never requested. |
+| `range` | `10y`, from `fetchDailyHistory`. With `interval=1d`, longer ranges return monthly bars (verified), so they are never requested. |
 | User-Agent | The same browser-compatible constant the quote call uses. Other agents get HTTP 429. |
 
 ## Fields read

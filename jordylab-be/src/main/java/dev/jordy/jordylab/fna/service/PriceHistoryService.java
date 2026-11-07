@@ -5,6 +5,7 @@ import dev.jordy.jordylab.fna.domain.PriceHistoryPeriod;
 import dev.jordy.jordylab.fna.domain.PositionPriceHistory;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
 import dev.jordy.jordylab.fna.domain.repository.PositionPriceHistoryRepository;
+import dev.jordy.jordylab.fna.rest.client.PriceSourceRateLimitedException;
 import dev.jordy.jordylab.fna.rest.client.YahooFinanceChartClient;
 import dev.jordy.jordylab.fna.rest.client.YahooFinanceChartClient.YahooBar;
 import dev.jordy.jordylab.fna.rest.client.YahooFinanceChartClient.YahooDailyHistory;
@@ -16,9 +17,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -47,27 +50,29 @@ public class PriceHistoryService {
     private static final String PENCE = "GBp";
     private static final String POUNDS_TO_EURO = "GBPEUR=X";
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
+    /** The scale of price_in_euro in finance.position_price_history. */
+    private static final int STORED_SCALE = 4;
 
     private final PositionPriceHistoryRepository historyRepository;
     private final PortfolioPositionRepository positionRepository;
     private final YahooFinanceChartClient chartClient;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     /** Writes the refreshed price of a held position as today's value. Wishlist items get no history (spec 023). */
     @Transactional
     public void recordTodaysPrice(PortfolioPosition position) {
-        if (!position.isHeld() || position.getPriceSymbol() == null || !isPositive(position.getLastPrice())) {
+        if (!position.isHeld() || position.getPriceSymbol() == null || !isStorable(position.getLastPrice())) {
             return;
         }
         historyRepository.upsertDailyPrice(UUID.randomUUID(), position.getPriceSymbol(), today(),
-                position.getLastPrice(), clock.instant());
+                toStoredPrice(position.getLastPrice()), clock.instant());
     }
 
     /**
      * Pulls the ten-year daily history of a held position whose symbol has no day before today. The refresh records
      * today's price before this runs, so checking for any row would skip the backfill for every new holding.
      */
-    @Transactional
     public void backfillIfMissing(PortfolioPosition position) {
         if (!position.isHeld() || position.getPriceSymbol() == null) {
             return;
@@ -78,13 +83,21 @@ public class PriceHistoryService {
         storeDailyHistory(position.getPriceSymbol());
     }
 
-    /** Re-pulls the history of held positions whose newest row is older than the previous weekday (gap repair). */
-    @Transactional
+    /**
+     * Re-pulls the history of held positions whose newest row is older than the previous weekday (gap repair). One
+     * symbol failing is logged and the others still run; a rate limit stops the pass.
+     */
     public void repairStaleSymbols() {
         LocalDate expectedNewestDay = previousWeekday(today());
         for (PortfolioPosition position : positionRepository.findAllByShareCountIsNotNullOrderByTickerAsc()) {
             if (position.getPriceSymbol() != null && isStale(position.getPriceSymbol(), expectedNewestDay)) {
-                storeDailyHistory(position.getPriceSymbol());
+                try {
+                    storeDailyHistory(position.getPriceSymbol());
+                } catch (PriceSourceRateLimitedException exception) {
+                    throw exception;
+                } catch (RuntimeException exception) {
+                    log.warn("Could not repair the history of {}: {}", position.getPriceSymbol(), exception.getMessage());
+                }
             }
         }
     }
@@ -109,7 +122,10 @@ public class PriceHistoryService {
                 lastRecordedAt(position.getPriceSymbol()));
     }
 
-    /** Pulls the daily closes of a symbol and stores them in euro. A currency without a rate series stores nothing. */
+    /**
+     * Fetches and converts a symbol's daily closes outside any transaction, then writes them in one short transaction.
+     * A currency without a rate series stores nothing.
+     */
     private void storeDailyHistory(String priceSymbol) {
         Optional<YahooDailyHistory> history = chartClient.fetchDailyHistory(priceSymbol);
         if (history.isEmpty()) {
@@ -121,8 +137,13 @@ public class PriceHistoryService {
 
             return;
         }
+        List<EuroDailyPrice> prices = euroPrices.get();
         Instant recordedAt = clock.instant();
-        for (EuroDailyPrice euroPrice : euroPrices.get()) {
+        transactionTemplate.executeWithoutResult(status -> writeDailyPrices(priceSymbol, prices, recordedAt));
+    }
+
+    private void writeDailyPrices(String priceSymbol, List<EuroDailyPrice> prices, Instant recordedAt) {
+        for (EuroDailyPrice euroPrice : prices) {
             historyRepository.upsertDailyPrice(UUID.randomUUID(), priceSymbol, euroPrice.date(),
                     euroPrice.priceInEuro(), recordedAt);
         }
@@ -131,8 +152,8 @@ public class PriceHistoryService {
     private Optional<List<EuroDailyPrice>> toEuroDailyPrices(YahooDailyHistory history) {
         if (EURO.equals(history.currency())) {
             return Optional.of(history.bars().stream()
-                    .filter(bar -> isPositive(bar.close()))
-                    .map(bar -> new EuroDailyPrice(bar.date(), bar.close()))
+                    .filter(bar -> isStorable(bar.close()))
+                    .map(bar -> new EuroDailyPrice(bar.date(), toStoredPrice(bar.close())))
                     .toList());
         }
         boolean pence = PENCE.equals(history.currency());
@@ -148,14 +169,19 @@ public class PriceHistoryService {
         List<EuroDailyPrice> euroPrices = new ArrayList<>();
         for (YahooBar bar : bars) {
             Map.Entry<LocalDate, BigDecimal> rate = dailyRates.floorEntry(bar.date());
-            if (isPositive(bar.close()) && rate != null) {
-                euroPrices.add(new EuroDailyPrice(bar.date(), euroValue(bar.close(), rate.getValue(), pence)));
+            if (bar.close() == null || rate == null) {
+                continue;
+            }
+            BigDecimal priceInEuro = toStoredPrice(euroValue(bar.close(), rate.getValue(), pence));
+            if (isStorable(priceInEuro)) {
+                euroPrices.add(new EuroDailyPrice(bar.date(), priceInEuro));
             }
         }
 
         return euroPrices;
     }
 
+    /** Rates stay unrounded: rounding them would lose precision before the product is stored. */
     private static NavigableMap<LocalDate, BigDecimal> closesByDate(YahooDailyHistory rates) {
         NavigableMap<LocalDate, BigDecimal> closes = new TreeMap<>();
         for (YahooBar bar : rates.bars()) {
@@ -208,6 +234,16 @@ public class PriceHistoryService {
         }
 
         return candidate;
+    }
+
+    /** The value as the database will hold it: four decimals, rounded half up. */
+    private static BigDecimal toStoredPrice(BigDecimal price) {
+        return price.setScale(STORED_SCALE, RoundingMode.HALF_UP);
+    }
+
+    /** A price the database accepts: positive once rounded to its stored scale. */
+    private static boolean isStorable(BigDecimal price) {
+        return price != null && toStoredPrice(price).signum() > 0;
     }
 
     private static boolean isPositive(BigDecimal value) {

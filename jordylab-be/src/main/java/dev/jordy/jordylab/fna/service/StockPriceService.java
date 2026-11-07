@@ -80,7 +80,7 @@ public class StockPriceService {
                         position.updatePriceSymbol(resolved.symbol());
                         position.updateLastPrice(resolved.priceInEuro(), Instant.now());
                         positionRepository.save(position);
-                        priceHistoryService.recordTodaysPrice(position);
+                        recordHistory(position);
                     },
                     () -> log.warn("No euro price found for {}", position.getTicker()));
 
@@ -90,7 +90,7 @@ public class StockPriceService {
                 price -> {
                     position.updateLastPrice(price, Instant.now());
                     positionRepository.save(position);
-                    priceHistoryService.recordTodaysPrice(position);
+                    recordHistory(position);
                 },
                 () -> log.debug("Retaining cached price for {}", position.getTicker()));
     }
@@ -104,15 +104,40 @@ public class StockPriceService {
         keepPriceHistoryCurrent(positions);
     }
 
-    /** A rate-limited price source stops the history work for this cycle only; the next cycle retries it. */
-    private void keepPriceHistoryCurrent(List<PortfolioPosition> positions) {
+    /**
+     * Records today's price for a held position. A history write must not stop the price refresh of the other positions,
+     * so a failure here is logged and the cycle continues.
+     */
+    private void recordHistory(PortfolioPosition position) {
         try {
-            for (PortfolioPosition position : positions) {
+            priceHistoryService.recordTodaysPrice(position);
+        } catch (RuntimeException exception) {
+            log.warn("Could not record today's price for {}: {}", position.getTicker(), exception.getMessage());
+        }
+    }
+
+    /**
+     * Backfills and repairs the history after prices. Each symbol is isolated: one failing symbol is logged and the rest
+     * still run. A rate-limited price source stops the history work for this cycle only; the next cycle retries it.
+     */
+    private void keepPriceHistoryCurrent(List<PortfolioPosition> positions) {
+        for (PortfolioPosition position : positions) {
+            try {
                 priceHistoryService.backfillIfMissing(position);
+            } catch (PriceSourceRateLimitedException exception) {
+                log.warn("Price history paused until the next refresh cycle: {}", exception.getMessage());
+
+                return;
+            } catch (RuntimeException exception) {
+                log.warn("Could not backfill the history of {}: {}", position.getTicker(), exception.getMessage());
             }
+        }
+        try {
             priceHistoryService.repairStaleSymbols();
         } catch (PriceSourceRateLimitedException exception) {
             log.warn("Price history paused until the next refresh cycle: {}", exception.getMessage());
+        } catch (RuntimeException exception) {
+            log.warn("Could not repair the price history: {}", exception.getMessage());
         }
     }
 

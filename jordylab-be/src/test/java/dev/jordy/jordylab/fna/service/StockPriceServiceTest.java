@@ -17,6 +17,7 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -303,5 +304,41 @@ class StockPriceServiceTest {
         stockPriceService.refreshAllPrices();
 
         verify(priceHistoryService, never()).repairStaleSymbols();
+    }
+
+    @Test
+    void aFailingSymbolDoesNotStopTheBackfillOfTheOtherPositions() {
+        PortfolioPosition failing = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .id(UUID.fromString("66666666-0000-0000-0000-000000000001"))
+                .ticker("AAA")
+                .priceSymbol("AAA")
+                .build();
+        PortfolioPosition healthy = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .id(UUID.fromString("66666666-0000-0000-0000-000000000002"))
+                .ticker("BBB")
+                .priceSymbol("BBB")
+                .build();
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(failing, healthy));
+        doThrow(new IllegalStateException("value rejected by the database")).when(priceHistoryService).backfillIfMissing(failing);
+
+        stockPriceService.refreshAllPrices();
+
+        verify(priceHistoryService).backfillIfMissing(healthy);
+        verify(priceHistoryService).repairStaleSymbols();
+    }
+
+    @Test
+    void aFailedHistoryWriteDoesNotStopThePriceRefresh() {
+        stubChart("KBC.BR", "65.50", "EUR");
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .ticker("KBC.BR")
+                .priceSymbol("KBC.BR")
+                .build();
+        doThrow(new IllegalStateException("value rejected by the database")).when(priceHistoryService).recordTodaysPrice(held);
+
+        stockPriceService.refresh(held);
+
+        verify(positionRepository).save(held);
+        assertThat(held.getLastPrice()).isEqualByComparingTo("65.50");
     }
 }

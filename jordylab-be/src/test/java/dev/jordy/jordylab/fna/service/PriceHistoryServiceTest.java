@@ -16,8 +16,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.SoftAssertions.assertSoftly;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNotNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,11 +58,15 @@ class PriceHistoryServiceTest {
     @Mock
     private YahooFinanceChartClient chartClient;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     private PriceHistoryService service;
 
     @BeforeEach
     void setUp() {
-        service = new PriceHistoryService(historyRepository, positionRepository, chartClient, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new PriceHistoryService(historyRepository, positionRepository, chartClient,
+                Clock.fixed(NOW, ZoneOffset.UTC), new TransactionTemplate(transactionManager));
     }
 
     @Test
@@ -73,7 +81,7 @@ class PriceHistoryServiceTest {
         service.recordTodaysPrice(held);
 
         verify(historyRepository).upsertDailyPrice(generatedIds.capture(), eq(SYMBOL),
-                eq(LocalDate.of(2026, 11, 7)), eq(new BigDecimal("1250.00")), eq(NOW));
+                eq(LocalDate.of(2026, 11, 7)), eq(new BigDecimal("1250.0000")), eq(NOW));
         assertThat(generatedIds.getAllValues()).doesNotContainNull();
     }
 
@@ -186,7 +194,7 @@ class PriceHistoryServiceTest {
         service.repairStaleSymbols();
 
         verify(historyRepository).upsertDailyPrice(generatedIds.capture(), eq(SYMBOL), eq(FRIDAY),
-                eq(new BigDecimal("1010.00")), eq(NOW));
+                eq(new BigDecimal("1010.0000")), eq(NOW));
         assertThat(generatedIds.getAllValues()).doesNotContainNull();
     }
 
@@ -269,6 +277,42 @@ class PriceHistoryServiceTest {
 
         assertThatThrownBy(() -> service.readWindow(wishlistItem.getId(), PriceHistoryPeriod.ONE_YEAR))
                 .isInstanceOf(PositionNotHeldException.class);
+    }
+
+    @Test
+    void theYahooFetchHappensBeforeAnyTransactionOpens() {
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore(SYMBOL, TODAY)).thenReturn(false);
+        when(chartClient.fetchDailyHistory(SYMBOL)).thenReturn(Optional.of(new YahooDailyHistory("EUR", List.of(
+                new YahooBar(WEDNESDAY, new BigDecimal("1000.00"))))));
+
+        service.backfillIfMissing(heldPosition());
+
+        InOrder order = inOrder(chartClient, transactionManager);
+        order.verify(chartClient).fetchDailyHistory(SYMBOL);
+        order.verify(transactionManager).getTransaction(isNotNull());
+    }
+
+    @Test
+    void roundsStoredPricesToFourDecimalsAndSkipsAValueThatRoundsToZero() {
+        when(historyRepository.existsByPriceSymbolAndPriceDateBefore(SYMBOL, TODAY)).thenReturn(false);
+        when(chartClient.fetchDailyHistory(SYMBOL)).thenReturn(Optional.of(new YahooDailyHistory("EUR", List.of(
+                new YahooBar(WEDNESDAY, new BigDecimal("0.00001")),
+                new YahooBar(FRIDAY, new BigDecimal("1010.123456"))))));
+        ArgumentCaptor<UUID> generatedIds = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<LocalDate> dates = ArgumentCaptor.forClass(LocalDate.class);
+        ArgumentCaptor<BigDecimal> prices = ArgumentCaptor.forClass(BigDecimal.class);
+
+        service.backfillIfMissing(heldPosition());
+
+        verify(historyRepository, times(1)).upsertDailyPrice(generatedIds.capture(), eq(SYMBOL),
+                dates.capture(), prices.capture(), eq(NOW));
+        assertSoftly(softly -> {
+            softly.assertThat(generatedIds.getAllValues()).doesNotContainNull();
+            softly.assertThat(dates.getAllValues()).containsExactly(FRIDAY);
+            softly.assertThat(prices.getAllValues()).usingElementComparator(BigDecimal::compareTo)
+                    .containsExactly(new BigDecimal("1010.1235"));
+            softly.assertThat(prices.getAllValues().getFirst().scale()).isEqualTo(4);
+        });
     }
 
     private static PortfolioPosition heldPosition() {
