@@ -207,11 +207,14 @@ skips a target older than the live release (a slow build that finishes late); a 
 an older target a rollback.
 
 1. Merge to `main`. `build.yml` tests, scans and publishes `ghcr.io/jordy-swinnen/jordylab-*:sha-<full-sha>`, and while
-   `AUTO_DEPLOY` is `true` it then calls the Compose workflow with that commit. Before publishing, a `main` build also runs
-   the live LibBot golden tier (`golden-live`: 31 real-model questions and 4 descriptions, spec 013 FR-018); a red tier
-   fails `build-and-push`, so it stops the automatic deploy. The recorded replay tier still runs in `test-backend` on every
-   PR. The job needs the `OPENROUTER_API_KEY` and `ANTHROPIC_API_KEY` repository secrets and costs roughly 110k tokens per
-   `main` build; it fails, rather than skips, when the gateway key is missing.
+   `AUTO_DEPLOY` is `true` it then calls the Compose workflow with that commit. Before publishing, a `main` build runs
+   the live LibBot golden tier (`golden-live`: 31 real-model questions and 4 descriptions, spec 013 FR-018) only when the
+   push changes AI code (`shared/ai`, LibBot, `EnrichmentService`, the prompts, `application.yaml`); a red tier then fails
+   `build-and-push`, so it stops the automatic deploy. Other pushes skip it, so an ordinary release spends no model tokens
+   (a run costs roughly 110k). `golden-live.yml` also runs the tier on demand and every Monday at 06:00 UTC to catch model
+   drift; a red run there reports only. The recorded replay tier still runs in `test-backend` on every PR. The job needs the
+   `OPENROUTER_API_KEY` and `ANTHROPIC_API_KEY` repository secrets; a run that is required to test AI code fails, rather
+   than skips, when the gateway key is missing.
 2. A manual deploy uses the same workflow: GitHub → Actions → *Deploy to Production (Compose)* → *Run workflow*, or from a
    terminal:
    ```
