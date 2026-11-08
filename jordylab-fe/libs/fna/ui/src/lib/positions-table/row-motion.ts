@@ -1,0 +1,38 @@
+/**
+ * The motion of a table row that gives way to its history row (used with `animate.enter` and `animate.leave`).
+ * The row fades out as the history row fades in, and fades back in when it closes. Reduced motion skips it.
+ */
+export const ROW_MOTION_STYLES = `
+  .row-enter {
+    animation: row-fade-in 260ms ease-out both;
+  }
+
+  .row-leave {
+    animation: row-fade-out 200ms ease-in both;
+  }
+
+  @keyframes row-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes row-fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .row-enter,
+    .row-leave {
+      animation: none;
+    }
+  }
+`;

@@ -1,15 +1,13 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
-  ElementRef,
-  inject,
   input,
   output,
   signal,
-  ChangeDetectionStrategy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import {
   PortfolioPositionRow,
   PriceHistory,
@@ -21,16 +19,11 @@ import {
   PageHeaderComponent,
 } from '@jordylab-fe/shared/layout';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
-import { PriceHistoryPanelComponent } from '../price-history';
-
-/** Swatch colours, assigned by row position so the allocation bar and the table agree. */
-const SWATCHES = [
-  'bg-series-1',
-  'bg-series-2',
-  'bg-series-3',
-  'bg-series-4',
-  'bg-muted-foreground',
-];
+import {
+  HoldingsTableComponent,
+  swatchFor,
+  WishlistTableComponent,
+} from '../positions-table';
 
 interface AllocationSegment {
   ticker: string;
@@ -43,12 +36,12 @@ interface AllocationSegment {
   standalone: true,
   imports: [
     FormsModule,
-    DatePipe,
     DecimalPipe,
     HlmButtonDirective,
     EmptyStateComponent,
     PageHeaderComponent,
-    PriceHistoryPanelComponent,
+    HoldingsTableComponent,
+    WishlistTableComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager-view.component.html',
@@ -74,11 +67,6 @@ export class PortfolioManagerViewComponent {
   historyPeriodSelected = output<PriceHistoryPeriod>();
   historyRetry = output<void>();
 
-  readonly #host = inject<ElementRef<HTMLElement>>(ElementRef);
-
-  protected readonly swatch = (index: number): string =>
-    SWATCHES[index % SWATCHES.length];
-
   /** Share of total value per priced position; positions without a price have no slice. */
   protected readonly allocation = computed<AllocationSegment[]>(() => {
     const priced = this.positions()
@@ -91,37 +79,14 @@ export class PortfolioManagerViewComponent {
 
     return priced.map(({ position, index }) => ({
       ticker: position.ticker,
-      swatch: this.swatch(index),
+      swatch: swatchFor(index),
       percent: total === 0 ? 0 : ((position.value ?? 0) / total) * 100,
     }));
   });
 
-  /** The open history belongs to a holding or to a wishlist item, and its panel sits under that table. */
-  protected readonly openedInHoldings = computed(() =>
-    this.positions().some(
-      (position) => position.id === this.openedPositionId(),
-    ),
-  );
-
-  protected readonly openedInWishlist = computed(() =>
-    this.wishlist().some((item) => item.id === this.openedPositionId()),
-  );
-
-  protected readonly openedTicker = computed(
-    () =>
-      this.positions().find(
-        (position) => position.id === this.openedPositionId(),
-      )?.ticker ??
-      this.wishlist().find((item) => item.id === this.openedPositionId())
-        ?.ticker ??
-      '',
-  );
-
   newTicker = signal('');
   newShares = signal<number | null>(null);
   newWishlistTicker = signal('');
-  promotingId = signal<string | null>(null);
-  promoteShares = signal<number | null>(null);
 
   onAddPosition(): void {
     const ticker = this.newTicker();
@@ -139,37 +104,5 @@ export class PortfolioManagerViewComponent {
 
     this.addWishlistItem.emit(ticker);
     this.newWishlistTicker.set('');
-  }
-
-  startPromoting(item: WishlistItem): void {
-    this.promotingId.set(item.id);
-    this.promoteShares.set(null);
-  }
-
-  cancelPromoting(): void {
-    this.promotingId.set(null);
-    this.promoteShares.set(null);
-  }
-
-  /** Closing returns focus to the History button of the same holding, so keyboard users keep their place. */
-  closeHistoryPanel(): void {
-    const positionId = this.openedPositionId();
-    this.closeHistory.emit();
-    if (positionId) {
-      this.#host.nativeElement
-        .querySelector<HTMLButtonElement>(
-          `[data-history-button="${positionId}"]`,
-        )
-        ?.focus();
-    }
-  }
-
-  /** Moves a wishlist ticker into held positions, keeping the row (and its cached price) in place. */
-  confirmPromoting(item: WishlistItem): void {
-    const shares = this.promoteShares();
-    if (shares === null || shares <= 0) return;
-
-    this.addPosition.emit({ ticker: item.ticker, shares });
-    this.cancelPromoting();
   }
 }

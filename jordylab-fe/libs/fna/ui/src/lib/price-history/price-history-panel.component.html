@@ -1,5 +1,5 @@
 <section
-  class="border-t border-border px-5 py-6 sm:px-7"
+  class="px-5 py-6 sm:px-7"
   aria-labelledby="price-history-heading"
   [attr.aria-busy]="isLoading()"
   data-testid="price-history-panel"
@@ -50,12 +50,6 @@
           [points]="loaded.points"
           [label]="chartLabel(summary)"
         />
-        <div
-          class="mt-2 flex justify-between text-[13px] tabular-nums text-muted-foreground"
-        >
-          <span>{{ summary.startDate | date: 'd MMM y' }}</span>
-          <span>{{ summary.endDate | date: 'd MMM y' }}</span>
-        </div>
         @if (startsAfterWindow()) {
           <p class="mt-2 text-[13px] text-secondary-foreground">
             History starts on {{ loaded.dataStartDate | date: 'd MMM y' }}.

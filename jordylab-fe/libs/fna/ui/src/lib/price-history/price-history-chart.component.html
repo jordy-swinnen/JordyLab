@@ -1,72 +1,126 @@
 @if (coordinates().length > 1) {
-  <div class="relative">
-    <svg
-      [attr.viewBox]="viewBox"
-      role="img"
-      [attr.aria-label]="label()"
-      class="block h-auto w-full touch-pan-y"
-      (pointermove)="pointerMoved($event)"
-      (pointerdown)="pointerMoved($event)"
-      (pointerleave)="pointerLeft()"
-      (pointercancel)="pointerLeft()"
-    >
-      <line
-        [attr.x1]="horizontalMargin"
-        [attr.x2]="viewWidth - horizontalMargin"
-        [attr.y1]="baselineY"
-        [attr.y2]="baselineY"
-        class="stroke-border"
-        stroke-width="1"
-      />
-      <polyline
-        [attr.points]="polyline()"
-        fill="none"
-        class="stroke-series-1"
-        stroke-width="2"
-        stroke-linejoin="round"
-        stroke-linecap="round"
-      />
-      @if (endPoint(); as end) {
-        <circle
-          [attr.cx]="end.x"
-          [attr.cy]="end.y"
-          [attr.r]="endDotRadius"
-          class="fill-series-1"
-        />
-      }
-      @if (hovered(); as marker) {
-        <line
-          [attr.x1]="marker.x"
-          [attr.x2]="marker.x"
-          [attr.y1]="verticalMargin"
-          [attr.y2]="baselineY"
-          class="stroke-muted-foreground"
-          stroke-width="1"
-          stroke-dasharray="3 3"
-        />
-        <circle
-          [attr.cx]="marker.x"
-          [attr.cy]="marker.y"
-          [attr.r]="endDotRadius"
-          class="fill-series-1 stroke-card"
-          stroke-width="2"
-        />
-      }
-    </svg>
-    @if (hovered(); as marker) {
-      <div
-        class="pointer-events-none absolute top-0 whitespace-nowrap rounded-[10px] border border-border bg-card px-3 py-2 text-xs shadow-sm"
-        data-testid="price-history-readout"
-        [style.left.%]="marker.leftPercent"
-        [style.transform]="marker.transform"
+  @for (key of [drawKey()]; track key) {
+    <div class="relative w-full">
+      <svg
+        [attr.viewBox]="viewBox()"
+        role="img"
+        [attr.aria-label]="label()"
+        class="block w-full touch-pan-y"
+        (pointermove)="pointerMoved($event)"
+        (pointerdown)="pointerMoved($event)"
+        (pointerleave)="pointerLeft()"
+        (pointercancel)="pointerLeft()"
       >
-        <p class="text-[15px] font-semibold tabular-nums text-foreground">
-          €{{ marker.priceInEuro | number: '1.2-2' }}
-        </p>
-        <p class="tabular-nums text-muted-foreground">
-          {{ marker.date | date: 'd MMM y' }}
-        </p>
-      </div>
-    }
-  </div>
+        <defs>
+          <linearGradient [attr.id]="gradientId" x1="0" x2="0" y1="0" y2="1">
+            <stop
+              offset="0"
+              [style.stop-color]="'hsl(var(--series-1))'"
+              stop-opacity="0.28"
+            />
+            <stop
+              offset="1"
+              [style.stop-color]="'hsl(var(--series-1))'"
+              stop-opacity="0"
+            />
+          </linearGradient>
+        </defs>
+        <g class="price-axis">
+          @for (tick of priceTicks(); track tick.value) {
+            <line
+              [attr.x1]="plotLeft"
+              [attr.x2]="plotRight()"
+              [attr.y1]="tick.y"
+              [attr.y2]="tick.y"
+              class="stroke-border"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+            />
+            <text
+              [attr.x]="priceAxisX()"
+              [attr.y]="tick.y + axisTextBaselineOffset"
+              class="fill-muted-foreground text-[11px] tabular-nums"
+            >
+              {{ tick.label }}
+            </text>
+          }
+          <line
+            [attr.x1]="plotLeft"
+            [attr.x2]="plotRight()"
+            [attr.y1]="plotBottom"
+            [attr.y2]="plotBottom"
+            class="stroke-border"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+          />
+          @for (dateLabel of dateLabels(); track $index) {
+            <text
+              [attr.x]="dateLabel.x"
+              [attr.y]="dateAxisY"
+              [attr.text-anchor]="dateLabel.anchor"
+              class="fill-muted-foreground text-[11px] tabular-nums"
+            >
+              {{ dateLabel.text }}
+            </text>
+          }
+        </g>
+        <path
+          class="price-area"
+          [attr.d]="areaPath()"
+          [attr.fill]="'url(#' + gradientId + ')'"
+        />
+        <polyline
+          class="price-line stroke-series-1"
+          [attr.points]="polyline()"
+          pathLength="1"
+          fill="none"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+        @if (endPoint(); as end) {
+          <circle
+            class="price-end-dot fill-series-1"
+            [attr.cx]="end.x"
+            [attr.cy]="end.y"
+            [attr.r]="endDotRadius"
+          />
+        }
+        @if (hovered(); as marker) {
+          <line
+            [attr.x1]="marker.x"
+            [attr.x2]="marker.x"
+            [attr.y1]="plotTop"
+            [attr.y2]="plotBottom"
+            class="stroke-muted-foreground"
+            stroke-width="1"
+            stroke-dasharray="3 3"
+            vector-effect="non-scaling-stroke"
+          />
+          <circle
+            [attr.cx]="marker.x"
+            [attr.cy]="marker.y"
+            [attr.r]="endDotRadius"
+            class="fill-series-1 stroke-card"
+            stroke-width="2"
+          />
+        }
+      </svg>
+      @if (hovered(); as marker) {
+        <div
+          class="pointer-events-none absolute top-0 whitespace-nowrap rounded-[10px] border border-border bg-card px-3 py-2 text-xs shadow-sm"
+          data-testid="price-history-readout"
+          [style.left.%]="marker.leftPercent"
+          [style.transform]="marker.transform"
+        >
+          <p class="text-[15px] font-semibold tabular-nums text-foreground">
+            €{{ marker.priceInEuro | number: '1.2-2' }}
+          </p>
+          <p class="tabular-nums text-muted-foreground">
+            {{ marker.date | date: 'd MMM y' }}
+          </p>
+        </div>
+      }
+    </div>
+  }
 }
