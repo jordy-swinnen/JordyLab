@@ -141,7 +141,7 @@ Fill in as each check is run (date, machine, result, versions or numbers). Nothi
 | Check | Where | Date | Result | Notes |
 |-------|-------|------|--------|-------|
 | Q1 | Mac | 2026-11-08 | pass | Compose 5.7.0 (Homebrew bottle), provider `docker-compose`; only caddy publishes ports |
-| Q2 | Rehearsal | | | Versions: |
+| Q2 | Rehearsal | 2026-11-08 | pass | podman 5.7.0; docker-compose 2.40.3+ds1-0ubuntu1, sha256 8b7b2350… (arm64 pin); Ubuntu 26.04.1 aarch64; jordylab-deploy uid 1001, not in docker; Linger=yes; port sysctl 80; `podman ps` ok from a non-interactive ssh command. Finding: run `sudo -u` commands from a directory the account can read (`cd /tmp`), or it stops with "cannot chdir" |
 | Q3 | Rehearsal | | | |
 | Q4 | Rehearsal | | | |
 | Q5 | Rehearsal | | | |
