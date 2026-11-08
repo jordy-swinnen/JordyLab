@@ -120,7 +120,8 @@ jordylab-fe/libs/fna/ui/src/lib/
 ├── positions-table/                              NEW
 │   ├── holdings-table.component.ts/.html/.spec.ts  holdings rows; the open row is replaced by the history panel
 │   ├── wishlist-table.component.ts/.html/.spec.ts  wishlist rows, promote flow; same in-row panel
-│   └── row-motion.ts                              fade styles shared by both tables
+│   ├── history-focus.ts                           shared focus return on close
+│   └── row-motion.css                             fade styles shared by both tables
 └── price-history/                                NEW
     ├── price-history-panel.component.ts/.html     presentational: period buttons, figures, close
     ├── price-history-chart.component.ts/.html     presentational: inline SVG line chart

@@ -62,6 +62,22 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
 
         expect(await violationsOf(page)).toEqual([]);
       });
+
+      // The History panel replaces a holding's row, so the open panel is checked too (spec 023). Each screen adds its own
+      // ticker because the e2e database is shared by every test of a run.
+      test('the portfolio with a holding history open has no violations', async ({ page }) => {
+        const holdingTicker = { desktop: 'NOK', phone: 'AMD' }[screen.name];
+        await page.goto('/fna/portfolio');
+        await page.getByRole('textbox', { name: 'Ticker', exact: true }).fill(holdingTicker);
+        await page.getByRole('spinbutton', { name: 'Shares', exact: true }).fill('2');
+        await page.getByRole('button', { name: 'Add position', exact: true }).click();
+        await page.getByRole('button', { name: `History for ${holdingTicker}`, exact: true }).click();
+        await expect(
+          page.getByTestId('price-history-panel').getByRole('heading', { name: holdingTicker, exact: true }),
+        ).toBeFocused();
+
+        expect(await violationsOf(page)).toEqual([]);
+      });
     });
   }
 

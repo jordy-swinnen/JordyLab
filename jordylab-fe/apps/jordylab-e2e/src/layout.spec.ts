@@ -32,6 +32,15 @@ async function offendersOf(page: Page): Promise<string[]> {
   });
 }
 
+// Adds a holding through the form (the price may stay unresolved; the holding is still saved).
+async function addHolding(page: Page, ticker: string): Promise<void> {
+  await page.goto('/fna/portfolio');
+  await page.getByRole('textbox', { name: 'Ticker', exact: true }).fill(ticker);
+  await page.getByRole('spinbutton', { name: 'Shares', exact: true }).fill('2');
+  await page.getByRole('button', { name: 'Add position', exact: true }).click();
+  await expect(page.getByRole('button', { name: `History for ${ticker}`, exact: true })).toBeVisible();
+}
+
 test.describe('No sideways scrolling on a phone', () => {
   for (const width of PHONE_WIDTHS) {
     test.describe(`${width} px wide`, () => {
@@ -138,6 +147,28 @@ test.describe('No sideways scrolling on a phone', () => {
 
         expect(box).not.toBeNull();
         expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+      });
+
+      // The History panel replaces the holding's row, so it must fit the screen the same way (spec 023).
+      test('a holding with its history open fits the screen', async ({ page }) => {
+        const holdingTicker = { 360: 'INTC', 390: 'BAYN', 430: 'TSLA' }[width];
+        await addHolding(page, holdingTicker);
+        await page.getByRole('button', { name: `History for ${holdingTicker}`, exact: true }).click();
+        await expect(page.getByTestId('price-history-panel')).toBeVisible();
+
+        expect(await offendersOf(page)).toEqual([]);
+      });
+
+      // Phones have no hover, and Remove is hidden until hover only from 640 px up, so it must show here without hover.
+      test('the Remove button of a holding shows without hover', async ({ page }) => {
+        const holdingTicker = { 360: 'NFLX', 390: 'ORCL', 430: 'AMZN' }[width];
+        await addHolding(page, holdingTicker);
+        const remove = page
+          .getByRole('region', { name: 'Positions table', exact: true })
+          .locator('tr', { hasText: holdingTicker })
+          .getByRole('button', { name: 'Remove', exact: true });
+
+        await expect(remove).toHaveCSS('opacity', '1');
       });
     });
   }
