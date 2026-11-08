@@ -1,0 +1,9 @@
+# SpecKit extension hooks. speckit-specify reads hooks.before_specify before its Outline, and runs each
+# mandatory hook as the skill named by its command (dots become hyphens: kaneo.start-ticket -> /kaneo-start-ticket).
+hooks:
+  before_specify:
+    - extension: kaneo
+      command: kaneo.start-ticket
+      enabled: true
+      optional: false
+      description: Move the JOR ticket to In progress when /speckit-specify starts on it

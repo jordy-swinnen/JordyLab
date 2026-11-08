@@ -46,17 +46,22 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 - Drafts live in `specs/_drafts/<short-name>/` and carry **no numbers or codes** — not in folder names, titles, requirement or priority labels (use High/Medium/Low), and no references to other features by number. Drafts are written in any order; SpecKit assigns the spec number when a draft is specified. Name other features by what they are.
 - **Keeping the drawing and status current.** When a feature's last task is checked, or something is replaced, dropped or deployed differently, the same change updates: the architecture drawing in `README.md` (the Mermaid block, edited as text); the matching row and end-goal entry in `docs/status.md`; and `docs/ai-workflow.md` if the agent tooling, models or pipeline changed. Do it in the same change as the work, not later. Claude Code reads this file through `CLAUDE.md` and OpenCode reads it directly, so the rule holds in both tools.
 
-## Backlog (Linear)
+## Backlog (Kaneo)
 
-Ideas and new bugs are logged in Linear (team `JOR`), not in files: use the `backlog-capture` skill ("log an idea", "make
-a ticket for …", "turn this plan into tickets"; it previews, checks duplicates and creates in Backlog with one App and
-one Type label). `docs/testing/bug-log.md` stays as history and the campaign's log-first rule; `BUG-###` references stay
-valid. Specs, plans and tasks stay in git. Setup, labels, states and the connector steps for the Claude apps are in
-`docs/linear.md` (spec `specs/015-linear-backlog/`).
+The backlog is the self-hosted Kaneo board (`https://kaneo.jordylab.be`, project `JOR`), not files. Columns run `ideas` →
+`refinement` → `todo` → `in-progress` → `in-review` → `done`, plus `canceled`. `/kaneo-idea` captures a rough idea,
+`/kaneo-refinement` turns it into a Ready ticket and moves it to `todo`, and `/kaneo-design` settles architecture or UI
+decisions for tickets with a design label (`needs-design`, `needs-ui-design`; design is a label, not a column). The
+`kaneo-board` skill holds the shared conventions. `/speckit-specify JOR-<n>` starts from a `todo` ticket and moves it to
+`in-progress`. A merged pull request does not close its ticket: `done` is set by the owner. The full flow is in
+[docs/ai-workflow.md](docs/ai-workflow.md#ticket-flow-kaneo). `docs/testing/bug-log.md` stays as history and the
+campaign's log-first rule; `BUG-###` references stay valid. Specs, plans and tasks stay in git. Linear is history
+(`docs/linear.md`, `specs/015-linear-backlog/`); the production idea box still writes to Linear until the cutover in
+spec 022.
 
 ## Commits
 
-Every commit subject starts with its Linear ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
+Every commit subject starts with its Kaneo ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
 `Refs:` trailer naming the SpecKit artefact (`Refs: 015/T004`, `Refs: 011 BUG-020`, or `Refs: NO-CODE`). No ticket yet?
 Create one first with the `backlog-capture` skill. Pull requests use `.github/pull_request_template.md` and a linking
 word (`Fixes JOR-23` finishes the ticket, `Refs JOR-23` does not). The full rules, the `Refs:` token table and examples
