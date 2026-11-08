@@ -22,7 +22,7 @@ These were decided by the owner on 2026-11-02. They are inputs to this spec, not
 
 1. **Same host.** No second VPS. The move happens on the existing VPS.
 2. **Reverse proxy: Caddy.** Automatic TLS in the proxy.
-3. **Container engine: Docker Engine** with the Compose plugin on the server. Local development is moving from Podman to Docker as a separate change, not part of this feature.
+3. **Container engine: Docker Engine** with the Compose plugin on the server. Local development is moving from Podman to Docker as a separate change, not part of this feature. *Superseded by [spec 024](../024-podman-on-vps/spec.md) for the server: production runs rootless Podman, and local development stays on Podman.*
 4. **Downtime per release is accepted** at a few seconds, because a single host restarts the backend on each release. Deploys run on release tags only, not on merges to the main branch.
 5. **Port finding left to the move.** Two extra public TCP ports were found on the VPS. The k3s configuration is not patched for them. The Compose host gets the same port scan before cutover.
 6. **Rebuild check dropped.** The full rebuild from an empty VPS is not a success criterion.
@@ -166,7 +166,7 @@ The runbook, the operations skill and the devops agent describe the Compose stac
 
 - High availability, more than one server, or a change of hosting provider.
 - Kubernetes for anything else.
-- The local development move from Podman to Docker, which is a separate change.
+- The local development move from Podman to Docker, which is a separate change. (Dropped by spec 024: local development stays on Podman.)
 - The separate authentication change that removes Keycloak.
 - Changes to the continuous deployment flow beyond pointing it at the Compose host. The deploy-on-green-main work is a separate ticket.
 

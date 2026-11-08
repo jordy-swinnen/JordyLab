@@ -12,6 +12,10 @@
 # prod.env.previous keeps the environment file that was live before the last deploy, so a rollback can restore it.
 set -euo pipefail
 
+script_directory=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=podman-env.sh
+. "$script_directory/podman-env.sh"
+
 readonly jordylab_home=/opt/jordylab
 readonly compose_dir=$jordylab_home/compose
 readonly compose_file=$compose_dir/compose.yaml
@@ -48,7 +52,7 @@ write_state() {
 }
 
 compose() {
-  docker compose --env-file "$env_file" -f "$compose_file" "$@"
+  podman compose --env-file "$env_file" -f "$compose_file" "$@"
 }
 
 # Pulls and starts the release. Postgres, ntfy and Caddy are not restarted, so a release causes a few seconds of

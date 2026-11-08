@@ -1,6 +1,9 @@
 # Production stack on the VPS (spec 020, research R1, R2, R7, R8). Only caddy publishes ports.
 # Every value comes from the environment file (names in env/prod.env.example). No value is written here.
-# The host runs it as: docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml ...
+# The host runs it as: podman compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml ...
+# (spec 024: the engine is rootless Podman under the deploy account; the Compose client is the Docker Compose v2 one.)
+# restart: always, not unless-stopped: Podman has no daemon to restart containers, and the boot restart unit is
+# known to start always containers (spec 024, research R3).
 # JORDYLAB_RELEASE (the release: a tag, or sha-<commit>) is exported by scripts/deploy-release.sh before each run.
 name: jordylab
 
@@ -13,7 +16,7 @@ x-logging: &logging
 services:
   caddy:
     image: caddy:2.11.7-alpine@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5
-    restart: unless-stopped
+    restart: always
     mem_limit: 128m
     logging: *logging
     ports:
@@ -42,7 +45,7 @@ services:
 
   frontend:
     image: ghcr.io/jordy-swinnen/jordylab-frontend:${JORDYLAB_RELEASE}
-    restart: unless-stopped
+    restart: always
     mem_limit: 64m
     logging: *logging
     healthcheck:
@@ -53,7 +56,7 @@ services:
 
   backend:
     image: ghcr.io/jordy-swinnen/jordylab-backend:${JORDYLAB_RELEASE}
-    restart: unless-stopped
+    restart: always
     mem_limit: 1536m
     logging: *logging
     environment:
@@ -107,7 +110,7 @@ services:
 
   ntfy:
     image: binwiederhier/ntfy:v2.28.0
-    restart: unless-stopped
+    restart: always
     mem_limit: 128m
     logging: *logging
     command: ["serve"]
@@ -124,10 +127,10 @@ services:
       context: .
       dockerfile: postgres/Containerfile
     image: jordylab-postgres:pg16-pgbackrest
-    restart: unless-stopped
+    restart: always
     mem_limit: 1024m
     logging: *logging
-    # Docker's default 64 MB /dev/shm is too small for PostgreSQL's shared memory use under parallel queries.
+    # The container default of 64 MB for /dev/shm is too small for PostgreSQL's shared memory use under parallel queries.
     shm_size: 256m
     environment:
       POSTGRES_DB: ${POSTGRES_DB}

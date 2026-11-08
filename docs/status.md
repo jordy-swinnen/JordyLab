@@ -1,6 +1,6 @@
 # Status: what is built, what is replaced, where it ends
 
-Last reviewed: 2026-11-05. Statuses are plain words derived from each item's work tracker (Done counts as
+Last reviewed: 2026-11-08. Statuses are plain words derived from each item's work tracker (Done counts as
 **Built**, in progress as **In progress**, everything not started as **Planned**). Open-task counts come from each
 feature's task list in `specs/`. The rule that keeps this page current is in
 [AGENTS.md](../AGENTS.md#workflow), under "Keeping the drawing and status current".
@@ -38,6 +38,7 @@ feature's task list in `specs/`. The rule that keeps this page current is in
 | Post-Keycloak housekeeping: secrets, database role, CI secrets | In progress | see the Replaced table |
 | Permanent agent test account, local and production | In progress | no task list |
 | Stock price history on the Portfolio page (spec 023) | In progress | 8 (see specs/023-portfolio-price-history/tasks.md) |
+| Production on rootless Podman, the same engine as local development (spec 024) | In progress | most of 59 tasks; see specs/024-podman-on-vps/tasks.md |
 
 ## Planned
 
@@ -61,6 +62,7 @@ Drafts that have no spec yet are in [`specs/_drafts/`](../specs/_drafts/).
 | Keycloak for sign-in | Built-in sign-in with passwords and passkeys | Built. Cleanup of leftover secrets, database role and CI secrets in progress. |
 | Capacitor Android app (APK) | Progressive web app | Built |
 | Local model inference (Ollama) | OpenRouter, with Anthropic as fallback | Removed on 2026-09-30 |
+| Docker Engine on the production VPS | Rootless Podman, the same engine as local development (spec 024) | In progress. Docker Engine is removed after the soak period. |
 | Home Assistant prototype for Eufy | Custom Android widget | Planned |
 | Linear as the ticket tracker | Self-hosted Kaneo | Planned. Not started; Linear is still the tracker. |
 | AI prompts kept in code | Prompts managed in Langfuse | Planned |

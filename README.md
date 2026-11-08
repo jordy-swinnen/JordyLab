@@ -6,7 +6,7 @@ recipe management — a modular monolith with a separate frontend and Python sid
 
 ## Architecture
 
-Production is one Docker Compose stack on a single OVH VPS, served at **https://jordylab.be**. Caddy terminates
+Production is one Compose stack, running on rootless Podman, on a single OVH VPS, served at **https://jordylab.be**. Caddy terminates
 TLS and is the only service that publishes ports. Local development runs the backend and Postgres with Podman
 Compose (see below).
 
@@ -31,7 +31,7 @@ flowchart LR
         build -- "green main, AUTO_DEPLOY=true" --> deploy["deploy-prod-compose.yml<br/>(also run by hand)"]
     end
 
-    subgraph vps["OVH VPS · Docker Compose"]
+    subgraph vps["OVH VPS · Podman Compose"]
         caddy["Caddy<br/>TLS · only public ports 80, 443"]
         fe["frontend<br/>nginx · Angular"]
         be["backend<br/>Spring Boot 4 · Java 25"]

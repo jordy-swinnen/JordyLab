@@ -1,9 +1,11 @@
 # Differential pgBackRest backup, Monday to Saturday (contracts/backup-contract.md). Output goes to the journal.
+# Runs as the deploy account, which owns the rootless Podman stack (spec 024, contracts/host-contract.md).
 [Unit]
 Description=JordyLab pgBackRest differential backup
-Requires=docker.service
-After=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml exec -T postgres pgbackrest --stanza=jordylab --type=diff backup
+User=jordylab-deploy
+# In a system unit %U is root's id, so the runtime directory is found from the account when the unit starts.
+# In systemd a single $ is expanded, so $$ passes a literal $ to the shell.
+ExecStart=/bin/sh -c 'XDG_RUNTIME_DIR=/run/user/$$(id -u) exec /usr/bin/podman exec jordylab-postgres-1 pgbackrest --stanza=jordylab --type=diff backup'
