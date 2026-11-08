@@ -10,9 +10,9 @@
       "command": "sh",
       "args": ["scripts/mcp/github-mcp.sh"]
     },
-    "linear": {
+    "kaneo": {
       "type": "http",
-      "url": "https://mcp.linear.app/mcp"
+      "url": "https://kaneo.jordylab.be/api/mcp"
     },
     "jordylab": {
       "type": "http",
