@@ -339,25 +339,35 @@ The newest backup of either kind must be within 24 hours, and the newest full ba
 
 **Restore to a point in time** into a throwaway container with no published ports and its own volume:
 
+Run this as root on the host (`sudo -i`, then paste the block). The container has no published ports, uses its own volume,
+and never mounts the live Postgres volume:
+
 ```bash
-sudo docker volume create jordylab-restore-drill
-sudo docker run --rm --name jordylab-restore-drill --env-file /opt/jordylab/env/prod.env \
+ENVF=/opt/jordylab/env/prod.env
+docker volume create jordylab-restore-drill
+# prod.env quotes every value ('...'). Docker's --env-file keeps those quotes as part of the value, so the S3 keys
+# would not match (the drill of 2026-11-07 failed that way). The sed strips them while the file is read; nothing is copied.
+docker run --rm --name jordylab-restore-drill \
+  --env-file <(sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\1=\2/" "$ENVF") \
   --mount type=volume,src=jordylab-restore-drill,dst=/var/lib/postgresql/data \
   --entrypoint bash jordylab-postgres:pg16-pgbackrest -c '
     pgbackrest --stanza=jordylab --type=time "--target=<UTC time>" --target-action=promote restore &&
-    pg_ctl -D /var/lib/postgresql/data -o "-p 5433" -w start &&
-    psql -p 5433 -U postgres -d jordylab -At -c "select count(*) from gamecatalog.game" &&
-    pg_ctl -D /var/lib/postgresql/data stop'
-sudo docker volume rm jordylab-restore-drill
+    pg_ctl -D /var/lib/postgresql/data -o "-p 5433 -k /tmp" -w start &&
+    psql -h /tmp -p 5433 -U postgres -d jordylab -At -c "select count(*) from gamecatalog.game" &&
+    psql -h /tmp -p 5433 -U postgres -d kaneo -At -c "select count(*) from task" &&
+    pg_ctl -D /var/lib/postgresql/data -m fast -w stop' </dev/null
+docker volume rm jordylab-restore-drill
 ```
 
-Pick a target time inside the window and after the first full backup, and write it down first. Compare the row counts
-with production, then log the drill below.
+Pick a target time inside the window and after the first full backup, and write it down first. To restore to the end of
+the archived WAL instead, use `--type=default` and drop `--target-action`: `--target-action` is refused without a time,
+lsn, name or xid target. Compare the row counts with production, then log the drill below.
 
 | Date | Restored to | Time to restore | Row counts match | By | Next due |
 |------|-------------|-----------------|------------------|----|----------|
 | 2026-10-01 | k3s era: base backup `cnpg-daily-backup-20261001030000` + WAL to ~09:53 UTC | 1 min 55 s | yes — `gamecatalog.game` 128/128, users 6/6, `flyway_schema_history` 20/20 | agent (approved by Jordy) | replaced by the Compose drill |
 | 2026-11-03 | the cutover window: `finance.article` at exactly its value at 20:38 UTC (823 vs 822 in the pre-window baseline) | inside the window; recorded in the cutover records | yes for the checked row | agent (approved by Jordy), in the cutover window | 2027-02-03 (quarterly) |
+| 2026-11-07 | end of the archived WAL (no time target), from the on-demand diff `20261103-203343F_20261107-214359D` (21:44 UTC) | 199 s | yes — `kaneo` database: `task` 4, `workspace` 1, `user` 1, `project` 1, the same as production | agent (approved by Jordy) | 2027-02-07 (quarterly) |
 
 Restores to a time **before** the cutover use the old CloudNativePG chain and the kept k3s manifests (backup contract,
 "The old chain"); pgBackRest cannot read it.
