@@ -17,5 +17,5 @@ public enum FeedbackType {
     IDEA("Idea", "Idea");
 
     private final String displayName;
-    private final String linearLabelName;
+    private final String backlogLabelName;
 }

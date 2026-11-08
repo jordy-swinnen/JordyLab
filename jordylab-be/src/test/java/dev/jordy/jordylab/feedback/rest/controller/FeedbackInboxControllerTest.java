@@ -5,7 +5,7 @@ import dev.jordy.jordylab.feedback.domain.FeedbackTicketState;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketTestBuilder;
 import dev.jordy.jordylab.feedback.service.AcceptTicketService;
 import dev.jordy.jordylab.feedback.service.FeedbackTriageService;
-import dev.jordy.jordylab.feedback.service.LinearUnavailableException;
+import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import dev.jordy.jordylab.feedback.service.TicketNotFoundException;
 import dev.jordy.jordylab.shared.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
@@ -144,8 +144,8 @@ class FeedbackInboxControllerTest {
     void acceptReturnsTheAcceptedTicketWithItsLinearLink() throws Exception {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.ACCEPTED)
-                .linearIssueId("issue-1")
-                .linearIssueUrl("https://linear.app/jordylab/issue/JOR-101")
+                .backlogTicketId("issue-1")
+                .backlogTicketUrl("https://linear.app/jordylab/issue/JOR-101")
                 .privateNote("Repro'd on CachyOS too.")
                 .build();
         when(acceptTicketService.accept(TICKET_ID, "Repro'd on CachyOS too.")).thenReturn(ticket);
@@ -157,15 +157,15 @@ class FeedbackInboxControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("ACCEPTED"))
-                .andExpect(jsonPath("$.linearIssueUrl").value("https://linear.app/jordylab/issue/JOR-101"));
+                .andExpect(jsonPath("$.backlogTicketUrl").value("https://linear.app/jordylab/issue/JOR-101"));
     }
 
     @Test
     void acceptWithoutABodyCreatesTheIssueWithoutANote() throws Exception {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.ACCEPTED)
-                .linearIssueId("issue-1")
-                .linearIssueUrl("https://linear.app/jordylab/issue/JOR-101")
+                .backlogTicketId("issue-1")
+                .backlogTicketUrl("https://linear.app/jordylab/issue/JOR-101")
                 .build();
         when(acceptTicketService.accept(eq(TICKET_ID), eq(null))).thenReturn(ticket);
 
@@ -177,10 +177,10 @@ class FeedbackInboxControllerTest {
     @Test
     void aLinearFailureMapsToUnavailableAndKeepsTheErrorOnTheTicket() throws Exception {
         when(acceptTicketService.accept(TICKET_ID, null))
-                .thenThrow(new LinearUnavailableException("LINEAR_API_KEY is not configured"));
+                .thenThrow(new BacklogUnavailableException("LINEAR_API_KEY is not configured"));
 
         mockMvc.perform(post("/api/feedback/inbox/{id}/accept", TICKET_ID))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.reason").value("LINEAR_UNAVAILABLE"));
+                .andExpect(jsonPath("$.reason").value("BACKLOG_UNAVAILABLE"));
     }
 }

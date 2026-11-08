@@ -2,7 +2,7 @@
 # Fixture for repo_inventory.sh: builds a temporary tree of drafts and numbered specs, runs the inventory against it
 # (INVENTORY_ROOT) and asserts the JSON. No network, nothing outside the temp tree is read.
 #
-# Run standalone: bash .claude/skills/linear-sync-drafts/scripts/tests/inventory-cases.sh
+# Run standalone: bash .claude/skills/backlog-sync-drafts/scripts/tests/inventory-cases.sh
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

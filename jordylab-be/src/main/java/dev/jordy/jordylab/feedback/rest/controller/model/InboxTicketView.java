@@ -20,7 +20,7 @@ public record InboxTicketView(
         String privateNote,
         String sender,
         Instant createdAt,
-        String linearIssueUrl,
+        String backlogTicketUrl,
         String acceptError) {
 
     public static InboxTicketView from(FeedbackTicket ticket) {
@@ -35,7 +35,7 @@ public record InboxTicketView(
                 ticket.getPrivateNote(),
                 ticket.getSenderDisplayName(),
                 ticket.getCreatedDate(),
-                ticket.getLinearIssueUrl(),
+                ticket.getBacklogTicketUrl(),
                 ticket.getAcceptError());
     }
 }

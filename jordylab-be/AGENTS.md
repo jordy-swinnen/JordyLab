@@ -304,20 +304,14 @@ class SomeObjectTestBuilder {
   Rejected (Accepted and Rejected are terminal). One aggregate (`FeedbackTicket`), one module;
   `/api/feedback/tickets` + `/api/feedback/apps` are guest-only, `/api/feedback/inbox/**` admin-only — both gated in
   `SecurityConfig`, never by method security.
-- **Accepting a ticket creates exactly one Linear issue** in team `JOR` (Triage state, App/Type labels,
-  `Source: idea box`, no guest personal data) through `LinearClient`, a hand-built GraphQL JSON client over a
-  module-private `RestClient` with short timeouts. Auth is Jordy's **personal API key** (`LINEAR_API_KEY`, SOPS
-  secret in prod; unset means Accept fails fast with `503 LINEAR_UNAVAILABLE`). Idempotency: the ticket is loaded
-  under a pessimistic row lock across the Linear call; a ticket with `linear_issue_id` never calls Linear again,
-  and a retry after a recorded `accept_error` searches Linear first and adopts the issue a timed-out attempt
-  already created instead of making a second one.
+- **Accepting a ticket creates exactly one backlog ticket** (spec 022): a Kaneo task in project `JOR` (Triage column, App and Type labels, `Source: idea box`, no guest personal data) through `KaneoClient`, behind the `BacklogClient` interface. `jordylab.feedback.backlog.provider` (`BACKLOG_PROVIDER`) selects the client: `kaneo` by default, `linear` until the cutover (production keeps `linear` through a GitHub repository variable). A blank value matches neither client and fails at start-up, so the deploy always renders a value. `LinearClient` stays until the follow-up pull request (spec 022, User Story 7). Both clients are hand-built JSON clients over module-private `RestClient`s with short timeouts and throw `BacklogUnavailableException` (`503 BACKLOG_UNAVAILABLE`). Kaneo auth is the backend's own API key (`KANEO_API_KEY`, production environment secret; unset means Accept fails fast). Idempotency: the ticket is loaded under a pessimistic row lock across the backlog call; a ticket with `backlog_ticket_id` never calls the backlog again, and a retry after a recorded `accept_error` searches the backlog first (`findTicket`) and adopts the ticket a timed-out attempt already created, completing its labels, instead of making a second one. Kaneo labels are read fresh per accept (one row per task, so label ids are not cached).
 - **Notification**: the submission service calls the shared `NtfyClient` directly (the post-018 pattern — the
   mobile module and its event listener are gone): one push with sender, app and type, never the ticket text, and a
   click-through to `/settings/inbox`. `UserAccessRemoved` anonymises a deleted account's tickets (display name
   cleared, tickets kept).
 - Guest view vs admin view are separate DTO records: a guest response never carries the sender, the private
-  note, the Linear link or the accept error. Two admin texts per ticket: the guest-visible `reply` and the
-  `private_note` (the Accept note is that private note, snapshotted into the Linear issue).
+  note, the backlog link or the accept error. Two admin texts per ticket: the guest-visible `reply` and the
+  `private_note` (the Accept note is that private note, snapshotted into the backlog ticket).
 - Frontend: `libs/feedback/{api,ui}` (scope `feedback`); the host composes `/settings` as a children array —
   admin-and-guest guarded at the root, each tab re-guarded (`feedback` guest-only, `inbox` admin-only), with a
   role-aware default redirect. `settingsAdminRoutes` is exported by the settings lib for that composition.

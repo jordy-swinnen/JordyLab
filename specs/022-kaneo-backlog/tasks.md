@@ -180,7 +180,7 @@ the VPS (`import-report.md`).
 - [ ] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
       (`--dry-run` default, keys only from the environment, nothing printed but counts and ticket keys; spec link mapping
       from `repo_inventory.sh`); T030 passes.
-- [ ] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
+- [X] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
 - [ ] T033 [US3] OWNER [D]: announce the freeze (Claude project instructions and the Linear welcome note), make sure every piece
       of work in flight already has its `JOR-n`, the fix-up reads the Linear export from T034, so it needs no Linear key (decided 2026-11-07).
 - [ ] T034 [US3] OPERATIONS [D]: take a full Linear export (JSON) and store it in the Object Storage bucket under a separate prefix;
@@ -210,48 +210,48 @@ no key answers "backlog unavailable".
 
 ### Tests and build [B]
 
-- [ ] T039 [US5] Rename `LinearUnavailableException` to `BacklogUnavailableException` (all uses, including
+- [X] T039 [US5] Rename `LinearUnavailableException` to `BacklogUnavailableException` (all uses, including
       `FeedbackExceptionHandler`), change the response code to `BACKLOG_UNAVAILABLE` and the message to "The backlog is unreachable
       right now - the ticket stays as it was, so you can retry."; update `FeedbackExceptionHandler` tests and
       `FeedbackTicketControllerTest`/`FeedbackInboxControllerTest` first, then the code.
-- [ ] T040 [US5] Extract `jordylab-be/src/main/java/dev/jordy/jordylab/feedback/rest/client/BacklogClient.java` (interface,
+- [X] T040 [US5] Extract `jordylab-be/src/main/java/dev/jordy/jordylab/feedback/rest/client/BacklogClient.java` (interface,
       `BacklogTicket(String id, String url)` record) and make `LinearClient` implement it (its inner `LinearIssue` becomes
       `BacklogTicket`); `AcceptTicketService` depends on the interface; update `AcceptTicketServiceTest` and `LinearClientTest`.
-- [ ] T041 [US5] Extend `FeedbackProperties` with the `kaneo` record and `backlog.provider` per `data-model.md` section 2, defaults
+- [X] T041 [US5] Extend `FeedbackProperties` with the `kaneo` record and `backlog.provider` per `data-model.md` section 2, defaults
       as listed, and `application.yaml` (env names `BACKLOG_PROVIDER`, `KANEO_*`); add a properties test for defaults and
       blank handling.
-- [ ] T042 [US5] Select the client with `@ConditionalOnProperty("jordylab.feedback.backlog.provider")` (`kaneo` matches by default,
+- [X] T042 [US5] Select the client with `@ConditionalOnProperty("jordylab.feedback.backlog.provider")` (`kaneo` matches by default,
       `linear` selects the old one); test both selections and that exactly one `BacklogClient` bean exists (in
       `FeedbackModuleTest` or a slice test).
-- [ ] T043 [US5] Write `KaneoClientTest` first under `jordylab-be/src/test/java/dev/jordy/jordylab/feedback/rest/client/` with WireMock
+- [X] T043 [US5] Write `KaneoClientTest` first under `jordylab-be/src/test/java/dev/jordy/jordylab/feedback/rest/client/` with WireMock
       and request-body assertions (`@Language("JSON")`, no `any()`): create + two label attaches, missing key, 401/403,
       429, 5xx, timeout, missing project / Triage column / Type label, App fallback to Platform, search finds one / none,
       adopt path completes labels, response bodies never logged. Reuse the existing `FeedbackTicketTestBuilder`
       (`@UtilityClass`, minimal object + pre-filled builder); add a response fixture only if it adds something.
-- [ ] T044 [US5] Implement `KaneoClient` in `feedback/rest/client/KaneoClient.java` per `contracts/kaneo-client.md` (records for
+- [X] T044 [US5] Implement `KaneoClient` in `feedback/rest/client/KaneoClient.java` per `contracts/kaneo-client.md` (records for
       responses, `RestClient` with timeouts, `volatile` caches, description template, label mapping, one
       `BacklogUnavailableException` for every failure); T043 passes.
-- [ ] T045 [US5] Add Flyway migration `jordylab-be/src/main/resources/db/migration/V<next date>__feedback_rename_linear_columns.sql`
+- [X] T045 [US5] Add Flyway migration `jordylab-be/src/main/resources/db/migration/V<next date>__feedback_rename_linear_columns.sql`
       (schema `feedback`, rename `linear_issue_id` -> `backlog_ticket_id`, `linear_issue_url` -> `backlog_ticket_url`; check
       the highest existing version first and use the `flyway-migration` skill), and rename the Java side:
       `FeedbackTicket`, `FeedbackApp`/`FeedbackType` (`backlogLabelName`), `InboxTicketView.backlogTicketUrl`, the repository
       comments; update `FeedbackTicketTest`, `FeedbackTicketTestBuilder` and the repository test (Testcontainers) so the rename
       is exercised.
-- [ ] T046 [US5] Update the e2e journey text in `jordylab-fe/apps/jordylab-e2e/src/feedback.spec.ts` for the new message and the
+- [X] T046 [US5] Update the e2e journey text in `jordylab-fe/apps/jordylab-e2e/src/feedback.spec.ts` for the new message and the
       comment about the missing key (`KANEO_API_KEY`/provider), and confirm the web app has no reference to the renamed
       field (`grep -ri linearIssue jordylab-fe` empty).
-- [ ] T047 [US5] Add the backend-side names to the `backend` service `environment:` block in `deploy/compose/compose.yaml`
+- [X] T047 [US5] Add the backend-side names to the `backend` service `environment:` block in `deploy/compose/compose.yaml`
       (`BACKLOG_PROVIDER`, `KANEO_BASE_URL`, `KANEO_API_KEY`, `KANEO_PROJECT_KEY`, `KANEO_TICKET_URL_TEMPLATE`); the values
       arrive through `prod.env` (T019/T020), with `BACKLOG_PROVIDER` coming from the repository variable (`linear` until
       cutover); keep `LINEAR_API_KEY`. (Same files as T017/T019; do after them.)
-- [ ] T048 [US5] Update `jordylab-be/AGENTS.md` (feedback module: the backlog is Kaneo, the provider switch, the error code) and the
+- [X] T048 [US5] Update `jordylab-be/AGENTS.md` (feedback module: the backlog is Kaneo, the provider switch, the error code) and the
       Linear mentions in `specs/017-guest-feedback/contracts/linear-client.md` header (a note that spec 022 replaces it).
-- [ ] T049 [US5] Run `./gradlew test --tests '*feedback*'` and `./gradlew test --tests '*ModularityTests*'` in `jordylab-be`; fix
+- [X] T049 [US5] Run `./gradlew test --tests '*feedback*'` and `./gradlew test --tests '*ModularityTests*'` in `jordylab-be`; fix
       until green.
-- [ ] T050 [US5] Write `scripts/kaneo/tests/test_relink_feedback.py` first (fake Kaneo server): the `JOR-n` is taken from a Linear issue
+- [X] T050 [US5] Write `scripts/kaneo/tests/test_relink_feedback.py` first (fake Kaneo server): the `JOR-n` is taken from a Linear issue
       URL, resolved with the by-ticket-id call, and an `UPDATE` statement is printed (never executed); unresolved keys are listed;
       already-relinked rows are skipped; a 401 stops; nothing but ids and URLs is read or printed. [B]
-- [ ] T051 [US5] Implement `scripts/kaneo/relink-feedback.py` (input: rows of id and Linear URL from a read-only `select` on stdin;
+- [X] T051 [US5] Implement `scripts/kaneo/relink-feedback.py` (input: rows of id and Linear URL from a read-only `select` on stdin;
       output: reviewed `UPDATE feedback.feedback_ticket SET backlog_ticket_id=..., backlog_ticket_url=...` statements per
       `contracts/board-conventions.md` step 6, spec FR-027); the previous task's test passes. [B]
 
@@ -280,24 +280,24 @@ no key answers "backlog unavailable".
 
 ### Build [B]
 
-- [ ] T055 [P] [US4] Replace the `linear` entry with `kaneo` in `.mcp.json` (`type: http`, URL `https://kaneo.jordylab.be/api/mcp`, no
+- [X] T055 [P] [US4] Replace the `linear` entry with `kaneo` in `.mcp.json` (`type: http`, URL `https://kaneo.jordylab.be/api/mcp`, no
       secret); keep `github`, `nx-mcp`, `jordylab`.
-- [ ] T056 [P] [US4] Replace the `linear` entry with `kaneo` in `opencode.json` (remote, same URL, OAuth settings as the trial found).
-- [ ] T057 [US4] `git mv .claude/skills/linear-capture .claude/skills/backlog-capture` and rewrite its `SKILL.md` for Kaneo using the
+- [X] T056 [P] [US4] Replace the `linear` entry with `kaneo` in `opencode.json` (remote, same URL, OAuth settings as the trial found).
+- [X] T057 [US4] `git mv .claude/skills/linear-capture .claude/skills/backlog-capture` and rewrite its `SKILL.md` for Kaneo using the
       tool mapping in `contracts/agent-tooling.md` (Triage column, `search` duplicate check, two label attaches, exactly-one
       App/Type check, preview and approval, `Source:` line, outage message); keep the injection rule.
-- [ ] T058 [US4] `git mv .claude/skills/linear-triage .claude/skills/backlog-triage` and rewrite for Kaneo (list the Triage column,
+- [X] T058 [US4] `git mv .claude/skills/linear-triage .claude/skills/backlog-triage` and rewrite for Kaneo (list the Triage column,
       one proposal table, apply only confirmed rows by moving to Backlog, injected text reported not obeyed).
-- [ ] T059 [US4] `git mv .claude/skills/linear-sync-drafts .claude/skills/backlog-sync-drafts` (scripts, `scripts/tests`,
+- [X] T059 [US4] `git mv .claude/skills/linear-sync-drafts .claude/skills/backlog-sync-drafts` (scripts, `scripts/tests`,
       `app-map.tsv` move with it), fix the paths inside `repo_inventory.sh`, `open_bugs.sh` and the two fixture test scripts,
       and rewrite `SKILL.md` for Kaneo with the write budget (40 writes a minute, 150 per run) instead of the 230-issue stop.
       Run both fixture scripts green.
-- [ ] T060 [P] [US4] Rewrite `.claude/skills/speckit-taskstoissues/SKILL.md` for Kaneo (one ticket per user story and per phase without a
+- [X] T060 [P] [US4] Rewrite `.claude/skills/speckit-taskstoissues/SKILL.md` for Kaneo (one ticket per user story and per phase without a
       story, a `Phase:` line instead of milestones, relations for ordering, spec link on the first line, preview and approval).
-- [ ] T061 [P] [US4] Update the Linear wording in `.claude/skills/agent-handover/SKILL.md` (section 5b: comment on the Kaneo ticket with
+- [X] T061 [P] [US4] Update the Linear wording in `.claude/skills/agent-handover/SKILL.md` (section 5b: comment on the Kaneo ticket with
       `create_task_comment`) and in `.opencode/commands/agent-handover.md`.
-- [ ] T062 [P] [US4] Update `.claude/skills/refresh-agent-models/SKILL.md` (steps 1-2 name the Kaneo ticket and `backlog-capture`).
-- [ ] T063 [US4] Update the renamed skill paths in `.github/workflows/hook-tests.yml` (after T032) and in any other reference found
+- [X] T062 [P] [US4] Update `.claude/skills/refresh-agent-models/SKILL.md` (steps 1-2 name the Kaneo ticket and `backlog-capture`).
+- [X] T063 [US4] Update the renamed skill paths in `.github/workflows/hook-tests.yml` (after T032) and in any other reference found
       by `grep -rIl "linear-sync-drafts\|linear-capture\|linear-triage"` (CLAUDE.md skill list is done in T075).
 
 ### Operate [D]/[E]
