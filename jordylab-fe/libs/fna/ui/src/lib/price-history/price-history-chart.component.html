@@ -5,6 +5,7 @@
         [attr.viewBox]="viewBox()"
         role="img"
         [attr.aria-label]="label()"
+        [attr.aria-describedby]="describedBy()"
         class="block w-full touch-pan-y"
         (pointermove)="pointerMoved($event)"
         (pointerdown)="pointerMoved($event)"

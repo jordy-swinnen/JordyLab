@@ -34,6 +34,26 @@ describe('PriceHistoryPanelComponent', () => {
     expect(periodSelected).toHaveBeenCalledWith('THREE_MONTHS');
   });
 
+  it('names the start, the end and the change in the chart label', () => {
+    spectator.setInput({ history: aPriceHistoryMock() });
+
+    expect(spectator.query('svg')?.getAttribute('aria-label')).toContain(
+      'up 250.00 euro or 25.00 percent',
+    );
+  });
+
+  it('links the chart to the figures so a screen reader reads them with it', () => {
+    spectator.setInput({ history: aPriceHistoryMock() });
+
+    const figuresId = spectator.query('dl')?.id;
+
+    expect(figuresId).toBeTruthy();
+    expect(spectator.query('svg')).toHaveAttribute(
+      'aria-describedby',
+      figuresId,
+    );
+  });
+
   it('shows the figures as text, with the change signed', () => {
     spectator.setInput({ history: aPriceHistoryMock() });
 
