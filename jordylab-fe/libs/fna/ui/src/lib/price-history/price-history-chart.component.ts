@@ -207,6 +207,8 @@ function readoutTransform(share: number): string {
 export class PriceHistoryChartComponent {
   points = input.required<PriceHistoryPoint[]>();
   label = input.required<string>();
+  /** The id of the element that describes the chart's figures, so a screen reader reads them with the drawing. */
+  describedBy = input<string | null>(null);
 
   readonly #host: ElementRef<HTMLElement> = inject(ElementRef);
   readonly #destroyRef = inject(DestroyRef);

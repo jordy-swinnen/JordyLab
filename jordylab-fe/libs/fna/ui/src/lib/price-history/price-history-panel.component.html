@@ -49,13 +49,14 @@
         <lib-price-history-chart
           [points]="loaded.points"
           [label]="chartLabel(summary)"
+          [describedBy]="figuresId"
         />
         @if (startsAfterWindow()) {
           <p class="mt-2 text-[13px] text-secondary-foreground">
             History starts on {{ loaded.dataStartDate | date: 'd MMM y' }}.
           </p>
         }
-        <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
+        <dl [id]="figuresId" class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4">
           <div>
             <dt class="label text-secondary-foreground">Start</dt>
             <dd

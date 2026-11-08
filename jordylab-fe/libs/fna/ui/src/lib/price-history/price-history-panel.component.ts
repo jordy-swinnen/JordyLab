@@ -26,6 +26,9 @@ const PERIOD_CHOICES: { period: PriceHistoryPeriod; label: string }[] = [
   { period: 'MAX', label: 'Max' },
 ];
 
+/** A counter gives every panel its own figures id, so two panels on one page never share one. */
+let panelCount = 0;
+
 /**
  * The history of one holding: period choice, chart, the figures as text, and the loading, empty, short and failed
  * states (spec 023). It shows recorded prices only; it never says buy, sell or hold (FR-009).
@@ -55,6 +58,7 @@ export class PriceHistoryPanelComponent {
   retried = output<void>();
 
   protected readonly periodChoices = PERIOD_CHOICES;
+  protected readonly figuresId = `price-history-figures-${++panelCount}`;
   protected readonly heading =
     viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
@@ -77,10 +81,16 @@ export class PriceHistoryPanelComponent {
     return Math.abs(value);
   }
 
+  /** Names the start, the end and the change, so the drawing says what the figures say. */
   protected chartLabel(summary: PriceHistorySummary): string {
-    return (
+    const range =
       `Euro price from ${summary.startDate}, ${summary.startPriceInEuro.toFixed(2)} euro, ` +
-      `to ${summary.endDate}, ${summary.endPriceInEuro.toFixed(2)} euro`
-    );
+      `to ${summary.endDate}, ${summary.endPriceInEuro.toFixed(2)} euro`;
+    if (summary.changeInEuro === null || summary.changePercent === null) {
+      return `${range}. Not enough history yet to show a change`;
+    }
+    const direction = summary.changeInEuro >= 0 ? 'up' : 'down';
+
+    return `${range}, ${direction} ${Math.abs(summary.changeInEuro).toFixed(2)} euro or ${Math.abs(summary.changePercent).toFixed(2)} percent`;
   }
 }

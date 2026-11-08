@@ -57,6 +57,21 @@ describe('PriceHistoryChartComponent', () => {
     );
   });
 
+  it('points the drawing at the figures that describe it', () => {
+    spectator = createComponent({
+      props: {
+        points: threePoints,
+        label: 'Euro price',
+        describedBy: 'price-history-figures',
+      },
+    });
+
+    expect(spectator.query('svg')).toHaveAttribute(
+      'aria-describedby',
+      'price-history-figures',
+    );
+  });
+
   it('draws a soft area under the line down to the baseline', () => {
     spectator = createComponent({
       props: { points: threePoints, label: 'Euro price' },
