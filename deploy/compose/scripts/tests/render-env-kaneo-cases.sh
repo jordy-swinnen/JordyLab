@@ -104,6 +104,8 @@ check "renders while the GitHub App keys are null placeholders" ok
 check "a null GitHub App ID renders empty" has_line "KANEO_GITHUB_APP_ID=''"
 check "a null webhook secret renders empty" has_line "KANEO_GITHUB_WEBHOOK_SECRET=''"
 check "a null private key renders empty" has_line "KANEO_GITHUB_PRIVATE_KEY_BASE64=''"
+check "a null GitHub sign-in client ID renders empty" has_line "KANEO_GITHUB_OAUTH_CLIENT_ID=''"
+check "a null GitHub sign-in client secret renders empty" has_line "KANEO_GITHUB_OAUTH_CLIENT_SECRET=''"
 check "the Kaneo auth secret still renders beside them" has_line "KANEO_AUTH_SECRET='soft-kaneo_auth_secret'"
 
 # 3. Existing keys stay strict: a misspelt optional key still fails the render.
