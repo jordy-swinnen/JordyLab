@@ -9,6 +9,11 @@ rather than `env`. This script handles that translation in both directions.
 Previews by default. Pass --write to actually modify the target file (a .bak
 copy is made first).
 
+OAuth settings (clientId, callbackPort, scope) are carried across. Each harness
+keeps its own callbackPort when the target already has the server, because
+Claude Code and OpenCode run separate OAuth callbacks. A clientSecret in either
+file is refused.
+
 Usage:
     python sync_mcp.py to-opencode --source .mcp.json --target opencode.json
     python sync_mcp.py to-claude   --source opencode.json --target .mcp.json --write
@@ -84,6 +89,8 @@ def claude_entry_to_opencode(name: str, entry: dict, warnings: list) -> dict:
             f"'{name}': headers were copied as-is. Confirm the field name against "
             "https://opencode.ai/docs/mcp-servers/ before relying on it."
         )
+    if entry.get("oauth") is not None:
+        translated["oauth"] = translate_oauth(name, entry["oauth"], "opencode", warnings)
 
     flag_secret_syntax(name, translated, "opencode", warnings)
     return translated
@@ -120,6 +127,8 @@ def opencode_entry_to_claude(name: str, entry: dict, warnings: list) -> dict:
         translated["env"] = dict(entry["environment"])
     if entry.get("headers"):
         translated["headers"] = dict(entry["headers"])
+    if entry.get("oauth") is not None:
+        translated["oauth"] = translate_oauth(name, entry["oauth"], "claude", warnings)
 
     if entry.get("enabled") is False:
         warnings.append(
@@ -148,6 +157,72 @@ def flag_secret_syntax(name: str, entry: dict, target: str, warnings: list) -> N
             f"'{name}' uses OpenCode's {{env:VAR}} expansion. Claude Code expects "
             "${VAR} — convert these by hand."
         )
+
+
+# OAuth settings each harness understands. Anything else is reported, not copied.
+OAUTH_KEYS = {
+    "opencode": {"clientId", "callbackPort", "scope"},
+    "claude": {"clientId", "callbackPort"},
+}
+
+
+def translate_oauth(name: str, oauth, target: str, warnings: list) -> dict:
+    """Carry the OAuth settings for one server across the two formats.
+
+    A client secret is refused outright: config files are checked in, so a
+    secret must come from the environment or a prompt, never from the file.
+    """
+    if not isinstance(oauth, dict):
+        raise TranslationError(f"'{name}' has an oauth value that is not an object")
+    if "clientSecret" in oauth:
+        raise TranslationError(
+            f"'{name}' puts clientSecret in its config. Remove it: a checked-in "
+            "config must not carry a secret."
+        )
+    allowed = OAUTH_KEYS[target]
+    dropped = sorted(set(oauth) - allowed)
+    if dropped:
+        warnings.append(
+            f"'{name}': oauth field(s) {', '.join(dropped)} were not translated to "
+            f"{target}. Check them by hand."
+        )
+    return {key: value for key, value in oauth.items() if key in allowed}
+
+
+def merge_servers(existing: dict, translated: dict, warnings: list) -> dict:
+    """Merge translated servers into the target's existing entries.
+
+    Servers are replaced as a whole, except for two things that are per-harness
+    by design: the target's own callback port is kept (Claude Code and OpenCode
+    each run their own OAuth callback), and an oauth block the source does not
+    mention is kept rather than dropped silently.
+    """
+    merged = dict(existing)
+    for name, entry in translated.items():
+        old = existing.get(name)
+        old_oauth = old.get("oauth") if isinstance(old, dict) else None
+        new_oauth = entry.get("oauth")
+        if isinstance(old_oauth, dict) and isinstance(new_oauth, dict):
+            oauth = {**old_oauth, **new_oauth}
+            if "callbackPort" in old_oauth and old_oauth["callbackPort"] != new_oauth.get("callbackPort"):
+                oauth["callbackPort"] = old_oauth["callbackPort"]
+                warnings.append(
+                    f"'{name}': kept the existing callbackPort {old_oauth['callbackPort']}. "
+                    "Each harness has its own callback port, so the source's value is not copied."
+                )
+            entry = {**entry, "oauth": oauth}
+        elif isinstance(old_oauth, dict) and new_oauth is None:
+            entry = {**entry, "oauth": dict(old_oauth)}
+            warnings.append(
+                f"'{name}': the source has no oauth block, so the existing one was kept."
+            )
+        elif isinstance(new_oauth, dict) and "callbackPort" in new_oauth:
+            warnings.append(
+                f"'{name}': a new entry takes callbackPort {new_oauth['callbackPort']} from the "
+                "source. Make sure no other server or harness already uses that port."
+            )
+        merged[name] = entry
+    return merged
 
 
 def translate(direction: str, source_doc: dict) -> tuple:
@@ -210,7 +285,9 @@ def main() -> int:
 
     existing = target_doc.get(target_key, {})
     overwritten = sorted(set(existing) & set(translated))
-    merged = {**existing, **translated}
+    merge_warnings = []
+    merged = merge_servers(existing, translated, merge_warnings)
+    warnings.extend(merge_warnings)
     target_doc[target_key] = merged
 
     if target_key == OPENCODE_KEY and "$schema" not in target_doc:
