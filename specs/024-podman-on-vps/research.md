@@ -116,7 +116,7 @@ Decisions for [plan.md](plan.md). Facts about the repository were read from the 
 | 7 | Podman 5.7.0 is what Ubuntu 26.04 installs, and the Compose client package is available | Taken from package listings and guides | Quickstart Q2 |
 | 8 | The tar-stream copy preserves the Postgres cluster and the Caddy certificates | Ownership mapping | Quickstart Q8 |
 | 9 | `sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/<id> podman ps` runs over a non-interactive `ssh` command and finds the account's containers | Not tried | Quickstart Q2 |
-| 10 | A `docker-compose` executable (Compose v2) can be installed on Ubuntu 26.04 from a pinned, checksummed source | A package may ship only the plugin form | Quickstart Q2 |
+| 10 | The `docker-compose-v2` archive package plus a `docker-compose` symlink gives `podman compose` a working Compose v2 client | The package ships only the plugin form (checked for both architectures on 2026-11-08); the provider call is not yet tried | Quickstart Q2 and Q3 |
 
 ## Sources
 

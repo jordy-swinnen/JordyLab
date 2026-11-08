@@ -26,7 +26,7 @@ loginctl show-user jordylab-deploy -p Linger
 sysctl net.ipv4.ip_unprivileged_port_start
 ```
 
-Expected: Podman 5.7.0 or newer; an id of 1000 or more; subordinate ranges present; `Linger=yes`; the sysctl is `80`; the Compose client's checksum equals the one pinned in the host contract; the `podman ps` command runs as the deploy account from a non-interactive `ssh` session. Record the versions.
+Expected: Podman 5.7.0 or newer; an id of 1000 or more; subordinate ranges present; `Linger=yes`; the sysctl is `80`; the checksum of `$(command -v docker-compose)` (which follows the symlink) equals the binary sha256 for the machine's architecture in the host contract; the `podman ps` command runs as the deploy account from a non-interactive `ssh` session. Record the versions.
 
 ## Q3: Pull, build and start with `--wait` (claim 1)
 
