@@ -280,9 +280,9 @@ no key answers "backlog unavailable".
 
 ### Build [B]
 
-- [X] T055 [P] [US4] Replace the `linear` entry with `kaneo` in `.mcp.json` (`type: http`, URL `https://kaneo.jordylab.be/api/mcp`, no
-      secret); keep `github`, `nx-mcp`, `jordylab`.
-- [X] T056 [P] [US4] Replace the `linear` entry with `kaneo` in `opencode.json` (remote, same URL, OAuth settings as the trial found).
+- [X] T055 [P] [US4] Add the `kaneo` entry beside `linear` in `.mcp.json` (`type: http`, URL `https://kaneo.jordylab.be/api/mcp`, no
+      secret); keep `github`, `nx-mcp`, `jordylab`. `linear` stays until the cutover; the follow-up PR after the 30-day mark (T076) removes it.
+- [X] T056 [P] [US4] Add the `kaneo` entry beside `linear` in `opencode.json` (remote, same URL, OAuth settings as the trial found). `linear` is removed in the same follow-up PR as T055.
 - [X] T057 [US4] `git mv .claude/skills/linear-capture .claude/skills/backlog-capture` and rewrite its `SKILL.md` for Kaneo using the
       tool mapping in `contracts/agent-tooling.md` (Triage column, `search` duplicate check, two label attaches, exactly-one
       App/Type check, preview and approval, `Source:` line, outage message); keep the injection rule.
