@@ -57,17 +57,6 @@ public class KaneoClient implements BacklogClient {
     private volatile String cachedProjectId;
     private volatile String cachedTriageStatus;
 
-    @PostConstruct
-    void init() {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.kaneo().connectTimeoutMs());
-        requestFactory.setReadTimeout(properties.kaneo().readTimeoutMs());
-        this.restClient = RestClient.builder()
-                .baseUrl(apiBaseUrl())
-                .requestFactory(requestFactory)
-                .build();
-    }
-
     /**
      * Creates the one Triage task for an accepted ticket: the task first, then the App and Type labels. Every
      * label and lookup is resolved before the task is written, so a missing Type label or column creates nothing.
@@ -121,6 +110,17 @@ public class KaneoClient implements BacklogClient {
         }
 
         return Optional.empty();
+    }
+
+    @PostConstruct
+    void init() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(properties.kaneo().connectTimeoutMs());
+        requestFactory.setReadTimeout(properties.kaneo().readTimeoutMs());
+        this.restClient = RestClient.builder()
+                .baseUrl(apiBaseUrl())
+                .requestFactory(requestFactory)
+                .build();
     }
 
     private void attachMissingLabels(String workspace, String taskId, FeedbackTicket ticket) {
