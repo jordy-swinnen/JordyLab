@@ -21,33 +21,33 @@ in [AGENTS.md](../AGENTS.md#workflow)).
 
 ```mermaid
 flowchart LR
-    idea["Idea or bug"] -->|linear-capture| triage["Triage"]
-    triage -->|linear-triage| draft["Draft in specs/_drafts/"]
+    idea["Idea or bug"] -->|backlog-capture| triage["Triage"]
+    triage -->|backlog-triage| draft["Draft in specs/_drafts/"]
     draft -->|speckit-specify · planner| spec["Numbered spec"]
     spec -->|speckit-clarify · planner| spec
     spec -->|speckit-plan · planner| plan["Plan"]
     plan -->|speckit-tasks · planner| tasks["tasks.md"]
-    tasks -->|speckit-taskstoissues · worker| backlog["Project, milestones, one issue per story"]
+    tasks -->|speckit-taskstoissues · worker| backlog["One ticket per story and phase"]
     tasks -->|speckit-implement · worker| code["Branch and commits"]
     code -->|speckit-analyze and speckit-converge · reviewer| code
     code -->|pull request| review["In review"]
     review -->|merge| finished["Finished"]
     finished -->|green main, AUTO_DEPLOY on| prod["Production"]
-    linear-sync["linear-sync-drafts"] -.->|keeps the tracker in step with specs and drafts| backlog
+    sync["backlog-sync-drafts"] -.->|keeps the tracker in step with specs and drafts| backlog
 ```
 
 | Step | Skill or action | Agent | Tracker after the step |
 |---|---|---|---|
-| Capture an idea or bug | `linear-capture` | none | Triage |
-| Triage the inbox | `linear-triage` | none | App and Type labels set, project chosen, duplicates found |
+| Capture an idea or bug | `backlog-capture` | none | Triage |
+| Triage the inbox | `backlog-triage` | none | App and Type labels set, duplicates found |
 | Start a draft | a folder in `specs/_drafts/`, no numbers in the name | none | Drafted |
 | Specify | `speckit-specify` | planner | Numbered spec |
 | Clarify, plan, tasks | `speckit-clarify`, `speckit-plan`, `speckit-tasks` | planner | Unchanged |
-| Tasks to issues | `speckit-taskstoissues` | worker | Project, milestones, one issue per user story |
+| Tasks to issues | `speckit-taskstoissues` | worker | One ticket per user story and phase |
 | Implement | `speckit-implement` | worker | In progress when the pull request opens |
 | Check | `speckit-analyze`, `speckit-converge` | reviewer | Unchanged |
 | Merge | pull request with a linking word | none | Done when it merges and finishes the item |
-| Keep in step | `linear-sync-drafts` | none | Matches folders and task lists |
+| Keep in step | `backlog-sync-drafts` | none | Matches folders and task lists |
 
 ## Models per role
 

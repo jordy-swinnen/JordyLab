@@ -297,7 +297,7 @@ no key answers "backlog unavailable".
 - [X] T061 [P] [US4] Update the Linear wording in `.claude/skills/agent-handover/SKILL.md` (section 5b: comment on the Kaneo ticket with
       `create_task_comment`) and in `.opencode/commands/agent-handover.md`.
 - [X] T062 [P] [US4] Update `.claude/skills/refresh-agent-models/SKILL.md` (steps 1-2 name the Kaneo ticket and `backlog-capture`).
-- [ ] T063 [US4] Update the renamed skill paths in `.github/workflows/hook-tests.yml` (after T032) and in any other reference found
+- [X] T063 [US4] Update the renamed skill paths in `.github/workflows/hook-tests.yml` (after T032) and in any other reference found
       by `grep -rIl "linear-sync-drafts\|linear-capture\|linear-triage"` (CLAUDE.md skill list is done in T075).
 
 ### Operate [D]/[E]
