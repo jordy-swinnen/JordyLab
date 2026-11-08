@@ -38,8 +38,8 @@ class FeedbackTicketTest {
             softly.assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.NEW);
             softly.assertThat(ticket.getReply()).isNull();
             softly.assertThat(ticket.getPrivateNote()).isNull();
-            softly.assertThat(ticket.getLinearIssueId()).isNull();
-            softly.assertThat(ticket.getLinearIssueUrl()).isNull();
+            softly.assertThat(ticket.getBacklogTicketId()).isNull();
+            softly.assertThat(ticket.getBacklogTicketUrl()).isNull();
             softly.assertThat(ticket.getAcceptError()).isNull();
         });
     }
@@ -176,8 +176,8 @@ class FeedbackTicketTest {
 
         assertSoftly(softly -> {
             softly.assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
-            softly.assertThat(ticket.getLinearIssueId()).isEqualTo("issue-id");
-            softly.assertThat(ticket.getLinearIssueUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-99");
+            softly.assertThat(ticket.getBacklogTicketId()).isEqualTo("issue-id");
+            softly.assertThat(ticket.getBacklogTicketUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-99");
             softly.assertThat(ticket.getAcceptError()).isNull();
         });
     }

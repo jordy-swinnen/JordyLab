@@ -4,7 +4,7 @@ import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketState;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketTestBuilder;
 import dev.jordy.jordylab.feedback.domain.repository.FeedbackTicketRepository;
-import dev.jordy.jordylab.feedback.rest.client.LinearClient;
+import dev.jordy.jordylab.feedback.rest.client.BacklogClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,28 +31,28 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AcceptTicketServiceTest {
 
-    private static final LinearClient.LinearIssue ISSUE =
-            new LinearClient.LinearIssue("issue-1", "https://linear.app/jordylab/issue/JOR-101");
+    private static final BacklogClient.BacklogTicket ISSUE =
+            new BacklogClient.BacklogTicket("issue-1", "https://linear.app/jordylab/issue/JOR-101");
 
     @Mock
     private FeedbackTicketRepository ticketRepository;
 
     @Mock
-    private LinearClient linearClient;
+    private BacklogClient backlogClient;
 
     private AcceptTicketService service;
 
     @BeforeEach
     void setUp() {
-        service = new AcceptTicketService(ticketRepository, linearClient);
+        service = new AcceptTicketService(ticketRepository, backlogClient);
     }
 
     @Test
     void anAlreadyAcceptedTicketShortCircuitsWithoutCallingLinearAgain() {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.ACCEPTED)
-                .linearIssueId("issue-1")
-                .linearIssueUrl("https://linear.app/jordylab/issue/JOR-101")
+                .backlogTicketId("issue-1")
+                .backlogTicketUrl("https://linear.app/jordylab/issue/JOR-101")
                 .build();
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
@@ -60,7 +60,7 @@ class AcceptTicketServiceTest {
         FeedbackTicket result = service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, "another note");
 
         assertThat(result).isSameAs(ticket);
-        verifyNoInteractions(linearClient);
+        verifyNoInteractions(backlogClient);
     }
 
     @Test
@@ -73,7 +73,7 @@ class AcceptTicketServiceTest {
 
         assertThatThrownBy(() -> service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, null))
                 .isInstanceOf(IllegalStateException.class);
-        verifyNoInteractions(linearClient);
+        verifyNoInteractions(backlogClient);
     }
 
     @Test
@@ -85,7 +85,7 @@ class AcceptTicketServiceTest {
 
         assertThatThrownBy(() -> service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, overlong))
                 .isInstanceOf(IllegalArgumentException.class);
-        verifyNoInteractions(linearClient);
+        verifyNoInteractions(backlogClient);
     }
 
     @Test
@@ -94,7 +94,7 @@ class AcceptTicketServiceTest {
 
         assertThatThrownBy(() -> service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, null))
                 .isInstanceOf(TicketNotFoundException.class);
-        verifyNoInteractions(linearClient);
+        verifyNoInteractions(backlogClient);
     }
 
     @Test
@@ -102,17 +102,17 @@ class AcceptTicketServiceTest {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
-        when(linearClient.createIssue(ticket, "Repro'd on CachyOS too.")).thenReturn(ISSUE);
+        when(backlogClient.createTicket(ticket, "Repro'd on CachyOS too.")).thenReturn(ISSUE);
 
         FeedbackTicket result = service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, "Repro'd on CachyOS too.");
 
         assertSoftly(softly -> {
             softly.assertThat(result.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
-            softly.assertThat(result.getLinearIssueId()).isEqualTo("issue-1");
-            softly.assertThat(result.getLinearIssueUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-101");
+            softly.assertThat(result.getBacklogTicketId()).isEqualTo("issue-1");
+            softly.assertThat(result.getBacklogTicketUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-101");
             softly.assertThat(result.getPrivateNote()).isEqualTo("Repro'd on CachyOS too.");
         });
-        verify(linearClient).createIssue(ticket, "Repro'd on CachyOS too.");
+        verify(backlogClient).createTicket(ticket, "Repro'd on CachyOS too.");
     }
 
     @Test
@@ -120,11 +120,11 @@ class AcceptTicketServiceTest {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
-        when(linearClient.createIssue(ticket, null))
-                .thenThrow(new LinearUnavailableException("Linear is unreachable"));
+        when(backlogClient.createTicket(ticket, null))
+                .thenThrow(new BacklogUnavailableException("Linear is unreachable"));
 
         assertThatThrownBy(() -> service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, null))
-                .isInstanceOf(LinearUnavailableException.class);
+                .isInstanceOf(BacklogUnavailableException.class);
         assertSoftly(softly -> {
             softly.assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.NEW);
             softly.assertThat(ticket.getAcceptError()).isEqualTo("Linear is unreachable");
@@ -137,16 +137,16 @@ class AcceptTicketServiceTest {
         ticket.recordAcceptError("timed out after Linear accepted");
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
-        when(linearClient.findIssue(FeedbackTicketTestBuilder.DEFAULT_TITLE)).thenReturn(Optional.of(ISSUE));
+        when(backlogClient.findTicket(ticket)).thenReturn(Optional.of(ISSUE));
 
         FeedbackTicket result = service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, null);
 
         assertSoftly(softly -> {
             softly.assertThat(result.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
-            softly.assertThat(result.getLinearIssueId()).isEqualTo("issue-1");
+            softly.assertThat(result.getBacklogTicketId()).isEqualTo("issue-1");
             softly.assertThat(result.getAcceptError()).isNull();
         });
-        verify(linearClient).findIssue(FeedbackTicketTestBuilder.DEFAULT_TITLE);
-        verify(linearClient, never()).createIssue(eq(ticket), isNull());
+        verify(backlogClient).findTicket(ticket);
+        verify(backlogClient, never()).createTicket(eq(ticket), isNull());
     }
 }

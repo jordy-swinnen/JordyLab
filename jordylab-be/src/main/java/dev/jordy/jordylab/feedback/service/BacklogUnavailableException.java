@@ -5,9 +5,9 @@ package dev.jordy.jordylab.feedback.service;
  * team/state/label (spec 017 FR-019). The ticket keeps its state, records the failure and stays
  * retryable.
  */
-public class LinearUnavailableException extends RuntimeException {
+public class BacklogUnavailableException extends RuntimeException {
 
-    public LinearUnavailableException(String message) {
+    public BacklogUnavailableException(String message) {
         super(message);
     }
 }

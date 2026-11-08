@@ -210,28 +210,28 @@ no key answers "backlog unavailable".
 
 ### Tests and build [B]
 
-- [ ] T039 [US5] Rename `LinearUnavailableException` to `BacklogUnavailableException` (all uses, including
+- [X] T039 [US5] Rename `LinearUnavailableException` to `BacklogUnavailableException` (all uses, including
       `FeedbackExceptionHandler`), change the response code to `BACKLOG_UNAVAILABLE` and the message to "The backlog is unreachable
       right now - the ticket stays as it was, so you can retry."; update `FeedbackExceptionHandler` tests and
       `FeedbackTicketControllerTest`/`FeedbackInboxControllerTest` first, then the code.
-- [ ] T040 [US5] Extract `jordylab-be/src/main/java/dev/jordy/jordylab/feedback/rest/client/BacklogClient.java` (interface,
+- [X] T040 [US5] Extract `jordylab-be/src/main/java/dev/jordy/jordylab/feedback/rest/client/BacklogClient.java` (interface,
       `BacklogTicket(String id, String url)` record) and make `LinearClient` implement it (its inner `LinearIssue` becomes
       `BacklogTicket`); `AcceptTicketService` depends on the interface; update `AcceptTicketServiceTest` and `LinearClientTest`.
-- [ ] T041 [US5] Extend `FeedbackProperties` with the `kaneo` record and `backlog.provider` per `data-model.md` section 2, defaults
+- [X] T041 [US5] Extend `FeedbackProperties` with the `kaneo` record and `backlog.provider` per `data-model.md` section 2, defaults
       as listed, and `application.yaml` (env names `BACKLOG_PROVIDER`, `KANEO_*`); add a properties test for defaults and
       blank handling.
-- [ ] T042 [US5] Select the client with `@ConditionalOnProperty("jordylab.feedback.backlog.provider")` (`kaneo` matches by default,
+- [X] T042 [US5] Select the client with `@ConditionalOnProperty("jordylab.feedback.backlog.provider")` (`kaneo` matches by default,
       `linear` selects the old one); test both selections and that exactly one `BacklogClient` bean exists (in
       `FeedbackModuleTest` or a slice test).
-- [ ] T043 [US5] Write `KaneoClientTest` first under `jordylab-be/src/test/java/dev/jordy/jordylab/feedback/rest/client/` with WireMock
+- [X] T043 [US5] Write `KaneoClientTest` first under `jordylab-be/src/test/java/dev/jordy/jordylab/feedback/rest/client/` with WireMock
       and request-body assertions (`@Language("JSON")`, no `any()`): create + two label attaches, missing key, 401/403,
       429, 5xx, timeout, missing project / Triage column / Type label, App fallback to Platform, search finds one / none,
       adopt path completes labels, response bodies never logged. Reuse the existing `FeedbackTicketTestBuilder`
       (`@UtilityClass`, minimal object + pre-filled builder); add a response fixture only if it adds something.
-- [ ] T044 [US5] Implement `KaneoClient` in `feedback/rest/client/KaneoClient.java` per `contracts/kaneo-client.md` (records for
+- [X] T044 [US5] Implement `KaneoClient` in `feedback/rest/client/KaneoClient.java` per `contracts/kaneo-client.md` (records for
       responses, `RestClient` with timeouts, `volatile` caches, description template, label mapping, one
       `BacklogUnavailableException` for every failure); T043 passes.
-- [ ] T045 [US5] Add Flyway migration `jordylab-be/src/main/resources/db/migration/V<next date>__feedback_rename_linear_columns.sql`
+- [X] T045 [US5] Add Flyway migration `jordylab-be/src/main/resources/db/migration/V<next date>__feedback_rename_linear_columns.sql`
       (schema `feedback`, rename `linear_issue_id` -> `backlog_ticket_id`, `linear_issue_url` -> `backlog_ticket_url`; check
       the highest existing version first and use the `flyway-migration` skill), and rename the Java side:
       `FeedbackTicket`, `FeedbackApp`/`FeedbackType` (`backlogLabelName`), `InboxTicketView.backlogTicketUrl`, the repository
@@ -244,9 +244,9 @@ no key answers "backlog unavailable".
       (`BACKLOG_PROVIDER`, `KANEO_BASE_URL`, `KANEO_API_KEY`, `KANEO_PROJECT_KEY`, `KANEO_TICKET_URL_TEMPLATE`); the values
       arrive through `prod.env` (T019/T020), with `BACKLOG_PROVIDER` coming from the repository variable (`linear` until
       cutover); keep `LINEAR_API_KEY`. (Same files as T017/T019; do after them.)
-- [ ] T048 [US5] Update `jordylab-be/AGENTS.md` (feedback module: the backlog is Kaneo, the provider switch, the error code) and the
+- [X] T048 [US5] Update `jordylab-be/AGENTS.md` (feedback module: the backlog is Kaneo, the provider switch, the error code) and the
       Linear mentions in `specs/017-guest-feedback/contracts/linear-client.md` header (a note that spec 022 replaces it).
-- [ ] T049 [US5] Run `./gradlew test --tests '*feedback*'` and `./gradlew test --tests '*ModularityTests*'` in `jordylab-be`; fix
+- [X] T049 [US5] Run `./gradlew test --tests '*feedback*'` and `./gradlew test --tests '*ModularityTests*'` in `jordylab-be`; fix
       until green.
 - [ ] T050 [US5] Write `scripts/kaneo/tests/test_relink_feedback.py` first (fake Kaneo server): the `JOR-n` is taken from a Linear issue
       URL, resolved with the by-ticket-id call, and an `UPDATE` statement is printed (never executed); unresolved keys are listed;
