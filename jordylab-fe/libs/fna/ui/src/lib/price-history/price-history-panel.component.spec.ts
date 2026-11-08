@@ -42,6 +42,19 @@ describe('PriceHistoryPanelComponent', () => {
     );
   });
 
+  it('gives each panel its own figures id, so two panels never share one', () => {
+    const otherPanel = createComponent({ props: { ticker: 'BEL' } });
+    spectator.setInput({ history: aPriceHistoryMock() });
+    otherPanel.setInput({ history: aPriceHistoryMock() });
+
+    const firstFiguresId = spectator.query('dl')?.id;
+    const secondFiguresId = otherPanel.query('dl')?.id;
+
+    expect(firstFiguresId).toBeTruthy();
+    expect(secondFiguresId).toBeTruthy();
+    expect(secondFiguresId).not.toBe(firstFiguresId);
+  });
+
   it('links the chart to the figures so a screen reader reads them with it', () => {
     spectator.setInput({ history: aPriceHistoryMock() });
 

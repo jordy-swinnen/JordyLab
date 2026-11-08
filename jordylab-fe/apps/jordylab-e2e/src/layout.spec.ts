@@ -159,6 +159,20 @@ test.describe('No sideways scrolling on a phone', () => {
         expect(await offendersOf(page)).toEqual([]);
       });
 
+      // The four period buttons must share one row, or the choice wraps and the panel grows on a phone (spec 023 T046).
+      test('the period buttons of an open history sit on one row', async ({ page }) => {
+        const holdingTicker = { 360: 'CRM', 390: 'UBER', 430: 'PFE' }[width];
+        await addHolding(page, holdingTicker);
+        await page.getByRole('button', { name: `History for ${holdingTicker}`, exact: true }).click();
+        const periodButtons = page.getByRole('group', { name: 'Period', exact: true }).getByRole('button');
+
+        await expect(periodButtons).toHaveCount(4);
+        const rowTops = await periodButtons.evaluateAll((buttons) =>
+          buttons.map((button) => Math.round(button.getBoundingClientRect().top)),
+        );
+        expect(new Set(rowTops).size).toBe(1);
+      });
+
       // Phones have no hover, and Remove is hidden until hover only from 640 px up, so it must show here without hover.
       test('the Remove button of a holding shows without hover', async ({ page }) => {
         const holdingTicker = { 360: 'NFLX', 390: 'ORCL', 430: 'AMZN' }[width];
