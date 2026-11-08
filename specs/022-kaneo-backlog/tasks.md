@@ -180,7 +180,7 @@ the VPS (`import-report.md`).
 - [ ] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
       (`--dry-run` default, keys only from the environment, nothing printed but counts and ticket keys; spec link mapping
       from `repo_inventory.sh`); T030 passes.
-- [ ] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
+- [X] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
 - [ ] T033 [US3] OWNER [D]: announce the freeze (Claude project instructions and the Linear welcome note), make sure every piece
       of work in flight already has its `JOR-n`, the fix-up reads the Linear export from T034, so it needs no Linear key (decided 2026-11-07).
 - [ ] T034 [US3] OPERATIONS [D]: take a full Linear export (JSON) and store it in the Object Storage bucket under a separate prefix;
@@ -248,10 +248,10 @@ no key answers "backlog unavailable".
       Linear mentions in `specs/017-guest-feedback/contracts/linear-client.md` header (a note that spec 022 replaces it).
 - [X] T049 [US5] Run `./gradlew test --tests '*feedback*'` and `./gradlew test --tests '*ModularityTests*'` in `jordylab-be`; fix
       until green.
-- [ ] T050 [US5] Write `scripts/kaneo/tests/test_relink_feedback.py` first (fake Kaneo server): the `JOR-n` is taken from a Linear issue
+- [X] T050 [US5] Write `scripts/kaneo/tests/test_relink_feedback.py` first (fake Kaneo server): the `JOR-n` is taken from a Linear issue
       URL, resolved with the by-ticket-id call, and an `UPDATE` statement is printed (never executed); unresolved keys are listed;
       already-relinked rows are skipped; a 401 stops; nothing but ids and URLs is read or printed. [B]
-- [ ] T051 [US5] Implement `scripts/kaneo/relink-feedback.py` (input: rows of id and Linear URL from a read-only `select` on stdin;
+- [X] T051 [US5] Implement `scripts/kaneo/relink-feedback.py` (input: rows of id and Linear URL from a read-only `select` on stdin;
       output: reviewed `UPDATE feedback.feedback_ticket SET backlog_ticket_id=..., backlog_ticket_url=...` statements per
       `contracts/board-conventions.md` step 6, spec FR-027); the previous task's test passes. [B]
 
