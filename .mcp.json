@@ -10,6 +10,10 @@
       "command": "sh",
       "args": ["scripts/mcp/github-mcp.sh"]
     },
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
+    },
     "kaneo": {
       "type": "http",
       "url": "https://kaneo.jordylab.be/api/mcp"

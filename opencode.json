@@ -28,9 +28,9 @@
       "command": ["sh", "scripts/mcp/github-mcp.sh"],
       "enabled": true
     },
-    "kaneo": {
+    "linear": {
       "type": "remote",
-      "url": "https://kaneo.jordylab.be/api/mcp",
+      "url": "https://mcp.linear.app/mcp",
       "enabled": true
     },
     "jordylab": {
@@ -42,6 +42,11 @@
         "callbackPort": 19876,
         "scope": "jordylab.mcp"
       }
+    },
+    "kaneo": {
+      "type": "remote",
+      "url": "https://kaneo.jordylab.be/api/mcp",
+      "enabled": true
     }
   },
   "agent": {
