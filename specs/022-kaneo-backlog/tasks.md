@@ -292,11 +292,11 @@ no key answers "backlog unavailable".
       `app-map.tsv` move with it), fix the paths inside `repo_inventory.sh`, `open_bugs.sh` and the two fixture test scripts,
       and rewrite `SKILL.md` for Kaneo with the write budget (40 writes a minute, 150 per run) instead of the 230-issue stop.
       Run both fixture scripts green.
-- [ ] T060 [P] [US4] Rewrite `.claude/skills/speckit-taskstoissues/SKILL.md` for Kaneo (one ticket per user story and per phase without a
+- [X] T060 [P] [US4] Rewrite `.claude/skills/speckit-taskstoissues/SKILL.md` for Kaneo (one ticket per user story and per phase without a
       story, a `Phase:` line instead of milestones, relations for ordering, spec link on the first line, preview and approval).
-- [ ] T061 [P] [US4] Update the Linear wording in `.claude/skills/agent-handover/SKILL.md` (section 5b: comment on the Kaneo ticket with
+- [X] T061 [P] [US4] Update the Linear wording in `.claude/skills/agent-handover/SKILL.md` (section 5b: comment on the Kaneo ticket with
       `create_task_comment`) and in `.opencode/commands/agent-handover.md`.
-- [ ] T062 [P] [US4] Update `.claude/skills/refresh-agent-models/SKILL.md` (steps 1-2 name the Kaneo ticket and `backlog-capture`).
+- [X] T062 [P] [US4] Update `.claude/skills/refresh-agent-models/SKILL.md` (steps 1-2 name the Kaneo ticket and `backlog-capture`).
 - [ ] T063 [US4] Update the renamed skill paths in `.github/workflows/hook-tests.yml` (after T032) and in any other reference found
       by `grep -rIl "linear-sync-drafts\|linear-capture\|linear-triage"` (CLAUDE.md skill list is done in T075).
 
