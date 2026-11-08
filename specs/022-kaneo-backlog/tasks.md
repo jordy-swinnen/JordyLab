@@ -240,7 +240,7 @@ no key answers "backlog unavailable".
 - [X] T046 [US5] Update the e2e journey text in `jordylab-fe/apps/jordylab-e2e/src/feedback.spec.ts` for the new message and the
       comment about the missing key (`KANEO_API_KEY`/provider), and confirm the web app has no reference to the renamed
       field (`grep -ri linearIssue jordylab-fe` empty).
-- [ ] T047 [US5] Add the backend-side names to the `backend` service `environment:` block in `deploy/compose/compose.yaml`
+- [X] T047 [US5] Add the backend-side names to the `backend` service `environment:` block in `deploy/compose/compose.yaml`
       (`BACKLOG_PROVIDER`, `KANEO_BASE_URL`, `KANEO_API_KEY`, `KANEO_PROJECT_KEY`, `KANEO_TICKET_URL_TEMPLATE`); the values
       arrive through `prod.env` (T019/T020), with `BACKLOG_PROVIDER` coming from the repository variable (`linear` until
       cutover); keep `LINEAR_API_KEY`. (Same files as T017/T019; do after them.)

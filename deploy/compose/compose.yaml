@@ -86,6 +86,11 @@ services:
       IGDB_CLIENT_SECRET: ${IGDB_CLIENT_SECRET}
       THEGAMESDB_API_KEY: ${THEGAMESDB_API_KEY}
       KANEO_API_KEY: ${KANEO_API_KEY:-}
+      BACKLOG_PROVIDER: ${BACKLOG_PROVIDER:-linear}
+      KANEO_BASE_URL: https://kaneo.jordylab.be
+      KANEO_PROJECT_KEY: JOR
+      KANEO_TICKET_URL_TEMPLATE: https://kaneo.jordylab.be/dashboard/workspace/{workspaceId}/project/{projectId}/board
+
     volumes:
       - artwork:/var/jordylab/artwork
     depends_on:
