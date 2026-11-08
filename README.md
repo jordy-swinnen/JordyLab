@@ -36,7 +36,7 @@ flowchart LR
         fe["frontend<br/>nginx · Angular"]
         be["backend<br/>Spring Boot 4 · Java 25"]
         ntfy["ntfy<br/>push notifications"]
-        pg[("Postgres 16 + pgvector<br/>app data + identity")]
+        pg[("Postgres 16 + pgvector<br/>app data, identity, price history")]
         art[("artwork volume")]
         host["deploy-release.sh<br/>on the host"]
     end
@@ -46,6 +46,7 @@ flowchart LR
     subgraph ext["External services"]
         ai["OpenRouter, Anthropic fallback<br/>AI calls"]
         games["Steam · IGDB · TheGamesDB"]
+        yahoo["Yahoo Finance chart API<br/>quotes, FX, daily closes"]
         linear["Linear<br/>feedback → issue"]
         lf["Langfuse<br/>AI traces"]
     end
@@ -60,6 +61,7 @@ flowchart LR
     be -- "publish" --> ntfy
     be --> ai
     be --> games
+    be -- "prices and history" --> yahoo
     be --> linear
     be --> lf
     pg -- "WAL + base backups" --> s3

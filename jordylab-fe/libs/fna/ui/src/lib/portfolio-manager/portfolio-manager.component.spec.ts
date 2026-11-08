@@ -386,6 +386,32 @@ describe('PortfolioManagerComponent', () => {
     expect(loadPriceHistory).toHaveBeenCalledWith('p1', 'ONE_YEAR');
   });
 
+  it('moves focus to the history panel heading when the panel opens', async () => {
+    positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
+    spectator.detectChanges();
+
+    clickButton('History');
+    await spectator.fixture.whenStable();
+
+    expect(document.activeElement).toBe(
+      spectator.query('#price-history-heading'),
+    );
+  });
+
+  it('returns focus to the History button of the row when the panel closes', async () => {
+    positions.set([aPortfolioPositionMock({ id: 'p1', ticker: 'ABI' })]);
+    spectator.detectChanges();
+    clickButton('History');
+    await spectator.fixture.whenStable();
+
+    clickButton('Close');
+    await spectator.fixture.whenStable();
+
+    expect(document.activeElement).toBe(
+      spectator.query('[data-history-button="p1"]'),
+    );
+  });
+
   function clickButton(label: string): void {
     const button = spectator
       .queryAll('button')
