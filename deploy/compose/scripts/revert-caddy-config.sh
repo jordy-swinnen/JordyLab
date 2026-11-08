@@ -3,6 +3,10 @@
 # Best effort: a missing or identical previous file is a no-op.
 set -euo pipefail
 
+script_directory=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=podman-env.sh
+. "$script_directory/podman-env.sh"
+
 readonly compose_dir=/opt/jordylab/compose
 readonly state_dir=/opt/jordylab/state
 readonly host_config=$compose_dir/Caddyfile
@@ -25,7 +29,7 @@ if cmp -s "$host_config" "$previous_config"; then
 fi
 
 install -m 644 "$previous_config" "$host_config"
-if ! docker exec jordylab-caddy-1 caddy reload --config "$container_config" --adapter caddyfile; then
+if ! podman exec jordylab-caddy-1 caddy reload --config "$container_config" --adapter caddyfile; then
   echo "revert-caddy-config: reloading the previous Caddyfile failed" >&2
   exit 1
 fi

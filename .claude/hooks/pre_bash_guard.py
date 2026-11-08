@@ -431,6 +431,17 @@ def check_command(tokens: list[str], *, gate_ddl: bool = True) -> str | None:
             return "docker compose down -v destroys volumes. Use docker compose down without -v."
         return None
 
+    if prog == "podman-compose":
+        if "down" in rest and any(t in ("-v", "--volumes") for t in rest):
+            return "podman compose down -v destroys volumes. Use podman compose down without -v."
+        return None
+
+    if prog == "podman" and rest and rest[0] == "compose":
+        sub = rest[1:]
+        if "down" in sub and any(t in ("-v", "--volumes") for t in sub):
+            return "podman compose down -v destroys volumes. Use podman compose down without -v."
+        return None
+
     return None
 
 

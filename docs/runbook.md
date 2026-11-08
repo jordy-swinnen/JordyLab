@@ -1,6 +1,6 @@
 # JordyLab Production Runbook
 
-Exact, copy-pasteable procedures for operating JordyLab's production Docker Compose stack on its OVH VPS. Every section
+Exact, copy-pasteable procedures for operating JordyLab's production Compose stack on its OVH VPS (rootless Podman, spec 024). Every section
 below that touches a live VPS, a billable OVH resource, DNS, or a real credential is Jordy's to run himself — nothing in
 this repository's automation performs these steps.
 
@@ -11,7 +11,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 
 1. [Order the VPS](#1-order-the-vps)
 2. [Harden the OS](#2-harden-the-os)
-3. [Install Docker Engine and the Compose plugin](#3-install-docker-engine-and-the-compose-plugin)
+3. [Install Podman and the Compose client](#3-install-podman-and-the-compose-client)
 4. [Join the VPS to Tailscale](#4-join-the-vps-to-tailscale)
 5. [The host layout and the stack](#5-the-host-layout-and-the-stack)
 6. [DNS & first TLS issuance](#6-dns--first-tls-issuance)
@@ -27,7 +27,7 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 16. [Full VPS rebuild](#16-full-vps-rebuild)
 17. [Certificate troubleshooting](#17-certificate-troubleshooting)
 18. [Disk cleanup](#18-disk-cleanup)
-19. [Docker / OS upgrades](#19-docker--os-upgrades)
+19. [Podman / OS upgrades](#19-podman--os-upgrades)
 20. [Deploys, releases and the APK](#20-deploys-releases-and-the-apk)
 21. [Manual tests the E2E campaign could not run](#21-manual-tests-the-e2e-campaign-could-not-run)
 22. [Before a release that changes the database: backup and pgvector](#22-before-a-release-that-changes-the-database-backup-and-pgvector)
@@ -37,6 +37,8 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 26. [MCP connector (Claude Desktop and mobile)](#26-mcp-connector-claude-desktop-and-mobile)
 27. [Agent test account](#27-agent-test-account)
 28. [Kaneo, the backlog](#28-kaneo-the-backlog)
+29. [The switch to Podman and the way back](#29-the-switch-to-podman-and-the-way-back)
+30. [Local and production differences](#30-local-and-production-differences)
 
 ---
 
@@ -79,32 +81,44 @@ SSH in as the image's default user, then:
    ```
    Nothing else is public. Only `caddy` publishes ports (`compose.yaml`), and administration goes over Tailscale (§4):
    no NodePorts, no 6443, no 10250.
-## 3. Install Docker Engine and the Compose plugin
+## 3. Install Podman and the Compose client
 **(operator step — do not run these commands yourself)**
 
-Production runs the Docker Compose stack in `deploy/compose/`. k3s is not part of it any more: it was retired at the
-Compose cutover (spec 020) and its manifests stay only as a rebuild fallback (§16).
+Production runs the Compose stack in `deploy/compose/` under rootless Podman, owned by the deploy account (spec 024). k3s is
+not part of it any more: it was retired at the Compose cutover (spec 020) and its manifests stay only as a rebuild fallback (§16).
 
-1. Install Docker Engine and the Compose plugin, and note the versions you install:
+1. Install Podman with its rootless helpers and the Compose client, and note the versions you install. The Compose client is
+   the `docker-compose` executable that `podman compose` runs (Compose v2 or later); its source and checksum are pinned in
+   `specs/024-podman-on-vps/contracts/host-contract.md`.
    ```
-   docker --version && docker compose version
+   sudo apt-get install -y podman uidmap passt netavark aardvark-dns
+   podman --version && docker-compose version --short
    ```
-2. Create the deploy user and the host layout. The deploy workflow connects as `jordylab-deploy` (never root) and
-   mirrors `deploy/compose/` into place:
+2. Create the deploy user and the host layout. The deploy workflow connects as `jordylab-deploy` (never root) and mirrors
+   `deploy/compose/` into place. The account is an ordinary account (an id of 1000 or more) with no `docker` group and no
+   `sudo`. Rootless Podman needs its subordinate id ranges, and the account's user manager has to run without a login:
    ```
-   sudo adduser --system --group --shell /bin/bash jordylab-deploy
-   sudo usermod -aG docker jordylab-deploy
+   sudo adduser --group --shell /bin/bash jordylab-deploy
+   sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 jordylab-deploy
+   sudo loginctl enable-linger jordylab-deploy
    sudo install -d -o jordylab-deploy -g jordylab-deploy /opt/jordylab/compose /opt/jordylab/env /opt/jordylab/state
    ```
    Put the CI key's public half in `~jordylab-deploy/.ssh/authorized_keys`; its private half is the `DEPLOY_SSH_KEY`
    environment secret (§9).
-3. Validate the stack definition against the example environment file (no secrets needed):
+3. Let rootless Podman bind the public ports 80 and 443, then turn on the Podman socket and the boot restart unit for the
+   deploy account. Copy the sysctl file from `deploy/compose/host/99-jordylab-ports.conf` in the repository:
    ```
-   docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q
+   sudo install -m 644 deploy/compose/host/99-jordylab-ports.conf /etc/sysctl.d/99-jordylab-ports.conf
+   sudo sysctl --system
+   sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) systemctl --user enable --now podman.socket podman-restart.service
    ```
-4. Bring the stack up (a deploy normally does this per release, §10):
+4. Validate the stack definition with the same Compose client the server uses (no secrets needed). Run it from the repository:
    ```
-   sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env \
+   deploy/compose/scripts/validate-stack.sh
+   ```
+5. Bring the stack up (a deploy normally does this per release, §10):
+   ```
+   sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman compose --env-file /opt/jordylab/env/prod.env \
      -f /opt/jordylab/compose/compose.yaml up -d --wait
    ```
    Every service must report healthy; the backend's health check waits out its 150 s start period.
@@ -133,17 +147,18 @@ and nothing else (the k3s API's 6443 is not used any more):
 
 - Only `caddy` publishes ports (80, 443). Caddy terminates TLS, redirects HTTP to HTTPS, and routes `/api` plus the
   WebAuthn ceremony paths and `/ntfy` (`Caddyfile`); every other path goes to the Angular app.
-- The other services are `backend`, `frontend`, `postgres` and `ntfy`, each with `restart: unless-stopped`,
+- The other services are `backend`, `frontend`, `postgres` and `ntfy`, each with `restart: always`,
   a memory limit and capped json-file logs (10 MB × 3).
 - The database is `jordylab-postgres:pg16-pgbackrest`, built on the host from `deploy/compose/postgres/`: pgvector
   included, base image pinned by digest, pgBackRest pinned by version.
 - Artwork lives in the `jordylab_artwork` volume; PostgreSQL data in `jordylab_postgres-data`; Caddy's certificates in
-  `jordylab_caddy-data`. They survive a `docker compose down`; only a host loss destroys them.
+  `jordylab_caddy-data`. They survive a `podman compose down`; only a host loss destroys them.
 
-When you are on the host, this is the one command shape used below:
+When you are on the host, the command shapes below run as the deploy account, which owns the rootless stack. `sudo -u` does not set the account's runtime directory, so `env XDG_RUNTIME_DIR=...` is part of each shape (the same reason `podman-env.sh` exists). The sections below use `$PODMAN` and `$COMPOSE`:
 
 ```bash
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 $COMPOSE ps
 ```
 ## 6. DNS & first TLS issuance
@@ -195,14 +210,14 @@ $COMPOSE ps
      (`tailscale/github-action@v4`). The tailnet policy must let `tag:ci` reach the host on TCP 22.
 3. The workflow pins the host's ed25519 fingerprint (`EXPECTED_ED25519_FP` in `deploy-prod-compose.yml`) and fails on a
    mismatch before it connects.
-4. No k3s credential is used any more. Production runs on Docker Compose (spec 020), k3s is stopped and disabled, and the
+4. No k3s credential is used any more. Production runs on Compose under rootless Podman (spec 020, spec 024), k3s is stopped and disabled, and the
    retired pipeline's `KUBE_*` environment secrets have been removed from the `production` environment.
 5. Automatic deploys are on since the pipeline was rewired (spec 020 T062); the repository variable `AUTO_DEPLOY` gates
    them (§10).
 
 ## 10. Deploy
 
-Production is the Docker Compose stack on the VPS (spec 020); k3s is retired. A deploy runs without an approval: a green
+Production is the Compose stack on rootless Podman on the VPS (spec 020, spec 024); k3s is retired. A deploy runs without an approval: a green
 build on `main` deploys by itself while `AUTO_DEPLOY` is `true`, and a manual run works with or without it. An automatic run
 skips a target older than the live release (a slow build that finishes late); a manual run never does, which is what makes
 an older target a rollback.
@@ -236,7 +251,7 @@ an older target a rollback.
 6. If anything fails from the environment file onwards, the workflow runs `deploy-release.sh rollback <release>`. It acts
    only when that release is still the live one: it restores `prod.env.previous` and the previous release, and the job
    ends red. The state files are `/opt/jordylab/state/current-release` and `previous-release`.
-7. Confirm: `ssh ubuntu@100.93.81.41 'sudo docker ps'` (six services healthy), then the `quickstart.md` checks.
+7. Confirm: `ssh ubuntu@100.93.81.41 'sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman ps'` (six services healthy), then the `quickstart.md` checks.
 
 **Outage**: a release restarts three services, so expect seconds rather than minutes. There is one host and no blue/green.
 
@@ -296,10 +311,11 @@ The stack's logs are capped json-file logs on the host:
 
 ```bash
 ssh ubuntu@100.93.81.41
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 $COMPOSE logs -f backend          # also: frontend, caddy, postgres, ntfy
 $COMPOSE ps
-sudo docker stats --no-stream
+$PODMAN stats --no-stream
 sudo journalctl -u 'jordylab-backup-*' -n 50    # the backup timers (§15)
 ```
 ## 13. Rotate a secret
@@ -309,7 +325,7 @@ sudo journalctl -u 'jordylab-backup-*' -n 50    # the backup timers (§15)
 2. Commit and push the updated ciphertext.
 3. Deploy a commit that contains it (§10): the runner renders `prod.env` from the new ciphertext and writes it on the
    host. The containers take the new values when that deploy recreates them; there is nothing to restart by hand.
-4. (Player-count key: see §23, "Player counts are missing".) A `docker compose up -d` on the host alone does **not** pick
+4. (Player-count key: see §23, "Player counts are missing".) A `podman compose up -d` on the host alone does **not** pick
    up a new value: it reads the `prod.env` that is already there, which only the deploy writes.
 ## 14. Age key lost (re-keying)
 If the private key is gone from **both** the password manager and the GitHub environment secret:
@@ -330,7 +346,8 @@ setup; it takes about 15 minutes.
 **Check the chain** (on the host):
 
 ```bash
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 systemctl list-timers 'jordylab-backup-*'
 $COMPOSE exec -T postgres pgbackrest --stanza=jordylab info
 ```
@@ -344,19 +361,19 @@ and never mounts the live Postgres volume:
 
 ```bash
 ENVF=/opt/jordylab/env/prod.env
-docker volume create jordylab-restore-drill
-# prod.env quotes every value ('...'). Docker's --env-file keeps those quotes as part of the value, so the S3 keys
-# would not match (the drill of 2026-11-07 failed that way). The sed strips them while the file is read; nothing is copied.
-docker run --rm --name jordylab-restore-drill \
-  --env-file <(sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\1=\2/" "$ENVF") \
+$PODMAN volume create jordylab-restore-drill
+# prod.env quotes every value ('...'). Podman's --env-file keeps those quotes as part of the value, so the S3 keys
+# would not match (the drill of 2026-11-07 failed that way). The sed strips them while the file is read and pipes the
+# result to podman; nothing is copied.
+sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\1=\2/" "$ENVF" | $PODMAN run --rm --name jordylab-restore-drill --env-file /dev/stdin \
   --mount type=volume,src=jordylab-restore-drill,dst=/var/lib/postgresql/data \
   --entrypoint bash jordylab-postgres:pg16-pgbackrest -c '
     pgbackrest --stanza=jordylab --type=time "--target=<UTC time>" --target-action=promote restore &&
     pg_ctl -D /var/lib/postgresql/data -o "-p 5433 -k /tmp" -w start &&
     psql -h /tmp -p 5433 -U postgres -d jordylab -At -c "select count(*) from gamecatalog.game" &&
     psql -h /tmp -p 5433 -U postgres -d kaneo -At -c "select count(*) from task" &&
-    pg_ctl -D /var/lib/postgresql/data -m fast -w stop' </dev/null
-docker volume rm jordylab-restore-drill
+    pg_ctl -D /var/lib/postgresql/data -m fast -w stop'
+$PODMAN volume rm jordylab-restore-drill
 ```
 
 Pick a target time inside the window and after the first full backup, and write it down first. To restore to the end of
@@ -375,9 +392,9 @@ Restores to a time **before** the cutover use the old CloudNativePG chain and th
 If the VPS is lost entirely:
 
 1. Order and harden a new VPS (§1–§2).
-2. Install Docker and the Compose plugin, create the deploy user and the layout, and join Tailscale (§3–§4).
+2. Install Podman and the Compose client, create the deploy user and the layout, and join Tailscale (§3–§4).
 3. From a clean checkout of `main`: mirror `deploy/compose/` to `/opt/jordylab/compose` and render `prod.env` from the
-   SOPS secrets (the deploy workflow does both; §10), then bring the stack up (§3 step 4).
+   SOPS secrets (the deploy workflow does both; §10), then bring the stack up (§3 step 5).
 4. Restore the database from the latest pgBackRest backup (§15) into the `jordylab_postgres-data` volume.
 5. Re-point DNS at the new VPS's IP (§6); Caddy issues a fresh certificate.
 6. Here is what does **not** survive a full host loss: the `artwork` volume and the Caddy certificate volume. The
@@ -388,7 +405,8 @@ in case the Compose path itself cannot be rebuilt. It is history, not a live pat
 ## 17. Certificate troubleshooting
 ```bash
 ssh ubuntu@100.93.81.41
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 $COMPOSE logs caddy | grep -i -E "certificate|challenge|error"
 $COMPOSE ps caddy
 curl -sI https://jordylab.be/
@@ -431,29 +449,30 @@ certificate directory forces a re-issue.
 75 GB total, shared by images, volumes and logs. Check and reclaim:
 
 ```bash
-df -h / /var/lib/docker
-sudo docker system df
-sudo docker image prune            # dangling images only; running and previous-release images are kept
-sudo docker builder prune
-du -sh /var/lib/docker/volumes/*
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+df -h / /home/jordylab-deploy
+$PODMAN system df
+$PODMAN image prune            # dangling images only; running and previous-release images are kept
+$PODMAN builder prune
+sudo du -sh /home/jordylab-deploy/.local/share/containers/storage/volumes/*
 ```
 
 Keep the current and previous release images: they are the rollback targets named in the state files (§5).
-## 19. Docker / OS upgrades
+## 19. Podman / OS upgrades
 1. **OS**: `sudo apt-get update && sudo apt-get upgrade -y`, reboot if the kernel requires it. The stack comes back
-   by itself (`restart: unless-stopped`); verify with `$COMPOSE ps` and the quickstart checks (§12).
-2. **Docker**: upgrade the engine and the Compose plugin deliberately, then `$COMPOSE ps` and one smoke check. A deploy
-   does not upgrade Docker.
+   by itself (`restart: always`, with the boot restart unit and lingering from §3); verify with `$COMPOSE ps` and the quickstart checks (§12).
+2. **Podman**: upgrade Podman and the Compose client deliberately, then `$COMPOSE ps` and one smoke check. A deploy
+   does not upgrade Podman.
 3. **The application**: a release is a deploy (§10). Nothing on the host changes.
 4. **Postgres / pgBackRest**: change the pinned digest or version in `deploy/compose/postgres/Containerfile`
-   deliberately, then `cd /opt/jordylab/compose && sudo -u jordylab-deploy docker compose ... build postgres` and a
+   deliberately, then `$COMPOSE build postgres` and a
    deploy in a maintenance window — restarting Postgres is downtime, and the image build is not part of a release.
 5. **No k3s to upgrade**: k3s is stopped and disabled since the cutover (spec 020). Its upgrade steps are history in
    `docs/runbooks/vps-k3s-deployment/`.
 ## 20. Deploys, releases and the APK
 
 **Status: the deploy platform changed on 2026-11-03.** The automatic k3s pipeline (spec 019) deployed a green `main` build
-without approval; the Compose cutover (spec 020), later the same day, retired it. Deploys now run on Docker Compose: a green
+without approval; the Compose cutover (spec 020), later the same day, retired it. Deploys now run on Compose (Docker Engine until the spec 024 switch, rootless Podman after it): a green
 `main` build deploys by itself while `AUTO_DEPLOY` is `true`, and a manual run takes a commit sha or a release tag (§10,
 §11). The measurement tables below are the record of the k3s pipeline, not of the Compose deploys, which time themselves in
 their own runs.
@@ -549,7 +568,8 @@ For a release that rewrites data, take one now:
 
 ```bash
 ssh ubuntu@100.93.81.41
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 $COMPOSE exec -T postgres pgbackrest --stanza=jordylab --type=full backup
 $COMPOSE exec -T postgres pgbackrest --stanza=jordylab info
 ```
@@ -583,18 +603,20 @@ major image. A major upgrade is a deliberate rebuild, a dump and a restore, and 
 and again for the cutover.
 
 **Before you start:** a full backup and a restore drill from the last week (§15); the live release in
-`state/current-release` (§5); at least twice the database size free under `/var/lib/docker` (a dump plus a second volume);
+`state/current-release` (§5); at least twice the database size free under the deploy account's container storage, `/home/jordylab-deploy/.local/share/containers` (a dump plus a second volume);
 and confirmation that the backend (Spring Boot/Hibernate) supports the new major — check its release
 notes, and keep the pgvector extension: the pinned base image is the `pgvector/pgvector` one.
+
+Set `$PODMAN` and `$COMPOSE` as in §5 in the shell you use for every command in this section.
 
 1. **Stop the writers, keep Postgres up**, so the dump is consistent:
    ```
    $COMPOSE stop backend
    ```
-2. **Dump everything** — roles and the `jordylab` database — as root, with the redirect inside
-   the root shell so the file is never world-readable:
+2. **Dump everything** — roles and the `jordylab` database. The dump runs as the deploy account and root writes
+   the file with mode 600, so the file is never world-readable:
    ```
-   sudo sh -c 'umask 077; docker exec -i jordylab-postgres-1 pg_dumpall -U postgres > /opt/jordylab/postgres-<old-major>-<date>.sql'
+   $PODMAN exec -i jordylab-postgres-1 pg_dumpall -U postgres | sudo sh -c 'umask 077; cat > /opt/jordylab/postgres-<old-major>-<date>.sql'
    ```
    Do **not** add `--clean`: it emits `DROP ROLE postgres` and `DROP DATABASE template1`, and a running cluster refuses the
    first ("current user cannot be dropped"). The target is a fresh volume, so no drops are needed. The dump is a copy of
@@ -604,19 +626,19 @@ notes, and keep the pgvector extension: the pinned base image is the `pgvector/p
    and the pinned `pgbackrest` version. Mirror `deploy/compose` to the host (§5), then build; keep the old image:
    ```
    cd /opt/jordylab/compose
-   sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env build postgres
-   sudo docker image ls jordylab-postgres
+   $COMPOSE build postgres
+   $PODMAN image ls jordylab-postgres
    ```
 4. **Rehearse into a throwaway volume** (no published ports, nothing touches the real data):
    ```
-   sudo docker volume create jordylab-postgres-<new>-rehearsal
-   sudo docker run -d --name jordylab-pg<new>-rehearsal --env-file /opt/jordylab/env/prod.env \
+   $PODMAN volume create jordylab-postgres-<new>-rehearsal
+   $PODMAN run -d --name jordylab-pg<new>-rehearsal --env-file /opt/jordylab/env/prod.env \
      --mount type=volume,src=jordylab-postgres-<new>-rehearsal,dst=/var/lib/postgresql/data \
      jordylab-postgres:pg<new>-pgbackrest
-   sudo sh -c 'docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d postgres < /opt/jordylab/postgres-<old-major>-<date>.sql'
-   sudo docker exec -i jordylab-pg<new>-rehearsal psql -U postgres -d jordylab -At \
+   sudo cat /opt/jordylab/postgres-<old-major>-<date>.sql | $PODMAN exec -i jordylab-pg<new>-rehearsal psql -U postgres -d postgres
+   $PODMAN exec -i jordylab-pg<new>-rehearsal psql -U postgres -d jordylab -At \
      -c "select count(*) from gamecatalog.game" -c "select version, success from flyway_schema_history order by installed_rank desc limit 1"
-   sudo docker rm -f jordylab-pg<new>-rehearsal && sudo docker volume rm jordylab-postgres-<new>-rehearsal
+   $PODMAN rm -f jordylab-pg<new>-rehearsal && $PODMAN volume rm jordylab-postgres-<new>-rehearsal
    ```
    Expect exactly one harmless error, `role "postgres" already exists` (the fresh cluster already has it); any other error
    is a real problem. Do not add `ON_ERROR_STOP`, or that one error aborts the restore. Fix anything else here, not on the
@@ -627,7 +649,7 @@ notes, and keep the pgvector extension: the pinned base image is the `pgvector/p
    $COMPOSE down
    # edit compose.yaml: postgres image and the postgres-data volume name
    $COMPOSE up -d --wait postgres
-   sudo sh -c 'docker exec -i jordylab-postgres-1 psql -U postgres -d postgres < /opt/jordylab/postgres-<old-major>-<date>.sql'
+   sudo cat /opt/jordylab/postgres-<old-major>-<date>.sql | $PODMAN exec -i jordylab-postgres-1 psql -U postgres -d postgres
    $COMPOSE up -d --wait
    ```
    Then the smoke checks (§10 step 5). Leave the old volume in place: that is the way back.
@@ -657,7 +679,7 @@ database — the documented last resort (spec 019 US6, D15). Do it over Tailscal
    ```
 2. Update the admin row in production. This also clears the lockout state:
    ```bash
-   ssh ubuntu@100.93.81.41 "sudo docker compose --env-file /opt/jordylab/env/prod.env \
+   ssh ubuntu@100.93.81.41 "sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/\$(id -u jordylab-deploy) podman compose --env-file /opt/jordylab/env/prod.env \
      -f /opt/jordylab/compose/compose.yaml exec -T postgres psql -U postgres -d jordylab -c \
      \"UPDATE identity.user_account SET password_hash = '\$2y\$10\$…', failed_attempts = 0, locked_until = NULL WHERE username = 'jordy';\""
    ```
@@ -754,7 +776,8 @@ startup fail instead of touching that account.
   `password_hash`):
   ```bash
   ssh ubuntu@100.93.81.41
-  export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+  export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+  export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
   $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c \
     "select username, role, status from identity.user_account where username = 'agent'"
   $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c \
@@ -785,9 +808,9 @@ service. It is not part of the application release: a Kaneo outage never blocks 
 4. Check that no one else can register: a second sign-up must not create an account.
 
 **Health and logs**
-- `docker compose ... ps kaneo` shows the container's health; the health path is `/api/health` (answers
+- `$COMPOSE ps kaneo` shows the container's health; the health path is `/api/health` (answers
   `{"status":"ok"}`).
-- `docker compose ... logs --tail=100 kaneo` for errors.
+- `$COMPOSE logs --tail=100 kaneo` for errors.
 
 **Closing or reopening registration**
 - Closed by default: `KANEO_DISABLE_REGISTRATION` is `true` unless the repository variable says otherwise. Change it with
@@ -803,7 +826,7 @@ service. It is not part of the application release: a Kaneo outage never blocks 
 
 **Upgrades**
 1. Read the Kaneo release notes for every version between the pin and the target; security notes first.
-2. Take a backup: `pgbackrest --stanza=jordylab --type=diff backup` (see section 22).
+2. Take a backup: `$PODMAN exec jordylab-postgres-1 pgbackrest --stanza=jordylab --type=diff backup` (see section 22).
 3. Change the image tag and digest in `compose.yaml` in a pull request, merge, and deploy.
 4. Check `/api/health` and sign in.
 5. To roll back, restore the previous pin through a deploy of the previous commit. If the new version changed the
@@ -816,3 +839,36 @@ service. It is not part of the application release: a Kaneo outage never blocks 
   set the variable to `false` (`gh variable set KANEO_DISABLE_WORKSPACE_CREATION --body false`), deploy, and record the
   result here.
 - The GitHub App matrix (T010) and the Claude Code and Claude app checks run on production after the first deploy.
+
+---
+
+## 29. The switch to Podman and the way back
+
+Spec 024 moves the production stack from Docker Engine to rootless Podman on the same VPS. The step-by-step procedure, its
+gates and the way back are in [switch-procedure.md](../specs/024-podman-on-vps/contracts/switch-procedure.md); the host
+settings are in [host-contract.md](../specs/024-podman-on-vps/contracts/host-contract.md). Read both before the window.
+
+The way back, in short:
+
+- **Inside the window** (no new data written under Podman): stop the Podman stack as the deploy account, re-enable
+  `docker.service` and `docker.socket`, start the Docker stack from its untouched volumes, and check the site.
+- **After the window**: the Docker volumes hold the state from before the switch. Data written under Podman must be dumped
+  and restored into them first, or it is lost.
+- Docker Engine stays installed but stopped for one week after the switch. It is removed only with the owner's approval.
+
+## 30. Local and production differences
+
+Local development (macOS, with Podman in a Linux VM) and production (Ubuntu 26.04 on the VPS) use the same engine. The
+production stack definition is checked with the production Compose client by `deploy/compose/scripts/validate-stack.sh`.
+These differences remain, with the reason for each. Task T054 finalises the list with what the rehearsal and the window find.
+
+| Difference | Local | Production | Why it stays |
+|---|---|---|---|
+| Host | macOS; Podman runs in a Linux VM (`podman machine`) | Ubuntu 26.04 on the VPS | The Mac is the owner's workstation; the VPS is the server |
+| Account | the owner's user | the `jordylab-deploy` account, with lingering and subordinate ids | Production runs unattended under a dedicated account |
+| Compose client | `podman compose` uses `podman-compose` unless `PODMAN_COMPOSE_PROVIDER` is set | `podman compose` uses the Docker Compose v2 client | The production client is pinned; local keeps its default, and `validate-stack.sh` checks the production client |
+| Boot | containers are not restarted at login | the restart unit and lingering start `restart: always` containers at boot | A workstation is not a server |
+| Services | the Postgres container from `jordylab-be/compose.yaml` only | the five-service stack: Caddy, frontend, backend, ntfy, Postgres with pgBackRest | Local development runs the backend itself (`./gradlew bootRun`) |
+| Ports | Postgres on 5432 | only Caddy publishes 80 and 443; the sysctl lets the deploy account bind from 80 | Production serves the public site |
+| Images | the pgvector image by tag (`pgvector/pgvector:pg16`) | the Postgres image built on the host from a digest-pinned base with pgBackRest; the application images pinned by release tag from GHCR | Production must be reproducible |
+| Secrets | an untracked `.env` file | a SOPS-encrypted file, rendered on deploy | Production secrets never sit on a workstation |

@@ -7,6 +7,10 @@
 # - reloads atomically, and restores the previous Caddyfile if the reload fails.
 set -euo pipefail
 
+script_directory=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=podman-env.sh
+. "$script_directory/podman-env.sh"
+
 readonly compose_dir=/opt/jordylab/compose
 readonly state_dir=/opt/jordylab/state
 readonly host_config=$compose_dir/Caddyfile
@@ -19,11 +23,11 @@ hash_of() {
 }
 
 reload_caddy() {
-  docker exec jordylab-caddy-1 caddy reload --config "$container_config" --adapter caddyfile
+  podman exec jordylab-caddy-1 caddy reload --config "$container_config" --adapter caddyfile
 }
 
 recreate_caddy() {
-  docker compose --env-file /opt/jordylab/env/prod.env -f "$compose_dir/compose.yaml" \
+  podman compose --env-file /opt/jordylab/env/prod.env -f "$compose_dir/compose.yaml" \
     up -d --no-deps --force-recreate caddy
 }
 
@@ -39,18 +43,18 @@ if [ -f "$applied_hash" ] && [ "$(cat "$applied_hash")" = "$current_hash" ]; the
 fi
 
 # Validate from a copy: an invalid file never reaches the mount, and never causes a crashed recreation.
-docker cp "$host_config" jordylab-caddy-1:/tmp/Caddyfile.validate
-if ! docker exec jordylab-caddy-1 caddy validate --config /tmp/Caddyfile.validate --adapter caddyfile; then
-  docker exec jordylab-caddy-1 rm -f /tmp/Caddyfile.validate
+podman cp "$host_config" jordylab-caddy-1:/tmp/Caddyfile.validate
+if ! podman exec jordylab-caddy-1 caddy validate --config /tmp/Caddyfile.validate --adapter caddyfile; then
+  podman exec jordylab-caddy-1 rm -f /tmp/Caddyfile.validate
   echo "apply-caddy-config: Caddy rejected the new Caddyfile; the running config is untouched" >&2
   exit 1
 fi
-docker exec jordylab-caddy-1 rm -f /tmp/Caddyfile.validate
+podman exec jordylab-caddy-1 rm -f /tmp/Caddyfile.validate
 
 install -m 600 "$host_config" "$previous_config"
 
 # The container from before JOR-82 mounts only /etc/caddy/Caddyfile and cannot see /srv/Caddyfile.
-inside_hash=$(docker exec jordylab-caddy-1 sha256sum "$container_config" 2>/dev/null | cut -d' ' -f1 || true)
+inside_hash=$(podman exec jordylab-caddy-1 sha256sum "$container_config" 2>/dev/null | cut -d' ' -f1 || true)
 if [ "$inside_hash" != "$current_hash" ]; then
   echo "apply-caddy-config: caddy does not see the mirrored file; recreating it once" >&2
   recreate_caddy

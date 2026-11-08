@@ -1,6 +1,6 @@
 ---
 name: jordylab-ops
-description: JordyLab production operations — OVH VPS + Docker Compose, Tailscale SSH, GitHub Actions deploys (by commit sha or release tag), rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), identity/user administration, pgBackRest backups, TLS via Caddy. Load before running, proposing or explaining anything that touches the live host, the deploy pipeline, prod secrets or the prod identity data.
+description: JordyLab production operations — OVH VPS + Compose on rootless Podman, Tailscale SSH, GitHub Actions deploys (by commit sha or release tag), rollbacks, SOPS + age secrets (edited by Jordy in IntelliJ), identity/user administration, pgBackRest backups, TLS via Caddy. Load before running, proposing or explaining anything that touches the live host, the deploy pipeline, prod secrets or the prod identity data.
 ---
 
 # JordyLab production operations
@@ -12,16 +12,16 @@ operations: explain *why* briefly when you propose something, and prefer command
 This skill is the single source of truth for production operations. The `jordylab-devops` subagent (Claude
 Code and OpenCode) only loads it; edit operational knowledge here, not in the agents.
 
-Production moved from k3s to Docker Compose on 2026-11-03 (spec 020). The k3s material is kept only as a rebuild
+Production moved from k3s to Docker Compose on 2026-11-03 (spec 020), and from Docker Engine to rootless Podman at the spec 024 switch. Use the Podman forms below; the Docker forms are history. The k3s material is kept only as a rebuild
 fallback; the narrative of the move is in `specs/020-compose-deployment/` and the project runbook is
 `docs/runbook.md`.
 
 ## Safety rules (always)
 
-1. **Read before you change.** Diagnose with read-only commands first (`docker ps`, `compose logs`, `compose config`,
+1. **Read before you change.** Diagnose with read-only commands first (`podman ps`, `compose logs`, `compose config`,
    `pgbackrest info`). Quote the error you found before proposing a fix.
-2. **Mutations need Jordy's explicit yes**: anything that runs `docker compose up/down/restart/build/exec` that changes
-   state, `docker volume rm`, `ssh` commands that change the server, `ufw`, Tailscale policy changes, GitHub
+2. **Mutations need Jordy's explicit yes**: anything that runs `podman compose up/down/restart/build/exec` that changes
+   state, `podman volume rm`, `ssh` commands that change the server, `ufw`, Tailscale policy changes, GitHub
    environment/secret/variable changes, or changing what a deploy does. A deploy is started by hand with a target
    (spec 020) and has no approval step; still, show the exact command and what it changes, then wait. A config change
    (`compose.yaml`, `Caddyfile`, `prod.env`, secrets) needs Jordy's yes even when it reaches production through a merge,
@@ -29,7 +29,7 @@ fallback; the narrative of the move is in `specs/020-compose-deployment/` and th
 3. **Secrets never pass through the conversation.** Never print, echo, `cat`, or decrypt secret values to the screen.
    Pipe values (`… | gh secret set …`), never select password hashes or machine-token hashes in `psql`, use
    `gitleaks --redact`, and filter logs with `grep -v -i -E 'password|secret'`. Never read `/opt/jordylab/env/prod.env`.
-4. **Production changes go through Git** (PR → merge → Build → deploy). A live `docker compose up -d` with a changed
+4. **Production changes go through Git** (PR → merge → Build → deploy). A live `podman compose up -d` with a changed
    value is fine to *test* a fix quickly, but the same change must land in the repo, or the next deploy undoes it.
 5. **Verify versions against the live source** (Docker Hub, GHCR, release pages) before pinning anything. Say so when
    you couldn't.
@@ -48,8 +48,8 @@ fallback; the narrative of the move is in `specs/020-compose-deployment/` and th
 | Server        | OVH VPS-2 (4 vCPU / 8 GB / 75 GB NVMe), London (UK), Ubuntu 26.04 LTS                                                        |
 | Public IPv4   | `57.129.163.110` — SSH user `ubuntu`, key-only, passwordless sudo                                                            |
 | Admin network | Tailscale; server = `jordylab-vps` (`100.93.81.41`, tag `tag:jordylab-vps`, key expiry disabled)                             |
-| CI access     | Tailscale node tag `tag:ci`, allowed to the server on `tcp:22` only, then SSH as `jordylab-deploy` (docker group, no sudo)   |
-| Stack         | Docker Compose project `jordylab` from `/opt/jordylab/compose/compose.yaml`, env file `/opt/jordylab/env/prod.env`           |
+| CI access     | Tailscale node tag `tag:ci`, allowed to the server on `tcp:22` only, then SSH as `jordylab-deploy` (no docker group, no sudo; rootless Podman)   |
+| Stack         | Compose project `jordylab` on rootless Podman, from `/opt/jordylab/compose/compose.yaml`, env file `/opt/jordylab/env/prod.env`           |
 | Live release  | `/opt/jordylab/state/current-release` (a tag or `sha-<sha>`), previous in `previous-release`; images `ghcr.io/jordy-swinnen/jordylab-{backend,frontend}:<release>` |
 | Backups       | pgBackRest → OVH Object Storage, bucket `jordylab-cnpg-backups`, path `/pgbackrest`, `https://s3.gra.io.cloud.ovh.net`        |
 | CI/CD         | `Build` on every push; a green `main` build deploys through `Deploy to Production (Compose)` while `AUTO_DEPLOY` is `true`; a manual run takes a commit sha or release tag (no approval) |
@@ -63,7 +63,7 @@ pgBackRest 2.60.0, ntfy v2.28.0, backend/frontend images from GHCR.
 
 ```
 Internet ──► VPS :80/:443 (ufw: 22, 80, 443 public)
-             └─ Docker Compose project `jordylab` (only caddy publishes ports)
+             └─ Compose project `jordylab` on rootless Podman (only caddy publishes ports)
                   caddy ──► /                                     frontend  (nginx :8080, Angular build)
                         ──► /api, /webauthn, /login/webauthn,
                             /.well-known/assetlinks.json           backend   (Spring Boot :8080)
@@ -135,7 +135,8 @@ Reach the host over Tailscale (key-only), and use one `$COMPOSE` shape for every
 
 ```bash
 ssh ubuntu@100.93.81.41
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 ```
 
 ### Access and health of the platform
@@ -145,8 +146,8 @@ tailscale status | grep jordylab-vps               # server reachable over Tails
 ssh ubuntu@100.93.81.41 'echo SSH_OK; hostname; uptime'
 ssh ubuntu@100.93.81.41 'sudo ufw status verbose'  # expect 22, 80, 443 only
 $COMPOSE ps                                        # six services, healthy
-sudo docker stats --no-stream
-df -h /; df -h /var/lib/docker
+$PODMAN stats --no-stream
+df -h /; df -h /home/jordylab-deploy
 ```
 
 ### App status and debugging
@@ -170,10 +171,10 @@ $COMPOSE restart backend
 ### The stack definition
 
 ```bash
-cd /opt/jordylab/compose && sudo -u jordylab-deploy docker compose \
+cd /opt/jordylab/compose && sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman compose \
   --env-file /opt/jordylab/env/prod.env -f compose.yaml config -q   # validates
 # On the Mac, against the template (no secrets needed):
-docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml config -q
+deploy/compose/scripts/validate-stack.sh
 $COMPOSE pull backend frontend
 ```
 
@@ -222,7 +223,7 @@ gitleaks dir --no-banner --redact .                        # hits in gitignored 
 `idea` is the JetBrains Toolbox launcher (on his `PATH`); `--wait` makes sops block until he closes the IntelliJ tab,
 then sops re-encrypts on exit (sops ≥ 3.9 reads `SOPS_EDITOR` before `EDITOR`). Never run this yourself: the decrypted
 file must only ever open in his editor. A changed value reaches production on the next deploy, which renders a new
-`prod.env`; a `docker compose up -d` on the host alone does not pick up an unwritten change. Editors can keep plaintext in
+`prod.env`; a `podman compose up -d` on the host alone does not pick up an unwritten change. Editors can keep plaintext in
 local history: clear IntelliJ Local History for the temp file afterwards, or use the VS Code `sops` profile
 (`workbench.localHistory.enabled: false`).
 
@@ -257,7 +258,8 @@ Read-only checks (never select `password_hash`, token hashes or session attribut
 
 ```bash
 ssh ubuntu@100.93.81.41
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select username, role, status from identity.user_account order by username"
 $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select principal_name, count(*) from identity.spring_session group by principal_name"
 $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select name, scope, revoked_at is not null from identity.machine_token order by created_at desc"
@@ -273,7 +275,8 @@ The coding agent's permanent test account (`agent`, guest with Game Catalog) is 
 
 ```bash
 ssh ubuntu@100.93.81.41
-export COMPOSE='sudo -u jordylab-deploy docker compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml'
+export PODMAN="sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman"
+export COMPOSE="$PODMAN compose --env-file /opt/jordylab/env/prod.env -f /opt/jordylab/compose/compose.yaml"
 $COMPOSE ps postgres
 $COMPOSE exec -T postgres pg_isready -U postgres -d jordylab
 systemctl list-timers 'jordylab-backup-*'
@@ -286,12 +289,12 @@ $COMPOSE exec -T postgres psql -U postgres -d jordylab -At -c "select version, d
 The restore drill (point-in-time restore into a throwaway volume) is `docs/runbook.md` §15. The old Barman chain under
 `cnpg-backups` is history that pgBackRest cannot read; a pre-cutover restore uses the kept k3s manifests.
 
-### Host, Docker, Tailscale
+### Host, Podman, Tailscale
 
 ```bash
-ssh ubuntu@100.93.81.41 'sudo docker --version; sudo docker compose version'
-ssh ubuntu@100.93.81.41 'sudo docker ps --format "{{.Names}}\t{{.Status}}\t{{.Image}}"'
-ssh ubuntu@100.93.81.41 'sudo docker system df; df -h /var/lib/docker'
+ssh ubuntu@100.93.81.41 'podman --version; docker-compose version --short'
+ssh ubuntu@100.93.81.41 'sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman ps --format "{{.Names}}\t{{.Status}}\t{{.Image}}"'
+ssh ubuntu@100.93.81.41 'sudo -u jordylab-deploy env XDG_RUNTIME_DIR=/run/user/$(id -u jordylab-deploy) podman system df; df -h /home/jordylab-deploy'
 ssh ubuntu@100.93.81.41 'sudo reboot'            # the stack returns by itself (restart: unless-stopped)
 ssh ubuntu@100.93.81.41 'sudo apt-get update && sudo apt-get upgrade -y'
 ssh ubuntu@100.93.81.41 'sudo tailscale status | head -3'
