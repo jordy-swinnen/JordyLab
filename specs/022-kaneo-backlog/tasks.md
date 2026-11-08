@@ -237,7 +237,7 @@ no key answers "backlog unavailable".
       `FeedbackTicket`, `FeedbackApp`/`FeedbackType` (`backlogLabelName`), `InboxTicketView.backlogTicketUrl`, the repository
       comments; update `FeedbackTicketTest`, `FeedbackTicketTestBuilder` and the repository test (Testcontainers) so the rename
       is exercised.
-- [ ] T046 [US5] Update the e2e journey text in `jordylab-fe/apps/jordylab-e2e/src/feedback.spec.ts` for the new message and the
+- [X] T046 [US5] Update the e2e journey text in `jordylab-fe/apps/jordylab-e2e/src/feedback.spec.ts` for the new message and the
       comment about the missing key (`KANEO_API_KEY`/provider), and confirm the web app has no reference to the renamed
       field (`grep -ri linearIssue jordylab-fe` empty).
 - [ ] T047 [US5] Add the backend-side names to the `backend` service `environment:` block in `deploy/compose/compose.yaml`

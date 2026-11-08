@@ -7,7 +7,7 @@ import { FeedbackState, InboxTicket } from './feedback.models';
 /**
  * The admin idea box (Custom Signal Store): the ticket list with its state filter, the triage
  * actions and the two admin texts. Accept carries the optional private note and surfaces the
- * stable LINEAR_UNAVAILABLE code when the workspace is unreachable.
+ * stable BACKLOG_UNAVAILABLE code when the backlog is unreachable.
  */
 @Injectable({ providedIn: 'root' })
 export class InboxStore {
@@ -107,8 +107,8 @@ export class InboxStore {
     }
     const reason = (error.error as { reason?: string } | null)?.reason;
     switch (reason) {
-      case 'LINEAR_UNAVAILABLE':
-        return 'Linear is unreachable right now — the ticket stays as it was, so you can retry.';
+      case 'BACKLOG_UNAVAILABLE':
+        return 'The backlog is unreachable right now — the ticket stays as it was, so you can retry.';
       case 'INVALID_STATE':
         return 'That ticket cannot be changed in its current state.';
       case 'NOT_FOUND':

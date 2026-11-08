@@ -19,7 +19,7 @@ export function anInboxTicketMock(overrides: Partial<InboxTicket> = {}): InboxTi
     ...aFeedbackTicketMock(),
     privateNote: null,
     sender: 'Ada Palmer',
-    linearIssueUrl: null,
+    backlogTicketUrl: null,
     acceptError: null,
     ...overrides,
   };
