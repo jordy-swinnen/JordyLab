@@ -1,7 +1,7 @@
 #!/bin/sh
 # Read-only inventory of the work the repository holds: every numbered spec under specs/ and every draft under
 # specs/_drafts/ that has no spec yet. Prints one JSON array (sorted by key) on stdout; diagnostics go to stderr.
-# Exit 0 on success, 2 when specs/_drafts/ is missing. Never writes a file, never calls Linear.
+# Exit 0 on success, 2 when specs/_drafts/ is missing. Never writes a file, never calls Kaneo.
 # Contract: specs/015-linear-backlog/contracts/draft-inventory.md. Run from the repository root.
 set -eu
 

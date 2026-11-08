@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fixture for open_bugs.sh: a small bug log with every status, run through the script (BUG_LOG), asserted with jq.
-# Run standalone: bash .claude/skills/linear-sync-drafts/scripts/tests/open-bugs-cases.sh
+# Run standalone: bash .claude/skills/backlog-sync-drafts/scripts/tests/open-bugs-cases.sh
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

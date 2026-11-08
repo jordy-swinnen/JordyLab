@@ -283,12 +283,12 @@ no key answers "backlog unavailable".
 - [X] T055 [P] [US4] Replace the `linear` entry with `kaneo` in `.mcp.json` (`type: http`, URL `https://kaneo.jordylab.be/api/mcp`, no
       secret); keep `github`, `nx-mcp`, `jordylab`.
 - [X] T056 [P] [US4] Replace the `linear` entry with `kaneo` in `opencode.json` (remote, same URL, OAuth settings as the trial found).
-- [ ] T057 [US4] `git mv .claude/skills/linear-capture .claude/skills/backlog-capture` and rewrite its `SKILL.md` for Kaneo using the
+- [X] T057 [US4] `git mv .claude/skills/linear-capture .claude/skills/backlog-capture` and rewrite its `SKILL.md` for Kaneo using the
       tool mapping in `contracts/agent-tooling.md` (Triage column, `search` duplicate check, two label attaches, exactly-one
       App/Type check, preview and approval, `Source:` line, outage message); keep the injection rule.
-- [ ] T058 [US4] `git mv .claude/skills/linear-triage .claude/skills/backlog-triage` and rewrite for Kaneo (list the Triage column,
+- [X] T058 [US4] `git mv .claude/skills/linear-triage .claude/skills/backlog-triage` and rewrite for Kaneo (list the Triage column,
       one proposal table, apply only confirmed rows by moving to Backlog, injected text reported not obeyed).
-- [ ] T059 [US4] `git mv .claude/skills/linear-sync-drafts .claude/skills/backlog-sync-drafts` (scripts, `scripts/tests`,
+- [X] T059 [US4] `git mv .claude/skills/linear-sync-drafts .claude/skills/backlog-sync-drafts` (scripts, `scripts/tests`,
       `app-map.tsv` move with it), fix the paths inside `repo_inventory.sh`, `open_bugs.sh` and the two fixture test scripts,
       and rewrite `SKILL.md` for Kaneo with the write budget (40 writes a minute, 150 per run) instead of the 230-issue stop.
       Run both fixture scripts green.
