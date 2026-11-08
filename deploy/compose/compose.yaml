@@ -172,6 +172,9 @@ services:
       GITHUB_APP_ID: ${KANEO_GITHUB_APP_ID:-}
       GITHUB_WEBHOOK_SECRET: ${KANEO_GITHUB_WEBHOOK_SECRET:-}
       GITHUB_PRIVATE_KEY_BASE64: ${KANEO_GITHUB_PRIVATE_KEY_BASE64:-}
+      # GitHub sign-in (spec 022): a GitHub OAuth App, separate from the GitHub App above. Empty means no GitHub button.
+      GITHUB_OAUTH_CLIENT_ID: ${KANEO_GITHUB_OAUTH_CLIENT_ID:-}
+      GITHUB_OAUTH_CLIENT_SECRET: ${KANEO_GITHUB_OAUTH_CLIENT_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy

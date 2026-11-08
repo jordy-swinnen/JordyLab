@@ -77,6 +77,30 @@ holds. Status is updated here, with the date.
 - Set with `gh variable set` on 2026-11-07. The deploy workflow reads them once the Kaneo step is merged (T020).
 - **Status:** done.
 
+## HANDOFF-06: GitHub sign-in for Kaneo (the owner's secret, in IntelliJ)
+
+Sign-in with GitHub is separate from the GitHub App. Kaneo needs it before a repository can be connected to a project
+(Project → Settings → Integrations → GitHub asks for it).
+
+- **Done already (by the agent, 2026-11-08):** the GitHub OAuth App **Kaneo JordyLab** is registered on the owner's account,
+  with homepage `https://kaneo.jordylab.be` and callback `https://kaneo.jordylab.be/api/auth/callback/github`. Its client ID
+  is `Ov23li01xDaCdsuTnxA9`. The client secret has **not** been generated.
+- **Owner:** on GitHub → Settings → Developer settings → OAuth Apps → Kaneo JordyLab, click **Generate a new client secret**
+  and copy it once. Do not paste it into chat.
+- **Owner:** in the repository root, edit the encrypted file in IntelliJ:
+
+  ```bash
+  SOPS_EDITOR="idea --wait" sops deploy/k8s/overlays/prod/secrets.sops.yaml
+  ```
+
+  Add `KANEO_GITHUB_OAUTH_CLIENT_ID` (the client ID above) and `KANEO_GITHUB_OAUTH_CLIENT_SECRET` (the new secret) to
+  `jordylab-secrets`, then save.
+- **Then:** the change reaches production on the next deploy (the Kaneo step recreates Kaneo with the new variables).
+  Test sign-in in a private window: GitHub button on `https://kaneo.jordylab.be`.
+- **Done when:** the GitHub button appears on the Kaneo sign-in page and sign-in returns to Kaneo.
+- **Status:** open. The repository change that passes these variables to Kaneo is in its PR, and the deploy must run before
+  they take effect.
+
 ## Note on the GitHub App check (T010)
 
 GitHub sends the App's webhooks to a public HTTPS address. The trial ran on `127.0.0.1`, so the check cannot run there. It
