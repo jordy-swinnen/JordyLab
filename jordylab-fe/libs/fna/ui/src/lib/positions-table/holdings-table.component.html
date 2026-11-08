@@ -133,7 +133,6 @@
                 type="button"
                 class="h-11 text-muted-foreground hover:text-foreground"
                 data-testid="row-history"
-                aria-controls="price-history-panel"
                 [attr.aria-label]="'History for ' + position.ticker"
                 [attr.data-history-button]="position.id"
                 (click)="openHistory.emit(position.id)"

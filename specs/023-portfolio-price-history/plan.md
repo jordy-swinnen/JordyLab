@@ -116,7 +116,11 @@ jordylab-fe/libs/fna/ui/src/lib/
 ├── portfolio-manager/
 │   ├── portfolio-manager.component.ts            CHANGED   container: selected position, opens history
 │   ├── portfolio-manager-view.component.ts       CHANGED   inputs and outputs for the panel
-│   └── portfolio-manager-view.component.html     CHANGED   History button per row (holdings and wishlist), panel under the table the row belongs to
+│   └── portfolio-manager-view.component.html     CHANGED   composes the two table components below
+├── positions-table/                              NEW
+│   ├── holdings-table.component.ts/.html/.spec.ts  holdings rows; the open row is replaced by the history panel
+│   ├── wishlist-table.component.ts/.html/.spec.ts  wishlist rows, promote flow; same in-row panel
+│   └── row-motion.ts                              fade styles shared by both tables
 └── price-history/                                NEW
     ├── price-history-panel.component.ts/.html     presentational: period buttons, figures, close
     ├── price-history-chart.component.ts/.html     presentational: inline SVG line chart

@@ -83,7 +83,7 @@ Use a 375-pixel-wide viewport.
 
 | Check | Expected |
 |---|---|
-| Open history on a row | The panel appears under the table with the chart, the period buttons and the figures as text. |
+| Open history on a row | The row is replaced by the history panel, with the chart, the period buttons and the figures as text. |
 | Change the period | The chart and figures update without leaving the page. |
 | Keyboard only | Tab reaches the History button, the period buttons and Close. Enter or Space activates them. Focus returns to the row's button on Close. |
 | Screen reader | The figures are readable as text, not only inside the chart. |

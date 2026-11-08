@@ -127,7 +127,6 @@
                     size="sm"
                     class="h-11 text-muted-foreground hover:text-foreground"
                     data-testid="wishlist-history"
-                    aria-controls="price-history-panel"
                     [attr.aria-label]="'History for ' + item.ticker"
                     [attr.data-history-button]="item.id"
                     (click)="openHistory.emit(item.id)"

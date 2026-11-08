@@ -95,7 +95,7 @@ Caveats the design handles:
 
 ## 7. Where the history opens
 
-**Decision**: A **History** button on each row, holdings and wishlist alike, visible without hover, opens a history panel directly under the table that row belongs to, on the same page. Choosing another row moves the panel. Focus moves to the panel heading on open and returns to the row's button on close.
+**Decision**: A **History** button on each row, holdings and wishlist alike, visible without hover, replaces that row with a history panel (an in-row panel with a fade, set apart by a secondary surface, input rules and a 3 px accent), on the same page. Choosing another row moves the panel. Focus moves to the panel heading on open and returns to the row's button on close.
 
 **Why the button is always visible**: the existing **Remove** button in `portfolio-manager-view.component.html` is `opacity-0` until hover or focus, and phones have no hover. A history action hidden that way would be unreachable on the phone app (FR-013 and the phone-width success criterion).
 
