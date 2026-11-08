@@ -42,6 +42,11 @@
         "callbackPort": 19876,
         "scope": "jordylab.mcp"
       }
+    },
+    "kaneo": {
+      "type": "remote",
+      "url": "https://kaneo.jordylab.be/api/mcp",
+      "enabled": true
     }
   },
   "agent": {
