@@ -173,6 +173,21 @@ test.describe('No sideways scrolling on a phone', () => {
         expect(new Set(rowTops).size).toBe(1);
       });
 
+      // iOS Safari zooms the page when a field under 16 px is focused, so the portfolio's fields must be 16 px on a phone.
+      test('the portfolio fields are 16 px or larger, so iOS does not zoom when they are focused', async ({ page }) => {
+        await page.goto('/fna/portfolio');
+        const fields = [
+          page.getByRole('textbox', { name: 'Ticker', exact: true }),
+          page.getByRole('spinbutton', { name: 'Shares', exact: true }),
+          page.getByRole('textbox', { name: 'Wishlist ticker', exact: true }),
+        ];
+
+        for (const field of fields) {
+          const fontSizeInPixels = await field.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+          expect(fontSizeInPixels).toBeGreaterThanOrEqual(16);
+        }
+      });
+
       // Phones have no hover, and Remove is hidden until hover only from 640 px up, so it must show here without hover.
       test('the Remove button of a holding shows without hover', async ({ page }) => {
         const holdingTicker = { 360: 'NFLX', 390: 'ORCL', 430: 'AMZN' }[width];
