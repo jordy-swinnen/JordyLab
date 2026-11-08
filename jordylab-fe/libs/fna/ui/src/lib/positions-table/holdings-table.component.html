@@ -7,17 +7,29 @@
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b border-border bg-secondary">
-        <th class="label px-3 py-4 text-left font-medium sm:px-7">Ticker</th>
-        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+        <th
+          class="label text-secondary-foreground px-3 py-4 text-left font-medium sm:px-7"
+        >
+          Ticker
+        </th>
+        <th
+          class="label text-secondary-foreground hidden px-4 py-4 text-right font-medium sm:table-cell"
+        >
           Shares
         </th>
-        <th class="label px-3 py-4 text-right font-medium sm:px-4">
+        <th
+          class="label text-secondary-foreground px-3 py-4 text-right font-medium sm:px-4"
+        >
           Last price
         </th>
-        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+        <th
+          class="label text-secondary-foreground hidden px-4 py-4 text-right font-medium sm:table-cell"
+        >
           Value
         </th>
-        <th class="label hidden px-4 py-4 text-right font-medium sm:table-cell">
+        <th
+          class="label text-secondary-foreground hidden px-4 py-4 text-right font-medium sm:table-cell"
+        >
           Updated
         </th>
         <th class="px-3 py-4 sm:px-7"></th>
@@ -143,7 +155,7 @@
                 hlmBtn
                 variant="ghost"
                 size="sm"
-                class="h-11 text-muted-foreground opacity-0 transition-all duration-150 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                class="h-11 text-muted-foreground opacity-100 transition-all duration-150 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 (click)="deletePosition.emit(position.id)"
               >
                 Remove

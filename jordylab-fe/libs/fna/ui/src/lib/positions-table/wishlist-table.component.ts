@@ -1,6 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -17,7 +16,7 @@ import {
 } from '@jordylab-fe/fna/api';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { PriceHistoryPanelComponent } from '../price-history';
-import { ROW_MOTION_STYLES } from './row-motion';
+import { returnFocusToHistoryButton } from './history-focus';
 
 /** The wishlist: stocks not owned yet, with the price history opening in place of the row (spec 023). */
 @Component({
@@ -31,7 +30,7 @@ import { ROW_MOTION_STYLES } from './row-motion';
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './wishlist-table.component.html',
-  styles: [ROW_MOTION_STYLES],
+  styleUrl: './row-motion.css',
 })
 export class WishlistTableComponent {
   wishlist = input.required<WishlistItem[]>();
@@ -78,16 +77,10 @@ export class WishlistTableComponent {
   protected closeHistoryPanel(): void {
     const positionId = this.openedPositionId();
     this.closeHistory.emit();
-    if (positionId) {
-      afterNextRender(
-        () =>
-          this.#host.nativeElement
-            .querySelector<HTMLButtonElement>(
-              `[data-history-button="${positionId}"]`,
-            )
-            ?.focus(),
-        { injector: this.#injector },
-      );
-    }
+    returnFocusToHistoryButton(
+      this.#host.nativeElement,
+      this.#injector,
+      positionId,
+    );
   }
 }

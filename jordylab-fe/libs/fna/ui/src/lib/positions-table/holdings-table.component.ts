@@ -1,6 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -16,7 +15,7 @@ import {
 } from '@jordylab-fe/fna/api';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
 import { PriceHistoryPanelComponent } from '../price-history';
-import { ROW_MOTION_STYLES } from './row-motion';
+import { returnFocusToHistoryButton } from './history-focus';
 
 /** Swatch colours, assigned by row position so the allocation bar and the table agree. */
 const SWATCHES = [
@@ -44,7 +43,7 @@ export function swatchFor(index: number): string {
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './holdings-table.component.html',
-  styles: [ROW_MOTION_STYLES],
+  styleUrl: './row-motion.css',
 })
 export class HoldingsTableComponent {
   positions = input.required<PortfolioPositionRow[]>();
@@ -69,16 +68,10 @@ export class HoldingsTableComponent {
   protected closeHistoryPanel(): void {
     const positionId = this.openedPositionId();
     this.closeHistory.emit();
-    if (positionId) {
-      afterNextRender(
-        () =>
-          this.#host.nativeElement
-            .querySelector<HTMLButtonElement>(
-              `[data-history-button="${positionId}"]`,
-            )
-            ?.focus(),
-        { injector: this.#injector },
-      );
-    }
+    returnFocusToHistoryButton(
+      this.#host.nativeElement,
+      this.#injector,
+      positionId,
+    );
   }
 }
