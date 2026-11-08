@@ -36,7 +36,7 @@
 - [x] T014 [P] Update `.claude/skills/jordylab-ops/SKILL.md` for Podman (commands, the deploy account, the host facts, the server's engine). `.claude/agents/jordylab-devops.md` and `.opencode/agents/jordylab-devops.md` hold no Docker mentions today (checked 2026-11-08): leave them unchanged unless the skill edit makes them wrong (FR-016)
 - [x] T015 [P] Edit `specs/020-compose-deployment/spec.md`: add "Superseded by spec 024 for the server" to Fixed Decision 3 and to the Out of Scope line about local development, linking to `specs/024-podman-on-vps/spec.md` (FR-016)
 - [x] T059 [P] Extend the destructive-command guard so it blocks the Podman forms it blocks for Docker: in `.claude/hooks/pre_bash_guard.py` block `podman compose … down -v|--volumes` and `podman-compose … down -v|--volumes` with the same message style, and add matching `block`/`pass` cases next to the Docker ones in `.claude/hooks/tests/guard-cases.sh`; run `bash .claude/hooks/tests/guard-cases.sh` and expect no failure. (Numbered out of sequence because it was added after review; it belongs in Phase 1.)
-- [ ] T016 **OWNER APPROVAL**: open a draft pull request for the branch `claude/docker-podman-migration-51813c` with `.github/pull_request_template.md`, ticket JOR-99, `Refs: 024`. Do not merge it before T037. Depends on T001 to T015 and T059
+- [x] T016 **OWNER APPROVAL**: open a draft pull request for the branch `claude/docker-podman-migration-51813c` with `.github/pull_request_template.md`, ticket JOR-99, `Refs: 024`. Do not merge it before T037. Depends on T001 to T015 and T059
 
 **Checkpoint**: the changed files validate locally; documentation describes Podman; nothing on the VPS changed.
 
