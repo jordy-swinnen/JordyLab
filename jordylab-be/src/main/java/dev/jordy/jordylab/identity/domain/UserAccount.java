@@ -7,6 +7,7 @@ import dev.jordy.jordylab.identity.UserAccessRemoved;
 import dev.jordy.jordylab.shared.domain.BaseEntity;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -67,7 +68,7 @@ public class UserAccount extends BaseEntity<UserAccount> {
     private int failedAttempts;
 
     /** The account-wide theme (spec 024 US3); {@link UserTheme#SYSTEM} follows the device. */
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = UserThemeConverter.class)
     @Column(nullable = false)
     private UserTheme theme;
 
