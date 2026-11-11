@@ -117,7 +117,7 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 |---|---|
 | `CLAUDE.md` | Entry point for Claude Code. It imports `AGENTS.md`. |
 | `AGENTS.md` | Shared rules for both tools: architecture, workflow, AI routing, secrets. |
-| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `gh@jordy-swinnen/agent-skills` OpenPackage package and are recorded in `.openpackage/`. Update each skill by subpath with `--platforms claude --force`; never run bare `opkg install`, which would create duplicate `.opencode/skills/`. The `Agent Config` workflow checks this on every pull request that touches skills or `.openpackage/`. |
+| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `jordy-swinnen/agent-skills` APM package, pinned by tag in `apm.yml` and deployed by `apm install`; `apm.yml` stays at `targets: [claude]`, the only target that deploys to `.claude/skills/`, which both tools read. Never run `apm compile`. The `Agent Config` workflow checks the single copy and the lockfile on every pull request that touches skills or `apm.yml`; `Skills Sync` proposes tag bumps weekly. |
 | `.opencode/agents/`, `.opencode/commands/`, `opencode.json` | OpenCode agents, commands, models and MCP servers. |
 | `.specify/` | SpecKit templates and scripts. |
 | `.specify/extensions.yml` | SpecKit hooks. `kaneo-start-ticket` runs before `/speckit-specify`. |
@@ -126,6 +126,23 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 | `docs/linear.md` | Linear setup, kept for history until the cutover. The Kaneo conventions are in the `kaneo-board` skill. |
 | `docs/design/JOR-<n>/` | Exported design images for Kaneo tickets. |
 | `.github/instructions/commits-and-pull-requests.instructions.md` | Commit and pull request rules. |
+
+## Keeping the shared skills current
+
+`apm.yml` pins the shared package by tag; `apm.lock.yaml` pins the resolved commit and the hash of every deployed file,
+so a clone gets the same skills without running anything.
+
+- `apm update` (or a new tag in `apm.yml` plus `apm install`) redeploys and rewrites the lockfile — commit both.
+- `apm install --frozen` replays the lockfile and never writes it; that is what CI runs.
+- `apm outdated` reports a newer tag without changing anything.
+
+`Skills Sync` (`.github/workflows/skills-sync.yml`) runs weekly: it moves `apm.yml` to the newest `v*` tag, redeploys,
+checks the single-copy invariants and opens a pull request. It never pushes to main, and `Agent Config` validates the
+result, including `apm audit --ci`. Its bot commit takes its ticket from the `SKILLS_SYNC_TICKET` repository variable
+(default `JOR-101`) because every commit here must start with one.
+
+Do not run `apm compile` in this repository. It generates root `CLAUDE.md`/`AGENTS.md` from APM instructions, and this
+rulebook is hand-written.
 
 ## Planned changes
 

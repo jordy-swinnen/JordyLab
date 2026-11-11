@@ -1,0 +1,199 @@
+lockfile_version: '1'
+apm_version: 0.35.0
+dependencies:
+- repo_url: jordy-swinnen/agent-skills
+  name: agent-skills
+  host: github.com
+  resolved_commit: 72aa6a6606f3791aa3de0cf986bb272370f81382
+  resolved_ref: v0.1.0
+  version: 0.1.0
+  package_type: skill_bundle
+  deployed_files:
+  - .claude/skills/agent-handoff
+  - .claude/skills/agent-handoff/SKILL.md
+  - .claude/skills/agent-handoff/references/handover-prompt-template.md
+  - .claude/skills/agent-handoff/references/model-budget.md
+  - .claude/skills/agent-handoff/scripts/handoff_check.sh
+  - .claude/skills/dual-agent-config
+  - .claude/skills/dual-agent-config/SKILL.md
+  - .claude/skills/dual-agent-config/references/compatibility-matrix.md
+  - .claude/skills/dual-agent-config/references/gotchas.md
+  - .claude/skills/dual-agent-config/references/mcp-translation.md
+  - .claude/skills/dual-agent-config/references/scoped-rules.md
+  - .claude/skills/dual-agent-config/references/subagent-translation.md
+  - .claude/skills/dual-agent-config/scripts/check_config.py
+  - .claude/skills/dual-agent-config/scripts/sync_mcp.py
+  - .claude/skills/dual-agent-config/scripts/test_sync_mcp.py
+  - .claude/skills/opencode-go-plus-build-plan-recommender
+  - .claude/skills/opencode-go-plus-build-plan-recommender/SKILL.md
+  deployed_file_hashes:
+    .claude/skills/agent-handoff/SKILL.md: sha256:9f21695dbeeca0f037f0ec4d309de9775b4805e22d5213842dc5cd07a3f10bf6
+    .claude/skills/agent-handoff/references/handover-prompt-template.md: sha256:fdcd4c13f9ac291b58de6be3ab6bffd3d578241225e775b0efe80c6354eafcf7
+    .claude/skills/agent-handoff/references/model-budget.md: sha256:214e5fca3fed9dbfe7079e8fc0992a08fc9df27762d08427c287de87c92a96fa
+    .claude/skills/agent-handoff/scripts/handoff_check.sh: sha256:14f88052f47c97cd0dd1110ff7ddf721ea54ceff1ffcb1fa9148baab0d2e3d5c
+    .claude/skills/dual-agent-config/SKILL.md: sha256:1737f8103618a35fd53844192a37393be281db378d69c5467ffa5f094f65d7d9
+    .claude/skills/dual-agent-config/references/compatibility-matrix.md: sha256:55bc169d515351ec46189c8deca9a3e0dd09a6e1d51724e038cc03c03a96bac3
+    .claude/skills/dual-agent-config/references/gotchas.md: sha256:95f05a20f4208280af4210504fea8707db7c41c1ea5afc488003d6ed1785e8eb
+    .claude/skills/dual-agent-config/references/mcp-translation.md: sha256:5d383de72edb305e254dc07e5c17eca7955b77b336c1bba02fedbc360ff93f81
+    .claude/skills/dual-agent-config/references/scoped-rules.md: sha256:abe8019f98f906cba47282df751bf16397298251b76decd145d0dfd22e913af6
+    .claude/skills/dual-agent-config/references/subagent-translation.md: sha256:5cf788c598bc99d66022f5fff5ae52d40445e32fc688f6e3da6bbc0bee45e660
+    .claude/skills/dual-agent-config/scripts/check_config.py: sha256:bad023bc0562d394b7548f8d56348950e99542d31589ca96c08f00fcf4c7108f
+    .claude/skills/dual-agent-config/scripts/sync_mcp.py: sha256:1fc7f31f6128afaf294bca30c47c20ca3d37cc4f956c952b61cad64a82e28a76
+    .claude/skills/dual-agent-config/scripts/test_sync_mcp.py: sha256:97aef3c33133bea0b36a09a91da56ca89761dbfd571e5d1b52d1422dfd16b8d8
+    .claude/skills/opencode-go-plus-build-plan-recommender/SKILL.md: sha256:b95fc19c88b9a34135bf78a6f5639e392b8b475323655ae7dc18fa76501cbe5e
+  content_hash: sha256:c87c4a424c5cd8aedbb7955ccc88850568be52cb9ca825ba5f56a26a06f898d3
+  declared_license: MIT
+deployments:
+- kind: project-relative
+  target: claude
+  value: .claude/skills/agent-handoff
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/agent-handoff/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:9f21695dbeeca0f037f0ec4d309de9775b4805e22d5213842dc5cd07a3f10bf6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/agent-handoff/references/handover-prompt-template.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:fdcd4c13f9ac291b58de6be3ab6bffd3d578241225e775b0efe80c6354eafcf7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/agent-handoff/references/model-budget.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:214e5fca3fed9dbfe7079e8fc0992a08fc9df27762d08427c287de87c92a96fa
+- kind: project-relative
+  target: claude
+  value: .claude/skills/agent-handoff/scripts/handoff_check.sh
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:14f88052f47c97cd0dd1110ff7ddf721ea54ceff1ffcb1fa9148baab0d2e3d5c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:1737f8103618a35fd53844192a37393be281db378d69c5467ffa5f094f65d7d9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/references/compatibility-matrix.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:55bc169d515351ec46189c8deca9a3e0dd09a6e1d51724e038cc03c03a96bac3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/references/gotchas.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:95f05a20f4208280af4210504fea8707db7c41c1ea5afc488003d6ed1785e8eb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/references/mcp-translation.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:5d383de72edb305e254dc07e5c17eca7955b77b336c1bba02fedbc360ff93f81
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/references/scoped-rules.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:abe8019f98f906cba47282df751bf16397298251b76decd145d0dfd22e913af6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/references/subagent-translation.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:5cf788c598bc99d66022f5fff5ae52d40445e32fc688f6e3da6bbc0bee45e660
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/scripts/check_config.py
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:bad023bc0562d394b7548f8d56348950e99542d31589ca96c08f00fcf4c7108f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/scripts/sync_mcp.py
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:1fc7f31f6128afaf294bca30c47c20ca3d37cc4f956c952b61cad64a82e28a76
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dual-agent-config/scripts/test_sync_mcp.py
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:97aef3c33133bea0b36a09a91da56ca89761dbfd571e5d1b52d1422dfd16b8d8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/opencode-go-plus-build-plan-recommender
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/opencode-go-plus-build-plan-recommender/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:b95fc19c88b9a34135bf78a6f5639e392b8b475323655ae7dc18fa76501cbe5e

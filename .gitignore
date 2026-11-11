@@ -26,3 +26,6 @@ key.txt
 age-key.txt
 *.dec.yaml
 *.decrypted.yaml
+
+# APM dependencies
+apm_modules/

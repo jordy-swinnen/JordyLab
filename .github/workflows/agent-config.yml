@@ -1,15 +1,18 @@
 name: Agent Config
 
-# The shared skills live once, in .claude/skills, and both tools read them (AGENTS.md → AI Routing). A bare
-# `opkg install` redetects both platforms and rebuilds .opencode/skills with a namespaced second copy, so this
-# workflow keeps that single copy from coming back. Reinstall by subpath instead:
-# `opkg install <skill> --platforms claude --force` (docs/ai-workflow.md → "Where things live").
+# The shared skills live once, in .claude/skills, and both tools read them (AGENTS.md → AI Routing). APM deploys
+# exactly the targets named in apm.yml, so a wrong `targets:` (or a missing one, which falls back to filesystem
+# auto-detection) silently puts a second copy under .agents/skills/ — the same failure OpenPackage caused with
+# .opencode/skills/. This workflow keeps the single copy, and the lockfile, honest.
+#
+# Reinstall or bump with `apm install` / `apm update` (docs/ai-workflow.md → "Where things live").
 
 on:
   pull_request:
     paths:
       - '.claude/skills/**'
-      - '.openpackage/**'
+      - 'apm.yml'
+      - 'apm.lock.yaml'
       - 'AGENTS.md'
       - 'CLAUDE.md'
       - 'opencode.json'
@@ -19,7 +22,8 @@ on:
     branches: [main]
     paths:
       - '.claude/skills/**'
-      - '.openpackage/**'
+      - 'apm.yml'
+      - 'apm.lock.yaml'
 
 permissions:
   contents: read
@@ -38,16 +42,18 @@ jobs:
 
       - name: Skills live only under .claude/skills
         run: |
-          if [ -e .opencode/skills ]; then
-            echo "::error::.opencode/skills exists. Skills live once, in .claude/skills. Reinstall by subpath: opkg install <skill> --platforms claude --force"
-            exit 1
-          fi
+          for dir in .opencode/skills .agents/skills; do
+            if [ -e "$dir" ]; then
+              echo "::error::$dir exists. Skills live once, in .claude/skills. Keep apm.yml at targets: [claude] and reinstall with apm install."
+              exit 1
+            fi
+          done
 
       - name: No namespaced duplicate skill folders
         run: |
           found=$(find .claude/skills -mindepth 1 -maxdepth 3 \( -name 'agent-skills-*' -o -name 'jordy-swinnen' \) -print)
           if [ -n "$found" ]; then
-            echo "::error::namespaced skill copy found, reinstall by subpath instead:"
+            echo "::error::namespaced skill copy found, reinstall with apm install instead:"
             printf '%s\n' "$found"
             exit 1
           fi
@@ -72,6 +78,16 @@ jobs:
 
       - name: MCP servers translated between the tools
         run: python3 .claude/skills/dual-agent-config/scripts/test_sync_mcp.py
+
+      - name: Install APM
+        run: |
+          curl -sSL https://aka.ms/apm-unix | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Deployed skills match the lockfile
+        run: |
+          apm install --frozen
+          apm audit --ci
 
       # Report-only for now: check_config.py also reports the pre-existing CLAUDE.md and SpecKit frontmatter
       # drift, tracked separately in docs/ai-workflow.md → "Known drift". Drop continue-on-error once fixed.

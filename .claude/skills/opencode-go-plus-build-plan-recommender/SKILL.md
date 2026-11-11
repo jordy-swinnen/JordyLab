@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires live access to https://opencode.ai/docs/console/go/ (via WebFetch) and the BenchLM MCP server (benchlm_recommend, benchlm_value_board, benchlm_compare_models, benchlm_list_models).
 metadata:
   author: jordy-swinnen
-  version: '1.1'
+  version: "1.1"
 allowed-tools: WebFetch Read Write Edit
 ---
 

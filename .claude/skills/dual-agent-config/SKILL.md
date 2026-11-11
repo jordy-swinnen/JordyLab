@@ -2,7 +2,7 @@
 name: dual-agent-config
 description: Configure a repo so Claude Code and OpenCode read the same rules, skills, subagents, and MCP servers without duplicated or drifting files. Use whenever work touches AGENTS.md, CLAUDE.md, .claude/, .opencode/, opencode.json, .mcp.json, or settings.json; when adding per-language or per-framework rules (the Copilot .instructions.md equivalent); when porting a skill, subagent, command, or MCP server between the two tools; when bootstrapping a repo for dual-agent use; or when debugging why one agent follows conventions the other ignores. Applies even when only one of the two tools is named.
 metadata:
-  docs-verified: '2026-08-05'
+  docs-verified: "2026-08-05"
 ---
 
 # Claude Code + OpenCode unified config
@@ -104,6 +104,14 @@ The one real constraint is frontmatter. Both tools honor the six portable Agent 
 
 Also: `SKILL.md` must be uppercase, the `name` must match the parent directory name, and skill names must be unique across every discovery location or one silently wins.
 
+### Package managers are the exception that bites
+
+A package manager that installs "for both tools" will usually deploy a second copy. APM (Agent Package Manager) is the common case: every target except `claude` converges on `.agents/skills/<name>/SKILL.md`, so `targets: [claude, opencode]` leaves the same skill in `.claude/skills/` and `.agents/skills/` — two discovery locations, one winner, silently. OpenPackage does the same thing under `.opencode/skills/` when it redetects platforms.
+
+- **APM:** declare `targets: [claude]` in `apm.yml`. Manifest targets outrank filesystem auto-detection, so a repository that also has `.opencode/` still gets one copy, and `apm install` / `apm update` stay safe without flags. Do not run `apm compile` for a skills-only package.
+- **OpenPackage:** install each skill by subpath with `--platforms claude --force`; never run bare `opkg install`.
+- **Either way:** `check_config.py` fails on `.opencode/skills/`, on `.agents/skills/`, on a skill nested below `.claude/skills/<name>/`, and on an `apm.yml` that names any target other than `claude`.
+
 ## Task: port a subagent
 
 **The system-prompt body is fully portable — copy it unchanged.** Only frontmatter differs, and the field names are not analogous:
@@ -150,7 +158,7 @@ Run the bundled checker first:
 python3 .claude/skills/dual-agent-config/scripts/check_config.py
 ```
 
-Add `--strict-portable` when every skill in the repository should package for claude.ai and OpenCode too. The checker verifies one rulebook, skill names and references, scoped-rule keys and MCP parity. If a harness-specific skill fails only the portable check, leave it strict-off and fix the other failures.
+Add `--strict-portable` when every skill in the repository should package for claude.ai and OpenCode too. The checker verifies one rulebook, one skill copy, skill names and references, scoped-rule keys and MCP parity. If a harness-specific skill fails only the portable check, leave it strict-off and fix the other failures.
 
 When someone reports "one agent isn't following my rules," walk this in order and stop at the first hit:
 
@@ -160,8 +168,9 @@ When someone reports "one agent isn't following my rules," walk this in order an
 4. Is a path-scoped rule sitting in `~/.claude/rules/` rather than the project? → may be ignored (known bug).
 5. Is `OPENCODE_DISABLE_CLAUDE_CODE` (or the `_PROMPT` / `_SKILLS` variants) set in the environment? → shared `.claude` files silently stop loading in OpenCode.
 6. Do skills carry non-spec frontmatter that OpenCode drops?
-7. Do subagents exist in only one of `.claude/agents/` and `.opencode/agents/`?
-8. Are MCP servers in `.mcp.json` but missing from `opencode.json`, or vice versa?
+7. Is the same skill installed twice — `.opencode/skills/`, `.agents/skills/`, or a namespaced folder below `.claude/skills/`? → one copy silently wins.
+8. Do subagents exist in only one of `.claude/agents/` and `.opencode/agents/`?
+9. Are MCP servers in `.mcp.json` but missing from `opencode.json`, or vice versa?
 
 The full catalogue of silent failure modes in both tools is in `references/gotchas.md`. Consult it whenever something "should work but doesn't."
 

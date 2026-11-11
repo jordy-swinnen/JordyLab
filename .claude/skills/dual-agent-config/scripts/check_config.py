@@ -36,6 +36,29 @@ def frontmatter_keys(path: Path):
     return None
 
 
+def apm_targets(path: Path):
+    """Return the `targets:` (or `target:`) list of an apm.yml, without a YAML parser."""
+    targets = []
+    inside = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        top = re.match(r"^(targets?):(.*)$", line)
+        if top:
+            rest = top.group(2).strip()
+            inside = not rest
+            if rest.startswith("["):
+                targets += [item.strip().strip("'\"") for item in rest.strip("[]").split(",") if item.strip()]
+            elif rest:
+                targets.append(rest.strip("'\""))
+            continue
+        if inside:
+            item = re.match(r"^\s+-\s*(\S+)", line)
+            if item:
+                targets.append(item.group(1).strip("'\""))
+            elif line.strip() and not line[:1].isspace():
+                inside = False
+    return targets
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, help="repository root; defaults to the nearest .git or AGENTS.md")
@@ -58,13 +81,35 @@ def main() -> int:
     if not claude.exists() or claude.read_text(encoding="utf-8").strip() != "@AGENTS.md":
         problems.append("CLAUDE.md must contain exactly one line, @AGENTS.md. OpenCode ignores CLAUDE.md when AGENTS.md exists, so rules there are lost.")
 
-    # 2. Skills: shared folders, names, references, optional portable frontmatter.
-    if (root / ".opencode" / "skills").exists():
-        problems.append(".opencode/skills exists: skills live only in .claude/skills (both tools read it).")
+    # 2. Skills: one copy, directly under .claude/skills (both tools read it there).
+    for duplicate_root in (".opencode/skills", ".agents/skills"):
+        if (root / duplicate_root).exists():
+            problems.append(f"{duplicate_root} exists: skills live only in .claude/skills (both tools read it).")
+
+    # A package manager must not deploy a second target: APM's opencode target uses .agents/skills.
+    apm_manifest = root / "apm.yml"
+    if apm_manifest.exists():
+        targets = apm_targets(apm_manifest)
+        if not targets:
+            problems.append(
+                "apm.yml declares no targets:: auto-detection picks up .opencode/ and deploys skills to "
+                ".agents/skills. Declare targets: [claude]."
+            )
+        else:
+            extra = sorted(target for target in targets if target != "claude")
+            if extra:
+                problems.append(
+                    f"apm.yml targets {extra}: only `claude` deploys skills to .claude/skills, so every other "
+                    "target adds a second copy. Keep targets: [claude]."
+                )
 
     skill_roots = [folder for folder in (root / ".claude" / "skills", root / "skills") if folder.is_dir()]
     seen = {}
     for skill_root in skill_roots:
+        for nested in sorted(skill_root.glob("*/*/SKILL.md")):
+            problems.append(
+                f"{nested.relative_to(root)}: nested skill copy; skills belong directly in .claude/skills/<name>/."
+            )
         for skill in sorted(skill_root.glob("*/SKILL.md")):
             folder = skill.parent.name
             if folder in seen:
@@ -96,7 +141,7 @@ def main() -> int:
                         f"{skill.relative_to(root)}: mentions {(owner + '/') if owner else ''}references/{filename}, which does not exist."
                     )
 
-    # 3. Claude-only scoped rules must use the key Claude Code recognises.
+    # 4. Claude-only scoped rules must use the key Claude Code recognises.
     rules_dir = root / ".claude" / "rules"
     if rules_dir.is_dir():
         for rule in rules_dir.glob("**/*.md"):
@@ -105,7 +150,7 @@ def main() -> int:
             if bad:
                 problems.append(f"{rule.relative_to(root)}: {bad} is not recognised, use paths:. The rule never loads.")
 
-    # 4. MCP servers must be in both tools or neither.
+    # 5. MCP servers must be in both tools or neither.
     mcp_claude = set()
     if (root / ".mcp.json").exists():
         mcp_claude = set(json.loads((root / ".mcp.json").read_text(encoding="utf-8")).get("mcpServers", {}))

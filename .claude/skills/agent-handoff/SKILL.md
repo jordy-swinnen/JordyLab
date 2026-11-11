@@ -5,7 +5,7 @@ license: MIT
 compatibility: Needs git and a POSIX shell. Model advice uses the BenchLM MCP server (benchlm_recommend, benchlm_compare_models) or its REST API at https://data.benchlm.ai/v1, plus the provider's own pricing page.
 metadata:
   author: jordy-swinnen
-  version: '1.1'
+  version: "1.1"
 allowed-tools: Bash(git:*) Read Write Edit
 ---
 
