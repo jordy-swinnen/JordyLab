@@ -55,7 +55,7 @@ As a signed-in user, I want my theme choice to follow my account, so that the we
 
 1. **Given** I pick one of the six themes in the desktop app, **When** I open the web app signed in as the same account, **Then** the web app shows the same theme.
 2. **Given** I pick a theme in the web app, **When** I open the desktop app, **Then** the desktop app shows the same theme.
-3. **Given** I choose `follow-device` as my account preference, **When** I use the web app on a light-mode device and the desktop app on a dark-mode device, **Then** each follows its own device setting.
+3. **Given** I choose `system` as my account preference, **When** I use the web app on a light-mode device and the desktop app on a dark-mode device, **Then** each follows its own device setting.
 
 ---
 
@@ -113,7 +113,7 @@ As the owner, I want to install the same app on a Windows PC, so that every mach
 - **FR-006**: The app MUST notify the user when a newer version of itself is published, and MUST install that version with one click, restarting itself afterwards.
 - **FR-007**: WHEN an update fails THE SYSTEM SHALL keep the previous working version and show the error with a retry action.
 - **FR-008**: The latest installer for each supported platform MUST be downloadable from a JordyLab download page (admin area of the web app).
-- **FR-009**: The theme preference MUST be stored per account (one of the six themes or `follow-device`) and applied by both the web app and the desktop app for the signed-in account.
+- **FR-009**: The theme preference MUST be stored per account (one of the six themes or `system`) and applied by both the web app and the desktop app for the signed-in account.
 - **FR-010**: Sunshine detection MUST run only on the Sunshine host and MUST report a Sunshine source per configured game, reconciled onto the existing catalog entry when the game already exists.
 - **FR-011**: The first release MUST support macOS and Linux; Windows support MUST be added at the same P2 priority as the Sunshine story (order between them flexible).
 - **FR-012**: The script client download (`GET /api/gamecatalog/ingest/client`) MUST be removed once every machine runs the app.
@@ -121,7 +121,7 @@ As the owner, I want to install the same app on a Windows PC, so that every mach
 ### Key Entities *(include if feature involves data)*
 
 - **Machine connection**: a PC authenticated to JordyLab (today's machine token); carries its own identity so two machines with the same hostname stay separate.
-- **Theme preference**: per account; one of the six themes or `follow-device`; replaces the per-device browser storage of the theme choice.
+- **Theme preference**: per account; one of the six themes or `system`; replaces the per-device browser storage of the theme choice.
 - **Sunshine source**: a new scan source type on the Sunshine host, one entry per game configured in Sunshine, reconciling onto the existing catalog game.
 
 ## Success Criteria *(mandatory)*

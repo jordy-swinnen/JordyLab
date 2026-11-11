@@ -22,8 +22,8 @@ No new database tables. This feature adds one enum value, one per-account prefer
 | Aspect | Detail |
 |--------|--------|
 | Entity | User attribute on the existing account aggregate (identity schema) |
-| Values | One of the six theme ids (`content-led`, `oxblood`, `flare-orange`, `paper`, `glasshouse`, `heather`) or `follow-device` |
-| Default | `follow-device` (matches today's web behaviour) |
+| Values | One of the six theme ids (`content`, `oxblood`, `flare`, `paper`, `glasshouse`, `heather`) or `system` |
+| Default | `system` (matches today's web behaviour) |
 | Migration | Additive column/table via Flyway (`CREATE SCHEMA IF NOT EXISTS identity` header per convention). No rows to migrate: the web app falls back to its localStorage value on first read, then persists the account preference |
 | API | Read/update through the existing user endpoints (admin self); both web and desktop read the same value |
 | Retention | Lives with the account; removed with it |

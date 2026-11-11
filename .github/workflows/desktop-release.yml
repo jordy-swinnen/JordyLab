@@ -23,6 +23,9 @@ jobs:
           - os: ubuntu-24.04
             platform: linux-x86_64
             artifact: jordylab-desktop-linux-x86_64
+          - os: windows-latest
+            platform: windows-x64
+            artifact: jordylab-desktop-windows-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +75,7 @@ jobs:
           names = {
               "jordylab-desktop-macos-aarch64.zip": "macos-aarch64",
               "jordylab-desktop-linux-x86_64": "linux-x86_64",
+              "jordylab-desktop-windows-x64.exe": "windows-x64",
           }
           for path in pathlib.Path("artifacts").iterdir():
               key = names.get(path.name)

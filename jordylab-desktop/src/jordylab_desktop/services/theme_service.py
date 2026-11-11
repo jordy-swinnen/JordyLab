@@ -14,7 +14,7 @@ from pathlib import Path
 from . import config_service
 
 THEMES = ("content", "oxblood", "flare", "paper", "glasshouse", "heather")
-FOLLOW_DEVICE = "follow-device"
+FOLLOW_DEVICE = "system"
 DEFAULT_THEME = "content"
 
 

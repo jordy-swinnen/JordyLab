@@ -8,14 +8,14 @@ from jordylab_desktop.services import theme_service
 
 def test_normalize():
     assert theme_service.normalize_theme("heather") == "heather"
-    assert theme_service.normalize_theme("follow-device") == "follow-device"
-    assert theme_service.normalize_theme("nope") == "follow-device"
-    assert theme_service.normalize_theme(None) == "follow-device"
+    assert theme_service.normalize_theme("system") == "system"
+    assert theme_service.normalize_theme("nope") == "system"
+    assert theme_service.normalize_theme(None) == "system"
 
 
 def test_resolve_follow_device():
-    assert theme_service.resolve_theme("follow-device", True) == "content"
-    assert theme_service.resolve_theme("follow-device", False) == "paper"
+    assert theme_service.resolve_theme("system", True) == "content"
+    assert theme_service.resolve_theme("system", False) == "paper"
     assert theme_service.resolve_theme("oxblood", True) == "oxblood"
 
 

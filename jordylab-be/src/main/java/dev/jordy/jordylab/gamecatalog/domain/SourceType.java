@@ -14,6 +14,12 @@ public enum SourceType {
         public String platform() {
             return "EmuDeck";
         }
+    },
+    SUNSHINE {
+        @Override
+        public String platform() {
+            return "Sunshine";
+        }
     };
 
     /**

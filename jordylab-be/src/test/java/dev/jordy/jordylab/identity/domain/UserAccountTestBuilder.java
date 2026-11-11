@@ -17,6 +17,7 @@ class UserAccountTestBuilder {
     public static final String DEFAULT_PASSWORD_HASH = "{bcrypt}$2a$10$abcdefghijklmnopqrstuv";
     public static final UserRole DEFAULT_ROLE = UserRole.GUEST;
     public static final UserStatus DEFAULT_STATUS = UserStatus.APPROVED;
+    public static final UserTheme DEFAULT_THEME = UserTheme.SYSTEM;
     public static final Set<ManagedApp> DEFAULT_GRANTS = Set.of(GAME_CATALOG);
 
     public static UserAccount aDefaultUserAccount() {
@@ -31,6 +32,7 @@ class UserAccountTestBuilder {
                 .passwordHash(DEFAULT_PASSWORD_HASH)
                 .role(DEFAULT_ROLE)
                 .status(DEFAULT_STATUS)
+                .theme(DEFAULT_THEME)
                 .appGrants(DEFAULT_GRANTS);
     }
 

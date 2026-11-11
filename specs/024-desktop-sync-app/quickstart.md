@@ -49,7 +49,7 @@ Expected: all fixtures pass byte-identical digests. **A failure here stops the f
 
 1. Pick a theme in the desktop app → open the web app signed in → same theme.
 2. Pick a theme in the web app → relaunch the desktop app → same theme.
-3. Choose `follow-device` → web follows the browser device mode, desktop follows the OS mode.
+3. Choose `system` → web follows the browser device mode, desktop follows the OS mode.
 4. Compare with `D_Theme.png`.
 
 ## Scenario 6 — Sunshine (US4, FR-010) — on the Sunshine host

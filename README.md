@@ -24,7 +24,7 @@ workflow: [`docs/ai-workflow.md`](docs/ai-workflow.md).
 ```mermaid
 flowchart LR
     user(["Browser / installed PWA"])
-    scanner(["Game scanner client<br/>on the owner's machines"])
+    desktop(["Desktop sync app<br/>jordylab-desktop · Qt + Python<br/>on the owner's machines"])
 
     subgraph gh["GitHub Actions"]
         build["build.yml<br/>tests → images"] --> ghcr[("GHCR<br/>backend · frontend<br/>tags sha-&lt;commit&gt; and releases")]
@@ -52,7 +52,8 @@ flowchart LR
     end
 
     user -- "HTTPS jordylab.be" --> caddy
-    scanner -- "POST /api/gamecatalog/ingest" --> caddy
+    desktop -- "POST /api/gamecatalog/ingest" --> caddy
+    desktop -- "connect page · downloads" --> caddy
     caddy -- "/" --> fe
     caddy -- "/api, /webauthn, /mcp, /oauth2" --> be
     caddy -- "/ntfy" --> ntfy
