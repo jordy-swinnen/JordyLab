@@ -32,7 +32,7 @@ description: "Task list for the Desktop Sync App (JOR-78 / spec 024)"
 
 **Purpose**: Shared scan core + app shell. **⚠️ CRITICAL**: no user story work begins until the parity gate is green.
 
-- [ ] T005 Extract the scan core from `gamecatalog-scanner/src/jordylab_scan/` into `jordylab-desktop/core/jordylab_scan_core/` (normalize, platforms, grouping, manifest, fingerprint, paths) — shared code, rules byte-identical; `gamecatalog-scanner` remains the source of truth for the rules
+- [ ] T005 Wire `jordylab-desktop` to consume `gamecatalog-scanner` as a library: add `gamecatalog-scanner/src` to `jordylab-desktop/pyproject.toml` as a path dependency so `jordylab_scan` (normalize, platforms, grouping, manifest, fingerprint, paths) imports unchanged — rules stay byte-identical in `gamecatalog-scanner`, frozen-template build untouched (research R1)
 - [ ] T006 Build the parity gate: port `gamecatalog-scanner/tests/` fixtures as golden files into `jordylab-desktop/tests/parity/` and verify identical fingerprints/payloads (quickstart Scenario 1) — **a failure here blocks all further work** (research R1, plan constraints)
 - [ ] T007 App bootstrap in `jordylab-desktop/src/jordylab_desktop/app.py`: QApplication, main window shell (440×640 per design), system tray (window hides, never quits), worker-thread pattern for scan work (research R8)
 - [ ] T008 App config store in `jordylab-desktop/src/jordylab_desktop/services/config.py` (`~/.config/jordylab/desktop/config.json`: schedule, extra_roots, window state) plus integration with the existing token cache `~/.config/jordylab/scan/token.json` (data-model.md)
@@ -47,12 +47,12 @@ description: "Task list for the Desktop Sync App (JOR-78 / spec 024)"
 
 **Independent test** (quickstart Scenarios 2 + 3): install on a machine with Steam and EmuDeck libraries, connect it, watch games appear; Sync now works; offline shows the failure with reason
 
-- [ ] T009 [US1] Register the second OAuth public client `jordylab-desktop-app` (PKCE S256, loopback redirect `http://127.0.0.1:<port>/callback`, admin-only gate) in `jordylab-be/src/main/java/dev/jordy/jordylab/identity/` following the spec 021 `McpAuthorizationServerConfiguration` pattern — contract: `contracts/auth-connect.md`
+- [ ] T009 [US1] Register the second OAuth public client `jordylab-desktop-app` (PKCE S256, loopback redirect `http://127.0.0.1:19878/callback`, admin-only gate) in `jordylab-be/src/main/java/dev/jordy/jordylab/identity/` following the spec 021 `McpAuthorizationServerConfiguration` pattern — contract: `contracts/auth-connect.md`
 - [ ] T010 [US1] Machine-token issuance on connect in `jordylab-be/src/main/java/dev/jordy/jordylab/identity/` (issue `jlmt_` token to the loopback callback; admin-only; non-admin refusal with clear error) + tests per repo entity/service conventions
 - [ ] T011 [US1] `auth_service` in `jordylab-desktop/src/jordylab_desktop/services/auth_service.py`: open system browser, loopback callback listener, PKCE state/verifier, code exchange, token write to `~/.config/jordylab/scan/token.json` (0600)
 - [ ] T012 [US1] Connect screen in `jordylab-desktop/src/jordylab_desktop/screens/connect.py` per `docs/design/JOR-78/D_Connect.png`, including non-admin ("Only the admin account can connect a machine.") and callback-timeout error states (contract error table)
-- [ ] T013 [US1] Library detection in `jordylab-desktop/core/jordylab_scan_core/paths.py` + `jordylab-desktop/src/jordylab_desktop/platform/`: default Steam and EmuDeck roots per OS plus extra roots from config (FR-003)
-- [ ] T014 [US1] `sync_service` in `jordylab-desktop/src/jordylab_desktop/services/sync_service.py`: background schedule + Sync now, off the UI thread, check-then-scan against the unchanged ingest API (`contracts/ingest-check-scan.md`, FR-004/005)
+- [ ] T013 [US1] Library detection in `jordylab-desktop/src/jordylab_desktop/detect/` + `jordylab-desktop/src/jordylab_desktop/platform/`, using the `jordylab_scan` paths module: default Steam and EmuDeck roots per OS plus extra roots from config (FR-003)
+- [ ] T014 [US1] `sync_service` in `jordylab-desktop/src/jordylab_desktop/services/sync_service.py`: background schedule (default 6h, configurable) + Sync now, off the UI thread, check-then-scan against the unchanged ingest API (`contracts/ingest-check-scan.md`, FR-004/005)
 - [ ] T015 [US1] Status screen in `jordylab-desktop/src/jordylab_desktop/screens/status.py` per `docs/design/JOR-78/D_Status.png`, `D_Syncing.png`, `D_Failed.png`, `D_Empty.png`: per-source outcome (up to date / scanned / failed with reason / skipped roots), counts, next scheduled check
 - [ ] T016 [US1] Autostart + background behaviour in `jordylab-desktop/src/jordylab_desktop/platform/`: launchd agent (macOS), XDG autostart `.desktop` (Linux); app runs from login with the window hidden (FR-001, research R9)
 - [ ] T017 [US1] Edge-case handling in `sync_service` + screens: backend unreachable (show reason, retry next schedule), revoked token ("This machine must be reconnected."), missing/unreadable roots skipped and reported (spec Edge cases)
@@ -80,7 +80,7 @@ description: "Task list for the Desktop Sync App (JOR-78 / spec 024)"
 
 **Goal**: Account-level theme preference shared by web and desktop
 
-**Independent test** (quickstart Scenario 5): pick a theme in one surface, see it in the other; "follow device" resolves per device
+**Independent test** (quickstart Scenario 5): pick a theme in one surface, see it in the other; `follow-device` resolves per device
 
 - [ ] T026 [US3] Theme preference in `jordylab-be/src/main/java/dev/jordy/jordylab/identity/`: per-account store + Flyway migration (`identity` schema, default `follow-device`) + `GET`/`PUT /api/identity/me/preferences` + entity/service tests per repo conventions (`contracts/theme-preference.md`, data-model.md)
 - [ ] T027 [US3] Web theme setting becomes account-wide in `jordylab-fe/libs/settings/`: read/write the account preference, localStorage fallback-once migration, picker re-labelled as account-wide (`contracts/theme-preference.md`)
@@ -97,7 +97,7 @@ description: "Task list for the Desktop Sync App (JOR-78 / spec 024)"
 **Independent test** (quickstart Scenario 6): sync on the Sunshine host → configured games tagged Sunshine; non-host machines report nothing
 
 - [ ] T031 [US4] `SourceType.SUNSHINE` + `SunshineLibraryParser` (`@Component("SUNSHINE")`) in `jordylab-be/src/main/java/dev/jordy/jordylab/gamecatalog/` + tests (existing `LibraryParser` extension path, data-model.md)
-- [ ] T032 [US4] Sunshine reader in `jordylab-desktop/core/jordylab_scan_core/`: parse `~/.config/sunshine/apps.json` (Linux + macOS paths, verified LizardByte docs) into client-grouped `games[]` payload entries
+- [ ] T032 [US4] Sunshine reader in `jordylab-desktop/src/jordylab_desktop/detect/sunshine.py`: parse `~/.config/sunshine/apps.json` (Linux + macOS paths, verified LizardByte docs) into client-grouped `games[]` payload entries
 - [ ] T033 [US4] Source gating in `jordylab-desktop/src/jordylab_desktop/services/sync_service.py`: report `SUNSHINE` only when Sunshine's config directory exists on the machine (ticket D7)
 - [ ] T034 [US4] End-to-end validation on the Sunshine host: quickstart Scenario 6 — one catalog game with Steam + Sunshine tags, no duplicates; non-host machine reports nothing
 
@@ -109,7 +109,7 @@ description: "Task list for the Desktop Sync App (JOR-78 / spec 024)"
 
 **Independent test**: install on Windows; US1 scenarios 1–4 and US2 scenarios pass
 
-- [ ] T035 [US5] Windows support in `jordylab-desktop/src/jordylab_desktop/platform/` and `core/jordylab_scan_core/paths.py`: paths, autostart (Startup folder/registry), token cache locations
+- [ ] T035 [US5] Windows support in `jordylab-desktop/src/jordylab_desktop/platform/` and the `jordylab_scan` paths module: paths, autostart (Startup folder/registry), token cache locations
 - [ ] T036 [US5] Windows packaging + release runner in `jordylab-desktop/packaging/` + `.github/workflows/desktop-release.yml` (Windows build + installer + update-manifest entry + in-app update on Windows)
 - [ ] T037 [US5] End-to-end validation on Windows: quickstart Scenarios 2–4 on a Windows PC with a Steam library
 

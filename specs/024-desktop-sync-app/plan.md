@@ -22,7 +22,7 @@ Replace the downloaded Python scan scripts with a Qt (PySide6) desktop sync app 
 
 **Project Type**: Desktop application (new top-level codebase) + additive changes to the existing web monolith and web app.
 
-**Performance Goals**: Scan cadence keeps today's behaviour (server decides whether a scan is needed; unchanged content uploads nothing). UI stays responsive during scans (scan work off the UI thread). Update download does not block syncing.
+**Performance Goals**: Scan runs every 6 hours (the script client's cadence, configurable) with the server deciding whether a scan is needed; unchanged content uploads nothing. UI stays responsive during scans (scan work off the UI thread). Update download does not block syncing.
 
 **Constraints**: Identity continuity is non-negotiable — fingerprints, grouping and normalize/platform rules must behave byte-identically to the current scanner (protected by its existing pytest fixtures). The server stays authoritative on change detection, adoption and the suspect-shrink guard. Admin-only machine setup. macOS unsigned/ad-hoc (Gatekeeper right-click on first install).
 
@@ -65,18 +65,18 @@ jordylab-desktop/                     # NEW top-level codebase (ticket D1)
 ├── src/jordylab_desktop/
 │   ├── app.py                        # QApplication bootstrap, window, tray/autostart
 │   ├── screens/                      # Connect, Status, Update, Appearance (per docs/design/JOR-78/)
+│   ├── detect/                       # app-side detection (Sunshine apps.json reader — no parity constraint)
 │   ├── services/
 │   │   ├── sync_service.py           # schedule + Sync now, runs scan off the UI thread
 │   │   ├── auth_service.py           # browser sign-in + loopback callback, token store
 │   │   ├── update_service.py         # check, download, verify, swap, restart (FR-006/007)
 │   │   └── theme_service.py          # account theme preference → QSS
 │   └── platform/                     # autostart, paths, per-OS bits
-├── core/                             # shared scan core (vendored/extracted from gamecatalog-scanner)
-│   └── jordylab_scan_core/           # normalize, platforms, grouping, manifest, fingerprint, paths
 └── tests/                            # pytest: services + parity suite (fixtures from gamecatalog-scanner)
 
-gamecatalog-scanner/                  # keeps its identity as the source of truth for scan rules;
-                                      # core is extracted/shared, not ported (ticket D2)
+gamecatalog-scanner/                  # stays the single home of the scan rules (ticket D2);
+                                      # jordylab-desktop consumes its jordylab_scan package as a
+                                      # path dependency — no code moves, frozen-template build untouched
 
 jordylab-be/src/main/java/dev/jordy/jordylab/
 ├── identity/                         # + theme preference (per-account store + endpoints)
@@ -87,7 +87,7 @@ jordylab-fe/libs/settings/            # theme setting becomes account-wide (repl
 jordylab-fe/apps/jordylab/...         # + admin download page (latest installers per platform)
 ```
 
-**Structure Decision**: Three existing sub-projects gain additive changes; the desktop app is a new fourth top-level codebase with a `src/` layout and its scan core extracted from `gamecatalog-scanner` (shared, not duplicated). The backend changes ride the existing module boundaries (`identity`, `gamecatalog`), no new modules.
+**Structure Decision**: Three existing sub-projects gain additive changes; the desktop app is a new fourth top-level codebase with a `src/` layout that consumes `gamecatalog-scanner`'s `jordylab_scan` package as a path dependency — the scan rules stay in their existing files, shared and never copied. The backend changes ride the existing module boundaries (`identity`, `gamecatalog`), no new modules.
 
 ## Complexity Tracking
 

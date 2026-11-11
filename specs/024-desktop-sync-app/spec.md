@@ -55,7 +55,7 @@ As a signed-in user, I want my theme choice to follow my account, so that the we
 
 1. **Given** I pick one of the six themes in the desktop app, **When** I open the web app signed in as the same account, **Then** the web app shows the same theme.
 2. **Given** I pick a theme in the web app, **When** I open the desktop app, **Then** the desktop app shows the same theme.
-3. **Given** I choose "follow device" as my account preference, **When** I use the web app on a light-mode device and the desktop app on a dark-mode device, **Then** each follows its own device setting.
+3. **Given** I choose `follow-device` as my account preference, **When** I use the web app on a light-mode device and the desktop app on a dark-mode device, **Then** each follows its own device setting.
 
 ---
 
@@ -105,7 +105,7 @@ As the owner, I want to install the same app on a Windows PC, so that every mach
 
 ### Functional Requirements
 
-- **FR-001**: The app MUST run as a small windowed desktop application on macOS and Linux that stays in the background after launch and starts on login.
+- **FR-001**: The app MUST run as a windowed desktop application (about 440 × 640, per the delivered designs) on macOS and Linux that stays in the background after launch and starts on login.
 - **FR-002**: Setup MUST be restricted to the admin account; a non-admin account MUST NOT be able to connect a machine.
 - **FR-003**: The app MUST detect Steam and EmuDeck libraries on the machine it runs on, without manual path configuration when the libraries are in their default locations.
 - **FR-004**: Syncing MUST keep today's server-authoritative behaviour: the app asks the backend whether a scan is needed and uploads only when told to.
@@ -113,15 +113,15 @@ As the owner, I want to install the same app on a Windows PC, so that every mach
 - **FR-006**: The app MUST notify the user when a newer version of itself is published, and MUST install that version with one click, restarting itself afterwards.
 - **FR-007**: WHEN an update fails THE SYSTEM SHALL keep the previous working version and show the error with a retry action.
 - **FR-008**: The latest installer for each supported platform MUST be downloadable from a JordyLab download page (admin area of the web app).
-- **FR-009**: The theme preference MUST be stored per account (one of the six themes or "follow device") and applied by both the web app and the desktop app for the signed-in account.
+- **FR-009**: The theme preference MUST be stored per account (one of the six themes or `follow-device`) and applied by both the web app and the desktop app for the signed-in account.
 - **FR-010**: Sunshine detection MUST run only on the Sunshine host and MUST report a Sunshine source per configured game, reconciled onto the existing catalog entry when the game already exists.
-- **FR-011**: The first release MUST support macOS and Linux; Windows support MUST be added before or with the Sunshine story.
+- **FR-011**: The first release MUST support macOS and Linux; Windows support MUST be added at the same P2 priority as the Sunshine story (order between them flexible).
 - **FR-012**: The script client download (`GET /api/gamecatalog/ingest/client`) MUST be removed once every machine runs the app.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Machine connection**: a PC authenticated to JordyLab (today's machine token); carries its own identity so two machines with the same hostname stay separate.
-- **Theme preference**: per account; one of the six themes or "follow device"; replaces the per-device browser storage of the theme choice.
+- **Theme preference**: per account; one of the six themes or `follow-device`; replaces the per-device browser storage of the theme choice.
 - **Sunshine source**: a new scan source type on the Sunshine host, one entry per game configured in Sunshine, reconciling onto the existing catalog game.
 
 ## Success Criteria *(mandatory)*
@@ -140,5 +140,5 @@ As the owner, I want to install the same app on a Windows PC, so that every mach
 - Existing machine tokens and the Settings → Machines flow are reused for authentication; the app may create its token through a guided sign-in rather than a manual copy-paste.
 - The six themes and the design system from the app redesign are reused for the desktop app, so both surfaces look like one product (designs delivered in `docs/design/JOR-78/`).
 - GitHub Releases remains the distribution channel for the app's binaries; the JordyLab download page links there or mirrors it.
-- Scheduled sync keeps the current cadence the script client uses today.
+- Scheduled sync runs every 6 hours (the script client's cadence), configurable in the app.
 - Only the owner's machines are supported (single household); no multi-tenant concerns.

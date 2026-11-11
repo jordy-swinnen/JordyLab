@@ -33,7 +33,7 @@ No new database tables. This feature adds one enum value, one per-account prefer
 | Aspect | Detail |
 |--------|--------|
 | Entity | Second public client on the existing authorization server (spec 021 `McpAuthorizationServerConfiguration` pattern) |
-| Redirect | Loopback `http://127.0.0.1:<port>/callback` (port registered per platform convention) |
+| Redirect | Loopback `http://127.0.0.1:19878/callback` (fixed port, matching the spec 021 fixed-port pattern; 19877/19876 are taken by the MCP clients) |
 | Grant | Authorization code + PKCE S256, admin-only machine-token issuance |
 | Token | The app receives the `jlmt_` machine token and stores it in the existing token cache path |
 
@@ -47,7 +47,7 @@ Machine token, mode 0600. Revocable in Settings → Machines (existing behaviour
 
 | Field | Type | Meaning |
 |-------|------|---------|
-| `schedule` | string | cron-like or interval description (default = today's cadence) |
+| `schedule` | string | sync interval, cron-like or simple (default `6h`, the script client's cadence) |
 | `extra_roots` | map | per-library-type additional roots (carried over from script-era config) |
 | `window` | object | last window position, theme override cache |
 

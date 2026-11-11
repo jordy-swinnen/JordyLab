@@ -6,7 +6,7 @@ All NEEDS CLARIFICATION items from the Technical Context are resolved here. Deci
 
 ## R1 — Desktop framework and scan engine (settled: ticket D2)
 
-- **Decision**: Qt (PySide6) windowed app in Python; the scan core is extracted from `gamecatalog-scanner` and shared, not ported.
+- **Decision**: Qt (PySide6) windowed app in Python; the app consumes `gamecatalog-scanner`'s `jordylab_scan` package as a **path dependency** (no code moves — the rules stay in their existing files, shared and never copied), so identity parity is inherited and its pytest suite keeps guarding it.
 - **Rationale**: identity continuity (fingerprints → game identity → kept AI descriptions) depends on exact parity with the scanner's rules; reusing the tested code inherits that parity and its pytest suite. Python is already a repo language (garmin-sync-service). Owner decision 2026-11-11, revising an earlier Tauri+Rust choice.
 - **Alternatives considered**: Tauri 2 + Rust port (parity risk, third stack); Tauri + Python sidecar (two-runtime glue); Qt WebEngine (web themes carried exactly but ~200 MB bundle); Electron (rejected earlier for footprint).
 
@@ -32,7 +32,7 @@ All NEEDS CLARIFICATION items from the Technical Context are resolved here. Deci
 
 ## R5 — Theme preference storage (settled: ticket D6)
 
-- **Decision**: Per-account preference in the `identity` module (one of six themes or "follow device"), exposed through the existing user endpoints; web falls back to the localStorage value once (migration by first read); desktop reads the same preference and renders Qt stylesheets verified against `docs/design/JOR-78/`.
+- **Decision**: Per-account preference in the `identity` module (one of six themes or `follow-device`), exposed through the existing user endpoints; web falls back to the localStorage value once (migration by first read); desktop reads the same preference and renders Qt stylesheets verified against `docs/design/JOR-78/`.
 - **Rationale**: `identity` owns users; no new module boundary; both surfaces then share one source of truth (US3).
 - **Alternatives considered**: settings module (cross-module read for a user attribute); per-device override (two sources of truth).
 
