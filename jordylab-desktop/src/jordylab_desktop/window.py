@@ -18,6 +18,8 @@ from .services import theme_service
 from .services.auth_service import ConnectError, ConnectFlow
 from .services.sync_service import (
     APPLIED,
+    NO_CONTENT,
+    NO_SOURCE,
     REAUTH_REQUIRED,
     UP_TO_DATE,
     SyncService,
@@ -189,6 +191,14 @@ class MainWindow(QMainWindow):
             return
         self.status_screen.set_syncing(True)
         self.status_screen.set_status("Checking whether a scan is needed…")
+        from .detect.libraries import detect_libraries
+
+        self.status_screen.set_libraries(
+            [
+                (library.library_type, "", "checking")
+                for library in detect_libraries(self.config.extra_roots)
+            ]
+        )
         self._sync_worker = SyncWorker(SyncService(self.config), force=force, parent=self)
         self._sync_worker.reportReady.connect(self._sync_finished)
         self._sync_worker.finished.connect(lambda: self.status_screen.set_syncing(False))
@@ -201,7 +211,11 @@ class MainWindow(QMainWindow):
             detail = f"{result.games} games" if result.games else ""
             if result.outcome in (APPLIED, UP_TO_DATE):
                 when = report.finished_at.replace("T", " ").replace("Z", " UTC")
-                detail = f"{result.games} games · {when}"
+                detail = f"{result.games} games · {when}" if result.games else f"Up to date · {when}"
+            elif result.outcome == NO_CONTENT:
+                detail = "No library found on this PC"
+            elif result.outcome == NO_SOURCE:
+                detail = "Not configured on this PC"
             elif result.message:
                 detail = result.message
             rows.append((result.library_type, detail, result.outcome))

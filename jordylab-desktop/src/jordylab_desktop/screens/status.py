@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 OUTCOME_LABELS = {
+    "checking": "Checking…",
     "NO_CHANGE": "Up to date",
     "APPLIED": "Synced",
     "NO_CONTENT": "Nothing found",

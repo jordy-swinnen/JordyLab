@@ -78,7 +78,7 @@ class SyncReport:
 
     def worst_outcome(self):
         for result in self.results:
-            if result.outcome not in (UP_TO_DATE, APPLIED):
+            if result.outcome not in (UP_TO_DATE, APPLIED, NO_CONTENT, NO_SOURCE):
                 return result.outcome
 
         return UP_TO_DATE
@@ -179,7 +179,9 @@ def scan_library(
         return LibraryResult(library_type, NO_CONTENT, message="nothing to scan")
 
     digest = compute_digest(entries, manifest_contents, games)
-    check_response = check(cfg, build_check_body(library_type, hostname, digest, machine_id), token)
+    _, check_response = check(
+        cfg, build_check_body(library_type, hostname, digest, machine_id), token
+    )
     if not check_response.get("scanNeeded") and not force:
         return LibraryResult(library_type, UP_TO_DATE, games=len(games))
 
@@ -194,7 +196,7 @@ def scan_library(
         machine_id=machine_id,
         force=bool(force),
     )
-    response = scan(cfg, body, token)
+    _, response = scan(cfg, body, token)
     outcome = response.get("outcome") or FAILED
     if outcome == APPLIED:
         return LibraryResult(
@@ -293,4 +295,6 @@ class SyncService:
         except ScanError as error:
             return LibraryResult(library.library_type, FAILED, message=str(error))
         except OSError as error:
+            return LibraryResult(library.library_type, FAILED, message=str(error))
+        except Exception as error:  # noqa: BLE001 - one library must not kill the run
             return LibraryResult(library.library_type, FAILED, message=str(error))

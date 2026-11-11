@@ -18,11 +18,11 @@ def test_scan_applies(tmp_path, monkeypatch):
 
     def fake_check(cfg, body, token):
         calls["check"] = body
-        return {"scanNeeded": True}
+        return 200, {"scanNeeded": True}
 
     def fake_scan(cfg, body, token):
         calls["scan"] = body
-        return {"outcome": "APPLIED", "counts": {"added": 1}}
+        return 200, {"outcome": "APPLIED", "counts": {"added": 1}}
 
     monkeypatch.setattr(sync_service, "check", fake_check)
     monkeypatch.setattr(sync_service, "scan", fake_scan)
@@ -43,7 +43,7 @@ def test_scan_applies(tmp_path, monkeypatch):
 
 def test_scan_skipped_when_server_says_so(tmp_path, monkeypatch):
     root = _emudeck_root(tmp_path)
-    monkeypatch.setattr(sync_service, "check", lambda *a, **k: {"scanNeeded": False})
+    monkeypatch.setattr(sync_service, "check", lambda *a, **k: (200, {"scanNeeded": False}))
     monkeypatch.setattr(
         sync_service,
         "scan",
@@ -97,11 +97,11 @@ def test_sunshine_games_are_reported(tmp_path):
     screenshot = {}
 
     def fake_check(cfg, body, token):
-        return {"scanNeeded": True}
+        return 200, {"scanNeeded": True}
 
     def fake_scan(cfg, body, token):
         screenshot.update(body)
-        return {"outcome": "APPLIED", "counts": {}}
+        return 200, {"outcome": "APPLIED", "counts": {}}
 
     import jordylab_desktop.services.sync_service as module
 
