@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { environment, expect, test } from './support/fixtures';
 import { signedInApprovedGuest } from './support/guest';
+import { setAccountTheme } from './support/theme';
 
 // The theme is chosen per device in Settings → App (reachable by an administrator and a guest, on the web) and remembered in the
 // browser. The boot script sets the root attribute before the first paint, so these checks read the attribute rather than colours.
@@ -18,6 +19,8 @@ async function openAppSettings(page: Page): Promise<void> {
 
 test.describe('Themes', () => {
   test.beforeEach(async ({ page }) => {
+    // The account-wide theme is the source of truth (spec 024); start every test from following the device.
+    await setAccountTheme(page, 'system');
     // Start from "no stored choice" once per tab; a later reload must keep what the test chose in between.
     await page.addInitScript((key) => {
       if (window.sessionStorage.getItem('e2e-theme-reset')) {

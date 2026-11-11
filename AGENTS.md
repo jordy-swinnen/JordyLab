@@ -8,6 +8,7 @@ Personal platform for financial intelligence, health/fitness tracking, game cata
 AGENTS.md                       ← you are here (root)
 jordylab-be/                    ← Spring Boot 4 monolith (Java 25, Gradle Kotlin DSL) — session auth (passwords + passkeys), gamecatalog ingest endpoint
 jordylab-fe/                    ← Nx Angular 22 monorepo (Bun, spartan/ui) — one deployable app (jordylab) lazy-loading per-domain route libs (fna, gamecatalog); future domains (recipe, garmin, trading) follow the same pattern
+jordylab-desktop/               ← Qt (PySide6) desktop sync app — connects a PC, syncs Steam/EmuDeck on a schedule, updates itself; reuses gamecatalog-scanner as its scan core (spec 024)
 garmin-sync-service/            ← Python 3.12 sidecar (Garmin Connect sync, direct DB writes)
 ```
 

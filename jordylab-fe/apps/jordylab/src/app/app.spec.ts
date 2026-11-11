@@ -26,6 +26,7 @@ describe('App', () => {
         provide: AuthService,
         useValue: {
           username: () => 'jordy',
+          isAuthenticated: signal(true).asReadonly(),
           init: authInit,
           logout,
           hasAppRole: hasAppRole.asReadonly(),
@@ -83,6 +84,7 @@ describe('App', () => {
       'Users',
       'AI Models',
       'Machines',
+      'Downloads',
       'App',
       'Feedback',
     ]);
@@ -108,6 +110,7 @@ describe('App', () => {
       '/settings/users',
       '/settings/ai-models',
       '/settings/machines',
+      '/settings/downloads',
       '/settings/app',
       '/settings/inbox',
     ]);

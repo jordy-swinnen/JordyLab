@@ -4,6 +4,7 @@ import dev.jordy.jordylab.identity.IdentityProperties;
 import dev.jordy.jordylab.identity.domain.UserAccount;
 import dev.jordy.jordylab.identity.ManagedApp;
 import dev.jordy.jordylab.identity.domain.UserRole;
+import dev.jordy.jordylab.identity.domain.UserTheme;
 import dev.jordy.jordylab.identity.domain.ResetRequestStatus;
 import dev.jordy.jordylab.identity.domain.UserStatus;
 import dev.jordy.jordylab.identity.domain.repository.PasswordResetRequestRepository;
@@ -146,6 +147,20 @@ public class UserAccountService {
         account.changeDisplayName(newDisplayName);
 
         return userAccountRepository.save(account);
+    }
+
+    /** Sets the account-wide theme (spec 024 FR-009). */
+    @Transactional
+    public UserAccount changeOwnTheme(UUID userId, UserTheme theme) {
+        UserAccount account = require(userId);
+        account.changeTheme(theme);
+
+        return userAccountRepository.save(account);
+    }
+
+    /** The account theme; an unknown account falls back to following the device. */
+    public UserTheme themeOf(UUID userId) {
+        return userAccountRepository.findById(userId).map(UserAccount::getTheme).orElse(UserTheme.SYSTEM);
     }
 
     public List<UserAccount> listUsers(UserStatus statusFilter) {

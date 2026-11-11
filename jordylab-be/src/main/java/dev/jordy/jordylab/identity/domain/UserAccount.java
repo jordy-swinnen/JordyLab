@@ -7,6 +7,7 @@ import dev.jordy.jordylab.identity.UserAccessRemoved;
 import dev.jordy.jordylab.shared.domain.BaseEntity;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -65,6 +66,11 @@ public class UserAccount extends BaseEntity<UserAccount> {
 
     @Column(name = "failed_attempts", nullable = false)
     private int failedAttempts;
+
+    /** The account-wide theme (spec 024 US3); {@link UserTheme#SYSTEM} follows the device. */
+    @Convert(converter = UserThemeConverter.class)
+    @Column(nullable = false)
+    private UserTheme theme;
 
     @Column(name = "locked_until")
     private Instant lockedUntil;
@@ -126,6 +132,11 @@ public class UserAccount extends BaseEntity<UserAccount> {
         this.displayName = newDisplayName.trim();
     }
 
+    /** Sets the account-wide theme (spec 024 FR-009); unknown values fall back to following the device. */
+    public void changeTheme(UserTheme newTheme) {
+        this.theme = newTheme == null ? UserTheme.SYSTEM : newTheme;
+    }
+
     public void recordFailedSignIn(Instant now, int maxFailures, Duration lockDuration) {
         Preconditions.checkArgument(now != null, "now is required");
         Preconditions.checkArgument(maxFailures > 0, "maxFailures must be positive");
@@ -170,12 +181,15 @@ public class UserAccount extends BaseEntity<UserAccount> {
             } else {
                 appGrants = new HashSet<>(appGrants);
             }
+            if (theme == null) {
+                theme = UserTheme.SYSTEM;
+            }
             if (id == null) {
                 id = UUID.randomUUID();
             }
 
             return new UserAccount(id, username, displayName, passwordHash, role, status, failedAttempts,
-                    lockedUntil, appGrants);
+                    theme, lockedUntil, appGrants);
         }
     }
 }

@@ -38,6 +38,7 @@ feature's task list in `specs/`. The rule that keeps this page current is in
 | Post-Keycloak housekeeping: secrets, database role, CI secrets | In progress | see the Replaced table |
 | Permanent agent test account, local and production | In progress | no task list |
 | Stock price history on the Portfolio page (spec 023) | In progress | 2: T001 baseline and T057 quickstart check (see specs/023-portfolio-price-history/tasks.md) |
+| Desktop sync app with self-update (spec 024) | In progress | 14: real-machine checks, updater spike, theme write-back, release-asset and signature alignment (see specs/024-desktop-sync-app/tasks.md) |
 
 ## Planned
 

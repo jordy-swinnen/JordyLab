@@ -66,10 +66,13 @@ public class IdentitySecurityConfiguration {
     public SecurityFilterChain machineTokenFilterChain(HttpSecurity http,
             MachineTokenAuthenticationFilter machineTokenAuthenticationFilter) throws Exception {
         http
-                .securityMatcher("/api/gamecatalog/ingest/scan", "/api/gamecatalog/ingest/check")
+                .securityMatcher("/api/gamecatalog/ingest/scan", "/api/gamecatalog/ingest/check",
+                        "/api/identity/machines/preferences")
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/gamecatalog/ingest/check",
                                 "/api/gamecatalog/ingest/scan")
+                        .hasRole("gamecatalog-scanner")
+                        .requestMatchers(HttpMethod.GET, "/api/identity/machines/preferences")
                         .hasRole("gamecatalog-scanner")
                         .anyRequest().denyAll())
                 .addFilterBefore(machineTokenAuthenticationFilter, AuthorizationFilter.class)
@@ -107,6 +110,8 @@ public class IdentitySecurityConfiguration {
                         .requestMatchers("/webauthn/register/options", "/webauthn/register").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/identity/me").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/identity/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/identity/me/preferences").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/identity/me/preferences").authenticated()
                         .requestMatchers("/api/identity/passkeys/**").authenticated()
                         .requestMatchers("/api/identity/users/**", "/api/identity/machines/**").hasRole("admin")
                         .requestMatchers("/api/gamecatalog/ingest/client").hasRole("admin")
