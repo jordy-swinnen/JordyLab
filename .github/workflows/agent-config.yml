@@ -1,0 +1,80 @@
+name: Agent Config
+
+# The shared skills live once, in .claude/skills, and both tools read them (AGENTS.md → AI Routing). A bare
+# `opkg install` redetects both platforms and rebuilds .opencode/skills with a namespaced second copy, so this
+# workflow keeps that single copy from coming back. Reinstall by subpath instead:
+# `opkg install <skill> --platforms claude --force` (docs/ai-workflow.md → "Where things live").
+
+on:
+  pull_request:
+    paths:
+      - '.claude/skills/**'
+      - '.openpackage/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'opencode.json'
+      - '.mcp.json'
+      - '.github/workflows/agent-config.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/**'
+      - '.openpackage/**'
+
+permissions:
+  contents: read
+
+jobs:
+  shared-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Skills live only under .claude/skills
+        run: |
+          if [ -e .opencode/skills ]; then
+            echo "::error::.opencode/skills exists. Skills live once, in .claude/skills. Reinstall by subpath: opkg install <skill> --platforms claude --force"
+            exit 1
+          fi
+
+      - name: No namespaced duplicate skill folders
+        run: |
+          found=$(find .claude/skills -mindepth 1 -maxdepth 3 \( -name 'agent-skills-*' -o -name 'jordy-swinnen' \) -print)
+          if [ -n "$found" ]; then
+            echo "::error::namespaced skill copy found, reinstall by subpath instead:"
+            printf '%s\n' "$found"
+            exit 1
+          fi
+
+      - name: Each shared skill is installed once
+        run: |
+          status=0
+          for skill in dual-agent-config agent-handoff opencode-go-plus-build-plan-recommender; do
+            if [ ! -f ".claude/skills/$skill/SKILL.md" ]; then
+              echo "::error::.claude/skills/$skill/SKILL.md is missing"
+              status=1
+              continue
+            fi
+            copies=$(find .claude/skills -type d -name "$skill" | wc -l | tr -d ' ')
+            if [ "$copies" != "1" ]; then
+              echo "::error::$skill is installed $copies times under .claude/skills, expected 1"
+              find .claude/skills -type d -name "$skill"
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: MCP servers translated between the tools
+        run: python3 .claude/skills/dual-agent-config/scripts/test_sync_mcp.py
+
+      # Report-only for now: check_config.py also reports the pre-existing CLAUDE.md and SpecKit frontmatter
+      # drift, tracked separately in docs/ai-workflow.md → "Known drift". Drop continue-on-error once fixed.
+      - name: Full agent config check (report only)
+        continue-on-error: true
+        run: python3 .claude/skills/dual-agent-config/scripts/check_config.py

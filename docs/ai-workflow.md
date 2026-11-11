@@ -117,7 +117,7 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 |---|---|
 | `CLAUDE.md` | Entry point for Claude Code. It imports `AGENTS.md`. |
 | `AGENTS.md` | Shared rules for both tools: architecture, workflow, AI routing, secrets. |
-| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `gh@jordy-swinnen/agent-skills` OpenPackage package and are recorded in `.openpackage/`. Update each skill by subpath with `--platforms claude --force`; never run bare `opkg install`, which would create duplicate `.opencode/skills/`. |
+| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `gh@jordy-swinnen/agent-skills` OpenPackage package and are recorded in `.openpackage/`. Update each skill by subpath with `--platforms claude --force`; never run bare `opkg install`, which would create duplicate `.opencode/skills/`. The `Agent Config` workflow checks this on every pull request that touches skills or `.openpackage/`. |
 | `.opencode/agents/`, `.opencode/commands/`, `opencode.json` | OpenCode agents, commands, models and MCP servers. |
 | `.specify/` | SpecKit templates and scripts. |
 | `.specify/extensions.yml` | SpecKit hooks. `kaneo-start-ticket` runs before `/speckit-specify`. |
@@ -145,3 +145,6 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 - `backlog-capture`, `backlog-triage` and `backlog-sync-drafts` still name the Triage and Drafted columns. The live board
   has Ideas, Refinement, Todo, In progress, In review, Done and Canceled instead. Use `kaneo-idea` for new ideas until
   those three skills follow the new flow.
+- `CLAUDE.md` is not a single `@AGENTS.md` line, and the SpecKit skills carry a `name` that differs from their folder plus
+  non-portable frontmatter keys. `check_config.py` reports both, so the `Agent Config` workflow runs it report-only until
+  they are fixed.
