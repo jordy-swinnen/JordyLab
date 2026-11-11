@@ -117,7 +117,7 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 |---|---|
 | `CLAUDE.md` | Entry point for Claude Code. It imports `AGENTS.md`. |
 | `AGENTS.md` | Shared rules for both tools: architecture, workflow, AI routing, secrets. |
-| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `gh@jordy-swinnen/agent-skills` OpenPackage package and are recorded in `.openpackage/`. |
+| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `gh@jordy-swinnen/agent-skills` OpenPackage package and are recorded in `.openpackage/`. Update each skill by subpath with `--platforms claude --force`; never run bare `opkg install`, which would create duplicate `.opencode/skills/`. |
 | `.opencode/agents/`, `.opencode/commands/`, `opencode.json` | OpenCode agents, commands, models and MCP servers. |
 | `.specify/` | SpecKit templates and scripts. |
 | `.specify/extensions.yml` | SpecKit hooks. `kaneo-start-ticket` runs before `/speckit-specify`. |
