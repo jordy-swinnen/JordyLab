@@ -1,0 +1,93 @@
+name: Desktop release
+
+# Tag-triggered (spec 024, ticket D8): builds the sync app on macOS and Linux,
+# publishes installers plus update-manifest.json to a GitHub Release. The
+# desktop app never touches the production VPS.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            platform: macos-aarch64
+            artifact: jordylab-desktop-macos-aarch64
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+            artifact: jordylab-desktop-linux-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: jordylab-desktop
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" pyinstaller
+      - name: Parity gate
+        working-directory: jordylab-desktop
+        run: pytest tests/parity -q
+      - name: Build
+        working-directory: jordylab-desktop
+        run: pyinstaller --clean --noconfirm packaging/jordylab-desktop.spec
+      - name: Rename artifact
+        working-directory: jordylab-desktop
+        run: |
+          mkdir -p out
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            ditto -c -k --sequesterRsrc --keepParent dist/jordylab-desktop.app out/${{ matrix.artifact }}.zip
+          else
+            cp dist/jordylab-desktop out/${{ matrix.artifact }}
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: jordylab-desktop/out/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Build update manifest
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib
+
+          version = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          platforms = {}
+          names = {
+              "jordylab-desktop-macos-aarch64.zip": "macos-aarch64",
+              "jordylab-desktop-linux-x86_64": "linux-x86_64",
+          }
+          for path in pathlib.Path("artifacts").iterdir():
+              key = names.get(path.name)
+              if key is None:
+                  continue
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              platforms[key] = {
+                  "url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{os.environ['GITHUB_REF_NAME']}/{path.name}",
+                  "sha256": digest,
+                  "signature": "",
+              }
+          manifest = {"version": version, "platforms": platforms}
+          pathlib.Path("artifacts/update-manifest.json").write_text(json.dumps(manifest, indent=2))
+          PY
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

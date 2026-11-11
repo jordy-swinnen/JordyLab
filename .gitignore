@@ -10,6 +10,12 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+jordylab-desktop/packaging/build/
+jordylab-desktop/packaging/dist/
 
 # Packaged skill export artifact (built from .claude/skills/dual-agent-config/)
 .claude/.skill
