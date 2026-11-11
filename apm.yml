@@ -1,0 +1,12 @@
+# APM (Agent Package Manager) manifest. `apm install` deploys the shared skills; `apm update` pulls a newer tag.
+#
+# targets: [claude] is deliberate and must stay: `claude` is the only APM target that deploys skills to
+# .claude/skills/, which both Claude Code and OpenCode read. Every other target converges on .agents/skills/
+# and would leave a second copy competing for the same skill name (see .claude/skills/dual-agent-config).
+name: jordylab
+version: "0.1.0"
+targets:
+  - claude
+dependencies:
+  apm:
+    - jordy-swinnen/agent-skills#v0.1.0

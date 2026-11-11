@@ -1,0 +1,117 @@
+# Keeps the shared agent skills current.
+#
+# The three shared skills come from the APM package jordy-swinnen/agent-skills, pinned by tag in apm.yml. Nothing
+# updates them on its own, so this weekly run looks for a newer tag, redeploys, checks the single-copy invariants and
+# opens a pull request only when something actually changed. It never pushes to main.
+#
+# The invariant that matters: targets: [claude] in apm.yml. `claude` is the only APM target that deploys skills to
+# .claude/skills/, which both Claude Code and OpenCode read; any other target converges on .agents/skills/ and leaves
+# a second copy competing for the same skill name.
+#
+# The bot commit must pass .github/workflows/commit-refs.yml, so it carries a ticket and a Refs: trailer. Set the
+# repository variable SKILLS_SYNC_TICKET to whatever standing ticket owns this upkeep; it defaults to JOR-101, the
+# ticket that introduced the shared skills.
+
+name: Skills Sync
+
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: skills-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  UPSTREAM: https://github.com/jordy-swinnen/agent-skills.git
+  SKILLS: 'agent-handoff dual-agent-config opencode-go-plus-build-plan-recommender'
+  SYNC_TICKET: ${{ vars.SKILLS_SYNC_TICKET || 'JOR-101' }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install APM
+        run: |
+          curl -sSL https://aka.ms/apm-unix | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Point apm.yml at the newest released tag
+        id: pin
+        run: |
+          latest=$(git ls-remote --tags --refs "$UPSTREAM" 'v*' \
+            | awk '{print $2}' | sed 's#refs/tags/##' | sort -V | tail -1)
+          current=$(sed -n 's/.*agent-skills#\(v[0-9][0-9.]*\).*/\1/p' apm.yml | head -1)
+          echo "current=${current:-none} latest=${latest:-none}"
+          if [ -z "$latest" ]; then
+            echo "::error::No v* tag found on $UPSTREAM"
+            exit 1
+          fi
+          if [ "$latest" != "$current" ]; then
+            sed -i "s#agent-skills#$current#agent-skills#$latest#" apm.yml
+            echo "bumped ${current:-none} -> $latest"
+          fi
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Redeploy the skills
+        run: apm install
+
+      - name: Check the single-copy invariants
+        run: |
+          set -eu
+          for dir in .opencode/skills .agents/skills; do
+            test ! -e "$dir" || { echo "::error::$dir appeared"; exit 1; }
+          done
+          for skill in $SKILLS; do
+            test -f ".claude/skills/$skill/SKILL.md" || { echo "::error::.claude/skills/$skill/SKILL.md is missing"; exit 1; }
+          done
+          python3 .claude/skills/dual-agent-config/scripts/check_config.py
+          apm install --frozen
+          apm audit --ci
+
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LATEST: ${{ steps.pin.outputs.latest }}
+        run: |
+          set -eu
+          if git diff --quiet -- apm.yml apm.lock.yaml .claude/skills; then
+            echo "Skills already up to date; nothing to propose."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B chore/skills-sync
+          git add apm.yml apm.lock.yaml .claude/skills
+          git commit -m "$SYNC_TICKET: sync shared agent skills to $LATEST" \
+                     -m "Automated weekly run of the Skills Sync workflow." \
+                     -m "Refs: NO-CODE"
+
+          git fetch origin chore/skills-sync || true
+          git push --force-with-lease origin chore/skills-sync
+
+          existing=$(gh pr list --head chore/skills-sync --json number --jq '.[0].number')
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            echo "Updated pull request #$existing"
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head chore/skills-sync \
+            --title "chore: sync shared agent skills to $LATEST" \
+            --body "Weekly run of the Skills Sync workflow: it bumped the pinned tag in apm.yml, ran apm install, and checked the single-copy invariants plus apm audit --ci. Review the redeployed files under .claude/skills/; nothing outside the pinned tag and those files was touched. Part of $SYNC_TICKET"

@@ -61,9 +61,9 @@ Numerous blog posts describe this feature as if it works. They are transcribing 
 OpenCode walks up from the working directory to the first matching `AGENTS.md`, and combines project and global rules additively (concatenated, project first). Placing a file per project directory scopes instructions by subtree:
 
 ```
-jordylab-be/AGENTS.md              ← Java / Spring conventions
-jordylab-fe/AGENTS.md              ← Angular / TypeScript conventions
-garmin-sync-service/AGENTS.md      ← Python conventions
+services/api/AGENTS.md             ← Java / Spring conventions
+apps/web/AGENTS.md                 ← Angular / TypeScript conventions
+services/worker/AGENTS.md          ← Python conventions
 ```
 
 Good when the language boundary *is* the directory boundary. Useless for cross-cutting file types — `.sql` migrations scattered across modules can't be targeted this way.
