@@ -17,13 +17,15 @@ tree.
 ```bash
 python3.12 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
+.venv/bin/pip install -e ../gamecatalog-scanner   # the shared scan rules; the app imports jordylab_scan
 .venv/bin/pytest                       # services + parity gate
 .venv/bin/ruff check . && .venv/bin/ruff format --check .
-.venv/bin/python -m jordylab_desktop   # run the app
+.venv/bin/python -m jordylab_desktop   # run the app (from this directory)
 ```
 
 The tests import `jordylab_scan` through pytest's `pythonpath` setting
-(`../gamecatalog-scanner/src`); no separate install of the scanner is needed.
+(`../gamecatalog-scanner/src`), but running the app needs the package installed
+in the venv (the command above).
 
 ## Layout
 
