@@ -161,3 +161,16 @@ Phase 1 (T001–T004) ──▶ Phase 2 (T005–T008, parity gate T006 blocks al
 **MVP first**: Phase 1 + 2 → US1 alone already removes the manual-update pain on macOS/Linux (quickstart Scenarios 1–3 as the demo). Ship US2 immediately after to complete the ticket's two P1 stories. US3–US5 land as independent increments afterwards.
 
 **Rollout**: app + script client coexist (same ingest endpoints, server authoritative); T038's cleanup runs only after the dev Mac and JordyBox have run the app green — rollback until then is trivial (ticket D9).
+
+---
+
+## Phase 9: Convergence
+
+Appended by `/speckit-converge` after the first real-machine run (2026-11-11). Each item traces to the artifact it leaves unsatisfied.
+
+- [ ] T042 [US3] Persist the desktop theme choice to the account: add `PUT /api/identity/machines/preferences` (machine-token chain) and call it from `jordylab_desktop/window.py::_theme_chosen` via `theme_service`, so a theme picked in the app reaches the web app too per FR-009 (partial)
+- [ ] T043 [FR-008] Align the Downloads page asset names with the release workflow (`jordylab-desktop-linux-x86_64.tar.gz`, and add the Windows entry with US5) in `jordylab-fe/apps/jordylab/src/app/downloads/downloads-page.component.ts` per FR-008 (partial)
+- [ ] T044 [contract update-manifest] Either verify the release signature in `update_service` (public key embedded, signature produced in CI from the SOPS key) or remove the signature field from the manifest contract and document hash-only verification per `contracts/update-manifest.md` (partial)
+- [ ] T045 [US1] Add backend tests for `UserPreferenceController` (session GET/PUT and the machine-token read) and `UserAccountService.changeOwnTheme`/`themeOf` per US1/FR-009 (missing)
+- [ ] T046 [US1] Add a Vitest/Spectator spec for `ConnectDesktopComponent` (missing state/port, token callback URL, error state) in `jordylab-fe/apps/jordylab/src/app/connect-desktop/` per US1/FR-002 (missing)
+- [ ] T047 [plan R2] Remove the unused `tufup` dependency from `jordylab-desktop/pyproject.toml` (the hand-rolled verified swap was chosen) or wire it, per plan research R2 (unrequested)
