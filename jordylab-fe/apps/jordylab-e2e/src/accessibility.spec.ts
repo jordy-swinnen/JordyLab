@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { environment, expect, test } from './support/fixtures';
 import { PAGES } from './support/pages';
+import { setAccountTheme } from './support/theme';
 
 // Automated accessibility check (WCAG 2.x A and AA: colour contrast, accessible names, labels, landmarks) on every signed-in page, on a
 // desktop and a phone-sized screen (the Android app shows this same web build). It exists because contrast and "label in name" findings
@@ -89,6 +90,7 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
         test.use({ viewport: screen.viewport });
 
         test.beforeEach(async ({ page }) => {
+          await setAccountTheme(page, theme);
           await page.addInitScript((id) => window.localStorage.setItem('jordylab.theme', id), theme);
         });
 
@@ -118,6 +120,7 @@ test.describe('Accessibility (WCAG 2 A and AA)', () => {
         test.use({ viewport: screen.viewport });
 
         test.beforeEach(async ({ page }) => {
+          await setAccountTheme(page, theme);
           await page.addInitScript((id) => window.localStorage.setItem('jordylab.theme', id), theme);
         });
 
