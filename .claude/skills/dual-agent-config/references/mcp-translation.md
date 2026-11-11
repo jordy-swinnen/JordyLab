@@ -1,18 +1,21 @@
-# MCP server translation: Claude Code ↔ OpenCode
+# MCP server translation: Claude Code ↔ OpenCode 2
 
 ## Field mapping
 
-| Concept | Claude Code (`.mcp.json`) | OpenCode (`opencode.json`) |
+| Concept | Claude Code (`.mcp.json`) | OpenCode 2 (`opencode.json(c)`) |
 |---|---|---|
-| Top-level key | `mcpServers` | `mcp` |
+| Top-level key | `mcpServers` | `mcp.servers` (V1: directly under `mcp`) |
 | Local process type | `"type": "stdio"` | `"type": "local"` |
 | Remote server type | `"type": "http"` or `"sse"` | `"type": "remote"` |
 | Command | `"command"` (string) + `"args"` (array) | `"command"` (single array) |
 | Environment vars | `"env"` | `"environment"` |
-| Enable/disable | omit the entry, or remove it | `"enabled": true/false` |
-| Remote URL | `"url"` | `"url"` |
+| Enable/disable | omit the entry, or remove it | `"disabled": true` (V1: `"enabled": false`); servers connect by default |
+| Remote URL | `"url"` | `"url"` (Streamable HTTP) |
+| OAuth | `oauth.clientId`, `oauth.callbackPort` | `oauth.client_id`, `oauth.callback_port`, `oauth.scope`; `"oauth": false` turns it off |
+| Timeout | per server, ms | `timeout: { startup, catalog, execution }` (V1: one number) |
+| Working directory | — | `cwd` |
 
-Claude Code also supports `websocket` transport, which has no clean OpenCode equivalent — flag these rather than guessing at a translation.
+Claude Code also supports `websocket` transport, which has no clean OpenCode equivalent — flag these rather than guessing at a translation. OpenCode 2 speaks Streamable HTTP only, so an SSE-only server may not connect.
 
 ## The command split
 
@@ -47,20 +50,23 @@ Going the other direction, the first array element becomes `command` and the rem
 }
 ```
 
-**OpenCode** (`opencode.json`):
+**OpenCode 2** (`opencode.json`):
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "postgres": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-postgres"],
-      "environment": { "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}" },
-      "enabled": true
+    "servers": {
+      "postgres": {
+        "type": "local",
+        "command": ["npx", "-y", "@modelcontextprotocol/server-postgres"],
+        "environment": { "POSTGRES_CONNECTION_STRING": "{env:DATABASE_URL}" }
+      }
     }
   }
 }
 ```
+
+Note the environment value: `${DATABASE_URL}` becomes `{env:DATABASE_URL}` (see Secrets).
 
 ## Worked example: remote server
 
@@ -76,18 +82,21 @@ Going the other direction, the first array element becomes `command` and the rem
 }
 ```
 
-**OpenCode**:
+**OpenCode 2**:
 ```json
 {
   "mcp": {
-    "sentry": {
-      "type": "remote",
-      "url": "https://mcp.sentry.dev/mcp",
-      "enabled": true
+    "servers": {
+      "sentry": {
+        "type": "remote",
+        "url": "https://mcp.sentry.dev/mcp"
+      }
     }
   }
 }
 ```
+
+Remote servers use OAuth by default in OpenCode; sign in with `/mcps` or `opencode mcp auth sentry`. Credentials are stored outside the config.
 
 ## Secrets
 
@@ -108,12 +117,12 @@ Claude Code has three MCP scopes with precedence local > project > user:
 - **project** — `.mcp.json` at the repo root, committed and shared
 - **user** — `~/.claude.json` top level, applies across all projects
 
-OpenCode merges a global `~/.config/opencode/opencode.json` with a project-level `opencode.json`, project winning.
+OpenCode merges a global `~/.config/opencode/opencode.json(c)` with project-level `opencode.json(c)` and `.opencode/opencode.json(c)`, project winning. A higher-precedence file replaces a server with the same name as a whole object. `opencode mcp add <name> ...` writes to the project config (`--global` for the global one).
 
 When translating, map Claude Code's *project* scope to OpenCode's *project* config and *user* scope to OpenCode's global config. Claude Code's *local* scope has no direct equivalent — if an entry lives there, ask whether it should become project-level or global on the OpenCode side rather than picking silently.
 
 ## Verification
 
-After translating, list servers in both tools and confirm the same names appear. A server that appears in the list but fails on first tool call is usually an environment-variable syntax problem, not a schema problem — check that first.
+After translating, list servers in both tools (`opencode mcp list`, `/mcp` in Claude Code) and confirm the same names appear. A server that appears in the list but fails on first tool call is usually an environment-variable syntax problem, not a schema problem — check that first.
 
 Claude Code also requires approving servers from a newly cloned `.mcp.json` before they activate. If a translated server shows up as disabled on the Claude Code side, that approval prompt is the likely cause, not the translation.
