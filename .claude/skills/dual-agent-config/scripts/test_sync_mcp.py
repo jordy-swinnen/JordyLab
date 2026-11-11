@@ -14,19 +14,19 @@ spec = importlib.util.spec_from_file_location("sync_mcp", SCRIPT)
 sync_mcp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sync_mcp)
 
-JORDYLAB_CLAUDE = {
+EXAMPLE_CLAUDE = {
     "type": "http",
-    "url": "https://jordylab.be/mcp",
-    "oauth": {"clientId": "jordylab-mcp-connector", "callbackPort": 19877},
+    "url": "https://example.com/mcp",
+    "oauth": {"clientId": "example-mcp-client", "callbackPort": 19877},
 }
-JORDYLAB_OPENCODE_EXISTING = {
+EXAMPLE_OPENCODE_EXISTING = {
     "type": "remote",
-    "url": "https://jordylab.be/mcp",
+    "url": "https://example.com/mcp",
     "enabled": True,
     "oauth": {
-        "clientId": "jordylab-mcp-connector",
+        "clientId": "example-mcp-client",
         "callbackPort": 19876,
-        "scope": "jordylab.mcp",
+        "scope": "example.mcp",
     },
 }
 
@@ -34,9 +34,9 @@ JORDYLAB_OPENCODE_EXISTING = {
 class OAuthTranslationTests(unittest.TestCase):
     def test_claude_oauth_becomes_opencode_oauth(self):
         warnings = []
-        entry = sync_mcp.claude_entry_to_opencode("jordylab", JORDYLAB_CLAUDE, warnings)
+        entry = sync_mcp.claude_entry_to_opencode("example", EXAMPLE_CLAUDE, warnings)
         self.assertEqual(
-            entry["oauth"], {"clientId": "jordylab-mcp-connector", "callbackPort": 19877}
+            entry["oauth"], {"clientId": "example-mcp-client", "callbackPort": 19877}
         )
         self.assertEqual(warnings, [])
 
@@ -68,43 +68,43 @@ class OAuthTranslationTests(unittest.TestCase):
 
 class MergeTests(unittest.TestCase):
     def test_existing_callback_port_is_kept_and_scope_survives(self):
-        # The jordylab case: Claude Code uses 19877, OpenCode 19876, and OpenCode keeps its scope.
+        # The example case: Claude Code uses 19877, OpenCode 19876, and OpenCode keeps its scope.
         warnings = []
         translated = {
-            "jordylab": sync_mcp.claude_entry_to_opencode("jordylab", JORDYLAB_CLAUDE, [])
+            "example": sync_mcp.claude_entry_to_opencode("example", EXAMPLE_CLAUDE, [])
         }
         merged = sync_mcp.merge_servers(
-            {"jordylab": JORDYLAB_OPENCODE_EXISTING}, translated, warnings
+            {"example": EXAMPLE_OPENCODE_EXISTING}, translated, warnings
         )
-        self.assertEqual(merged["jordylab"]["oauth"], JORDYLAB_OPENCODE_EXISTING["oauth"])
+        self.assertEqual(merged["example"]["oauth"], EXAMPLE_OPENCODE_EXISTING["oauth"])
         self.assertTrue(any("kept the existing callbackPort 19876" in w for w in warnings))
 
     def test_result_matches_the_existing_entry_when_nothing_changed(self):
         translated = {
-            "jordylab": sync_mcp.claude_entry_to_opencode("jordylab", JORDYLAB_CLAUDE, [])
+            "example": sync_mcp.claude_entry_to_opencode("example", EXAMPLE_CLAUDE, [])
         }
         merged = sync_mcp.merge_servers(
-            {"jordylab": JORDYLAB_OPENCODE_EXISTING}, translated, []
+            {"example": EXAMPLE_OPENCODE_EXISTING}, translated, []
         )
-        self.assertEqual(merged["jordylab"], JORDYLAB_OPENCODE_EXISTING)
+        self.assertEqual(merged["example"], EXAMPLE_OPENCODE_EXISTING)
 
     def test_new_server_takes_the_source_port_with_a_warning(self):
         warnings = []
         translated = {
-            "jordylab": sync_mcp.claude_entry_to_opencode("jordylab", JORDYLAB_CLAUDE, [])
+            "example": sync_mcp.claude_entry_to_opencode("example", EXAMPLE_CLAUDE, [])
         }
         merged = sync_mcp.merge_servers({}, translated, warnings)
-        self.assertEqual(merged["jordylab"]["oauth"]["callbackPort"], 19877)
+        self.assertEqual(merged["example"]["oauth"]["callbackPort"], 19877)
         self.assertTrue(any("new entry takes callbackPort 19877" in w for w in warnings))
 
     def test_existing_oauth_is_kept_when_the_source_has_none(self):
         warnings = []
-        source = {"type": "http", "url": "https://jordylab.be/mcp"}
-        translated = {"jordylab": sync_mcp.claude_entry_to_opencode("jordylab", source, [])}
+        source = {"type": "http", "url": "https://example.com/mcp"}
+        translated = {"example": sync_mcp.claude_entry_to_opencode("example", source, [])}
         merged = sync_mcp.merge_servers(
-            {"jordylab": JORDYLAB_OPENCODE_EXISTING}, translated, warnings
+            {"example": EXAMPLE_OPENCODE_EXISTING}, translated, warnings
         )
-        self.assertEqual(merged["jordylab"]["oauth"], JORDYLAB_OPENCODE_EXISTING["oauth"])
+        self.assertEqual(merged["example"]["oauth"], EXAMPLE_OPENCODE_EXISTING["oauth"])
         self.assertTrue(any("existing one was kept" in w for w in warnings))
 
     def test_servers_without_oauth_are_unchanged(self):

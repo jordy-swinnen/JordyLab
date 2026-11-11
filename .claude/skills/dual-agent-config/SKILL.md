@@ -2,7 +2,7 @@
 name: dual-agent-config
 description: Configure a repo so Claude Code and OpenCode read the same rules, skills, subagents, and MCP servers without duplicated or drifting files. Use whenever work touches AGENTS.md, CLAUDE.md, .claude/, .opencode/, opencode.json, .mcp.json, or settings.json; when adding per-language or per-framework rules (the Copilot .instructions.md equivalent); when porting a skill, subagent, command, or MCP server between the two tools; when bootstrapping a repo for dual-agent use; or when debugging why one agent follows conventions the other ignores. Applies even when only one of the two tools is named.
 metadata:
-  docs-verified: "2026-08-05"
+  docs-verified: '2026-08-05'
 ---
 
 # Claude Code + OpenCode unified config
@@ -143,6 +143,14 @@ Resist making permissions and hooks shareable. The syntaxes differ, the preceden
 If the user pushes to unify anyway, explain the reasoning rather than declining — then do it if they still want it. It's their setup.
 
 ## Task: audit an existing setup
+
+Run the bundled checker first:
+
+```bash
+python3 .claude/skills/dual-agent-config/scripts/check_config.py
+```
+
+Add `--strict-portable` when every skill in the repository should package for claude.ai and OpenCode too. The checker verifies one rulebook, skill names and references, scoped-rule keys and MCP parity. If a harness-specific skill fails only the portable check, leave it strict-off and fix the other failures.
 
 When someone reports "one agent isn't following my rules," walk this in order and stop at the first hit:
 

@@ -4,7 +4,7 @@ How work moves from an idea to production in this repository: which tool, skill 
 rules every agent follows. The AI features the product runs at runtime (LibBot, FNA briefings) are in
 [AGENTS.md](../AGENTS.md#ai-routing), not here.
 
-Last reviewed: 2026-11-08. Update it in the same change as any change to agents, skills, models or the pipeline (rule
+Last reviewed: 2026-11-11. Update it in the same change as any change to agents, skills, models or the pipeline (rule
 in [AGENTS.md](../AGENTS.md#workflow)).
 
 ## Tools and roles
@@ -82,7 +82,7 @@ Each tool pins its own model for each role. The two tools do not share a model.
 | planner (specify, clarify, plan, tasks) | `claude-opus-5-5`, effort medium | `claude-haiku-5-5`, variant xhigh |
 | reviewer (analyze, converge) | `claude-haiku-5-5`, effort max | `mimo-v2.6-flash`, a different model creator on purpose, for an independent review |
 | worker (implement, checklist, tasks to issues) | `claude-haiku-5-5`, effort max | `deepseek-v4.1-flash`, variant max |
-| build and plan (OpenCode only) | not set | `deepseek-v4.1-flash` for build, `glm-5.2` for plan |
+| build and plan (OpenCode only) | not set | `deepseek-v4.1-flash` for build, `mimo-v2.6-pro` for plan |
 
 The `refresh-agent-models` skill re-picks these from benchmark data. When a choice should change, it opens a pull
 request. Edit the table here in the same change.
@@ -117,7 +117,7 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 |---|---|
 | `CLAUDE.md` | Entry point for Claude Code. It imports `AGENTS.md`. |
 | `AGENTS.md` | Shared rules for both tools: architecture, workflow, AI routing, secrets. |
-| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. |
+| `.claude/agents/`, `.claude/skills/`, `.claude/hooks/`, `.claude/rules/` | Claude Code agents, skills, hooks and language rules. Generic skills come from the shared `gh@jordy-swinnen/agent-skills` OpenPackage package and are recorded in `.openpackage/`. |
 | `.opencode/agents/`, `.opencode/commands/`, `opencode.json` | OpenCode agents, commands, models and MCP servers. |
 | `.specify/` | SpecKit templates and scripts. |
 | `.specify/extensions.yml` | SpecKit hooks. `kaneo-start-ticket` runs before `/speckit-specify`. |
