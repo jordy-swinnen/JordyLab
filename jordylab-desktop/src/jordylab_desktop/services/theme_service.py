@@ -9,7 +9,6 @@ one of the six JordyLab themes.
 
 import json
 import urllib.request
-from pathlib import Path
 
 from . import config_service
 
@@ -97,7 +96,9 @@ def device_is_dark():
         try:
             result = subprocess.run(
                 ["defaults", "read", "-g", "AppleInterfaceStyle"],
-                capture_output=True, text=True, check=False,
+                capture_output=True,
+                text=True,
+                check=False,
             )
             return "dark" in (result.stdout or "").lower()
         except OSError:

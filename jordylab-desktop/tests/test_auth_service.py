@@ -1,7 +1,6 @@
 """Connect flow tests: loopback callback, state validation, token caching."""
 
 import json
-import threading
 import urllib.request
 
 import pytest
@@ -69,7 +68,8 @@ def test_timeout(tmp_path):
 
 
 def test_connect_url_contains_machine(tmp_path):
-    flow = ConnectFlow("https://jordylab.be/", token_path=tmp_path / "token.json",
-                       hostname="jordybox")
+    flow = ConnectFlow(
+        "https://jordylab.be/", token_path=tmp_path / "token.json", hostname="jordybox"
+    )
     assert flow.connect_url.startswith("https://jordylab.be/connect/desktop?")
     assert "machine=jordybox" in flow.connect_url

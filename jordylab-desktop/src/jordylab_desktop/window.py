@@ -4,28 +4,23 @@ All scanning, checking and updating happens in worker threads; the widgets only
 render results and emit user intents.
 """
 
-import datetime
 import threading
 
+from jordylab_scan.auth import clear_token, load_token
 from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QStackedWidget, QSystemTrayIcon
 
-from jordylab_scan.auth import clear_token, load_token
-
 from . import __version__
 from .platform import autostart
 from .screens import AppearanceScreen, ConnectScreen, StatusScreen
-from .services import config_service, theme_service
+from .services import theme_service
 from .services.auth_service import ConnectError, ConnectFlow
 from .services.sync_service import (
     APPLIED,
-    NO_CONTENT,
-    NO_SOURCE,
-    PARTIAL,
     REAUTH_REQUIRED,
-    SyncService,
     UP_TO_DATE,
+    SyncService,
     detect_hostname,
 )
 from .services.update_service import UpdateService, apply_staged, platform_key
@@ -149,10 +144,12 @@ class MainWindow(QMainWindow):
         self.timer.start(int(config.schedule_hours * 3600 * 1000))
 
         self._setup_tray()
-        self._apply_theme(theme_service.resolve_theme(
-            theme_service.load_cached_theme() or theme_service.FOLLOW_DEVICE,
-            theme_service.device_is_dark(),
-        ))
+        self._apply_theme(
+            theme_service.resolve_theme(
+                theme_service.load_cached_theme() or theme_service.FOLLOW_DEVICE,
+                theme_service.device_is_dark(),
+            )
+        )
         self._show_start()
 
     # ------------------------------------------------------------------ state
@@ -171,9 +168,7 @@ class MainWindow(QMainWindow):
         self.status_screen.set_connected(load_token() is not None)
 
     def _show_appearance(self):
-        self.appearance_screen.set_theme(
-            self._theme_preference or theme_service.FOLLOW_DEVICE
-        )
+        self.appearance_screen.set_theme(self._theme_preference or theme_service.FOLLOW_DEVICE)
         self.stack.setCurrentWidget(self.appearance_screen)
 
     # ------------------------------------------------------------------ sync
@@ -212,7 +207,9 @@ class MainWindow(QMainWindow):
             self.status_screen.set_status("This machine must be reconnected.")
             self.status_screen.set_connected(False)
         else:
-            self.status_screen.set_status("The last sync did not complete. See the libraries below.")
+            self.status_screen.set_status(
+                "The last sync did not complete. See the libraries below."
+            )
         self._refresh_theme()
 
     # ------------------------------------------------------------------ connect
@@ -279,7 +276,6 @@ class MainWindow(QMainWindow):
         worker.start()
 
     def _update_finished(self):
-        import sys
 
         QApplication.exit(0)
         self._relaunch()
@@ -288,7 +284,9 @@ class MainWindow(QMainWindow):
         import subprocess
         import sys
 
-        subprocess.Popen([sys.executable] + ([] if getattr(sys, "frozen", False) else ["-m", "jordylab_desktop"]))
+        subprocess.Popen(
+            [sys.executable] + ([] if getattr(sys, "frozen", False) else ["-m", "jordylab_desktop"])
+        )
 
     # ------------------------------------------------------------------ theme
 

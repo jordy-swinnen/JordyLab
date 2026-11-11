@@ -150,13 +150,21 @@ def apply_staged(staged_path, executable_path):
 class UpdateService:
     """Checks for a newer release for this platform."""
 
-    def __init__(self, current_version, platform_key, manifest_url=DEFAULT_MANIFEST_URL,
-                 state_dir=None, opener=None):
+    def __init__(
+        self,
+        current_version,
+        platform_key,
+        manifest_url=DEFAULT_MANIFEST_URL,
+        state_dir=None,
+        opener=None,
+    ):
         self.current_version = current_version
         self.platform_key = platform_key
         self.manifest_url = manifest_url
-        self.state_dir = Path(state_dir) if state_dir else (
-            Path.home() / ".local" / "state" / "jordylab-desktop"
+        self.state_dir = (
+            Path(state_dir)
+            if state_dir
+            else (Path.home() / ".local" / "state" / "jordylab-desktop")
         )
         self.opener = opener
 

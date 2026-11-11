@@ -78,8 +78,15 @@ class _CallbackHandler(BaseHTTPRequestHandler):
 class ConnectFlow:
     """Runs the browser sign-in once; ``wait`` blocks until the token arrives."""
 
-    def __init__(self, backend_url, port=DEFAULT_PORT, timeout=DEFAULT_TIMEOUT_SECONDS,
-                 token_path=None, open_browser=webbrowser.open, hostname=None):
+    def __init__(
+        self,
+        backend_url,
+        port=DEFAULT_PORT,
+        timeout=DEFAULT_TIMEOUT_SECONDS,
+        token_path=None,
+        open_browser=webbrowser.open,
+        hostname=None,
+    ):
         self.backend_url = backend_url.rstrip("/")
         self.port = port
         self.timeout = timeout
@@ -92,10 +99,12 @@ class ConnectFlow:
 
     @property
     def connect_url(self):
-        query = urllib.parse.urlencode({
-            "state": self.state,
-            "port": str(self.port),
-        })
+        query = urllib.parse.urlencode(
+            {
+                "state": self.state,
+                "port": str(self.port),
+            }
+        )
         if self.hostname:
             query += "&" + urllib.parse.urlencode({"machine": self.hostname})
 
@@ -119,7 +128,7 @@ class ConnectFlow:
         """Block until the callback arrives; returns the machine token."""
         if self._server is None:
             raise ConnectError("connect flow not started")
-        deadline = (timeout if timeout is not None else self.timeout)
+        deadline = timeout if timeout is not None else self.timeout
         if not self._server.done.wait(deadline):
             self.stop()
             raise ConnectError("sign-in did not complete in time")

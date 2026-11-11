@@ -43,14 +43,23 @@ jobs:
       - name: Build
         working-directory: jordylab-desktop
         run: pyinstaller --clean --noconfirm packaging/jordylab-desktop.spec
+      - name: Bundle licence texts
+        working-directory: jordylab-desktop
+        run: |
+          mkdir -p dist/jordylab-desktop/licenses
+          curl -fsSL https://www.gnu.org/licenses/lgpl-3.0.txt -o dist/jordylab-desktop/licenses/LGPL-3.0.txt
+          curl -fsSL https://www.python.org/ftp/python/3.12.0/LICENSE -o dist/jordylab-desktop/licenses/PSF-LICENSE.txt
+          curl -fsSL https://raw.githubusercontent.com/pyinstaller/pyinstaller/develop/COPYING.txt -o dist/jordylab-desktop/licenses/PyInstaller-COPYING.txt
       - name: Rename artifact
         working-directory: jordylab-desktop
         run: |
           mkdir -p out
           if [ "${{ runner.os }}" = "macOS" ]; then
-            ditto -c -k --sequesterRsrc --keepParent dist/jordylab-desktop.app out/${{ matrix.artifact }}.zip
+            ditto -c -k --sequesterRsrc --keepParent dist/jordylab-desktop out/${{ matrix.artifact }}.zip
+          elif [ "${{ runner.os }}" = "Windows" ]; then
+            powershell Compress-Archive -Path dist/jordylab-desktop -DestinationPath out/${{ matrix.artifact }}.zip
           else
-            cp dist/jordylab-desktop out/${{ matrix.artifact }}
+            tar -czf out/${{ matrix.artifact }}.tar.gz -C dist jordylab-desktop
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -74,8 +83,8 @@ jobs:
           platforms = {}
           names = {
               "jordylab-desktop-macos-aarch64.zip": "macos-aarch64",
-              "jordylab-desktop-linux-x86_64": "linux-x86_64",
-              "jordylab-desktop-windows-x64.exe": "windows-x64",
+              "jordylab-desktop-linux-x86_64.tar.gz": "linux-x86_64",
+              "jordylab-desktop-windows-x64.zip": "windows-x64",
           }
           for path in pathlib.Path("artifacts").iterdir():
               key = names.get(path.name)

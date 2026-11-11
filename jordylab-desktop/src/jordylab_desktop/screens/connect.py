@@ -77,6 +77,4 @@ class ConnectScreen(QWidget):
 
     def set_busy(self, busy):
         self.sign_in_button.setEnabled(not busy)
-        self.sign_in_button.setText(
-            "Waiting for sign-in…" if busy else "Sign in with your browser"
-        )
+        self.sign_in_button.setText("Waiting for sign-in…" if busy else "Sign in with your browser")

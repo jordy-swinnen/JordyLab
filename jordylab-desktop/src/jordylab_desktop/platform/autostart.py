@@ -39,8 +39,17 @@ def xdg_autostart_path(home=None):
 def windows_startup_path(home=None):
     base = Path(home) if home else Path.home()
 
-    return base / "AppData" / "Roaming" / "Microsoft" / "Windows" \
-        / "Start Menu" / "Programs" / "Startup" / "jordylab-desktop.bat"
+    return (
+        base
+        / "AppData"
+        / "Roaming"
+        / "Microsoft"
+        / "Windows"
+        / "Start Menu"
+        / "Programs"
+        / "Startup"
+        / "jordylab-desktop.bat"
+    )
 
 
 def install_autostart(home=None, platform_name=None):
@@ -64,7 +73,7 @@ def install_autostart(home=None, platform_name=None):
         path = windows_startup_path(home)
         path.parent.mkdir(parents=True, exist_ok=True)
         quoted = " ".join(f'"{part}"' for part in command)
-        path.write_text(f"@echo off\r\nstart \"\" {quoted}\r\n", encoding="utf-8")
+        path.write_text(f'@echo off\r\nstart "" {quoted}\r\n', encoding="utf-8")
 
         return path
     path = xdg_autostart_path(home)

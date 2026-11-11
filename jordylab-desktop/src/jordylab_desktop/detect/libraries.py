@@ -73,8 +73,6 @@ def detect_libraries(extra_roots=None):
         roots, explicit = library_roots(library_type, extra_roots)
         detected.append(DetectedLibrary(library_type, roots, explicit))
     if sunshine_config_dir().is_dir():
-        detected.append(
-            DetectedLibrary(SUNSHINE, sunshine_apps=sunshine_apps())
-        )
+        detected.append(DetectedLibrary(SUNSHINE, sunshine_apps=sunshine_apps()))
 
     return detected

@@ -38,21 +38,29 @@ def _manifest_opener(payload):
 
 
 def test_check_finds_newer_release():
-    manifest = {"version": "9.9.9", "platforms": {
-        "linux-x86_64": {"url": "https://x/asset", "sha256": "00"}}}
+    manifest = {
+        "version": "9.9.9",
+        "platforms": {"linux-x86_64": {"url": "https://x/asset", "sha256": "00"}},
+    }
     service = update_service.UpdateService(
-        "0.1.0", "linux-x86_64", manifest_url="https://x/manifest.json",
-        opener=_manifest_opener(manifest))
+        "0.1.0",
+        "linux-x86_64",
+        manifest_url="https://x/manifest.json",
+        opener=_manifest_opener(manifest),
+    )
 
     info = service.check()
     assert info.version == "9.9.9"
 
 
 def test_check_returns_none_when_current():
-    manifest = {"version": "0.1.0", "platforms": {
-        "linux-x86_64": {"url": "https://x/asset", "sha256": "00"}}}
+    manifest = {
+        "version": "0.1.0",
+        "platforms": {"linux-x86_64": {"url": "https://x/asset", "sha256": "00"}},
+    }
     service = update_service.UpdateService(
-        "0.1.0", "linux-x86_64", opener=_manifest_opener(manifest))
+        "0.1.0", "linux-x86_64", opener=_manifest_opener(manifest)
+    )
 
     assert service.check() is None
 

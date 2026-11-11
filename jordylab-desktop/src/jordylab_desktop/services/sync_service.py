@@ -71,8 +71,10 @@ class SyncReport:
 
     @property
     def ok(self):
-        return all(result.outcome in (UP_TO_DATE, APPLIED, NO_CONTENT, NO_SOURCE)
-                   for result in self.results)
+        return all(
+            result.outcome in (UP_TO_DATE, APPLIED, NO_CONTENT, NO_SOURCE)
+            for result in self.results
+        )
 
     def worst_outcome(self):
         for result in self.results:
@@ -83,8 +85,8 @@ class SyncReport:
 
 
 def _root_usable(root):
-    from pathlib import Path
     import os
+    from pathlib import Path
 
     try:
         return Path(root).is_dir() and os.access(str(root), os.R_OK)
@@ -152,31 +154,32 @@ def _collect_sunshine(config_dir=None):
         stat = path.stat()
         from jordylab_scan.manifest import ScanEntry
 
-        entries.append(ScanEntry(relpath="sunshine/apps.json", size=stat.st_size,
-                                 mtime_ns=stat.st_mtime_ns))
+        entries.append(
+            ScanEntry(relpath="sunshine/apps.json", size=stat.st_size, mtime_ns=stat.st_mtime_ns)
+        )
     except OSError:
         pass
 
     return entries, {}, games, []
 
 
-def scan_library(library_type, roots, explicit, cfg, hostname, machine_id, token,
-                 force=False, sunshine_dir=None):
+def scan_library(
+    library_type, roots, explicit, cfg, hostname, machine_id, token, force=False, sunshine_dir=None
+):
     """Run one library through check → scan, returning a LibraryResult."""
     if library_type == SUNSHINE:
         entries, manifest_contents, games, skipped = _collect_sunshine(sunshine_dir)
     else:
         entries, manifest_contents, games, skipped = _collect(library_type, roots, explicit)
     if skipped:
-        return LibraryResult(library_type, PARTIAL,
-                             message="some roots were skipped",
-                             skipped_roots=tuple(skipped))
+        return LibraryResult(
+            library_type, PARTIAL, message="some roots were skipped", skipped_roots=tuple(skipped)
+        )
     if not entries and not games:
         return LibraryResult(library_type, NO_CONTENT, message="nothing to scan")
 
     digest = compute_digest(entries, manifest_contents, games)
-    check_response = check(cfg, build_check_body(library_type, hostname, digest, machine_id),
-                           token)
+    check_response = check(cfg, build_check_body(library_type, hostname, digest, machine_id), token)
     if not check_response.get("scanNeeded") and not force:
         return LibraryResult(library_type, UP_TO_DATE, games=len(games))
 
@@ -194,13 +197,15 @@ def scan_library(library_type, roots, explicit, cfg, hostname, machine_id, token
     response = scan(cfg, body, token)
     outcome = response.get("outcome") or FAILED
     if outcome == APPLIED:
-        return LibraryResult(library_type, APPLIED, games=len(games),
-                             counts=response.get("counts") or {})
+        return LibraryResult(
+            library_type, APPLIED, games=len(games), counts=response.get("counts") or {}
+        )
     if outcome == UP_TO_DATE:
         return LibraryResult(library_type, UP_TO_DATE, games=len(games))
     if outcome == "REJECTED":
-        return LibraryResult(library_type, REJECTED,
-                             message=str(response.get("reason") or "rejected by the server"))
+        return LibraryResult(
+            library_type, REJECTED, message=str(response.get("reason") or "rejected by the server")
+        )
 
     return LibraryResult(library_type, FAILED, message=f"unexpected outcome {outcome}")
 
@@ -223,10 +228,14 @@ class SyncService:
             token = get_token(interactive=False, path=self.token_path)
         except ReauthRequired as error:
             self.libraries = detect_libraries()
-            report = SyncReport(started, now_iso(), tuple(
-                LibraryResult(library.library_type, REAUTH_REQUIRED, message=str(error))
-                for library in self.libraries
-            ))
+            report = SyncReport(
+                started,
+                now_iso(),
+                tuple(
+                    LibraryResult(library.library_type, REAUTH_REQUIRED, message=str(error))
+                    for library in self.libraries
+                ),
+            )
 
             return report
 
@@ -243,8 +252,11 @@ class SyncService:
 
     def _scan_one(self, library, hostname, machine_id, token, force):
         if library.library_type == SUNSHINE and not library.sunshine_apps:
-            return LibraryResult(library.library_type, NO_SOURCE,
-                                 message="Sunshine is not configured on this machine")
+            return LibraryResult(
+                library.library_type,
+                NO_SOURCE,
+                message="Sunshine is not configured on this machine",
+            )
         cfg = resolve_service(
             library.library_type,
             config_data={"service": {"backend_url": self.config.backend_url}},
@@ -252,20 +264,26 @@ class SyncService:
         )
         try:
             return scan_library(
-                library.library_type, library.roots, library.explicit, cfg,
-                hostname, machine_id, token, force=force,
+                library.library_type,
+                library.roots,
+                library.explicit,
+                cfg,
+                hostname,
+                machine_id,
+                token,
+                force=force,
                 sunshine_dir=self.sunshine_dir,
             )
         except ReauthRequired:
             clear_token(self.token_path)
 
-            return LibraryResult(library.library_type, REAUTH_REQUIRED,
-                                 message="the machine must be reconnected")
+            return LibraryResult(
+                library.library_type, REAUTH_REQUIRED, message="the machine must be reconnected"
+            )
         except NetworkError as error:
             return LibraryResult(library.library_type, NETWORK_ERROR, message=str(error))
         except ServerRejected as error:
-            return LibraryResult(library.library_type, REJECTED,
-                                 message=str(error.reason or error))
+            return LibraryResult(library.library_type, REJECTED, message=str(error.reason or error))
         except PayloadTooLarge as error:
             return LibraryResult(library.library_type, REJECTED, message=str(error))
         except ScanError as error:
