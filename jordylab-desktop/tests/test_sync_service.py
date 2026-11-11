@@ -69,6 +69,23 @@ def test_missing_explicit_root_is_partial(tmp_path):
     assert result.skipped_roots == (str(tmp_path / "missing"),)
 
 
+def test_missing_token_reports_reconnect(monkeypatch):
+    from jordylab_desktop.services import config_service
+
+    def raise_reauth(*_args, **_kwargs):
+        raise sync_service.ReauthRequired("no token cached")
+
+    monkeypatch.setattr(sync_service, "get_token", raise_reauth)
+    monkeypatch.setattr(sync_service, "ensure_machine_id", lambda: "machine-test")
+    service = sync_service.SyncService(config_service.DesktopConfig())
+
+    report = service.run_once()
+
+    assert report.worst_outcome() == sync_service.REAUTH_REQUIRED
+    assert report.results
+    assert all(result.message == "This machine must be reconnected." for result in report.results)
+
+
 def test_sunshine_games_are_reported(tmp_path):
     import json
 

@@ -39,6 +39,14 @@ def _tray_icon():
     return QIcon(pixmap)
 
 
+def _has_usable_token():
+    """True only for a real scanner token; the legacy Keycloak cache has no `token` key."""
+    cached = load_token()
+    token = cached.get("token") if isinstance(cached, dict) else None
+
+    return isinstance(token, str) and token.startswith("jlmt_")
+
+
 class SyncWorker(QThread):
     reportReady = Signal(object)
 
@@ -155,7 +163,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ state
 
     def _show_start(self):
-        if load_token() is None:
+        if not _has_usable_token():
             self.stack.setCurrentWidget(self.connect_screen)
             self.status_screen.set_connected(False)
             return
@@ -165,7 +173,7 @@ class MainWindow(QMainWindow):
 
     def _show_status(self):
         self.stack.setCurrentWidget(self.status_screen)
-        self.status_screen.set_connected(load_token() is not None)
+        self.status_screen.set_connected(_has_usable_token())
 
     def _show_appearance(self):
         self.appearance_screen.set_theme(self._theme_preference or theme_service.FOLLOW_DEVICE)
@@ -174,7 +182,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ sync
 
     def _start_sync(self, force=False):
-        if load_token() is None:
+        if not _has_usable_token():
             self._show_start()
             return
         if self._sync_worker is not None and self._sync_worker.isRunning():
@@ -291,14 +299,13 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ theme
 
     def _refresh_theme(self):
-        token = load_token()
-        if not token or not token.get("token"):
+        cached = load_token()
+        token = cached.get("token") if isinstance(cached, dict) else None
+        if not token:
             return
 
         def run():
-            theme = theme_service.current_theme(
-                self.config, token["token"], theme_service.device_is_dark()
-            )
+            theme = theme_service.current_theme(self.config, token, theme_service.device_is_dark())
             QApplication.instance().stheme = theme
             QTimer.singleShot(0, lambda: self._apply_theme(theme))
 

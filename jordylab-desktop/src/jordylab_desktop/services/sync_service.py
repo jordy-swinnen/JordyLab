@@ -226,13 +226,17 @@ class SyncService:
         results = []
         try:
             token = get_token(interactive=False, path=self.token_path)
-        except ReauthRequired as error:
+        except ReauthRequired:
             self.libraries = detect_libraries()
             report = SyncReport(
                 started,
                 now_iso(),
                 tuple(
-                    LibraryResult(library.library_type, REAUTH_REQUIRED, message=str(error))
+                    LibraryResult(
+                        library.library_type,
+                        REAUTH_REQUIRED,
+                        message="This machine must be reconnected.",
+                    )
                     for library in self.libraries
                 ),
             )
