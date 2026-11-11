@@ -1,4 +1,4 @@
-# Subagent translation: Claude Code ↔ OpenCode
+# Subagent translation: Claude Code ↔ OpenCode 2
 
 Both tools define subagents as a Markdown file with YAML frontmatter, where the body is the system prompt. **The body is fully portable — copy it verbatim.** Everything below concerns frontmatter and file placement only.
 
@@ -16,7 +16,7 @@ Claude Code scans its agents directory recursively, so subfolders like `agents/r
 This is the one that silently breaks a port:
 
 - **Claude Code** takes the agent's name from the required `name:` frontmatter field.
-- **OpenCode** takes it from the **filename** — `review.md` defines an agent called `review`.
+- **OpenCode** takes it from the **path** — `review.md` defines `review`, `team/review.md` defines `team/review`.
 
 Porting Claude Code → OpenCode: drop `name:`, and rename the file to match what `name:` said.
 Porting OpenCode → Claude Code: add `name:`, matching the filename.
@@ -29,10 +29,13 @@ Claude Code additionally requires names to be unique across the whole agents tre
 |---|---|---|
 | Identity | `name:` (required) | filename |
 | When to invoke | `description:` (required) | `description:` (required) |
-| Agent kind | implicit | `mode: subagent` |
-| Model | `model:` — `sonnet`, `opus`, `haiku`, full ID, or `inherit` | `model:` — `provider/model-id` |
-| Tool allowlist | `tools:` (comma-separated) | configured via `tools`/permissions |
-| Temperature | not a frontmatter field | `temperature:` |
+| Agent kind | implicit | `mode: subagent` — required; V2 defaults a new agent to `primary` |
+| Model | `model:` — `sonnet`, `opus`, `haiku`, `fable`, full ID, or `inherit` | `model:` — `provider/model-id`, optional `#variant` |
+| Tool limits | `tools:` / `disallowedTools:` | `permissions:` — ordered list of `action` / `resource` / `effect` |
+| Turn cap | `maxTurns:` | `steps:` |
+| Temperature | not a frontmatter field | not on the agent in V2: set it on a model variant |
+
+Write the OpenCode file entirely in V2 fields. Once it has `permissions` (or `system`, `request`, `disabled`), OpenCode reads it as V2 and ignores V1 fields such as `tools`, `permission` and `temperature`, logging only a warning.
 
 Claude Code supports a number of fields OpenCode has no equivalent for — `skills:`, `memory:`, `effort:`, `hooks:`, `disallowedTools:`. When porting away from Claude Code, call out which fields are being dropped instead of discarding them silently; the user may be relying on one of them.
 
@@ -63,12 +66,16 @@ When invoked:
 Organize feedback by priority: Critical, Warnings, Suggestions.
 ```
 
-**OpenCode** — `.opencode/agents/code-reviewer.md`:
+**OpenCode 2** — `.opencode/agents/code-reviewer.md`:
 ```markdown
 ---
 description: Reviews code for quality and best practices. Use after any significant change.
 mode: subagent
 model: opencode-go/glm-5.2
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
 ---
 
 You are a senior code reviewer.
@@ -81,7 +88,7 @@ When invoked:
 Organize feedback by priority: Critical, Warnings, Suggestions.
 ```
 
-Note what changed: `name:` removed (filename carries it), `mode: subagent` added, `model:` retargeted, `tools:` dropped. The body is byte-identical.
+Note what changed: `name:` removed (the filename carries it), `mode: subagent` added, `model:` retargeted, and `tools:` replaced by a `permissions` rule that keeps it read-only for edits. The body is byte-identical. Check the result with `opencode debug agents`.
 
 ## Keeping bodies in sync over time
 

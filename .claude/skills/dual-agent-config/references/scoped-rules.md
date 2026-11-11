@@ -1,6 +1,6 @@
 # Path- and language-scoped rules
 
-The dual-agent equivalent of Copilot's `.instructions.md` + `applyTo`. Claude Code has a native mechanism; OpenCode does not. This file covers both sides and ends with a worked three-language example.
+The dual-agent equivalent of Copilot's `.instructions.md` + `applyTo`. Claude Code has a native glob mechanism; OpenCode 2 scopes by directory only. This file covers both sides and ends with a worked three-language example.
 
 ## Claude Code: `.claude/rules/`
 
@@ -48,17 +48,17 @@ User-level rules load *before* project rules, so project rules win on conflict. 
 - Before v2.1.207, one invalid glob made the Read tool fail for *every* file the rule was evaluated against, instead of matching nothing.
 - After `/compact`, project-root `CLAUDE.md` is re-injected but path-scoped rules are not — they return only when a matching file is read again.
 
-## OpenCode: no native equivalent
+## OpenCode 2: directory scoping, no glob rules
 
 **Status as of this skill's `docs-verified` date.** Re-check before repeating, since this is exactly the kind of thing that ships.
 
-The official rules documentation contains no mention of `.opencode/rules/`, a `paths:` field, or any glob-triggered conditional loading. The "Smart Rules" proposal (GitHub issue #10096, implemented in PR #10090, gated behind `OPENCODE_EXPERIMENTAL_SMART_RULES`) is **open and unmerged**; a related PR #18903 is likewise unmerged; and a follow-up request for `.opencode/rules` support (#29405) was **closed as "not planned."**
+The official instructions documentation contains no mention of `.opencode/rules/`, a `paths:` field, or any glob-triggered conditional loading. The "Smart Rules" proposal (GitHub issue #10096, PR #10090, gated behind `OPENCODE_EXPERIMENTAL_SMART_RULES`) was **closed without merging**, and a follow-up request for `.opencode/rules` support (#29405) was **closed as "not planned."**
 
-Numerous blog posts describe this feature as if it works. They are transcribing the unmerged proposal. Do not put it in a user's config.
+Numerous blog posts describe this feature as if it works. They are transcribing the proposal. Do not put it in a user's config.
 
-### Workaround 1 — nested `AGENTS.md`
+### Option 1 — nested `AGENTS.md`, loaded lazily
 
-OpenCode walks up from the working directory to the first matching `AGENTS.md`, and combines project and global rules additively (concatenated, project first). Placing a file per project directory scopes instructions by subtree:
+OpenCode 2 loads the global file and every `AGENTS.md` from the workspace directory up to the project root at start. Files *below* the workspace load the first time the agent reads or lists something in their directory, nearest first, and stay until compaction drops them. Placing a file per project directory scopes instructions by subtree:
 
 ```
 services/api/AGENTS.md             ← Java / Spring conventions
@@ -68,7 +68,9 @@ services/worker/AGENTS.md          ← Python conventions
 
 Good when the language boundary *is* the directory boundary. Useless for cross-cutting file types — `.sql` migrations scattered across modules can't be targeted this way.
 
-### Workaround 2 — the `instructions` array
+Claude Code loads a nested `CLAUDE.md` the same way, so one file can serve both tools: put the rules in `services/api/AGENTS.md` and a one-line `services/api/CLAUDE.md` containing `@AGENTS.md`. Avoid this inside folders an engine or build imports wholesale (a Unity `Assets/` folder imports every `.md` as an asset).
+
+### Option 2 — the `instructions` array
 
 ```json
 {
@@ -82,13 +84,13 @@ Good when the language boundary *is* the directory boundary. Useless for cross-c
 }
 ```
 
-Accepts file paths, globs *over instruction-file locations*, and remote URLs (fetched with a 5-second timeout). It can point at the same `.claude/rules/*.md` files Claude Code uses — OpenCode reads them as plain Markdown and ignores frontmatter it doesn't understand.
+Accepts file paths, globs, and remote URLs (fetched with a 5-second timeout). Relative entries are searched from the workspace up to the project root, and load after the `AGENTS.md` files in the order listed. It can point at the same `.claude/rules/*.md` files Claude Code uses — OpenCode reads them as plain Markdown and ignores frontmatter it doesn't understand.
 
 **But it is eager.** Every listed file loads into every session regardless of what the agent is working on. It saves file duplication, not context. Say this explicitly rather than presenting it as parity.
 
-### Workaround 3 — third-party plugin
+### Option 3 — third-party plugin
 
-`frap129/opencode-rules` adds Cursor-style conditional injection: `.md`/`.mdc` rule files from `.opencode/rules/`, `.claude/rules/`, `~/.config/opencode/rules/`, and `~/.claude/rules/`, with conditions on file paths, prompt keywords, and available tools, plus filtering by model, agent, git branch, OS, and CI, and `match: any` / `match: all` logic.
+`frap129/opencode-rules` added Cursor-style conditional injection, built on the OpenCode 1 plugin API (which V2 does not run — check for a V2 release first): `.md`/`.mdc` rule files from `.opencode/rules/`, `.claude/rules/`, `~/.config/opencode/rules/`, and `~/.claude/rules/`, with conditions on file paths, prompt keywords, and available tools, plus filtering by model, agent, git branch, OS, and CI, and `match: any` / `match: all` logic.
 
 Its README states it is not affiliated with the official OpenCode project. Offer it as an option with that caveat; don't install it on someone's behalf without asking.
 
@@ -154,7 +156,7 @@ Note the scoping collision: a generic `python.md` matching `**/*.py` and a `pyth
 
 ### OpenCode side of the same setup
 
-Given a repo where each language lives in its own directory, add three small `AGENTS.md` files with the same content — or, if the rules must not be duplicated, point `opencode.json` at the Claude rule files and accept eager loading:
+Given a repo where each language lives in its own directory, add three small `AGENTS.md` files with the same content (each with a one-line `CLAUDE.md` beside it if you drop the `.claude/rules/` files) — or, if the rules must not be duplicated, point `opencode.json` at the Claude rule files and accept eager loading:
 
 ```json
 {

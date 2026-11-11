@@ -61,7 +61,12 @@ jobs:
       - name: Each shared skill is installed once
         run: |
           status=0
-          for skill in dual-agent-config agent-handoff opencode-go-plus-build-plan-recommender; do
+          skills=$(sed -n 's#^  - \.claude/skills/\([^/]*\)$#\1#p' apm.lock.yaml)
+          if [ -z "$skills" ]; then
+            echo "::error::apm.lock.yaml records no deployed skills"
+            exit 1
+          fi
+          for skill in $skills; do
             if [ ! -f ".claude/skills/$skill/SKILL.md" ]; then
               echo "::error::.claude/skills/$skill/SKILL.md is missing"
               status=1

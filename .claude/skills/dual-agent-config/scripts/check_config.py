@@ -12,7 +12,17 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sync_mcp import TranslationError, load_json, opencode_servers  # noqa: E402
+
 PORTABLE = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+OPENCODE_CONFIGS = ("opencode.json", "opencode.jsonc", ".opencode/opencode.json", ".opencode/opencode.jsonc")
+# OpenCode 1 top-level keys that OpenCode 2 still reads, and their native names.
+V1_KEYS = {"agent": "agents", "mode": "agents", "permission": "permissions", "command": "commands",
+           "provider": "providers", "reference": "references", "snapshot": "snapshots", "attachment": "media"}
+# An agent file with any of these is read as OpenCode 2, and these V1 fields in it are ignored.
+V2_AGENT_MARKERS = {"permissions", "request", "system", "disabled"}
+V1_AGENT_FIELDS = {"name", "tools", "permission", "temperature", "top_p", "prompt", "disable", "maxSteps", "variant"}
 
 
 def find_root(start: Path) -> Path:
@@ -79,7 +89,7 @@ def main() -> int:
     if not agents.exists():
         problems.append("AGENTS.md is missing: Claude Code reads CLAUDE.md only, and OpenCode would have no rules.")
     if not claude.exists() or claude.read_text(encoding="utf-8").strip() != "@AGENTS.md":
-        problems.append("CLAUDE.md must contain exactly one line, @AGENTS.md. OpenCode ignores CLAUDE.md when AGENTS.md exists, so rules there are lost.")
+        problems.append("CLAUDE.md must contain exactly one line, @AGENTS.md. OpenCode 2 never reads CLAUDE.md, so rules there are lost.")
 
     # 2. Skills: one copy, directly under .claude/skills (both tools read it there).
     for duplicate_root in (".opencode/skills", ".agents/skills"):
@@ -150,16 +160,51 @@ def main() -> int:
             if bad:
                 problems.append(f"{rule.relative_to(root)}: {bad} is not recognised, use paths:. The rule never loads.")
 
-    # 5. MCP servers must be in both tools or neither.
+    # 5. OpenCode config: native OpenCode 2 keys, and MCP servers in both tools or neither.
+    mcp_opencode = set()
+    for name in OPENCODE_CONFIGS:
+        path = root / name
+        if not path.exists():
+            continue
+        try:
+            doc = load_json(path)
+        except TranslationError as exc:
+            problems.append(str(exc))
+            continue
+        mcp_opencode |= set(opencode_servers(doc))
+        if "plugin" in doc:
+            warnings.append(f"{name}: `plugin` is the OpenCode 1 key. Use `plugins`; OpenCode 1 plugin code does not run in OpenCode 2.")
+        for key in sorted(set(doc) & set(V1_KEYS)):
+            warnings.append(f"{name}: `{key}` is OpenCode 1 syntax (still read). The native OpenCode 2 key is `{V1_KEYS[key]}`.")
+        if isinstance(doc.get("mcp"), dict) and set(doc["mcp"]) - {"servers", "timeout"}:
+            warnings.append(f"{name}: MCP servers sit directly under `mcp` (OpenCode 1). OpenCode 2 puts them under `mcp.servers`.")
+
     mcp_claude = set()
     if (root / ".mcp.json").exists():
         mcp_claude = set(json.loads((root / ".mcp.json").read_text(encoding="utf-8")).get("mcpServers", {}))
-    mcp_opencode = set()
-    if (root / "opencode.json").exists():
-        mcp_opencode = set(json.loads((root / "opencode.json").read_text(encoding="utf-8")).get("mcp", {}))
     if mcp_claude != mcp_opencode:
         problems.append(
-            f"MCP servers differ: .mcp.json has {sorted(mcp_claude)}, opencode.json has {sorted(mcp_opencode)}. Translate them with dual-agent-config/scripts/sync_mcp.py."
+            f"MCP servers differ: .mcp.json has {sorted(mcp_claude)}, OpenCode has {sorted(mcp_opencode)}. Translate them with dual-agent-config/scripts/sync_mcp.py."
+        )
+
+    # 6. Subagents: same set in both tools, and OpenCode files that OpenCode 2 reads the way they were meant.
+    claude_agents, opencode_agents = set(), set()
+    for agent in sorted((root / ".claude" / "agents").glob("**/*.md")):
+        name = re.search(r"^name:\s*(\S+)", agent.read_text(encoding="utf-8"), re.M)
+        claude_agents.add(name.group(1) if name else agent.stem)
+    opencode_dir = root / ".opencode" / "agents"
+    for agent in sorted(opencode_dir.glob("**/*.md")):
+        rel = agent.relative_to(root)
+        opencode_agents.add(agent.relative_to(opencode_dir).with_suffix("").as_posix())
+        keys = set(frontmatter_keys(agent) or [])
+        if "mode" not in keys:
+            warnings.append(f"{rel}: no `mode`. OpenCode 2 makes it a primary agent, so it is never offered as a subagent. Add mode: subagent if that is the intent.")
+        mixed = sorted(keys & V1_AGENT_FIELDS)
+        if keys & V2_AGENT_MARKERS and mixed:
+            problems.append(f"{rel}: read as OpenCode 2 (it has {sorted(keys & V2_AGENT_MARKERS)}), so the OpenCode 1 fields {mixed} are ignored. Convert the whole frontmatter.")
+    if claude_agents and opencode_agents and claude_agents != opencode_agents:
+        warnings.append(
+            f"Subagents differ: .claude/agents has {sorted(claude_agents)}, .opencode/agents has {sorted(opencode_agents)}."
         )
 
     for warning in warnings:

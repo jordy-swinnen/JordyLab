@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Translate MCP server definitions between Claude Code and OpenCode formats.
+"""Translate MCP server definitions between Claude Code and OpenCode 2 formats.
 
 Claude Code stores servers under `mcpServers` in .mcp.json, splitting the
-executable (`command`) from its arguments (`args`). OpenCode stores them under
-`mcp` in opencode.json with a single `command` array, and uses `environment`
-rather than `env`. This script handles that translation in both directions.
+executable (`command`) from its arguments (`args`). OpenCode 2 stores them under
+`mcp.servers` in opencode.json(c) with a single `command` array, `environment`
+rather than `env`, `disabled` rather than `enabled`, and snake_case OAuth keys.
+OpenCode 1 entries (servers directly under `mcp`) are read too, and moved under
+`mcp.servers` when OpenCode is the target.
 
 Previews by default. Pass --write to actually modify the target file (a .bak
-copy is made first).
+copy is made first). An opencode.jsonc source is read with its comments; an
+opencode.jsonc target is preview-only, because rewriting it would drop them.
 
-OAuth settings (clientId, callbackPort, scope) are carried across. Each harness
-keeps its own callbackPort when the target already has the server, because
-Claude Code and OpenCode run separate OAuth callbacks. A clientSecret in either
-file is refused.
+OAuth settings (client id, callback port, scope) are carried across. Each
+harness keeps its own callback port when the target already has the server,
+because Claude Code and OpenCode run separate OAuth callbacks. A client secret
+in either file is refused.
 
 Usage:
     python sync_mcp.py to-opencode --source .mcp.json --target opencode.json
@@ -21,26 +24,63 @@ Usage:
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
 
 CLAUDE_KEY = "mcpServers"
 OPENCODE_KEY = "mcp"
+# Members of OpenCode's `mcp` object that are settings, not V1 server names.
+OPENCODE_MCP_SETTINGS = {"servers", "timeout"}
 
 
 class TranslationError(Exception):
     """Raised when a server entry cannot be translated safely."""
 
 
+def strip_jsonc(text: str) -> str:
+    """Remove // and /* */ comments and trailing commas, leaving strings untouched."""
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == '"':
+            j = i + 1
+            while j < n and text[j] != '"':
+                j += 2 if text[j] == "\\" else 1
+            out.append(text[i:j + 1])
+            i = j + 1
+        elif text.startswith("//", i):
+            end = text.find("\n", i)
+            i = n if end < 0 else end
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+        elif c == "," and re.match(r"\s*[}\]]", text[i + 1:]):
+            i += 1  # trailing comma
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
 def load_json(path: Path) -> dict:
     if not path.exists():
         raise TranslationError(f"File not found: {path}")
     try:
-        with path.open(encoding="utf-8") as handle:
-            return json.load(handle)
+        return json.loads(strip_jsonc(path.read_text(encoding="utf-8")))
     except json.JSONDecodeError as exc:
-        raise TranslationError(f"{path} is not valid JSON: {exc}") from exc
+        raise TranslationError(f"{path} is not valid JSON or JSONC: {exc}") from exc
+
+
+def opencode_servers(doc: dict) -> dict:
+    """All servers in an OpenCode config: V2 `mcp.servers` plus V1 entries directly under `mcp`."""
+    mcp = doc.get(OPENCODE_KEY) or {}
+    if not isinstance(mcp, dict):
+        return {}
+    v1 = {name: entry for name, entry in mcp.items() if name not in OPENCODE_MCP_SETTINGS}
+    servers = mcp.get("servers") if isinstance(mcp.get("servers"), dict) else {}
+    return {**v1, **servers}
 
 
 def claude_entry_to_opencode(name: str, entry: dict, warnings: list) -> dict:
@@ -59,17 +99,17 @@ def claude_entry_to_opencode(name: str, entry: dict, warnings: list) -> dict:
             merged = list(command) + list(args)
         else:
             merged = [command] + list(args)
-        translated = {"type": "local", "command": merged, "enabled": True}
+        translated = {"type": "local", "command": merged}
 
     elif server_type in ("http", "sse"):
         url = entry.get("url")
         if not url:
             raise TranslationError(f"'{name}' is a remote server with no url")
-        translated = {"type": "remote", "url": url, "enabled": True}
+        translated = {"type": "remote", "url": url}
         if server_type == "sse":
             warnings.append(
-                f"'{name}': SSE transport is deprecated; verify OpenCode accepts "
-                "this server as a plain remote endpoint."
+                f"'{name}': OpenCode 2 speaks Streamable HTTP only; check that this SSE "
+                "server also serves Streamable HTTP at the same URL."
             )
 
     elif server_type == "websocket":
@@ -85,10 +125,6 @@ def claude_entry_to_opencode(name: str, entry: dict, warnings: list) -> dict:
         translated["environment"] = dict(entry["env"])
     if entry.get("headers"):
         translated["headers"] = dict(entry["headers"])
-        warnings.append(
-            f"'{name}': headers were copied as-is. Confirm the field name against "
-            "https://opencode.ai/docs/mcp-servers/ before relying on it."
-        )
     if entry.get("oauth") is not None:
         translated["oauth"] = translate_oauth(name, entry["oauth"], "opencode", warnings)
 
@@ -127,17 +163,42 @@ def opencode_entry_to_claude(name: str, entry: dict, warnings: list) -> dict:
         translated["env"] = dict(entry["environment"])
     if entry.get("headers"):
         translated["headers"] = dict(entry["headers"])
-    if entry.get("oauth") is not None:
+    if entry.get("oauth") is False:
+        warnings.append(
+            f"'{name}' turns OAuth off in OpenCode (oauth: false). Claude Code has no "
+            "such switch; it authenticates with the headers only if the server allows it."
+        )
+    elif entry.get("oauth") is not None:
         translated["oauth"] = translate_oauth(name, entry["oauth"], "claude", warnings)
 
-    if entry.get("enabled") is False:
+    if entry.get("disabled") is True or entry.get("enabled") is False:
         warnings.append(
-            f"'{name}' is disabled in OpenCode. Claude Code has no enabled flag — "
-            "it was translated as active. Remove it if that is wrong."
+            f"'{name}' is disabled in OpenCode. Claude Code has no disabled flag, "
+            "so it was translated as active. Remove it if that is wrong."
         )
 
     flag_secret_syntax(name, translated, "claude", warnings)
     return translated
+
+
+def to_opencode_v2(name: str, entry: dict, warnings: list) -> dict:
+    """Rewrite an OpenCode 1 server entry in the native OpenCode 2 shape."""
+    entry = dict(entry)
+    changed = False
+    if "enabled" in entry:
+        if entry.pop("enabled") is False:
+            entry["disabled"] = True
+        changed = True
+    if isinstance(entry.get("timeout"), int):
+        ms = entry.pop("timeout")
+        entry["timeout"] = {"catalog": ms, "execution": ms}
+        changed = True
+    if isinstance(entry.get("oauth"), dict) and set(entry["oauth"]) & set(OAUTH_KEYS["claude"]):
+        entry["oauth"] = translate_oauth(name, entry["oauth"], "opencode", warnings)
+        changed = True
+    if changed:
+        warnings.append(f"'{name}': converted the existing OpenCode 1 entry to the OpenCode 2 shape.")
+    return entry
 
 
 def flag_secret_syntax(name: str, entry: dict, target: str, warnings: list) -> None:
@@ -159,37 +220,46 @@ def flag_secret_syntax(name: str, entry: dict, target: str, warnings: list) -> N
         )
 
 
-# OAuth settings each harness understands. Anything else is reported, not copied.
+# OAuth keys each harness understands, as {claude_name: opencode_name}. OpenCode 1 used the Claude spelling.
 OAUTH_KEYS = {
-    "opencode": {"clientId", "callbackPort", "scope"},
-    "claude": {"clientId", "callbackPort"},
+    "claude": {"clientId": "client_id", "callbackPort": "callback_port"},
+    "opencode": {"clientId": "client_id", "callbackPort": "callback_port", "scope": "scope"},
 }
+PORT_KEY = {"claude": "callbackPort", "opencode": "callback_port"}
 
 
 def translate_oauth(name: str, oauth, target: str, warnings: list) -> dict:
     """Carry the OAuth settings for one server across the two formats.
 
-    A client secret is refused outright: config files are checked in, so a
-    secret must come from the environment or a prompt, never from the file.
+    Accepts camelCase (Claude Code, OpenCode 1) and snake_case (OpenCode 2) keys
+    and writes the target's spelling. A client secret is refused outright:
+    config files are checked in, so a secret must come from the environment or
+    a prompt, never from the file.
     """
     if not isinstance(oauth, dict):
         raise TranslationError(f"'{name}' has an oauth value that is not an object")
-    if "clientSecret" in oauth:
+    if "clientSecret" in oauth or "client_secret" in oauth:
         raise TranslationError(
-            f"'{name}' puts clientSecret in its config. Remove it: a checked-in "
+            f"'{name}' puts a client secret in its config. Remove it: a checked-in "
             "config must not carry a secret."
         )
-    allowed = OAUTH_KEYS[target]
-    dropped = sorted(set(oauth) - allowed)
+    names = OAUTH_KEYS[target]
+    result, dropped = {}, []
+    for key, value in oauth.items():
+        camel = next((c for c, s in OAUTH_KEYS["opencode"].items() if key in (c, s)), None)
+        if camel in names:
+            result[camel if target == "claude" else names[camel]] = value
+        else:
+            dropped.append(key)
     if dropped:
         warnings.append(
-            f"'{name}': oauth field(s) {', '.join(dropped)} were not translated to "
+            f"'{name}': oauth field(s) {', '.join(sorted(dropped))} were not translated to "
             f"{target}. Check them by hand."
         )
-    return {key: value for key, value in oauth.items() if key in allowed}
+    return result
 
 
-def merge_servers(existing: dict, translated: dict, warnings: list) -> dict:
+def merge_servers(existing: dict, translated: dict, warnings: list, target: str = "opencode") -> dict:
     """Merge translated servers into the target's existing entries.
 
     Servers are replaced as a whole, except for two things that are per-harness
@@ -197,6 +267,7 @@ def merge_servers(existing: dict, translated: dict, warnings: list) -> dict:
     each run their own OAuth callback), and an oauth block the source does not
     mention is kept rather than dropped silently.
     """
+    port = PORT_KEY[target]
     merged = dict(existing)
     for name, entry in translated.items():
         old = existing.get(name)
@@ -204,10 +275,10 @@ def merge_servers(existing: dict, translated: dict, warnings: list) -> dict:
         new_oauth = entry.get("oauth")
         if isinstance(old_oauth, dict) and isinstance(new_oauth, dict):
             oauth = {**old_oauth, **new_oauth}
-            if "callbackPort" in old_oauth and old_oauth["callbackPort"] != new_oauth.get("callbackPort"):
-                oauth["callbackPort"] = old_oauth["callbackPort"]
+            if port in old_oauth and old_oauth[port] != new_oauth.get(port):
+                oauth[port] = old_oauth[port]
                 warnings.append(
-                    f"'{name}': kept the existing callbackPort {old_oauth['callbackPort']}. "
+                    f"'{name}': kept the existing {port} {old_oauth[port]}. "
                     "Each harness has its own callback port, so the source's value is not copied."
                 )
             entry = {**entry, "oauth": oauth}
@@ -216,9 +287,9 @@ def merge_servers(existing: dict, translated: dict, warnings: list) -> dict:
             warnings.append(
                 f"'{name}': the source has no oauth block, so the existing one was kept."
             )
-        elif isinstance(new_oauth, dict) and "callbackPort" in new_oauth:
+        elif isinstance(new_oauth, dict) and port in new_oauth:
             warnings.append(
-                f"'{name}': a new entry takes callbackPort {new_oauth['callbackPort']} from the "
+                f"'{name}': a new entry takes {port} {new_oauth[port]} from the "
                 "source. Make sure no other server or harness already uses that port."
             )
         merged[name] = entry
@@ -228,15 +299,15 @@ def merge_servers(existing: dict, translated: dict, warnings: list) -> dict:
 def translate(direction: str, source_doc: dict) -> tuple:
     if direction == "to-opencode":
         servers = source_doc.get(CLAUDE_KEY, {})
-        convert, target_key = claude_entry_to_opencode, OPENCODE_KEY
+        convert = claude_entry_to_opencode
     else:
-        servers = source_doc.get(OPENCODE_KEY, {})
-        convert, target_key = opencode_entry_to_claude, CLAUDE_KEY
+        servers = opencode_servers(source_doc)
+        convert = opencode_entry_to_claude
 
     if not servers:
         raise TranslationError(
-            f"No servers found. Expected a non-empty "
-            f"'{CLAUDE_KEY if direction == 'to-opencode' else OPENCODE_KEY}' object."
+            "No servers found. Expected a non-empty "
+            + ("'mcpServers' object." if direction == "to-opencode" else "'mcp.servers' (or OpenCode 1 'mcp') object.")
         )
 
     warnings, translated, failed = [], {}, []
@@ -249,12 +320,28 @@ def translate(direction: str, source_doc: dict) -> tuple:
         except TranslationError as exc:
             failed.append(str(exc))
 
-    return target_key, translated, warnings, failed
+    return translated, warnings, failed
+
+
+def write_target(direction: str, target_doc: dict, translated: dict, warnings: list) -> tuple:
+    """Merge the translated servers into the target document. Returns (doc, overwritten names)."""
+    if direction == "to-claude":
+        existing = target_doc.get(CLAUDE_KEY, {})
+        target_doc[CLAUDE_KEY] = merge_servers(existing, translated, warnings, "claude")
+        return target_doc, sorted(set(existing) & set(translated))
+
+    existing = {name: to_opencode_v2(name, entry, warnings) if isinstance(entry, dict) else entry
+                for name, entry in opencode_servers(target_doc).items()}
+    mcp = {key: value for key, value in (target_doc.get(OPENCODE_KEY) or {}).items() if key in OPENCODE_MCP_SETTINGS}
+    mcp["servers"] = merge_servers(existing, translated, warnings, "opencode")
+    target_doc[OPENCODE_KEY] = mcp
+    target_doc.setdefault("$schema", "https://opencode.ai/config.json")
+    return target_doc, sorted(set(existing) & set(translated))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Translate MCP server definitions between Claude Code and OpenCode."
+        description="Translate MCP server definitions between Claude Code and OpenCode 2."
     )
     parser.add_argument("direction", choices=["to-opencode", "to-claude"])
     parser.add_argument("--source", required=True, type=Path)
@@ -266,32 +353,20 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    try:
-        source_doc = load_json(args.source)
-        target_key, translated, warnings, failed = translate(args.direction, source_doc)
-    except TranslationError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-
+    if args.write and args.target.suffix == ".jsonc":
+        print(f"error: {args.target} is JSONC; writing it would drop its comments. "
+              "Preview without --write and copy the servers in by hand.", file=sys.stderr)
         return 1
 
-    target_doc = {}
-    if args.target.exists():
-        try:
-            target_doc = load_json(args.target)
-        except TranslationError as exc:
-            print(f"error reading target: {exc}", file=sys.stderr)
+    try:
+        source_doc = load_json(args.source)
+        translated, warnings, failed = translate(args.direction, source_doc)
+        target_doc = load_json(args.target) if args.target.exists() else {}
+    except TranslationError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
-            return 1
-
-    existing = target_doc.get(target_key, {})
-    overwritten = sorted(set(existing) & set(translated))
-    merge_warnings = []
-    merged = merge_servers(existing, translated, merge_warnings)
-    warnings.extend(merge_warnings)
-    target_doc[target_key] = merged
-
-    if target_key == OPENCODE_KEY and "$schema" not in target_doc:
-        target_doc["$schema"] = "https://opencode.ai/config.json"
+    target_doc, overwritten = write_target(args.direction, target_doc, translated, warnings)
 
     print(f"translated {len(translated)} server(s): {', '.join(sorted(translated)) or 'none'}")
     if overwritten:
@@ -306,7 +381,6 @@ def main() -> int:
     if not args.write:
         print(f"\n--- preview of {args.target} (not written; pass --write to apply) ---")
         print(rendered, end="")
-
         return 0
 
     if args.target.exists():
@@ -316,7 +390,6 @@ def main() -> int:
 
     args.target.write_text(rendered, encoding="utf-8")
     print(f"wrote {args.target}")
-
     return 0
 
 

@@ -86,7 +86,7 @@ Include footnotes for any active promotional discounts, peak/off-peak windows, c
 
 When the user asks to set the recommended models as defaults:
 
-1. Update `opencode.json` (`model`, and `agent.build.model` / `agent.plan.model` or the `agents` map used by that version).
+1. Update `opencode.json`: `model`, and `agents.build.model` / `agents.plan.model` (OpenCode 2). Only if the file still uses the OpenCode 1 `agent` map and no `agents`, edit `agent.*.model` instead. Never write both: OpenCode 2 prefers `agents`, so a value added under `agent` next to it is silently ignored.
 2. Search `.opencode/commands/` for any command that pins a `model:` in frontmatter. Confirm with the user whether to align those commands with the Plan and Build choices, and verify that any command judging images uses a model with image input.
 3. Update the model routing note in `AGENTS.md` if the repository documents its defaults there.
 4. Run the repository's config check if it has one. With the shared `dual-agent-config` skill installed, use `python3 .claude/skills/dual-agent-config/scripts/check_config.py`.
