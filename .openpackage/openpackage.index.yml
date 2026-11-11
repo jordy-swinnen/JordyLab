@@ -20,7 +20,7 @@ packages:
           sourceHash: 3f7e182465effc44
           target: .claude/skills/agent-handoff/scripts/handoff_check.sh
     installScope: subset
-    path: ~/.openpackage/cache/git/6ce45f84ac0d/6c468df/skills/agent-handoff
+    path: ~/.openpackage/cache/git/6ce45f84ac0d/86c96f0/skills/agent-handoff
     platforms:
       - claude
     version: 0.0.0
@@ -63,7 +63,7 @@ packages:
           sourceHash: 923a573821491f0d
           target: .claude/skills/dual-agent-config/scripts/test_sync_mcp.py
     installScope: subset
-    path: ~/.openpackage/cache/git/6ce45f84ac0d/139867c/skills/dual-agent-config
+    path: ~/.openpackage/cache/git/6ce45f84ac0d/86c96f0/skills/dual-agent-config
     platforms:
       - claude
     version: 0.0.0
@@ -74,7 +74,7 @@ packages:
           sourceHash: 083e7e5e533dd544
           target: .claude/skills/opencode-go-plus-build-plan-recommender/SKILL.md
     installScope: subset
-    path: ~/.openpackage/cache/git/6ce45f84ac0d/6c468df/skills/opencode-go-plus-build-plan-recommender
+    path: ~/.openpackage/cache/git/6ce45f84ac0d/86c96f0/skills/opencode-go-plus-build-plan-recommender
     platforms:
       - claude
     version: 0.0.0
