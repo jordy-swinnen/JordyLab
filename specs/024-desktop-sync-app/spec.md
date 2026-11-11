@@ -138,7 +138,7 @@ As the owner, I want to install the same app on a Windows PC, so that every mach
 
 - The app replaces the script client entirely; there is no supported headless/script mode after the switchover.
 - Existing machine tokens and the Settings → Machines flow are reused for authentication; the app may create its token through a guided sign-in rather than a manual copy-paste.
-- The six themes and the design system from the app redesign are reused as-is for the desktop app (designs delivered in `docs/design/JOR-78/`).
+- The six themes and the design system from the app redesign are reused for the desktop app, so both surfaces look like one product (designs delivered in `docs/design/JOR-78/`).
 - GitHub Releases remains the distribution channel for the app's binaries; the JordyLab download page links there or mirrors it.
 - Scheduled sync keeps the current cadence the script client uses today.
 - Only the owner's machines are supported (single household); no multi-tenant concerns.

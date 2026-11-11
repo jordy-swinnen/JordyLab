@@ -32,5 +32,4 @@
 ## Notes
 
 - All items pass: the spec lifts the settled stories, requirements, edge cases and criteria from the refined and design-settled JOR-78 Kaneo ticket, which had its open questions resolved in refinement and design rounds.
-- The technology decisions (framework, scan-engine port, sign-in flow, signing) were settled with the owner during design and are recorded in the JOR-78 ticket conversation; they are inputs for `/speckit-plan`, not this spec.
-- One caveat: the JOR-78 ticket's Design notes section currently carries only the refinement-era decisions (D1–D3); the later design-round decisions (framework choice, scan-engine port strategy, sign-in flow, macOS signing, release pipeline, rollout order) should be re-confirmed or re-recorded in the ticket before `/speckit-plan` runs.
+- The technology decisions (Qt/Python desktop app with the scan engine reused, in-app self-update kept in scope, browser sign-in flow, unsigned macOS, release pipeline, rollout order) were settled with the owner during design and are recorded in the JOR-78 ticket's Design notes (D1–D9); they are inputs for `/speckit-plan`, not this spec.
