@@ -61,6 +61,7 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/pyinstaller/pyinstaller/develop/COPYING.txt -o dist/jordylab-desktop/licenses/PyInstaller-COPYING.txt
       - name: Rename artifact
         working-directory: jordylab-desktop
+        shell: bash
         run: |
           mkdir -p out
           if [ "${{ runner.os }}" = "macOS" ]; then
