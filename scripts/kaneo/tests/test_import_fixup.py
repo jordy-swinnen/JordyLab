@@ -33,6 +33,7 @@ class FakeKaneo:
         self.refuse = None  # set to a status code to refuse every call
         self.rate_limit_once = False
         self.defer_descriptions = False  # list replies omit the description (descriptionDeferred)
+        self.omit_descriptions = False  # list replies omit the description without the flag (older versions)
         self.bad_auth_seen = []
 
     def handle(self, method, path, body):
@@ -58,11 +59,12 @@ class FakeKaneo:
                 return 404, {"code": "NOT_FOUND"}, {}
             task = self.tasks[identifier]
             reply = {"id": task["id"], "number": task["number"], "status": task["status"]}
-            if self.defer_descriptions:
+            if self.defer_descriptions or self.omit_descriptions:
                 reply["description"] = None
-                reply["descriptionDeferred"] = True
             else:
                 reply["description"] = task["description"]
+            if self.defer_descriptions:
+                reply["descriptionDeferred"] = True
             return 200, reply, {}
         if method == "GET" and route.startswith("/api/task/"):
             task_id = route.rsplit("/", 1)[1]
@@ -174,12 +176,14 @@ def inventory_file(tmp_path, items=None):
     return path
 
 
-def run_script(monkeypatch, capsys, base_url, export, apply=False, inventory=None):
+def run_script(monkeypatch, capsys, base_url, export, apply=False, inventory=None, dry_run_flag=False):
     monkeypatch.setenv("KANEO_API_KEY", API_KEY)
     monkeypatch.setenv("KANEO_BASE_URL", base_url)
     monkeypatch.setenv("KANEO_WORKSPACE_ID", "")
     monkeypatch.setenv("KANEO_FIXUP_MIN_INTERVAL", os.environ.get("KANEO_FIXUP_MIN_INTERVAL", "0"))
     argv = ["import-fixup.py", "--export", str(export)] + (["--apply"] if apply else [])
+    if dry_run_flag:
+        argv.append("--dry-run")
     if inventory is not None:
         argv += ["--inventory", str(inventory)]
     monkeypatch.setattr(sys, "argv", argv)
@@ -434,3 +438,45 @@ def test_spec_reference_needs_the_inventory_when_the_export_has_one(tmp_path, mo
         httpd.shutdown()
     assert code == 1
     assert "inventory" in err
+
+
+def test_explicit_dry_run_flag_is_accepted(tmp_path, monkeypatch, capsys):
+    fake = FakeKaneo({"JOR-1": {"id": "t1", "number": 1, "status": "planned"}})
+    httpd, base = start(fake)
+    try:
+        code, out, _ = run_script(
+            monkeypatch, capsys, base, export_file(tmp_path, [issue("JOR-1", "Triage")]), dry_run_flag=True
+        )
+    finally:
+        httpd.shutdown()
+    assert code == 0
+    assert fake.writes() == []
+    assert "dry run, nothing written" in out
+
+
+def test_a_stale_own_spec_line_falls_back_to_the_project(tmp_path, monkeypatch, capsys):
+    fake = FakeKaneo({
+        "JOR-1": {"id": "t1", "number": 1, "status": "todo", "description": "Spec: specs/old-name/\n\nBody."},
+    })
+    httpd, base = start(fake)
+    try:
+        export = export_file(tmp_path, [issue("JOR-1", "Todo", project={"description": "Spec: specs/022-kaneo-backlog/"})])
+        code, _, _ = run_script(monkeypatch, capsys, base, export, apply=True, inventory=inventory_file(tmp_path))
+    finally:
+        httpd.shutdown()
+    assert code == 0
+    assert fake.tasks["JOR-1"]["description"] == "Spec: specs/022-kaneo-backlog/\n\nBody."
+
+
+def test_an_omitted_description_is_read_before_it_is_replaced(tmp_path, monkeypatch, capsys):
+    fake = FakeKaneo({"JOR-1": {"id": "t1", "number": 1, "status": "todo", "description": "Body that must survive."}})
+    fake.omit_descriptions = True  # no description and no flag: an older reply shape
+    httpd, base = start(fake)
+    try:
+        export = export_file(tmp_path, [issue("JOR-1", "Todo", project={"name": "kaneo-backlog"})])
+        code, _, _ = run_script(monkeypatch, capsys, base, export, apply=True, inventory=inventory_file(tmp_path))
+    finally:
+        httpd.shutdown()
+    assert code == 0
+    assert fake.tasks["JOR-1"]["description"] == "Spec: specs/022-kaneo-backlog/\n\nBody that must survive."
+    assert ("GET", "/api/task/t1") in [(m, p) for m, p, _ in fake.requests]
