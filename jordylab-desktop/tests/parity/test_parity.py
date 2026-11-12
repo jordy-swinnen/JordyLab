@@ -11,7 +11,7 @@ implementation) and runs the app's collection over the same fixture.
 
 import json
 
-from jordylab_scan.__main__ import collect_library as scanner_collect
+from jordylab_scan.collect import collect_library as scanner_collect
 from jordylab_scan.manifest import compute_digest
 
 from jordylab_desktop.services.sync_service import _collect

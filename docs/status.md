@@ -1,6 +1,6 @@
 # Status: what is built, what is replaced, where it ends
 
-Last reviewed: 2026-11-05. Statuses are plain words derived from each item's work tracker (Done counts as
+Last reviewed: 2026-11-12. Statuses are plain words derived from each item's work tracker (Done counts as
 **Built**, in progress as **In progress**, everything not started as **Planned**). Open-task counts come from each
 feature's task list in `specs/`. The rule that keeps this page current is in
 [AGENTS.md](../AGENTS.md#workflow), under "Keeping the drawing and status current".
@@ -29,7 +29,7 @@ feature's task list in `specs/`. The rule that keeps this page current is in
 | Continuous deploy on green main | Built | 0 |
 | Production on Docker Compose | Built | 0 |
 | Progressive web app (installable, replaces the Android app) | Built | 0 |
-| Desktop sync app with self-update (spec 024) | Built, to confirm | 14: real-machine checks, updater spike, script-endpoint cleanup and convergence tasks (see specs/024-desktop-sync-app/tasks.md) |
+| Desktop sync app with self-update (spec 024) | Built | 0 |
 
 ## In progress
 

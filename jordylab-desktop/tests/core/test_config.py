@@ -3,7 +3,6 @@ import os
 import stat
 
 import pytest
-
 from jordylab_scan import config
 
 
@@ -31,7 +30,6 @@ def test_resolve_service_precedence():
 
     assert resolved.backend_url == "http://constant"
     assert resolved.scan_endpoint == "/custom/scan"
-
 
 
 def test_resolve_service_treats_placeholders_as_absent():

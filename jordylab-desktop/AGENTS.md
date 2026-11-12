@@ -6,26 +6,23 @@ EmuDeck libraries in the Game Catalog on a 6-hour schedule, and updates itself
 from GitHub Releases.
 
 The scan rules are **not** reimplemented here: the app imports the
-`jordylab_scan` package from `../gamecatalog-scanner/src` (the single source of
-truth, frozen into the served script template by `tools/build_client.py`).
-Identity parity — same fingerprints, same grouping — is what keeps existing
-games, marks and AI descriptions intact, so never copy those modules into this
-tree.
+`jordylab_scan` package from `core/` (the single source of truth for
+normalization, grouping and fingerprints). Identity parity — same fingerprints,
+same grouping — is what keeps existing games, marks and AI descriptions intact,
+so never fork those modules.
 
 ## Commands
 
 ```bash
 python3.12 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
-.venv/bin/pip install -e ../gamecatalog-scanner   # the shared scan rules; the app imports jordylab_scan
-.venv/bin/pytest                       # services + parity gate
+.venv/bin/pytest                       # services + core rules + parity gate
 .venv/bin/ruff check . && .venv/bin/ruff format --check .
 .venv/bin/python -m jordylab_desktop   # run the app (from this directory)
 ```
 
-The tests import `jordylab_scan` through pytest's `pythonpath` setting
-(`../gamecatalog-scanner/src`), but running the app needs the package installed
-in the venv (the command above).
+The tests import `jordylab_scan` through pytest's `pythonpath` setting (`core`);
+the editable install includes it, so a plain run needs no extra step.
 
 ## Layout
 
@@ -35,8 +32,11 @@ in the venv (the command above).
   call service methods.
 - `src/jordylab_desktop/detect/` — Steam/EmuDeck/Sunshine discovery.
 - `src/jordylab_desktop/platform/` — per-OS autostart and paths.
+- `core/jordylab_scan/` — the scan rules (normalize, grouping, fingerprints, payload):
+  the single source of truth, imported by the app and guarded by its tests.
 - `packaging/` — PyInstaller specs and the release workflow input.
-- `tests/parity/` — the gate: payloads and fingerprints must match the scanner.
+- `tests/core/` — the rules' own suite; `tests/parity/` — the gate: the app's
+  collection and payloads must match the core rules exactly.
 
 ## Rules
 

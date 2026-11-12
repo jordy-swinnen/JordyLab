@@ -37,20 +37,15 @@
       >.
     </p>
     <div>
-      <button
+      <a
         hlmBtn
-      class="h-11"
+        class="h-11"
         variant="default"
-        [disabled]="downloading() !== null"
-        (click)="downloadClient.emit('steam')"
-        data-testid="download-steam-client"
+        routerLink="/settings/downloads"
+        data-testid="download-sync-app"
       >
-        @if (downloading() === 'steam') {
-          Generating...
-        } @else {
-          Download client
-        }
-      </button>
+        Get the sync app
+      </a>
     </div>
   </div>
 
@@ -85,20 +80,15 @@
       runs). One source per hostname.
     </p>
     <div>
-      <button
+      <a
         hlmBtn
-      class="h-11"
+        class="h-11"
         variant="default"
-        [disabled]="downloading() !== null"
-        (click)="downloadClient.emit('emudeck')"
-        data-testid="download-emudeck-client"
+        routerLink="/settings/downloads"
+        data-testid="download-sync-app"
       >
-        @if (downloading() === 'emudeck') {
-          Generating...
-        } @else {
-          Download client
-        }
-      </button>
+        Get the sync app
+      </a>
     </div>
   </div>
 </div>
@@ -380,7 +370,7 @@
 } @else if (sources().length === 0) {
   <lib-empty-state
     title="No sources yet."
-    hint="Download the client above, run it once on a host, and the source appears after its first scan."
+    hint="Install the JordyLab Sync app from Settings → Downloads, connect a host, and the source appears after its first scan."
   />
 } @else {
   <div class="space-y-3">

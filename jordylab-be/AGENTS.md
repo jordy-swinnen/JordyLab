@@ -350,10 +350,10 @@ class SomeObjectTestBuilder {
 - The old static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client
   handles its own `jlmt_` machine token (created in Settings → Machines) and caches it at `~/.config/jordylab/scan/token.json`.
 
-# Game library scan flow (feature 003 — Python client)
+# Game library scan flow (feature 003, now the desktop sync app — spec 024)
 
-- Users download a per-library Python client via the web UI's source-manager page → `GET /api/gamecatalog/ingest/client` renders `jordylab-scan-template.py` (frozen from `gamecatalog-scanner/` by `tools/build_client.py`) into `text/x-python`.
-- The client (`gamecatalog-scanner/`) authenticates with its `jlmt_` machine token, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so.
+- Scans come from the **desktop sync app** (`jordylab-desktop/`), downloaded from Settings → Downloads. The script download endpoint (`GET /api/gamecatalog/ingest/client`), the frozen template and `ClientService` were removed with the script client; do not reintroduce them.
+- The app authenticates with its `jlmt_` machine token, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so. Its scan rules live in `jordylab-desktop/core/jordylab_scan` (the retired client's rules, unchanged).
 - `ScanService` resolves-or-adopts a `ScanSource` keyed on `(machine_id, sourceType)` falling back to `(hostname, sourceType)`; client-grouped EmuDeck `games[]` take precedence over the path-inference `LibraryParser` backstop; Steam VDF parsing stays server-side.
 - Change detection is **server-authoritative**: `scanNeeded = fingerprint differs OR stored ingest_version < CURRENT_INGEST_VERSION OR lastOutcome ∉ {APPLIED, NO_CHANGE}`. The digest is equality-only — the client never controls invalidation.
 - Safety: a scan whose resulting installed set is empty, or that would remove more than `jordylab.gamecatalog.scan.max-shrink-fraction` (default 0.5) of a source's installed games, is `REJECTED` with `SNAPSHOT_SHRINK_SUSPECT` unless `force` is set. The client skips (exit 5) explicitly configured roots that are missing/unreadable/empty.
