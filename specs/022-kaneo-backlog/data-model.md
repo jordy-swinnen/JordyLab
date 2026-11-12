@@ -44,7 +44,7 @@ The existing `jordylab.feedback.linear.*` properties stay until the follow-up pu
 |---|---|---|
 | Workspace | one, owned by Jordy | no other members; guest access, registration and extra workspaces closed |
 | Project | key `JOR` | created by the importer; ticket id = `JOR-<number>` |
-| Columns | Triage, Drafted, Specified, Todo, In Progress, In Review, Done, Canceled; plus Kaneo's Backlog view | Done and Canceled are final; slugs are the lower-case names (`triage`, `in-progress`, ...) |
+| Columns | `ideas`, `refinement`, `todo`, `in-progress`, `in-review`, `done`, `canceled` (the JOR-111 flow); the import fix-up first creates Triage, Drafted and Specified for Linear's states, then a one-time pass folds them into `ideas` and `todo` | `done` is set by the owner, not by a merge; slugs are the lower-case names |
 | Priority | Urgent, High, Medium, Low, none | new tickets from the idea box use none |
 | App label | exactly one of 7 | Game Catalog, Finance News, Garmin, Mobile, Recipe, Trading, Platform |
 | Type label | exactly one of 5 | Bug, Feature, Improvement, Idea, Chore |

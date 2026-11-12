@@ -64,8 +64,9 @@ until the cutover in spec 022.
 
 Every commit subject starts with its Kaneo ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
 `Refs:` trailer naming the SpecKit artefact (`Refs: 015/T004`, `Refs: 011 BUG-020`, or `Refs: NO-CODE`). No ticket yet?
-Create one first with the `backlog-capture` skill. Pull requests use `.github/pull_request_template.md` and a linking
-word (`Fixes JOR-23` finishes the ticket, `Refs JOR-23` does not). The full rules, the `Refs:` token table and examples
+Create one first with the `backlog-capture` skill. Pull requests use `.github/pull_request_template.md` and name the
+ticket (`JOR-23` when the PR completes it, `Part of JOR-23` for partial work); a linked pull request moves to In Review,
+and Done is set by the owner. The full rules, the `Refs:` token table and examples
 are in `.github/instructions/commits-and-pull-requests.instructions.md`, loaded by Claude Code (`CLAUDE.md`) and OpenCode
 (`opencode.json`). Enforced by `.githooks/commit-msg` locally (enable once per clone:
 `git config core.hooksPath .githooks`) and by the `Commit References` workflow on every pull-request commit. Never

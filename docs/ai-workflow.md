@@ -92,8 +92,9 @@ request. Edit the table here in the same change.
 - **Commits.** The subject starts with the ticket key (`JOR-<n>: …`). The body ends with a `Refs:` trailer that names
   the spec and task. Enforced locally by `.githooks/commit-msg`, which needs `git config core.hooksPath .githooks` once
   per clone, and in CI by the `commit-refs` workflow. Never bypass it with `--no-verify`.
-- **Pull requests.** The template is `.github/pull_request_template.md`. A linking word decides what happens to the
-  ticket: `Fixes` finishes it, `Part of` only links it.
+- **Pull requests.** The template is `.github/pull_request_template.md`. The ticket key in the title or branch links the
+  pull request: it moves to In Review when opened, and merging does not finish it — Done is set by the owner. Use
+  `Part of JOR-n` in the description for partial work.
 - **Claude Code hooks.** Before a command runs: `pre-bash-guard.sh`. Before an edit: `pre-edit-protect.sh`. After an
   edit: format, lint, the Java modularity check and the test naming check (`post-*.sh`). The hooks are tested in CI
   by `hook-tests.yml`.

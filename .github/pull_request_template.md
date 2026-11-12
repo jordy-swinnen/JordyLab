@@ -1,4 +1,4 @@
-<!-- Title: JOR-<n>: <summary> when this PR finishes the ticket (merging a linked PR moves it to Done); a partial PR leaves the key out of the title, body and branch. See .github/instructions/commits-and-pull-requests.instructions.md -->
+<!-- Title: JOR-<n>: <summary>   See .github/instructions/commits-and-pull-requests.instructions.md -->
 
 ## What
 
@@ -10,7 +10,7 @@
 
 ## Tickets
 
-<!-- JOR-<n> when this PR finishes the ticket (merging moves it to Done).   |   Partial work: say what it is part of, without the key — Kaneo links any mention of it. -->
+<!-- JOR-<n> when this PR completes the ticket   |   Part of JOR-<n> for partial work. Merging does not set Done: the owner does. -->
 
 ## Refs
 

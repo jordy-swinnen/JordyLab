@@ -188,7 +188,9 @@ the VPS (`import-report.md`).
 - [ ] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
       project. Save the importer's summary into `specs/022-kaneo-backlog/import-report.md`.
 - [ ] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
-      review the table with the owner, run it for real, append the output counts to `import-report.md`.
+      review the table with the owner, run it for real, append the output counts to `import-report.md`. Then fold the
+      import columns into the current board (Triage and Drafted -> `ideas`, Specified -> `todo`; owner decision
+      2026-11-12, JOR-111).
 - [ ] T037 [US3] OPERATIONS [D]: run the verification checklist in `contracts/board-conventions.md` (counts per state, every key and the
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.
@@ -333,10 +335,12 @@ no key answers "backlog unavailable".
       command; set `GITHUB_APP_NAME` in `compose.yaml` (T017). After the merge's deploy [C], install the App on
       `jordy-swinnen/JordyLab`.
 - [ ] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
-      In Progress, PR opened -> In Review, merged -> Done.
-- [ ] T071 [US6] OPERATIONS [D]: on a throwaway ticket and two throwaway pull requests (one `Part of`, one finishing word) run
-      the matrix cases the written rules rely on; confirm the ticket moves and the open/finish behaviour matches T066; a
-      subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if reality differs.
+      In Progress, PR opened -> In Review, merged -> Don't move (Done is set by the owner; owner decision 2026-11-08,
+      JOR-111).
+- [ ] T071 [US6] OPERATIONS [D]: on a throwaway ticket and two throwaway pull requests (one `Part of`, one completing) run
+      the matrix cases the written rules rely on; confirm the ticket moves to In Progress and In Review, that merging does
+      not set Done, and that a subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if
+      reality differs.
 
 ---
 

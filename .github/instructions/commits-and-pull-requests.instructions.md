@@ -45,24 +45,20 @@ with a ticket.
 Kaneo links a pull request to a ticket through the branch name (the project's branch pattern, e.g. `jor-23-short-title`;
 `jordyswinnen/jor-23-short-title` matches too), or through the key anywhere in the title or description (`JOR-23`,
 `fix(JOR-23): …`, `task: 23`, a copied task link). A linked pull request moves the ticket: the first push to its branch
-moves it to *In Progress*, opening the pull request to *In Review*, and merging it to *Done* (the project's default
-automations, see `specs/022-kaneo-backlog/contracts/board-conventions.md`).
+moves it to *In Progress*, opening the pull request to *In Review* (the project's automations, see
+`specs/022-kaneo-backlog/contracts/board-conventions.md`).
 
-- **A linked pull request finishes its ticket on merge.** So link a ticket only when the pull request finishes it: put the
-  key in the title (`JOR-23: <summary>`) and in the branch name. A pull request that does not finish its ticket must not
-  carry the key in its title, description or branch name — the commit subjects still start with it, and the description
-  can name the spec instead ("spec 022").
-- **`Fixes` and `Part of` are not read.** Kaneo does not parse linking words: any mention of the key links the pull
-  request. The words may stay as human-readable text, but they never keep a ticket open.
-- **Provisional until the matrix runs.** These rules follow Kaneo's documentation. The GitHub App matrix (spec 022, T010)
-  runs on production against a scratch repository before the import; T071 confirms each case and this section is fixed
-  if reality differs.
-- **Title**: the same shape as a commit subject, with the ticket the PR finishes: `JOR-85: moving the backlog to Kaneo`.
+- **Merging does not finish a ticket.** The owner decided this (2026-11-08): the merged-to-*Done* automation stays off,
+  and *Done* is set by the owner after the merge. So a pull request can carry the key whether or not it finishes the
+  ticket: `JOR-23` in the title when it completes it, `Part of JOR-23` in the description for partial work.
+- **Provisional until the matrix runs.** Which branch names, titles and words link follows Kaneo's documentation. The
+  GitHub App matrix (spec 022, T010) runs on production against a scratch repository before the import; T071 confirms
+  each case and this section is fixed if reality differs.
+- **Title**: the same shape as a commit subject, with the ticket the PR serves: `JOR-85: moving the backlog to Kaneo`.
 - **Description** (the template in `.github/pull_request_template.md` has the headings):
   1. **What**: two to five lines on the change and why it exists.
   2. **How it was verified**: commands run and results, and what was *not* checked.
-  3. **Tickets**: the key this PR finishes (merging moves it to *Done*), one line per ticket; a partial PR says what it is
-     part of without the key.
+  3. **Tickets**: `JOR-<n>` when the PR completes the ticket, `Part of JOR-<n>` for partial work, one line per ticket.
   4. **Refs**: the spec and tasks, as in the commit trailer.
 - **One pull request per spec** (spec, plan, tasks and implementation on one branch), several tickets allowed.
 - Never put secrets or personal data in a message or description.
@@ -72,5 +68,5 @@ automations, see `specs/022-kaneo-backlog/contracts/board-conventions.md`).
 
 Before `git commit`: find the ticket (the branch name, the task's `Refs:`, or ask once), write the subject with it (`JOR-55: adding a button`),
 run the hook by committing normally. If the hook blocks, fix the message; never bypass it. Before opening a
-PR: use the template headings, and put the key in the title only when the pull request finishes the ticket; a partial
-pull request keeps the key out of its title, description and branch name. Do not push or merge unless asked.
+PR: use the template headings and name the ticket (`JOR-<n>`, or `Part of JOR-<n>` for partial work); merging does not
+set *Done*, so the owner still finishes it. Do not push or merge unless asked.

@@ -59,8 +59,8 @@ produced, nothing changes, the text is reported. Run the draft sync twice: the s
 log an idea: the outage message names how to sign in and repeats the text.
 
 **10. Commits and pull requests (User Story 6, SC-004).** Open a pull request with branch `jordyswinnen/jor-<n>-...` and
-`Part of JOR-<n>` in the description: the ticket moves to In Progress/In Review and stays open on merge; with the
-finishing word it moves to Done. `git commit` with a subject lacking a key is refused by the hook; with `JOR-n:` it passes.
+`Part of JOR-<n>` in the description: the ticket moves to In Progress and In Review, and merging does not finish it (Done
+is the owner's). `git commit` with a subject lacking a key is refused by the hook; with `JOR-n:` it passes.
 
 **11. Switch off Linear (User Story 7).** The Linear GitHub integration and commit webhook are switched off at cutover, the
 workspace is read-only for 30 days. After 30 days: cancel, revoke the personal key, remove `LINEAR_API_KEY` from the secrets

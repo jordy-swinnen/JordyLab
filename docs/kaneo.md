@@ -1,73 +1,80 @@
 # Kaneo: backlog and tickets
 
 Kaneo holds the backlog: ideas, bugs, improvements and the status of every draft. Git keeps the work itself (specs,
-plans, tasks, code). Spec: `specs/022-kaneo-backlog/`. This page records what cannot be read from the repo: workspace
-facts, the settings changed by hand, the steps to connect each tool, and the history of the move from Linear.
+plans, tasks, code). Spec: `specs/022-kaneo-backlog/`; the workflow is the one settled in JOR-111. This page records what
+cannot be read from the repo: workspace facts, the settings changed by hand, the steps to connect each tool, and the
+history of the move from Linear.
 
 ## Workspace and project
 
 - Board: `https://kaneo.jordylab.be`, project `JOR`; a ticket is `JOR-<number>`, the same keys Linear used.
-- A ticket is what Kaneo calls a **task**. The Triage inbox is the **Triage column**.
+- A ticket is what Kaneo calls a **task**. The Triage inbox is the Triage column (only during the import, see below).
 - The board is private: registration is closed and the owner created the only account. The service, the registration
   switch, secret rotation, upgrades, backups and restores are in `docs/runbook.md` §28.
 - No secret lives in the repo. Each tool signs in with the board's own OAuth (MCP clients) or a browser session; the
-  backend's idea box uses the production secret `KANEO_API_KEY`, and the one-time import fix-up used a short-lived
-  owner key that was revoked afterwards.
+  backend's idea box uses the production secret `KANEO_API_KEY`, and the one-time import fix-up uses a short-lived owner
+  key that is revoked afterwards.
 
 ## Columns
 
-| Column | Meaning |
-|---|---|
-| Triage | New and unreviewed. The idea box creates here; an agent capture starts here unless the owner asks otherwise. |
-| Drafted | A draft folder exists under `specs/_drafts/`, with no numbered spec yet. |
-| Specified | A numbered spec exists but has no `tasks.md` yet. |
-| Todo | Ready to build. |
-| In Progress | Started; a linked branch moved it here. |
-| In Review | A linked pull request is open. |
-| Done | Merged or confirmed finished. Final column. |
-| Canceled | Dropped or duplicate. Final column. |
+| Column | Meaning | Who moves a ticket in |
+|---|---|---|
+| `ideas` | Raw idea: a title and a few sentences. | `kaneo-idea` |
+| `refinement` | Being turned into a Ready ticket; also where a ticket waits for the owner's answers. | `kaneo-refinement` (on start) |
+| `todo` | Ready: it meets the Definition of Ready and can go straight into `/speckit-specify`. | `kaneo-refinement` or `kaneo-design`, after the owner confirms |
+| `in-progress` | SpecKit is running. | the start of `/speckit-specify` (the `kaneo-start-ticket` hook) |
+| `in-review` | A pull request is open. | the PR flow |
+| `done` | Finished. **The owner sets it:** a merged pull request does not close its ticket (owner decision, 2026-11-08). | the owner, by hand |
+| `canceled` | Duplicate, superseded or not worth doing; always with a comment saying why. | whichever skill found out, after the owner confirms |
 
-**Backlog** is a view over the tickets that are not in a column (the import leaves Drafted and Specified there), not a
-column of its own. Done and Canceled are the final columns.
+The `kaneo-board` skill is the single place where the layout, the Ready template and the Definition of Ready live.
+
+**Import-time columns.** The import fix-up creates **Triage**, **Drafted** and **Specified** so Linear's states survive
+the import (Kaneo's importer flattens them into the Backlog view). A one-time pass then folds them into the current
+columns: Triage and Drafted → `ideas`, Specified → `todo`. The legacy `planned` bucket is retired; treat any ticket still
+in it as `ideas`.
 
 ## Labels
 
-Exactly one App and one Type label on every ticket, and no others (workspace-level, flat names — Kaneo has no label
-groups):
+Every ticket gets one Type label; App labels are picked as they fit. Names are workspace-level and flat (Kaneo has no
+label groups):
 
 - **App**: Game Catalog, Finance News, Garmin, Mobile, Recipe, Trading, Platform. ("Platform" covers infra, auth, the AI
   layer and tooling.)
 - **Type**: Bug, Feature, Improvement, Idea, Chore.
+- **Design flags** (working markers, not categories): `needs-design`, `needs-ui-design`. Set them during refinement and
+  remove them when the matching design work is recorded; a ticket in `todo` never carries one.
 
-Priority uses Kaneo's own field: No priority, Low, Medium, High, Urgent.
+Priority uses Kaneo's own field: No priority, Low, Medium, High, Urgent. Priority is the owner's call.
 
 ## Spec links
 
 Kaneo has no Linear-style project per spec. Each spec ticket's **first description line** is `Spec: specs/<nnn-name>/`:
-the import fix-up (`scripts/kaneo/import-fixup.py`) wrote it from Linear's projects, and `speckit-taskstoissues` and the
+the import fix-up (`scripts/kaneo/import-fixup.py`) writes it from Linear's projects, and `speckit-taskstoissues` and the
 `backlog-sync-drafts` skill keep it. That line and the ticket title are how the tooling matches a ticket to the
 repository.
 
 ## Saved views or filter recipes
 
-Kaneo's label filters count per view (Tasks and Backlog count separately), so the four views from the Linear setup are
-either saved filters or recipes applied in two clicks:
+Kaneo's label filters count per view (Tasks and Backlog count separately), so the four views are either saved filters or
+recipes applied in two clicks:
 
 | View | Filter |
 |---|---|
 | Open work by app | not Done/Canceled, filtered by the App label, in both the Tasks and the Backlog view |
 | Open ideas | Type Idea, not Done/Canceled |
 | Open bugs | Type Bug, not Done/Canceled |
-| Specified & Todo | the Specified or Todo column |
+| Ready queue | column `todo` |
 
 Whether this Kaneo version saves named views was not settled in the trial; if it does not, these stay recipes. Task T038
 records the result.
 
 ## Who does what
 
-- **Agents** (Claude Code, OpenCode, the Claude apps): capture an idea (`backlog-capture`), triage the Triage column
-  (`backlog-triage`), mirror drafts and specs (`backlog-sync-drafts`), turn a spec's tasks into tickets
-  (`speckit-taskstoissues`), and comment on the ticket during a handover (`agent-handover`).
+- **Agents** (Claude Code, OpenCode, the Claude apps): capture an idea (`kaneo-idea`), refine it into a Ready ticket
+  (`kaneo-refinement`), settle design when flagged (`kaneo-design`), start the spec (`kaneo-start-ticket`), mirror drafts
+  and specs (`backlog-sync-drafts`), turn a spec's tasks into tickets (`speckit-taskstoissues`), and comment on the ticket
+  during a handover (`agent-handover`). The older `backlog-capture` and `backlog-triage` skills work on the Triage inbox.
 - **The owner, by hand**: the account and sign-ins, the GitHub App and its installation, connecting the repository to
   project `JOR`, the saved views, the secrets and repository variables, and every ticket's move to Done.
 
@@ -101,9 +108,9 @@ Keep this block in sync with `specs/022-kaneo-backlog/contracts/board-convention
 ```text
 When I ask you to log an idea, bug, improvement, feature or chore, or to turn a conversation or plan into tickets,
 use the Kaneo connector with these rules:
-- Project JOR. Always create the ticket in the Triage column, and check that the reply shows Triage.
-- Give every ticket exactly one App label (Game Catalog, Finance News, Garmin, Mobile, Recipe, Trading, Platform) and
-  exactly one Type label (Bug, Feature, Improvement, Idea, Chore). Use those exact names. Ask me when unsure; never
+- Project JOR. Create the ticket in the `ideas` column; a rough idea is a title and a few sentences, nothing more.
+- Give every ticket exactly one Type label (Bug, Feature, Improvement, Idea, Chore) and the App labels that fit (Game
+  Catalog, Finance News, Garmin, Mobile, Recipe, Trading, Platform). Use those exact names. Ask me when unsure; never
   invent a label.
 - Search the board for the same words first and show me the best matches. Create only after I say it is new.
 - Write the ticket for a reader who has not seen this chat: a title under 80 characters, one paragraph on what and
@@ -127,12 +134,13 @@ HANDOFF-03):
 - Events: Issues, Issue comments, Pull requests, Push.
 - Project `JOR` → Settings → Integrations → GitHub: connect `jordy-swinnen/JordyLab`. The owner's GitHub sign-in is a
   separate OAuth app (HANDOFF-06).
-- Workflow → Automations: branch push → In Progress, pull request opened → In Review, merged → Done (the defaults).
+- Workflow → Automations: branch push → In Progress, pull request opened → In Review, **merged → Don't move** (a merged
+  pull request does not close its ticket; the owner sets Done).
 - Branch pattern: a custom regex accepting `jor-23-some-title` and `jordyswinnen/jor-23-some-title`, case-insensitive.
 
-Which branch names, title patterns and words link, and which finish a ticket, is in
-`.github/instructions/commits-and-pull-requests.instructions.md`. A linked pull request finishes its ticket on merge.
-The matrix that confirms each case runs on production against a scratch repository (spec 022, T010 and T071).
+Which branch names, title patterns and words link, and which columns they move, is in
+`.github/instructions/commits-and-pull-requests.instructions.md`. The matrix that confirms each case runs on production
+against a scratch repository (spec 022, T010 and T071).
 
 ## Secrets and repository variables
 
@@ -160,8 +168,8 @@ Details and exact commands: `specs/022-kaneo-backlog/owner-steps.md`.
 ## The move from Linear
 
 - Linear is history: its setup is described in `specs/015-linear-backlog/`, and the old `docs/linear.md` content is in
-  this file's git history.
-- The full Linear export (JSON) is stored outside the VPS (spec 022, T034) and is the archive for what the importer did
+  that file's git history.
+- The full Linear export (JSON) is stored outside the VPS (spec 022, T034) and is the archive for what the importer does
   not carry: projects, milestones, cycles, estimates, attachments and archived issues.
 - Until the cutover, `BACKLOG_PROVIDER=linear` keeps the production idea box writing to Linear; switching it to
   `kaneo` is the cutover (spec 022, T072).
@@ -171,17 +179,18 @@ Details and exact commands: `specs/022-kaneo-backlog/owner-steps.md`.
 To recreate this setup in a new workspace:
 
 1. Start Kaneo and create the owner account while registration is closed (`docs/runbook.md` §28).
-2. Create the project `JOR` and the columns Triage, Drafted, Specified, Todo, In Progress, In Review, Done, Canceled.
-3. Create the seven App and five Type labels with the exact names above.
+2. Create the project `JOR` and the columns `ideas`, `refinement`, `todo`, `in-progress`, `in-review`, `done`,
+   `canceled` (and, for an import, the Triage/Drafted/Specified columns the fix-up creates).
+3. Create the seven App and five Type labels with the exact names above, plus the two design flags.
 4. Connect the tools: `/mcp` in Claude Code, `opencode mcp auth kaneo`, the custom connector in the Claude apps.
 5. Paste the conventions block into the Claude apps' instructions.
 6. Create the saved views or the filter recipes (section above).
 7. Create the GitHub App and connect `jordy-swinnen/JordyLab` to project `JOR`; set the branch pattern and the
-   automations; install the App on the repository.
+   automations (merged → Don't move); install the App on the repository.
 8. Add the secrets and repository variables; run `git config core.hooksPath .githooks` in every clone.
-9. Run the import fix-up once (`scripts/kaneo/import-fixup.py`) and verify with the checklist in
-   `specs/022-kaneo-backlog/contracts/board-conventions.md`.
+9. Run the import fix-up once (`scripts/kaneo/import-fixup.py`), fold Triage/Drafted/Specified into `ideas`/`todo`, and
+   verify with the checklist in `specs/022-kaneo-backlog/contracts/board-conventions.md`.
 
-Done by hand: the account, sign-ins, GitHub App, repository connection, views, secrets and variables. Done by an agent:
-labels, tickets, columns (the fix-up), comments, and everything the backlog skills do. Estimated time on a fresh
-workspace: under an hour, most of it the sign-ins and the GitHub App.
+Done by hand: the account, sign-ins, GitHub App, repository connection, views, secrets, variables and every ticket's
+move to Done. Done by an agent: labels, tickets, columns (the fix-up), comments, and everything the backlog skills do.
+Estimated time on a fresh workspace: under an hour, most of it the sign-ins and the GitHub App.
