@@ -9,4 +9,4 @@ targets:
   - claude
 dependencies:
   apm:
-    - jordy-swinnen/agent-skills#v0.2.0
+    - jordy-swinnen/agent-skills#v0.3.0
