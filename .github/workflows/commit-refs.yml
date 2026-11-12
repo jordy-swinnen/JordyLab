@@ -1,9 +1,10 @@
 name: Commit References
 
-# Every commit in a pull request must start with its Linear ticket (`JOR-55: adding a button`, commits made after
+# Every commit in a pull request must start with its Kaneo ticket (`JOR-55: adding a button`, commits made after
 # 2026-11-02T00:30Z) and name the SpecKit artefact it serves (`Refs: 011 BUG-033`,
-# `Refs: 009/T039`) or say it has none (`Refs: NO-CODE`) — AGENTS.md → "Commits". Runs the same
-# .githooks/commit-msg script as the local hook, so clones without the hook installed are caught too.
+# `Refs: 009/T039`) or say it has none (`Refs: NO-CODE`) — AGENTS.md → "Commits". A `chore:` subject is exempt from
+# both rules (owner decision, used by the weekly Skills Sync bot). Runs the same .githooks/commit-msg script as the
+# local hook, so clones without the hook installed are caught too.
 
 on:
   pull_request:
@@ -29,7 +30,7 @@ jobs:
           for commit in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
             git log -1 --format=%B "$commit" > /tmp/commit-message
             if ! sh .githooks/commit-msg /tmp/commit-message "$(git log -1 --format=%ct "$commit")"; then
-              echo "::error::$(git log -1 --format='%h %s' "$commit") — subject must start with JOR-<n>, and a valid Refs: trailer is required"
+              echo "::error::$(git log -1 --format='%h %s' "$commit") — subject must start with JOR-<n> (or chore:), and a valid Refs: trailer is required"
               failed=1
             fi
           done

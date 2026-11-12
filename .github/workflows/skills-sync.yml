@@ -8,9 +8,8 @@
 # .claude/skills/, which both Claude Code and OpenCode read; any other target converges on .agents/skills/ and leaves
 # a second copy competing for the same skill name.
 #
-# The bot commit must pass .github/workflows/commit-refs.yml, so it carries a ticket and a Refs: trailer. Set the
-# repository variable SKILLS_SYNC_TICKET to whatever standing ticket owns this upkeep; it defaults to JOR-101, the
-# ticket that introduced the shared skills.
+# The bot commit uses a `chore:` subject, which the commit rules exempt from the ticket and Refs requirements
+# (owner decision for automated upkeep: no ticket owns this job).
 
 name: Skills Sync
 
@@ -29,7 +28,6 @@ permissions:
 
 env:
   UPSTREAM: https://github.com/jordy-swinnen/agent-skills.git
-  SYNC_TICKET: ${{ vars.SKILLS_SYNC_TICKET || 'JOR-101' }}
 
 jobs:
   sync:
@@ -103,9 +101,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B chore/skills-sync
           git add apm.yml apm.lock.yaml .claude/skills
-          git commit -m "$SYNC_TICKET: sync shared agent skills to $LATEST" \
-                     -m "Automated weekly run of the Skills Sync workflow." \
-                     -m "Refs: NO-CODE"
+          git commit -m "chore(skills): sync shared agent skills to $LATEST" \
+                     -m "Automated weekly run of the Skills Sync workflow."
 
           git fetch origin chore/skills-sync || true
           git push --force-with-lease origin chore/skills-sync
@@ -120,4 +117,4 @@ jobs:
             --base main \
             --head chore/skills-sync \
             --title "chore: sync shared agent skills to $LATEST" \
-            --body "Weekly run of the Skills Sync workflow: it bumped the pinned tag in apm.yml, ran apm install, and checked the single-copy invariants plus apm audit --ci. Review the redeployed files under .claude/skills/; nothing outside the pinned tag and those files was touched. Part of $SYNC_TICKET"
+            --body "Weekly run of the Skills Sync workflow: it bumped the pinned tag in apm.yml, ran apm install, and checked the single-copy invariants plus apm audit --ci. Review the redeployed files under .claude/skills/; nothing outside the pinned tag and those files was touched."

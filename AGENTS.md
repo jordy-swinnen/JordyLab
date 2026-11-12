@@ -68,7 +68,8 @@ word (`Fixes JOR-23` finishes the ticket, `Refs JOR-23` does not). The full rule
 are in `.github/instructions/commits-and-pull-requests.instructions.md`, loaded by Claude Code (`CLAUDE.md`) and OpenCode
 (`opencode.json`). Enforced by `.githooks/commit-msg` locally (enable once per clone:
 `git config core.hooksPath .githooks`) and by the `Commit References` workflow on every pull-request commit. Never
-bypass it with `--no-verify`. Merge, `fixup!`/`squash!` and `git revert` commits are exempt.
+bypass it with `--no-verify`. Merge, `fixup!`/`squash!` and `git revert` commits are exempt, and so is a `chore:`
+subject (owner decision: automated upkeep such as the weekly `Skills Sync` has no owning ticket).
 
 ## Validation Data
 

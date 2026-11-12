@@ -138,8 +138,8 @@ so a clone gets the same skills without running anything.
 
 `Skills Sync` (`.github/workflows/skills-sync.yml`) runs weekly: it moves `apm.yml` to the newest `v*` tag, redeploys,
 checks the single-copy invariants and opens a pull request. It never pushes to main, and `Agent Config` validates the
-result, including `apm audit --ci`. Its bot commit takes its ticket from the `SKILLS_SYNC_TICKET` repository variable
-(default `JOR-101`) because every commit here must start with one.
+result, including `apm audit --ci`. Its bot commit uses a `chore:` subject, which the commit rules exempt from the
+ticket and `Refs:` requirements because no ticket owns this upkeep.
 
 Do not run `apm compile` in this repository. It generates root `CLAUDE.md`/`AGENTS.md` from APM instructions, and this
 rulebook is hand-written.
