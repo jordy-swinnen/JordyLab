@@ -396,7 +396,11 @@ no key answers "backlog unavailable".
 
 - [ ] T083 Run every affected gate: `./gradlew test --tests '*feedback*'`, `*ModularityTests*`, the shell fixture suites,
       `python -I -m pytest scripts/kaneo/tests`, `docker compose ... config -q`, `gitleaks git --no-banner --redact .`; all green.
-- [ ] T084 Review the whole diff with the `code-reviewer` agent against the JordyLab conventions; fix findings by severity.
+- [X] T084 Review the whole diff with the `code-reviewer` agent against the JordyLab conventions; fix findings by severity.
+      Done 2026-11-12: 0 blockers, 5 major, 5 minor, 6 nits. The majors were the AGENTS.md linking words and the two
+      owner decisions that conflict with JOR-111 (both settled by the owner, see the board-model commit); the fix-up
+      findings (deferred description, stale fallback, inventory path) were fixed with tests; the unverified
+      description write is now a pre-import probe in `owner-steps.md`.
 - [X] T085 Mark the Kaneo draft as history (a one-line note at the top of `specs/_drafts/kaneo-backlog/plan-draft.md` pointing to spec 022) and
       leave `specs/_drafts/langfuse-self-hosting/` untouched. That folder was never created and will not be developed
       (owner decision, 2026-11-12: storage limits), so there is nothing to leave alone.
