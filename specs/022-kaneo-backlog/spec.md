@@ -15,8 +15,8 @@ stay, with a Triage column, App and Type fields, a Linear import, the GitHub App
 module's Linear client replaced by a Kaneo client, the Linear skills and MCP config rewritten, docs, and Linear retired."
 
 **Background**: `specs/_drafts/kaneo-backlog/plan-draft.md` (researched facts, phases, risks). This spec supersedes the
-draft's scope; the draft folder stays as history. The Linear setup being replaced is described in `docs/linear.md` and
-`specs/015-linear-backlog/`; the idea box in `specs/017-guest-feedback/`.
+draft's scope; the draft folder stays as history. The Linear setup being replaced is described in
+`specs/015-linear-backlog/` (the old `docs/linear.md`, now `docs/kaneo.md`); the idea box in `specs/017-guest-feedback/`.
 
 ## Overview
 

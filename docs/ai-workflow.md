@@ -109,7 +109,7 @@ request. Edit the table here in the same change.
 The `agent-handover` skill (Claude Code) and `.opencode/commands/agent-handover.md` (OpenCode) do the same job. The
 outgoing agent finishes its step, records its state in the spec's task list and in `HANDOFF-next-agent.md` next to the
 spec, and prints a prompt for the other tool. The incoming agent starts from that file. Steps only the owner can do are
-logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log to `docs/kaneo.md`.
+logged as handoffs in [docs/kaneo.md](kaneo.md).
 
 ## Where things live
 
@@ -123,7 +123,7 @@ logged as handoffs in [docs/linear.md](linear.md) until spec 022 moves that log 
 | `.specify/extensions.yml` | SpecKit hooks. `kaneo-start-ticket` runs before `/speckit-specify`. |
 | `specs/`, `specs/_drafts/` | Specs, plans and task lists. Drafts have no number until they are specified. |
 | `.mcp.json`, `opencode.json` | MCP servers: nx, GitHub (through the `gh` login), Kaneo, JordyLab and Linear (until the cutover). |
-| `docs/linear.md` | Linear setup, kept for history until the cutover. The Kaneo conventions are in the `kaneo-board` skill. |
+| `docs/kaneo.md` | The backlog: workspace facts, columns, labels, connector sign-in, the GitHub App and the handoff log. The old `docs/linear.md` is its git history. |
 | `docs/design/JOR-<n>/` | Exported design images for Kaneo tickets. |
 | `.github/instructions/commits-and-pull-requests.instructions.md` | Commit and pull request rules. |
 

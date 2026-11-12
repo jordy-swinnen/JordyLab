@@ -355,7 +355,7 @@ no key answers "backlog unavailable".
       nothing writes to it by agreement; announce the end of the freeze and note the 30-day date in `docs/kaneo.md`.
 - [ ] T074 [US7] [E] Record the cutover (date, result of T072, rollback not needed) in `specs/022-kaneo-backlog/import-report.md` and in
       `spec.md` Status.
-- [ ] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
+- [X] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
       renamed skills, MCP list) and `specs/_drafts/README.md` (tracking in Kaneo, `backlog-sync-drafts`). [B]
 - [ ] T076 [US7] [E] At the 30-day mark, with no rollback needed: OWNER confirms; the Linear export from T034 is re-checked as stored.
 
@@ -376,12 +376,12 @@ no key answers "backlog unavailable".
 
 ## Phase 9: User Story 8 - Operate and rebuild from the docs (Priority: P3)
 
-- [ ] T080 [US8] `git mv docs/linear.md docs/kaneo.md` and rewrite: workspace facts, terms (a ticket is what Kaneo calls a task; the
+- [X] T080 [US8] `git mv docs/linear.md docs/kaneo.md` and rewrite: workspace facts, terms (a ticket is what Kaneo calls a task; the
       Triage inbox is the Triage column), columns, labels, which steps are manual and which an agent does, connector sign-in for
       each tool, GitHub App setup, saved views or filter recipes, secret and variable rotation, upgrade, backup and restore
       pointers, owner handoffs log (H-01 ...), the Claude apps' conventions block (`contracts/board-conventions.md` "Ticket
       text conventions"), the Linear history pointer (`specs/015-linear-backlog/`), and the rebuild checklist. [B]
-- [ ] T081 [P] [US8] Update any other doc that names Linear: `docs/learn/` and `docs/runbooks/` if `grep -il linear` finds one; add a
+- [X] T081 [P] [US8] Update any other doc that names Linear: `docs/learn/` and `docs/runbooks/` if `grep -il linear` finds one; add a
       Kaneo row to the Reference Docs table in `AGENTS.md` only if useful.
 - [ ] T082 [US8] Rebuild test (SC-010): a reviewer follows the rebuild checklist on a clean `scripts/kaneo/trial/run.sh up` and ends with
       columns, labels and one ticket in under two hours; record time and gaps, fix the doc.
@@ -393,8 +393,9 @@ no key answers "backlog unavailable".
 - [ ] T083 Run every affected gate: `./gradlew test --tests '*feedback*'`, `*ModularityTests*`, the shell fixture suites,
       `python -I -m pytest scripts/kaneo/tests`, `docker compose ... config -q`, `gitleaks git --no-banner --redact .`; all green.
 - [ ] T084 Review the whole diff with the `code-reviewer` agent against the JordyLab conventions; fix findings by severity.
-- [ ] T085 Mark the Kaneo draft as history (a one-line note at the top of `specs/_drafts/kaneo-backlog/plan-draft.md` pointing to spec 022) and
-      leave `specs/_drafts/langfuse-self-hosting/` untouched.
+- [X] T085 Mark the Kaneo draft as history (a one-line note at the top of `specs/_drafts/kaneo-backlog/plan-draft.md` pointing to spec 022) and
+      leave `specs/_drafts/langfuse-self-hosting/` untouched. That folder was never created and will not be developed
+      (owner decision, 2026-11-12: storage limits), so there is nothing to leave alone.
 - [ ] T086 Update `tasks.md` counts, `spec.md` Status, and open the pull request only when the owner asks, using
       `.github/pull_request_template.md` (`Refs JOR-<n>` until the work is finished, `Part of` for the staged parts).
 
