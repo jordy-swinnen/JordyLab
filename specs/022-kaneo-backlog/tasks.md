@@ -172,12 +172,12 @@ restore drill brings the `kaneo` database back, and the application services are
 **Independent Test**: counts per state equal Linear's, every key exists, ten spot checks pass, a Linear export is stored off
 the VPS (`import-report.md`).
 
-- [ ] T030 [P] [US3] Write `scripts/kaneo/tests/test_import_fixup.py` first, with a fake Kaneo and fake Linear HTTP server: state
+- [X] T030 [P] [US3] Write `scripts/kaneo/tests/test_import_fixup.py` first, with a fake Kaneo and fake Linear HTTP server: state
       -> column mapping (Triage, Drafted, Specified; Duplicate -> Canceled), moves into and out of Backlog, the `Spec:` first
       line written once for spec tickets (and not duplicated on a second run), dry run writes nothing, a run is idempotent,
       pacing stays at or below 40 writes a minute (inject a fake clock), a 429 waits `Retry-After`, a 401 stops, tickets
       lacking an App or Type label are listed.
-- [ ] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
+- [X] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
       (`--dry-run` default, keys only from the environment, nothing printed but counts and ticket keys; spec link mapping
       from `repo_inventory.sh`); T030 passes.
 - [X] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
