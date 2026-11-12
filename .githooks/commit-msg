@@ -18,6 +18,9 @@
 #   HANDOFF-##  DEPLOY-##  Q-##   campaign IDs from docs/testing/e2e-test-plan.md
 #   NO-CODE
 #
+#   Rule 3 (owner decision): a `chore:` subject carries no ticket and no `Refs:` trailer, and is exempt.
+#   The weekly Skills Sync bot uses it. Keep it for genuinely ticketless chores, not for feature work.
+#
 # Installed per clone with: git config core.hooksPath .githooks
 # Also run by CI on every pull-request commit (.github/workflows/commit-refs.yml).
 
@@ -29,6 +32,7 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 subject="$(grep -v '^#' "$message_file" | sed -n '/./{p;q;}')"
 case "$subject" in
   "Merge "*|"fixup! "*|"squash! "*|"amend! "*|"Revert \""*) exit 0 ;;
+  chore:*|chore\(*|chore!:*) exit 0 ;;
 esac
 
 if [ -z "$commit_time" ] || [ "$commit_time" -ge "$ticket_rule_cutoff" ]; then
