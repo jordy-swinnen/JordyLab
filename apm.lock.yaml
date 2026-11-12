@@ -4,9 +4,9 @@ dependencies:
 - repo_url: jordy-swinnen/agent-skills
   name: agent-skills
   host: github.com
-  resolved_commit: 42c1eeb2f612f1a336081d8ad74baf2b04d37606
-  resolved_ref: v0.2.0
-  version: 0.2.0
+  resolved_commit: 3f4b016f2324e55a2f08614107e3f4fb2e70deac
+  resolved_ref: v0.3.0
+  version: 0.3.0
   package_type: skill_bundle
   deployed_files:
   - .claude/skills/agent-handoff
@@ -14,6 +14,9 @@ dependencies:
   - .claude/skills/agent-handoff/references/handover-prompt-template.md
   - .claude/skills/agent-handoff/references/model-budget.md
   - .claude/skills/agent-handoff/scripts/handoff_check.sh
+  - .claude/skills/autonomous-work
+  - .claude/skills/autonomous-work/SKILL.md
+  - .claude/skills/autonomous-work/references/final-report.md
   - .claude/skills/dual-agent-config
   - .claude/skills/dual-agent-config/SKILL.md
   - .claude/skills/dual-agent-config/references/compatibility-matrix.md
@@ -31,6 +34,8 @@ dependencies:
     .claude/skills/agent-handoff/references/handover-prompt-template.md: sha256:fdcd4c13f9ac291b58de6be3ab6bffd3d578241225e775b0efe80c6354eafcf7
     .claude/skills/agent-handoff/references/model-budget.md: sha256:214e5fca3fed9dbfe7079e8fc0992a08fc9df27762d08427c287de87c92a96fa
     .claude/skills/agent-handoff/scripts/handoff_check.sh: sha256:14f88052f47c97cd0dd1110ff7ddf721ea54ceff1ffcb1fa9148baab0d2e3d5c
+    .claude/skills/autonomous-work/SKILL.md: sha256:931c10c551cf25860916c199342c3ecde3beecccc67d58598dd8b7d75f6494a7
+    .claude/skills/autonomous-work/references/final-report.md: sha256:d3ab450492c8e5f0c075cb1ffa02d260900f68a03a63d7ef4b2914be4a0f3ec9
     .claude/skills/dual-agent-config/SKILL.md: sha256:cb6b69198e7fa3120127bf2ef977b761ecb847efe2e9a2ecbebaedacde424fe8
     .claude/skills/dual-agent-config/references/compatibility-matrix.md: sha256:d28ed0e496b6763ef7b8d05c4452b26b04be10dc0e4988fcc67357f8c769ed75
     .claude/skills/dual-agent-config/references/gotchas.md: sha256:34a4635e356f1f655872b43ce54e5820323749a52559d4ba8d37319f1664e8f2
@@ -41,7 +46,7 @@ dependencies:
     .claude/skills/dual-agent-config/scripts/sync_mcp.py: sha256:d3ab0a142054f534eb1be6ff70df2d17533ae3cf2b1dabc2fafafbc8499d5acd
     .claude/skills/dual-agent-config/scripts/test_sync_mcp.py: sha256:b1306d3004f15911121414439624ebd4a4e457d05dc3651b4f3428b3b167adb0
     .claude/skills/opencode-go-plus-build-plan-recommender/SKILL.md: sha256:2038c7959b994c4c1a8ca1fbe2e37dffa4c96b39dd5183f627e6ec469ad44401
-  content_hash: sha256:603efd7a40f07e3d6b378ed8c9e198f590d30ea462f4c3e133c07068f18dc5cb
+  content_hash: sha256:310e144a64b080756e1bfb117a0a7ea8d4706243fcdb490f5e153dddd6612df5
   declared_license: MIT
 deployments:
 - kind: project-relative
@@ -89,6 +94,33 @@ deployments:
   - jordy-swinnen/agent-skills
   active_owner: jordy-swinnen/agent-skills
   content_hash: sha256:14f88052f47c97cd0dd1110ff7ddf721ea54ceff1ffcb1fa9148baab0d2e3d5c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/autonomous-work
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/autonomous-work/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:931c10c551cf25860916c199342c3ecde3beecccc67d58598dd8b7d75f6494a7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/autonomous-work/references/final-report.md
+  runtime: null
+  scope: project
+  owners:
+  - jordy-swinnen/agent-skills
+  active_owner: jordy-swinnen/agent-skills
+  content_hash: sha256:d3ab450492c8e5f0c075cb1ffa02d260900f68a03a63d7ef4b2914be4a0f3ec9
 - kind: project-relative
   target: claude
   value: .claude/skills/dual-agent-config
