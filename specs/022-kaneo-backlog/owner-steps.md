@@ -69,7 +69,10 @@ holds. Status is updated here, with the date.
   ```
 
 - **Done when:** `gh secret list --env production` shows `KANEO_API_KEY`.
-- **Status:** open, after the deploy.
+- **Status:** open, after the deploy. Before the fix-up's `--apply`, probe the write path once on a throwaway ticket:
+  read it by ticket id (does the reply carry its description, or `descriptionDeferred`?), `PUT /task/description/<id>`
+  with the same text plus a marker, read it back, then restore the original text and delete the ticket. This confirms
+  that the pinned Kaneo version supports the description write the fix-up uses.
 
 ## HANDOFF-05: Repository variables (done by the agent)
 

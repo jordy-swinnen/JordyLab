@@ -445,4 +445,6 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4.
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 50, open 36
+(2026-11-12): the open ones are mostly OWNER/OPERATIONS steps after the merge, the 30-day follow-up, and T082-T084 and
+T086.
