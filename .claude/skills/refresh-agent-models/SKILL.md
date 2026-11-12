@@ -1,6 +1,6 @@
 ---
 name: refresh-agent-models
-description: Recommend and, when justified, switch the Planner, Reviewer and Worker models and effort levels for OpenCode Go and Claude Code, using Artificial Analysis data and the OpenCode Go plan. Use whenever the user or a scheduled task asks to refresh, update, re-evaluate, audit or recommend models or effort levels for the planner, reviewer or worker agents, asks which model a SpecKit step should use, asks for a cheaper or better model for one of these roles, mentions new models on OpenCode Go or Artificial Analysis, or says run the model refresh. Also use for the periodic scheduled run, even if the request only says "run the model refresh".
+description: Recommend and, when justified, switch the Planner, Reviewer and Worker models and effort levels for OpenCode Go and Claude Code, using Artificial Analysis data and the OpenCode Go plan. Use whenever the user or a scheduled task asks to refresh, update, re-evaluate, audit or recommend models or effort levels for the planner, reviewer or worker agents, asks which model a design, review or build step should use, asks for a cheaper or better model for one of these roles, mentions new models on OpenCode Go or Artificial Analysis, or says run the model refresh. Also use for the periodic scheduled run, even if the request only says "run the model refresh".
 compatibility: Python 3 standard library for the scripts (pytest and ruff for the tests), the opencode CLI for the effort-variant list, network access to artificialanalysis.ai and opencode.ai, git and an authenticated GitHub CLI (gh). Run from the repository root.
 ---
 
@@ -17,7 +17,7 @@ The rules live in code, not in this file: `scripts/build_snapshot.py` reads the 
 - `scripts/settings.json`: the judgement parameters, and the `current` block that mirrors the assignments below.
 - This file: the "Current assignments" and "Last run" sections.
 
-Never touch descriptions, permissions, prompts, or other agents (`speckit`, `build`, `plan`).
+Never touch descriptions, permissions, prompts, or other agents (`build`, `plan`).
 
 ## Step 1: Snapshot the sources
 
@@ -48,7 +48,7 @@ Useful variations for a single run:
 
 ## Step 4: Apply the switches
 
-- OpenCode: set `agent.<role>.model` and `agent.<role>.variant` in `opencode.json` to the pick. A pick with no variant removes `variant`. The `plan`, `build` and `speckit` agents are not touched.
+- OpenCode: set `agent.<role>.model` and `agent.<role>.variant` in `opencode.json` to the pick. A pick with no variant removes `variant`. The `build` and `plan` agents are not touched.
 - Claude Code: set the `model:` and `effort:` lines in `.claude/agents/<role>.md`. Use full model IDs such as `claude-haiku-5-5`, not aliases.
 - Update `scripts/settings.json` `current` and the "Current assignments" table below, so that the next decide run reports `unchanged`.
 
@@ -64,7 +64,7 @@ Useful variations for a single run:
 ## Step 6: Branch, commit, PR
 
 1. Branch `jordyswinnen/jor-<n>-...` (the Kaneo ticket's key in lower case) from an up-to-date `main`. If an open PR for this work exists, update it instead of opening another (one PR per piece of work).
-2. Ensure a Kaneo ticket exists in project `JOR` (use the `backlog-capture` skill if none exists). Commit subject `JOR-<n>: refresh planner/reviewer/worker models (YYYY-MM-DD)`, under 72 characters, and the trailer `Refs: NO-CODE`. Never use `--no-verify`.
+2. Ensure a Kaneo ticket exists in project `JOR` (use the `backlog-capture` skill if none exists). Commit subject `JOR-<n>: refresh planner/reviewer/worker models (YYYY-MM-DD)`, under 72 characters, and the trailer `Refs: JOR-<n>`. Never use `--no-verify`.
 3. Write the PR body to a file (no shell heredocs) following `.github/pull_request_template.md`. Paste the decide Markdown output as the evidence, and list each excluded model with its reason. Then run `gh pr create --base main --title "JOR-<n>: refresh planner/reviewer/worker models (YYYY-MM-DD)" --body-file <file>`. Never push to `main`, never merge, never enable auto-merge.
 
 ## Judgement parameters (`scripts/settings.json`)
@@ -81,7 +81,7 @@ These are judgement calls, and the owner tunes them. Each change needs a sentenc
 ## Known limits
 
 - Claude rows have no response-time cap. Go's caps do not apply to them, so Haiku max (372 s end to end on AA) is allowed. Whether to add a Claude cap is open (see Last run).
-- The coding score is `0.6 × FrontierCode 2.0 + 0.4 × Terminal-Bench 4.0` (the Coding category weights in Intelligence Index v5.0). It is AA's benchmark, not the team's SpecKit runs.
+- The coding score is `0.6 × FrontierCode 2.0 + 0.4 × Terminal-Bench 4.0` (the Coding category weights in Intelligence Index v5.0). It is AA's benchmark, not the team's own runs.
 - Go picks use the Intelligence Index only. The coding score is not applied to Go.
 - `Q_base` (requests per month) is OpenCode's own estimate and assumes short, non-reasoning turns, so it cannot separate effort levels. AA tasks per month can.
 - AA labels some Claude rows "with fallback". AA's methodology page does not define the label, and the rules use those rows as AA reports them.

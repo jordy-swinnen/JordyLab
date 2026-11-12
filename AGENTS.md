@@ -43,8 +43,16 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 
 - After implementing a feature or fix, immediately run relevant tests to verify only the changed code works — no full test suite runs unless explicitly requested.
 - After completing a plan or task, always test the end-to-end flow of the features built or changed. Test only the scope that was touched — avoid full-suite integration tests unless the change warrants it.
-- Switching between Claude Code and OpenCode mid-work: use the `agent-handover` skill (`/agent-handover` in both tools). The outgoing agent wraps up, writes `HANDOFF-next-agent.md` next to the spec and prints a prompt for the other tool; the incoming agent takes over from that file.
-- Drafts live in `specs/_drafts/<short-name>/` and carry **no numbers or codes** — not in folder names, titles, requirement or priority labels (use High/Medium/Low), and no references to other features by number. Drafts are written in any order; SpecKit assigns the spec number when a draft is specified. Name other features by what they are.
+- A ticket is the specification. Start work with `/kaneo-start-ticket JOR-<n>`: it checks the ticket is Ready, makes the
+  `jor-<n>-<slug>` branch, moves it to `in-progress` and loads it into context. The plan is agreed in the harness's Plan
+  Mode in chat and is not a file. There is no `spec.md`, `plan.md` or `tasks.md` for new work; `specs/001`–`024` are
+  frozen history (see `specs/README.md`).
+- A decision worth keeping — one that had a real alternative whose reason the code will not show — goes into
+  [docs/decisions.md](docs/decisions.md) under its ticket (`### JOR-<n> D<k>`), in the pull request that builds the
+  ticket. A decision that changes a standing rule also goes into `AGENTS.md` (root or sub-project) in that same change.
+  Status, progress and checklists stay on the board only: one ledger, so nothing can drift.
+- Switching between Claude Code and OpenCode mid-work: use the `agent-handover` skill (`/agent-handover` in both tools). The outgoing agent wraps up, comments the state on the ticket (plus `docs/handoff/HANDOFF-JOR-<n>.md` when a comment is not enough) and prints a prompt for the other tool; the incoming agent takes over from that record.
+- An idea that is not ready for the board yet goes into `ideas` as a rough ticket, not into a file. `specs/_drafts/` is frozen with the rest of `specs/`; do not add to it. Name other features by what they are, never by a number.
 - **Keeping the drawing and status current.** When a feature's last task is checked, or something is replaced, dropped or deployed differently, the same change updates: the architecture drawing in `README.md` (the Mermaid block, edited as text); the matching row and end-goal entry in `docs/status.md`; and `docs/ai-workflow.md` if the agent tooling, models or pipeline changed. Do it in the same change as the work, not later. Claude Code reads this file through `CLAUDE.md` and OpenCode reads it directly, so the rule holds in both tools.
 
 ## Backlog (Kaneo)
@@ -53,17 +61,19 @@ The backlog is the self-hosted Kaneo board (`https://kaneo.jordylab.be`, project
 `refinement` → `todo` → `in-progress` → `in-review` → `done`, plus `canceled`. `/kaneo-idea` captures a rough idea,
 `/kaneo-refinement` turns it into a Ready ticket and moves it to `todo`, and `/kaneo-design` settles architecture or UI
 decisions for tickets with a design label (`needs-design`, `needs-ui-design`; design is a label, not a column). The
-`kaneo-board` skill holds the shared conventions. `/speckit-specify JOR-<n>` starts from a `todo` ticket and moves it to
-`in-progress`. A merged pull request does not close its ticket: `done` is set by the owner. The full flow is in
-[docs/ai-workflow.md](docs/ai-workflow.md#ticket-flow-kaneo). `docs/testing/bug-log.md` stays as history and the
-campaign's log-first rule; `BUG-###` references stay valid. Specs, plans and tasks stay in git. Linear is history
-(`specs/015-linear-backlog/`; `docs/kaneo.md` replaces `docs/linear.md`); the production idea box still writes to Linear
-until the cutover in spec 022.
+`kaneo-board` skill holds the shared conventions, and its Definition of Ready is the quality gate. `/kaneo-start-ticket
+JOR-<n>` starts the build from a `todo` ticket and moves it to `in-progress`. A merged pull request does not close its
+ticket: `done` is set by the owner. The full flow is in [docs/ai-workflow.md](docs/ai-workflow.md#the-pipeline).
+`docs/testing/bug-log.md` stays as history and the campaign's log-first rule; `BUG-###` references stay valid. Linear is
+history (`specs/015-linear-backlog/`; `docs/kaneo.md` replaces `docs/linear.md`); the production idea box still writes
+to Linear until the cutover in spec 022.
 
 ## Commits
 
 Every commit subject starts with its Kaneo ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
-`Refs:` trailer naming the SpecKit artefact (`Refs: 015/T004`, `Refs: 011 BUG-020`, or `Refs: NO-CODE`). No ticket yet?
+`Refs:` trailer naming what the commit serves (`Refs: JOR-55`, `Refs: JOR-78/D3` for a recorded decision,
+`Refs: JOR-122/FR-004` for a requirement, or `Refs: NO-CODE` for work with no ticket). `Refs: 011` and `Refs: 011/T004`
+still pass for commits against the frozen specs. No ticket yet?
 Create one first with the `backlog-capture` skill. Pull requests use `.github/pull_request_template.md` and name the
 ticket (`JOR-23` when the PR completes it, `Part of JOR-23` for partial work); a linked pull request moves to In Review,
 and Done is set by the owner. The full rules, the `Refs:` token table and examples
@@ -131,6 +141,7 @@ Read these on-demand when working on related tasks — do not load all at once.
 | `jordylab-project-setup.md` | Scaffolding new modules, adding dependencies, or configuring build tools |
 | `jordylab-project-overview.md` | Needing full context on project goals, monetization angles, or tech decisions |
 | `docs/research/spring-ai-architecture.md` | Designing or reviewing an AI feature in depth (the short rules are in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md`) |
+| `docs/decisions.md` | Reshaping a module, an auth flow, a dependency or a deployment path, or asked why something is built this way |
 | `docs/status.md` | Asked what is built, replaced or planned, or after a feature ships or is replaced |
 | `docs/ai-workflow.md` | Changing agents, skills, models or the pipeline, or asked how work moves from idea to production |
 | `docs/kaneo.md` | Working on the backlog: columns, labels, the MCP sign-in per tool, the GitHub App, saved views, or a rebuild |

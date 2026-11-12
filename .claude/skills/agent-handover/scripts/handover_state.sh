@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Prints the state the next agent needs: git, open PRs, the active spec's tasks and open bugs.
-# Read-only. Usage: handover_state.sh [spec-number]   (e.g. 013; guessed from branch and commits when omitted)
+# Prints the state the next agent needs: git, open PRs, the active ticket and open bugs.
+# Read-only. Usage: handover_state.sh [JOR-number]   (e.g. 122; guessed from the branch and the Refs trailers)
+# The ticket's own state (columns, stories, decisions) is on the board: read it with get_task_by_ticket_id.
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "Not in a git repository" >&2; exit 1; }
@@ -38,19 +39,31 @@ else
   echo "  (gh not installed)"
 fi
 
-section "Active spec"
+section "Active ticket"
+ticket=${1:-}
+if [ -z "$ticket" ]; then
+  # 1) jor-<n> in the branch name, 2) a JOR-<n> (or JOR-<n>/D<k>) in the Refs trailers of this branch
+  ticket=$(printf '%s' "$branch" | grep -oiE 'jor-[0-9]+' | head -1 | sed 's/.*-//')
+  [ -z "$ticket" ] && ticket=$(git log --format='%(trailers:key=Refs,valueonly)' "$base"..HEAD 2>/dev/null \
+    | tr -s ' ,' '\n\n' | grep -oE '^JOR-[0-9]+' | head -1 | sed 's/JOR-//')
+fi
+if [ -n "$ticket" ]; then
+  echo "JOR-$ticket  (read it with get_task_by_ticket_id: ticketId JOR-$ticket, projectId"
+  echo "n98q252x7sd5objcw94xrj9t, workspaceId vnXfguYyxl5dmvNuO1S82f8sH7e9HRTP)"
+  [ -f "docs/handoff/HANDOFF-JOR-$ticket.md" ] && echo "previous handoff: docs/handoff/HANDOFF-JOR-$ticket.md"
+else
+  echo "no ticket found (pass the JOR number as the first argument, or this is NO-CODE work)"
+fi
+
+section "Frozen spec (only for branches that predate JOR-122)"
 spec=${1:-}
 if [ -z "$spec" ]; then
-  # 1) a number in the branch name, 2) Refs: trailers on this branch, 3) the most recently changed tasks.md
-  spec=$(printf '%s' "$branch" | grep -oE '(^|[/-])[0-9]{3}([/-]|$)' | grep -oE '[0-9]{3}' | head -1)
-  [ -z "$spec" ] && spec=$(git log --format='%(trailers:key=Refs,valueonly)' "$base"..HEAD 2>/dev/null \
-    | tr -s ' ,' '\n\n' | grep -E '^[0-9]{3}(/T[0-9]+)?$' | cut -c1-3 | head -1)
-  [ -z "$spec" ] && spec=$(git log -1 --format= --name-only -- 'specs/[0-9]*/tasks.md' 2>/dev/null \
+  spec=$(git log -1 --format= --name-only -- 'specs/[0-9]*/tasks.md' 2>/dev/null \
     | grep -oE 'specs/[0-9]{3}' | grep -oE '[0-9]{3}' | head -1)
 fi
 dir=$(ls -d specs/"${spec:-none}"-*/ 2>/dev/null | head -1)
 if [ -z "$dir" ]; then
-  echo "none found (pass the spec number as the first argument, or this is NO-CODE work)"
+  echo "none (specs/001-024 are frozen history; new work has no tasks.md)"
 else
   dir=${dir%/}
   echo "spec: $dir"
@@ -59,10 +72,7 @@ else
     open=$(grep -cE '^- \[ \]' "$dir/tasks.md")
     done_=$(grep -cE '^- \[[xX]\]' "$dir/tasks.md")
     echo "tasks.md: $done_ done, $open open"
-    echo "open tasks (first 20, cut at 160 chars):"
     grep -nE '^- \[ \]' "$dir/tasks.md" | head -20 | cut -c1-160 | sed 's/^/  /'
-  else
-    echo "no tasks.md yet (spec not planned/tasked)"
   fi
 fi
 

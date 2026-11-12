@@ -16,14 +16,13 @@ Skills (invoke with `/skill-name`):
 - `/kaneo-refinement` — turn a rough ticket into a Ready ticket (functional analyst and customer proxy) and move it to Todo
 - `/kaneo-design` — optional design step for tickets flagged `needs-design` or `needs-ui-design`, then move to Todo
 - `/kaneo-board` — shared Kaneo conventions (columns, labels, Ready template, Definition of Ready); read by the three skills above
-- `/kaneo-start-ticket` — runs before `/speckit-specify JOR-<n>` (SpecKit hook in `.specify/extensions.yml`): moves the ticket to In progress and comments the branch
-- `/backlog-capture`, `/backlog-triage`, `/backlog-sync-drafts` — older Kaneo skills for the Triage inbox and drafts; they still assume the Triage and Drafted columns (see `docs/ai-workflow.md`)
-- `/speckit-taskstoissues` — customised: turns a spec's tasks into Kaneo tickets in project JOR, one per user story and one per phase without a story
+- `/kaneo-start-ticket` — starts building a Ready ticket: makes the `jor-<n>-<slug>` branch, moves it to In progress, comments the branch and loads the ticket into context for Plan Mode
+- `/backlog-capture`, `/backlog-triage` — older Kaneo skills for the Triage inbox; they still assume the Triage and Drafted columns (see `docs/ai-workflow.md#known-drift`)
 - `/dual-agent-config` — set up and audit shared config so Claude Code and OpenCode read the same rules/skills/MCP servers
 - `/agent-handover` — hand work over between Claude Code and OpenCode (wrap up, update tasks/bug log, write
   `HANDOFF-next-agent.md`, print the prompt for the other tool, stop); also used by the agent taking over
 - `/refresh-agent-models` — re-curate the Planner, Reviewer and Worker agent models and effort levels for OpenCode (OpenCode Go) and Claude Code using the Artificial Analysis leaderboards
-- `/model-harness-recommendations` — recommend a model per harness and cost level for SpecKit Plan and Build steps (method only; reads current prices and scores each time)
+- `/model-harness-recommendations` — recommend a model per harness and cost level for planning and building (method only; reads current prices and scores each time)
 - `trading-guard` — background rules for the trading module (human-in-the-loop enforcement, not user-invocable)
 - `jordylab-ops` — production operations knowledge (VPS + k3s, deploys/approvals/rollbacks, SOPS secrets edited in
   IntelliJ, identity/user administration, CNPG backups); the single source of truth, shared natively with OpenCode

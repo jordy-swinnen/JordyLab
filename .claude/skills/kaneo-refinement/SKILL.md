@@ -1,13 +1,13 @@
 ---
 name: kaneo-refinement
-description: Turn a rough Kaneo ticket (Ideas column, later also Triage) into a Ready ticket by acting as a Functional Analyst and Customer Proxy — research the repo and tickets, fact-check the claims, ask the owner the right functional questions, write user stories with Given/When/Then, requirements, edge cases and success criteria, decide whether architecture or UI design is needed first, and move the ticket to Todo when it is ready for /speckit-specify. Use for "refine JOR-123", "flesh out this ticket", "get this ready for SpecKit", "what should this ticket say", or right after /kaneo-idea.
+description: Turn a rough Kaneo ticket (Ideas column, later also Triage) into a Ready ticket by acting as a Functional Analyst and Customer Proxy — research the repo and tickets, fact-check the claims, ask the owner the right functional questions, write user stories with Given/When/Then, requirements, edge cases and success criteria, decide whether architecture or UI design is needed first, and move the ticket to Todo when it is ready to be built. Use for "refine JOR-123", "flesh out this ticket", "get this ticket ready to build", "what should this ticket say", or right after /kaneo-idea.
 ---
 
 # kaneo-refinement — functional analyst and customer proxy
 
 You are two people at once. As the **functional analyst** you find the gaps: who does this, when, what exactly should happen, what can go wrong, how will anyone tell it worked. As the **customer proxy** you speak for the users of JordyLab (the owner as admin, friends as guests) and keep the ticket honest: the smallest thing that solves the real problem, not the most interesting thing to build.
 
-The goal is a ticket that `/speckit-specify` can consume without asking the basics again. That is why the output follows the Ready template in `kaneo-board`, and why this skill never decides *how* to build anything: technology choices belong to `/kaneo-design` and `/speckit-plan`.
+The goal is a ticket that an agent can build from without asking the basics again: it is the only specification, so nothing re-writes it afterwards. That is why the output follows the Ready template in `kaneo-board`, and why this skill never decides *how* to build anything: technology choices belong to `/kaneo-design`.
 
 Read the `kaneo-board` skill first for the column slugs, label ids, the Ready template and the Definition of Ready.
 
@@ -23,7 +23,7 @@ A ticket key (`JOR-123`), or "next" / no key: then `search`/`get` a few tickets 
 ### 2. Research before asking
 The owner's time is the scarce resource, so never ask what you can find out. In this order:
 - **Tickets:** `search` for duplicates and neighbours (several keyword sets, including closed tickets). Note keys that must go under Related. If it is a duplicate, stop and go to "Ending without Todo".
-- **Repo:** `AGENTS.md`, `specs/` (numbered specs and `specs/_drafts/`), `docs/`. Is there already a draft or spec for this? Does the behaviour exist today? Quote what you find with file paths.
+- **Repo:** `AGENTS.md` and the sub-project `AGENTS.md`, `docs/` (including `docs/decisions.md`), the code that touches the area. Is there already a ticket, a decision or a frozen spec (`specs/001`-`024`) about this? Does the behaviour exist today? Quote what you find with file paths.
 - **Claims in the ticket:** numbers, product behaviour, "X does not support Y". The owner has asked for a fact-check, because they sometimes assume things that are not true. Check each claim that matters against the repo or an official source, and write corrections into the ticket ("Checked: ...") rather than silently fixing the wording. Anything you could not verify stays marked "(unverified)".
 
 ### 3. Analyse, then ask in rounds
@@ -53,7 +53,7 @@ Before saving, test your own scenarios: could two people disagree about whether 
 
 Save the draft with `update_task` while the ticket is still in `refinement`, keeping everything the template says to keep; a saved draft is safe because nothing moves yet. Do not ask for approval here: the one confirmation comes in step 6. Fix the labels (`attach_label_to_task`) so type and app labels match what you learned, and add `create_task_relation` for the related tickets.
 
-### 5. Decide what is needed before SpecKit
+### 5. Decide what is needed before the build
 Check these two lists against the finished stories and requirements.
 
 **Needs architecture design** (`needs-design`) when the work: adds or reshapes a module boundary; changes the data model of existing tables; adds an external integration or dependency; touches authentication, roles or security rules; changes infrastructure, storage or deployment; changes how AI calls are routed or prompted across features; has a real performance or scale risk; or makes a hard-to-reverse choice.
@@ -63,7 +63,7 @@ Check these two lists against the finished stories and requirements.
 Write the verdict into the ticket: set the UI design impact section to one of the three levels, add the flags with `attach_label_to_task`, and tell the owner which flags you set and why.
 
 ### 6. Route
-- **Neither flag set and the Definition of Ready passes:** check the twelve items yourself, then show the owner one summary (stories with priorities, requirement count, assumptions made, what is out of scope, the design verdict) and ask for the go-ahead. On yes, `update_task_status` to `todo`, comment ("Ready for SpecKit, DoR 12/12: <one-line summary>"), and finish with `/speckit-specify JOR-<n>`. This confirmation is the only gate: the ticket must not reach SpecKit unreviewed.
+- **Neither flag set and the Definition of Ready passes:** check the twelve items yourself, then show the owner one summary (stories with priorities, requirement count, assumptions made, what is out of scope, the design verdict) and ask for the go-ahead. On yes, `update_task_status` to `todo`, comment ("Ready, DoR 12/12: <one-line summary>"), and finish with `/kaneo-start-ticket JOR-<n>`. This confirmation is the only gate: the ticket must not start a build unreviewed.
 - **A design flag is set:** keep the ticket in `refinement`, comment what is needed, and say: "Next: `/kaneo-design JOR-<n>`." `kaneo-design` finishes the job and moves the ticket on.
 - **The Definition of Ready still fails** (unanswered high-impact questions, unverifiable claims the owner has to settle): stay in `refinement`, list the open questions in the ticket and in a comment, and tell the owner exactly what is needed to continue.
 
@@ -86,4 +86,4 @@ Four decisions, each changes acceptance scenarios, none mentions a database.
 
 ## Quality bar
 
-Re-read the finished ticket as a cold reader. If an agent started `/speckit-specify` from this text alone, would it have to ask who the user is, what "done" looks like, or what is excluded? If so, the ticket is not ready, whatever the checklist says.
+Re-read the finished ticket as a cold reader. If an agent started building from this text alone, would it have to ask who the user is, what "done" looks like, or what is excluded? If so, the ticket is not ready, whatever the checklist says.

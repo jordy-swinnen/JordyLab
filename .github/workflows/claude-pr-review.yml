@@ -37,32 +37,30 @@ jobs:
             - jordylab-fe/AGENTS.md — Angular/Nx conventions
             - jordylab-desktop/AGENTS.md (core/jordylab_scan rules and app conventions), garmin-sync-service/AGENTS.md — Python conventions
             - .claude/rules/*.md — Java, TypeScript/Angular and Python code style rules
-            - .specify/memory/constitution.md — project-wide coding principles
+            - docs/decisions.md — the architectural decisions already recorded, with what they rejected
 
-            ## Spec-driven development (SDD) conformance
+            ## Ticket conformance
 
-            This repo is spec-driven: features are planned under `specs/<NNN-slug>/`
-            (spec.md, plan.md, tasks.md, contracts/) before implementation. Before
-            reviewing the diff:
-            1. Find the active spec directory. Prefer one whose slug matches the PR's
-               branch or title; otherwise use the most recently modified `specs/*/`.
-               If no `specs/` directory exists at all, skip this section entirely —
-               do not block a PR over SDD conformance on a repo with no specs yet.
-            2. Read that directory's `spec.md`, `plan.md`, `tasks.md`, and everything
-               under `contracts/`.
-            3. Cross-check the diff against them and flag, as their own review
-               comments (not folded into unrelated line comments):
-               - Behavior in the diff that isn't backed by any FR/requirement in
-                 spec.md — either the spec is stale or the change is out of scope.
-               - FRs that are clearly in this diff's scope but left unimplemented.
-               - A `contracts/*.md` file describing behavior the code doesn't
-                 actually have (e.g. a documented timeout, return contract, or
-                 config key that doesn't match the implementation) — the contract
-                 doc is supposed to be truth, not aspiration.
-               - `tasks.md` checkboxes marked `[x]` for work that isn't actually
-                 present in this diff or the existing code.
-            This is a conformance check, not a rubber stamp — if the spec and the
-            code already agree, say so briefly rather than inventing findings.
+            This repo is ticket-driven: the specification of a change is its Kaneo ticket
+            (`JOR-<n>`), not a file in the repository. You cannot open the board from this
+            workflow, so work from what the pull request states. Before reviewing the diff:
+            1. Find the `JOR-<n>` key: in the PR title, the branch name, or the `Tickets`
+               section of the description. If there is none, note it once (do not block a
+               `chore:` pull request) and review the diff on its own merits.
+            2. Read `docs/decisions.md` for the decisions recorded under that ticket.
+            3. Cross-check the diff and flag, as their own review comments (not folded into
+               unrelated line comments):
+               - Behaviour that nothing in the description, the requirements it names or
+                 `docs/decisions.md` backs — either the description is stale or the change
+                 is out of scope.
+               - A requirement the description says this PR implements but whose behaviour
+                 is not in the diff.
+               - Code that contradicts a recorded decision in `docs/decisions.md` without a
+                 new decision explaining why it changed.
+               - A change that alters a standing rule but leaves `AGENTS.md` (root or
+                 sub-project) saying the old thing.
+            Do not invent requirements when the description is thin: say what you could not
+            check and why, once, and continue with the rest of the review.
 
             Apply what those files actually say, including but not limited to:
             - Spring Modulith boundaries: module root package is the public
