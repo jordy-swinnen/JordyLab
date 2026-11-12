@@ -19,7 +19,6 @@ describe('ScanSourceStore', () => {
   const setSourceEnabled = vi.fn<GameCatalogApiService['setSourceEnabled']>();
   const getHideImpact = vi.fn<GameCatalogApiService['getHideImpact']>();
   const setHostDisplayName = vi.fn<GameCatalogApiService['setHostDisplayName']>();
-  const getScanClient = vi.fn<GameCatalogApiService['getScanClient']>();
   const getLibraryStatus = vi.fn<GameCatalogApiService['getLibraryStatus']>();
   const syncOwnedLibrary = vi.fn<GameCatalogApiService['syncOwnedLibrary']>();
   const syncFamilyLibrary = vi.fn<GameCatalogApiService['syncFamilyLibrary']>();
@@ -37,7 +36,6 @@ describe('ScanSourceStore', () => {
           setSourceEnabled,
           getHideImpact,
           setHostDisplayName,
-          getScanClient,
           getLibraryStatus,
           syncOwnedLibrary,
           syncFamilyLibrary,
@@ -58,8 +56,6 @@ describe('ScanSourceStore', () => {
     getHideImpact.mockReturnValue(of({ hiddenGames: 87, stillVisibleElsewhere: 5 }));
     setSourceEnabled.mockReset();
     setSourceEnabled.mockImplementation((id, enabled) => of({ id, enabled }));
-    getScanClient.mockReset();
-    getScanClient.mockReturnValue(of(new Blob(['#!/bin/sh'])));
     getLibraryStatus.mockReset();
     getLibraryStatus.mockReturnValue(of(anEmptyLibraryStatus()));
     syncOwnedLibrary.mockReset();
@@ -338,58 +334,6 @@ describe('ScanSourceStore', () => {
 
       expect(setHostDisplayName).toHaveBeenCalledTimes(1);
       expect(spectator.service.renamingHostId()).toBe(steam.hostId);
-    });
-  });
-
-  describe('downloadClient', () => {
-    const onReady = vi.fn<(blob: Blob) => void>();
-
-    beforeEach(() => {
-      onReady.mockReset();
-      spectator = createService();
-    });
-
-    it('hands the generated script to the callback', () => {
-      const blob = new Blob(['#!/bin/sh']);
-      getScanClient.mockReturnValue(of(blob));
-
-      spectator.service.downloadClient('steam', onReady);
-
-      expect(getScanClient).toHaveBeenCalledWith('steam');
-      expect(onReady).toHaveBeenCalledWith(blob);
-      expect(spectator.service.downloading()).toBeNull();
-    });
-
-    it('marks the library as downloading until the script arrives', () => {
-      const script = new Subject<Blob>();
-      getScanClient.mockReturnValue(script.asObservable());
-
-      spectator.service.downloadClient('emudeck', onReady);
-
-      expect(spectator.service.downloading()).toBe('emudeck');
-
-      script.next(new Blob([]));
-
-      expect(spectator.service.downloading()).toBeNull();
-    });
-
-    it('ignores a download while another is in flight', () => {
-      getScanClient.mockReturnValue(new Subject<Blob>().asObservable());
-
-      spectator.service.downloadClient('steam', onReady);
-      spectator.service.downloadClient('emudeck', onReady);
-
-      expect(getScanClient).toHaveBeenCalledTimes(1);
-    });
-
-    it('reports a failure without calling the callback', () => {
-      getScanClient.mockReturnValue(throwError(() => new Error('network error')));
-
-      spectator.service.downloadClient('steam', onReady);
-
-      expect(spectator.service.error()).toBe('Failed to generate the steam scan client.');
-      expect(spectator.service.downloading()).toBeNull();
-      expect(onReady).not.toHaveBeenCalled();
     });
   });
 

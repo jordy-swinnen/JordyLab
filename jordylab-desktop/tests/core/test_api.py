@@ -3,7 +3,6 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-
 from jordylab_scan import api
 from jordylab_scan.config import AppConfig
 

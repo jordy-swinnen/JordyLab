@@ -114,7 +114,6 @@ public class IdentitySecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/api/identity/me/preferences").authenticated()
                         .requestMatchers("/api/identity/passkeys/**").authenticated()
                         .requestMatchers("/api/identity/users/**", "/api/identity/machines/**").hasRole("admin")
-                        .requestMatchers("/api/gamecatalog/ingest/client").hasRole("admin")
                         .requestMatchers("/api/fna/**", "/api/settings/**").hasRole("admin")
                         .requestMatchers(HttpMethod.GET, "/api/gamecatalog/games/**",
                                 "/api/gamecatalog/platforms", "/api/gamecatalog/places")

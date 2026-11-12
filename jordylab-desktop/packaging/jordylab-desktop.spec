@@ -12,18 +12,19 @@ bundled without being copied into this tree.
 from pathlib import Path
 
 root = Path(SPECPATH).parent
-scanner = root.parent / "gamecatalog-scanner" / "src"
+core = root / "core"
 notices = root / "THIRD-PARTY-NOTICES.md"
 
 a = Analysis(
     [str(root / "packaging" / "launcher.py")],
-    pathex=[str(root / "src"), str(scanner)],
+    pathex=[str(root / "src"), str(core)],
     binaries=[],
     datas=[(str(notices), ".")],
     hiddenimports=[
         "jordylab_scan",
         "jordylab_scan.api",
         "jordylab_scan.auth",
+        "jordylab_scan.collect",
         "jordylab_scan.config",
         "jordylab_scan.grouping",
         "jordylab_scan.manifest",

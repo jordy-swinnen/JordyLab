@@ -211,7 +211,9 @@ class MainWindow(QMainWindow):
             detail = f"{result.games} games" if result.games else ""
             if result.outcome in (APPLIED, UP_TO_DATE):
                 when = report.finished_at.replace("T", " ").replace("Z", " UTC")
-                detail = f"{result.games} games · {when}" if result.games else f"Up to date · {when}"
+                detail = (
+                    f"{result.games} games · {when}" if result.games else f"Up to date · {when}"
+                )
             elif result.outcome == NO_CONTENT:
                 detail = "No library found on this PC"
             elif result.outcome == NO_SOURCE:

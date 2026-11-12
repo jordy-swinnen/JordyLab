@@ -3,7 +3,6 @@ import os
 import stat
 
 import pytest
-
 from jordylab_scan import auth
 from jordylab_scan.api import ReauthRequired
 
@@ -35,14 +34,18 @@ def test_get_token_without_any_token_asks_for_a_login(tmp_path, monkeypatch):
 
 def test_prompt_login_rejects_foreign_tokens(tmp_path):
     with pytest.raises(ReauthRequired):
-        auth.prompt_login(path=tmp_path / "token.json", stream=open(os.devnull, "w"),
-                          prompt=lambda _prompt: "not-a-token")
+        auth.prompt_login(
+            path=tmp_path / "token.json",
+            stream=open(os.devnull, "w"),
+            prompt=lambda _prompt: "not-a-token",
+        )
 
 
 def test_prompt_login_saves_a_machine_token(tmp_path):
     token_file = tmp_path / "token.json"
-    auth.prompt_login(path=token_file, stream=open(os.devnull, "w"),
-                      prompt=lambda _prompt: "jlmt_pasted")
+    auth.prompt_login(
+        path=token_file, stream=open(os.devnull, "w"), prompt=lambda _prompt: "jlmt_pasted"
+    )
 
     assert auth.load_token(path=token_file) == {"token": "jlmt_pasted"}
 

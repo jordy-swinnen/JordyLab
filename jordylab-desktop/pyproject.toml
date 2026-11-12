@@ -24,11 +24,11 @@ dev = [
 jordylab-desktop = "jordylab_desktop.app:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "core"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../gamecatalog-scanner/src"]
+pythonpath = ["src", "core"]
 addopts = "-q"
 
 [tool.coverage.run]
