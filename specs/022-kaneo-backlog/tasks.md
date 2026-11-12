@@ -321,11 +321,11 @@ no key answers "backlog unavailable".
 
 **Independent Test**: `quickstart.md` step 10 with the production App and a throwaway ticket.
 
-- [ ] T066 [US6] Rewrite `.github/instructions/commits-and-pull-requests.instructions.md` from the trial's matrix (T010/T011): which
+- [X] T066 [US6] Rewrite `.github/instructions/commits-and-pull-requests.instructions.md` from the trial's matrix (T010/T011): which
       branch names, title patterns and words link, which finish a ticket, and the commit-linking statement; keep the
       `JOR-n:` subject rule and the `Refs:` table unchanged. [B]
-- [ ] T067 [P] [US6] Update `.github/pull_request_template.md` and `.github/copilot-instructions.md` to match T066. [B]
-- [ ] T068 [P] [US6] Update message text only in `.githooks/commit-msg` and `.github/workflows/commit-refs.yml` (ticket creation points to
+- [X] T067 [P] [US6] Update `.github/pull_request_template.md` and `.github/copilot-instructions.md` to match T066. [B]
+- [X] T068 [P] [US6] Update message text only in `.githooks/commit-msg` and `.github/workflows/commit-refs.yml` (ticket creation points to
       `backlog-capture`, no Linear wording); run the hook's own tests and `bash .githooks` cases if present. [B]
 - [ ] T069 [US6] OWNER [B] before the merge: create the GitHub App for Kaneo with the permissions, name and webhook URL
       (`https://kaneo.jordylab.be` + the trial's path) the trial recorded, and add `KANEO_GITHUB_APP_ID`,

@@ -8,7 +8,7 @@ One source for every reader: Claude Code (`@` import in `CLAUDE.md`), OpenCode (
 and GitHub Copilot (`.github/copilot-instructions.md` points here). Enforced by `.githooks/commit-msg` locally and by
 the `Commit References` workflow on every pull-request commit. Never bypass it with `--no-verify`.
 
-## Every commit starts with its Linear ticket
+## Every commit starts with its Kaneo ticket
 
 ```
 JOR-55: adding a button
@@ -42,22 +42,28 @@ with a ticket.
 
 ## Pull requests
 
-- **Title**: the same shape as a commit subject, with the ticket the PR completes: `JOR-23: Linear backlog and GitHub MCP fix`.
+Kaneo links a pull request to a ticket through the branch name (the project's branch pattern, e.g. `jor-23-short-title`;
+`jordyswinnen/jor-23-short-title` matches too), or through the key anywhere in the title or description (`JOR-23`,
+`fix(JOR-23): …`, `task: 23`, a copied task link). A linked pull request moves the ticket: the first push to its branch
+moves it to *In Progress*, opening the pull request to *In Review*, and merging it to *Done* (the project's default
+automations, see `specs/022-kaneo-backlog/contracts/board-conventions.md`).
+
+- **A linked pull request finishes its ticket on merge.** So link a ticket only when the pull request finishes it: put the
+  key in the title (`JOR-23: <summary>`) and in the branch name. A pull request that does not finish its ticket must not
+  carry the key in its title, description or branch name — the commit subjects still start with it, and the description
+  can name the spec instead ("spec 022").
+- **`Fixes` and `Part of` are not read.** Kaneo does not parse linking words: any mention of the key links the pull
+  request. The words may stay as human-readable text, but they never keep a ticket open.
+- **Provisional until the matrix runs.** These rules follow Kaneo's documentation. The GitHub App matrix (spec 022, T010)
+  runs on production against a scratch repository before the import; T071 confirms each case and this section is fixed
+  if reality differs.
+- **Title**: the same shape as a commit subject, with the ticket the PR finishes: `JOR-85: moving the backlog to Kaneo`.
 - **Description** (the template in `.github/pull_request_template.md` has the headings):
   1. **What**: two to five lines on the change and why it exists.
   2. **How it was verified**: commands run and results, and what was *not* checked.
-  3. **Tickets**: a linking word and the key (below), one line per ticket.
+  3. **Tickets**: the key this PR finishes (merging moves it to *Done*), one line per ticket; a partial PR says what it is
+     part of without the key.
   4. **Refs**: the spec and tasks, as in the commit trailer.
-- **Linking words** (Linear reads them in the PR title and description, not in comments):
-  - `Fixes JOR-23`, `Closes`, `Resolves`, `Completes`, `Implements`: the ticket moves to *Done* when the PR merges. Use
-    only on the PR that finishes the ticket.
-  - `Refs JOR-23`, `Part of JOR-23`, `Towards JOR-23`: links without completing. Use for partial work.
-  - **A key alone completes the ticket.** A key in the PR title or in the branch name links the PR, and merging moves
-    the ticket to *Done* (PR #159 did this to JOR-23 by mistake). A PR that does not finish its ticket must say
-    `Part of JOR-n` (or `Refs JOR-n`) in the description; Linear then leaves the ticket open (PR #160 did this for
-    JOR-15 and JOR-22). Put the key of the ticket the PR finishes in the title.
-  - Linear also links a PR whose **branch name** contains the key (`jordyswinnen/jor-23-…`, from Linear's "copy branch
-    name"), and moves the ticket to *In Progress* when the PR opens.
 - **One pull request per spec** (spec, plan, tasks and implementation on one branch), several tickets allowed.
 - Never put secrets or personal data in a message or description.
 - An agent ends its PR description with the attribution line its host gives it.
@@ -66,4 +72,5 @@ with a ticket.
 
 Before `git commit`: find the ticket (the branch name, the task's `Refs:`, or ask once), write the subject with it (`JOR-55: adding a button`),
 run the hook by committing normally. If the hook blocks, fix the message; never bypass it. Before opening a
-PR: use the template headings and the right linking word. Do not push or merge unless asked.
+PR: use the template headings, and put the key in the title only when the pull request finishes the ticket; a partial
+pull request keeps the key out of its title, description and branch name. Do not push or merge unless asked.

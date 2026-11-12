@@ -1,5 +1,5 @@
 #!/bin/sh
-# commit-msg — every commit starts with its Linear ticket and names the SpecKit artefact it serves.
+# commit-msg — every commit starts with its Kaneo ticket and names the SpecKit artefact it serves.
 #
 # Rule 1 (since 2026-11-02): the subject starts with the ticket key and a colon, `JOR-<n>: <summary>`, e.g.
 #   JOR-55: adding a button
@@ -37,7 +37,7 @@ esac
 
 if [ -z "$commit_time" ] || [ "$commit_time" -ge "$ticket_rule_cutoff" ]; then
   if ! printf '%s' "$subject" | grep -Eq '^JOR-[1-9][0-9]{0,5}: .*[^ ]'; then
-    echo "commit-msg: the subject must start with the Linear ticket and a colon, e.g. 'JOR-55: adding a button'." >&2
+    echo "commit-msg: the subject must start with the Kaneo ticket and a colon, e.g. 'JOR-55: adding a button'." >&2
     echo "  No ticket yet? Create one first (backlog-capture skill: 'make a ticket for ...'), then commit." >&2
     echo "  See .github/instructions/commits-and-pull-requests.instructions.md." >&2
     exit 1
