@@ -71,16 +71,16 @@ describe('InboxStore', () => {
     expect(accept).toHaveBeenCalledWith('ticket-1', 'Repro on CachyOS too.');
   });
 
-  it('surfaces the Linear-unavailable reason and keeps the ticket list', () => {
+  it('surfaces the backlog-unavailable reason and keeps the ticket list', () => {
     spectator = createService();
     accept.mockReturnValue(
-      throwError(() => new HttpErrorResponse({ status: 503, error: { reason: 'LINEAR_UNAVAILABLE' } }))
+      throwError(() => new HttpErrorResponse({ status: 503, error: { reason: 'BACKLOG_UNAVAILABLE' } }))
     );
 
     spectator.service.accept('ticket-1', null);
 
     expect(spectator.service.error()).toBe(
-      'Linear is unreachable right now — the ticket stays as it was, so you can retry.'
+      'The backlog is unreachable right now — the ticket stays as it was, so you can retry.'
     );
     expect(spectator.service.tickets().length).toBe(1);
     expect(spectator.service.actioningId()).toBeNull();

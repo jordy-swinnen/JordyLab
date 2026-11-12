@@ -3,7 +3,7 @@ package dev.jordy.jordylab.feedback.service;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketState;
 import dev.jordy.jordylab.feedback.domain.repository.FeedbackTicketRepository;
-import dev.jordy.jordylab.feedback.rest.client.LinearClient;
+import dev.jordy.jordylab.feedback.rest.client.BacklogClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,7 @@ import java.util.UUID;
  * the ticket carries a previous {@code acceptError}, Linear is searched first (team + exact title
  * + the {@code Source: idea box} marker) and a matching issue is adopted instead of created.
  *
- * <p>The transaction deliberately does not roll back on {@link LinearUnavailableException}: the
+ * <p>The transaction deliberately does not roll back on {@link BacklogUnavailableException}: the
  * failure is recorded on the ticket (and any note the admin typed is kept), so the admin sees why
  * Accept failed and can retry.
  */
@@ -29,13 +29,13 @@ import java.util.UUID;
 public class AcceptTicketService {
 
     private final FeedbackTicketRepository ticketRepository;
-    private final LinearClient linearClient;
+    private final BacklogClient backlogClient;
 
-    @Transactional(noRollbackFor = LinearUnavailableException.class)
+    @Transactional(noRollbackFor = BacklogUnavailableException.class)
     public FeedbackTicket accept(UUID id, String privateNote) {
         FeedbackTicket ticket = ticketRepository.findByIdForAccept(id)
                 .orElseThrow(() -> new TicketNotFoundException("ticket not found: " + id));
-        if (ticket.getLinearIssueId() != null) {
+        if (ticket.getBacklogTicketId() != null) {
             return ticket;
         }
         if (ticket.getState() != FeedbackTicketState.NEW && ticket.getState() != FeedbackTicketState.BACKLOG) {
@@ -48,14 +48,14 @@ public class AcceptTicketService {
             ticket.updateTexts(ticket.getReply() == null ? "" : ticket.getReply(), privateNote);
         }
         try {
-            LinearClient.LinearIssue issue = ticket.getAcceptError() == null
-                    ? linearClient.createIssue(ticket, ticket.getPrivateNote())
-                    : linearClient.findIssue(ticket.getTitle())
-                            .orElseGet(() -> linearClient.createIssue(ticket, ticket.getPrivateNote()));
+            BacklogClient.BacklogTicket issue = ticket.getAcceptError() == null
+                    ? backlogClient.createTicket(ticket, ticket.getPrivateNote())
+                    : backlogClient.findTicket(ticket)
+                            .orElseGet(() -> backlogClient.createTicket(ticket, ticket.getPrivateNote()));
             ticket.markAccepted(issue.id(), issue.url());
 
             return ticket;
-        } catch (LinearUnavailableException exception) {
+        } catch (BacklogUnavailableException exception) {
             ticket.recordAcceptError(exception.getMessage());
             throw exception;
         }

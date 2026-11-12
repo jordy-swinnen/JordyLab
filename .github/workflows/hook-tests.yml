@@ -6,7 +6,8 @@ on:
       - '.claude/hooks/**'
       - '.githooks/**'
       - 'scripts/mcp/**'
-      - '.claude/skills/linear-sync-drafts/**'
+      - '.claude/skills/backlog-sync-drafts/**'
+      - 'scripts/kaneo/**'
 
 jobs:
   guard-cases:
@@ -35,8 +36,14 @@ jobs:
       - name: Run GitHub MCP launcher fixtures
         run: bash scripts/mcp/tests/github-mcp-cases.sh
 
-      - name: Run Linear sync inventory fixtures
-        run: bash .claude/skills/linear-sync-drafts/scripts/tests/inventory-cases.sh
+      - name: Run backlog sync inventory fixtures
+        run: bash .claude/skills/backlog-sync-drafts/scripts/tests/inventory-cases.sh
 
-      - name: Run Linear sync open-bugs fixtures
-        run: bash .claude/skills/linear-sync-drafts/scripts/tests/open-bugs-cases.sh
+      - name: Run backlog sync open-bugs fixtures
+        run: bash .claude/skills/backlog-sync-drafts/scripts/tests/open-bugs-cases.sh
+
+      - name: Install Kaneo tooling test dependencies
+        run: python -m pip install -r scripts/kaneo/requirements-dev.txt
+
+      - name: Run Kaneo tooling tests
+        run: python -I -m pytest scripts/kaneo/tests

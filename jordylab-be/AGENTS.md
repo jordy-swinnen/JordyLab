@@ -304,20 +304,14 @@ class SomeObjectTestBuilder {
   Rejected (Accepted and Rejected are terminal). One aggregate (`FeedbackTicket`), one module;
   `/api/feedback/tickets` + `/api/feedback/apps` are guest-only, `/api/feedback/inbox/**` admin-only — both gated in
   `SecurityConfig`, never by method security.
-- **Accepting a ticket creates exactly one Linear issue** in team `JOR` (Triage state, App/Type labels,
-  `Source: idea box`, no guest personal data) through `LinearClient`, a hand-built GraphQL JSON client over a
-  module-private `RestClient` with short timeouts. Auth is Jordy's **personal API key** (`LINEAR_API_KEY`, SOPS
-  secret in prod; unset means Accept fails fast with `503 LINEAR_UNAVAILABLE`). Idempotency: the ticket is loaded
-  under a pessimistic row lock across the Linear call; a ticket with `linear_issue_id` never calls Linear again,
-  and a retry after a recorded `accept_error` searches Linear first and adopts the issue a timed-out attempt
-  already created instead of making a second one.
+- **Accepting a ticket creates exactly one backlog ticket** (spec 022): a Kaneo task in project `JOR` (Triage column, App and Type labels, `Source: idea box`, no guest personal data) through `KaneoClient`, behind the `BacklogClient` interface. `jordylab.feedback.backlog.provider` (`BACKLOG_PROVIDER`) selects the client: `kaneo` by default, `linear` until the cutover (production keeps `linear` through a GitHub repository variable). A blank value matches neither client and fails at start-up, so the deploy always renders a value. `LinearClient` stays until the follow-up pull request (spec 022, User Story 7). Both clients are hand-built JSON clients over module-private `RestClient`s with short timeouts and throw `BacklogUnavailableException` (`503 BACKLOG_UNAVAILABLE`). Kaneo auth is the backend's own API key (`KANEO_API_KEY`, production environment secret; unset means Accept fails fast). Idempotency: the ticket is loaded under a pessimistic row lock across the backlog call; a ticket with `backlog_ticket_id` never calls the backlog again, and a retry after a recorded `accept_error` searches the backlog first (`findTicket`) and adopts the ticket a timed-out attempt already created, completing its labels, instead of making a second one. Kaneo labels are read fresh per accept (one row per task, so label ids are not cached).
 - **Notification**: the submission service calls the shared `NtfyClient` directly (the post-018 pattern — the
   mobile module and its event listener are gone): one push with sender, app and type, never the ticket text, and a
   click-through to `/settings/inbox`. `UserAccessRemoved` anonymises a deleted account's tickets (display name
   cleared, tickets kept).
 - Guest view vs admin view are separate DTO records: a guest response never carries the sender, the private
-  note, the Linear link or the accept error. Two admin texts per ticket: the guest-visible `reply` and the
-  `private_note` (the Accept note is that private note, snapshotted into the Linear issue).
+  note, the backlog link or the accept error. Two admin texts per ticket: the guest-visible `reply` and the
+  `private_note` (the Accept note is that private note, snapshotted into the backlog ticket).
 - Frontend: `libs/feedback/{api,ui}` (scope `feedback`); the host composes `/settings` as a children array —
   admin-and-guest guarded at the root, each tab re-guarded (`feedback` guest-only, `inbox` admin-only), with a
   role-aware default redirect. `settingsAdminRoutes` is exported by the settings lib for that composition.
@@ -356,10 +350,10 @@ class SomeObjectTestBuilder {
 - The old static `GAMECATALOG_INGEST_TOKEN` and `IngestAuthFilter` are gone — never reintroduce them. The scan client
   handles its own `jlmt_` machine token (created in Settings → Machines) and caches it at `~/.config/jordylab/scan/token.json`.
 
-# Game library scan flow (feature 003 — Python client)
+# Game library scan flow (feature 003, now the desktop sync app — spec 024)
 
-- Users download a per-library Python client via the web UI's source-manager page → `GET /api/gamecatalog/ingest/client` renders `jordylab-scan-template.py` (frozen from `gamecatalog-scanner/` by `tools/build_client.py`) into `text/x-python`.
-- The client (`gamecatalog-scanner/`) authenticates with its `jlmt_` machine token, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so.
+- Scans come from the **desktop sync app** (`jordylab-desktop/`), downloaded from Settings → Downloads. The script download endpoint (`GET /api/gamecatalog/ingest/client`), the frozen template and `ClientService` were removed with the script client; do not reintroduce them.
+- The app authenticates with its `jlmt_` machine token, then on each run asks `POST /api/gamecatalog/ingest/check` whether a scan is needed — sending a stable `machineId` and an opaque metadata fingerprint (`last_client_digest`) — and only uploads to `/api/gamecatalog/ingest/scan` when the server says so. Its scan rules live in `jordylab-desktop/core/jordylab_scan` (the retired client's rules, unchanged).
 - `ScanService` resolves-or-adopts a `ScanSource` keyed on `(machine_id, sourceType)` falling back to `(hostname, sourceType)`; client-grouped EmuDeck `games[]` take precedence over the path-inference `LibraryParser` backstop; Steam VDF parsing stays server-side.
 - Change detection is **server-authoritative**: `scanNeeded = fingerprint differs OR stored ingest_version < CURRENT_INGEST_VERSION OR lastOutcome ∉ {APPLIED, NO_CHANGE}`. The digest is equality-only — the client never controls invalidation.
 - Safety: a scan whose resulting installed set is empty, or that would remove more than `jordylab.gamecatalog.scan.max-shrink-fraction` (default 0.5) of a source's installed games, is `REJECTED` with `SNAPSHOT_SHRINK_SUSPECT` unless `force` is set. The client skips (exit 5) explicitly configured roots that are missing/unreadable/empty.
@@ -410,7 +404,7 @@ class SomeObjectTestBuilder {
 - **Marks.** One of `WANT_TO_PLAY | PLAYED_LIKED | PLAYED_DISLIKED` per person per game (`PUT /games/{id}/mark`, subject from the signed-in user, upsert on the unique index). Totals are public, voters never. `UserAccessRemoved` (published by the `identity` module) deletes a removed account's marks.
 - **ROM status.** `UNKNOWN | VALIDATED | BROKEN` per emulated copy (`PUT /games/{id}/installations/{installationId}/rom-status`, `409 ROM_STATUS_NOT_APPLICABLE` for others). It lives on the installation, so rescans and the grace period keep it.
 - **LibBot** (`service/libbot`, SSE `POST /libbot/ask`): interpret (typed facts, temperature 0) → `ConstraintDeriver` (rules in Java: six people = 6+ local players) → `CandidateRetriever` (SQL + pgvector + tsvector fallback; unknown facts are reported, not matched; votes order only games that already satisfy the requirements; the asker's disliked games and games whose only copies are broken are left out) → `AnswerComposer` (temperature 0.3) → `LibBotAnswerValidator` (≤ 10 references, all named in the text). The unknown note keeps a missing player count apart from a missing local-multiplayer flag (JOR-83). Session memory of the last 10 exchanges in `ConversationStore` (in process, keyed by user and conversation). Guests have a daily allowance counted by `LibBotMessageAnswered` in `settings`; `GET /libbot/quota` lives in `settings`.
-- **Tests that guard it:** `GoldenReplayTest` (recorded model output, in CI), `GoldenLiveTest` (`./gradlew goldenLive`, real models, needs `OPENROUTER_API_KEY`; the `golden-live` job runs it on `main` and gates image publishing, JOR-88), `IgdbPlatformCatalogCheck` (`./gradlew igdbCheck`, needs IGDB keys), `GameFilterQueryTest`, `CandidateRetrieverTest`, `MarkServiceTest`, the e2e journeys.
+- **Tests that guard it:** `GoldenReplayTest` (recorded model output, in CI), `GoldenLiveTest` (`./gradlew goldenLive`, real models, needs `OPENROUTER_API_KEY`; the `golden-live` job runs it on a push to `main` that changes AI code and gates image publishing when it runs, JOR-88, JOR-100; `golden-live.yml` also runs it on demand and weekly), `IgdbPlatformCatalogCheck` (`./gradlew igdbCheck`, needs IGDB keys), `GameFilterQueryTest`, `CandidateRetrieverTest`, `MarkServiceTest`, the e2e journeys.
 - **Descriptions.** `DescriptionQualityValidator` (2 to 4 sentences, about 40 to 110 words, third person, no scores, no filler, no contradicting year) gates every AI description; one retry with the reason; a rejected text is never stored. Authorship (`descriptionModel` = what the provider reported, `descriptionRequestedModel` only when different, `descriptionWrittenAt`) is returned as `description{…}` with `factSources{…}`.
 - **Embeddings.** `GameEmbeddingService` embeds title, genres, developer and description into `game_embedding` (`vector(1536)`, HNSW cosine); `GAMECATALOG_EMBEDDING` is a non-selectable feature. Production needs the `vector` extension: `deploy/k8s/cluster/cnpg-database.yaml`.
 

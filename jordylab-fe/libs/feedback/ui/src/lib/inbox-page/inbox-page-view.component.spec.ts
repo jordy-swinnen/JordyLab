@@ -97,18 +97,18 @@ describe('InboxPageViewComponent', () => {
     ]);
   });
 
-  it('shows the Linear link and the last accept error when present', () => {
+  it('shows the backlog link and the last accept error when present', () => {
     render([
       anInboxTicketMock({
         state: 'ACCEPTED',
-        linearIssueUrl: 'https://linear.app/jordylab/issue/JOR-101',
-        acceptError: 'Linear is unreachable',
+        backlogTicketUrl: 'https://kaneo.jordylab.be/dashboard/workspace/ws-1/project/proj-1/board',
+        acceptError: 'The backlog is unreachable',
       }),
     ]);
 
-    expect(spectator.query('[data-testid="inbox-linear-link"]')).toBeTruthy();
+    expect(spectator.query('[data-testid="inbox-backlog-link"]')).toBeTruthy();
     expect(spectator.query('[data-testid="inbox-accept-error"]')?.textContent).toContain(
-      'Linear is unreachable'
+      'The backlog is unreachable'
     );
   });
 

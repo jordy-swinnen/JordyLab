@@ -2,7 +2,7 @@ package dev.jordy.jordylab.feedback.rest.controller;
 
 import dev.jordy.jordylab.feedback.service.FeedbackAppNotAllowedException;
 import dev.jordy.jordylab.feedback.service.FeedbackLimitReachedException;
-import dev.jordy.jordylab.feedback.service.LinearUnavailableException;
+import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import dev.jordy.jordylab.feedback.service.TicketNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,12 +36,12 @@ public class FeedbackExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorBody("NOT_FOUND"));
     }
 
-    @ExceptionHandler(LinearUnavailableException.class)
-    public ResponseEntity<ErrorBody> handleLinearUnavailable(LinearUnavailableException exception) {
+    @ExceptionHandler(BacklogUnavailableException.class)
+    public ResponseEntity<ErrorBody> handleBacklogUnavailable(BacklogUnavailableException exception) {
         // The message names only the failing step (never the key or a request body); without it a
         // rejected credential would surface as a bare 503 with nothing in the log.
-        log.warn("Linear call failed: {}", exception.getMessage());
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorBody("LINEAR_UNAVAILABLE"));
+        log.warn("Backlog call failed: {}", exception.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorBody("BACKLOG_UNAVAILABLE"));
     }
 
     @ExceptionHandler(IllegalStateException.class)

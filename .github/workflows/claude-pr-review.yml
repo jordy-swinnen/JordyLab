@@ -35,7 +35,7 @@ jobs:
             - AGENTS.md (root) — architecture principles, module boundaries
             - jordylab-be/AGENTS.md — Java/Spring Modulith/Flyway conventions
             - jordylab-fe/AGENTS.md — Angular/Nx conventions
-            - gamecatalog-scanner/AGENTS.md and garmin-sync-service/AGENTS.md — Python conventions
+            - jordylab-desktop/AGENTS.md (core/jordylab_scan rules and app conventions), garmin-sync-service/AGENTS.md — Python conventions
             - .claude/rules/*.md — Java, TypeScript/Angular and Python code style rules
             - .specify/memory/constitution.md — project-wide coding principles
 

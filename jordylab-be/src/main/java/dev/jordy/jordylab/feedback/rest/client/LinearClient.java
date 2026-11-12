@@ -6,10 +6,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.jordy.jordylab.feedback.FeedbackProperties;
 import dev.jordy.jordylab.feedback.domain.FeedbackApp;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
-import dev.jordy.jordylab.feedback.service.LinearUnavailableException;
+import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -25,16 +26,18 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The module's only outbound integration (contracts/linear-client.md): Linear's GraphQL API over a
+ * The Linear implementation of {@link BacklogClient} (contracts/linear-client.md), kept until the follow-up
+ * pull request that removes Linear: Linear's GraphQL API over a
  * private {@code RestClient} with short timeouts, authenticated with Jordy's personal API key
  * (header value as-is, no {@code Bearer} prefix — Linear's documented scheme). One mutation
  * ({@code issueCreate}) plus three cached lookups (team by key, the Triage workflow state, the
  * App/Type labels) and the adopt-on-retry search. Never logs or rethrows response bodies.
  */
 @Component
+@ConditionalOnProperty(name = "jordylab.feedback.backlog.provider", havingValue = "linear")
 @Slf4j
 @RequiredArgsConstructor
-public class LinearClient {
+public class LinearClient implements BacklogClient {
 
     private static final String TRIAGE_STATE_NAME = "Triage";
     private static final String SOURCE_LINE = "Source: idea box";
@@ -106,7 +109,8 @@ public class LinearClient {
      * Creates the one Triage issue for an accepted ticket, labelled App and Type, with the
      * guest-marked description and the source line last (FR-009–FR-012).
      */
-    public LinearIssue createIssue(FeedbackTicket ticket, String privateNote) {
+    @Override
+    public BacklogTicket createTicket(FeedbackTicket ticket, String privateNote) {
         String team = teamId();
         Map<String, String> labels = labelIds();
         Map<String, Object> input = new LinkedHashMap<>();
@@ -118,24 +122,26 @@ public class LinearClient {
         JsonNode data = execute(ISSUE_CREATE_QUERY, Map.of("input", input));
         JsonNode issueCreate = data.path("issueCreate");
         if (!issueCreate.path("success").asBoolean(false)) {
-            throw new LinearUnavailableException("Linear did not create the issue");
+            throw new BacklogUnavailableException("Linear did not create the issue");
         }
         JsonNode issue = issueCreate.path("issue");
 
-        return new LinearIssue(issue.path("id").asText(), issue.path("url").asText());
+        return new BacklogTicket(issue.path("id").asText(), issue.path("url").asText());
     }
 
     /**
      * The adopt-on-retry search: a previous accept may have created the issue before failing
      * locally. Only ever called for a ticket that carries an {@code acceptError}.
      */
-    public Optional<LinearIssue> findIssue(String title) {
+    @Override
+    public Optional<BacklogTicket> findTicket(FeedbackTicket ticket) {
+        String title = ticket.getTitle();
         JsonNode data = execute(ISSUE_SEARCH_QUERY, Map.of("teamId", teamId(), "title", title));
         JsonNode nodes = data.path("issues").path("nodes");
         if (nodes.isArray() && !nodes.isEmpty()) {
             JsonNode issue = nodes.get(0);
 
-            return Optional.of(new LinearIssue(issue.path("id").asText(), issue.path("url").asText()));
+            return Optional.of(new BacklogTicket(issue.path("id").asText(), issue.path("url").asText()));
         }
 
         return Optional.empty();
@@ -149,7 +155,7 @@ public class LinearClient {
         JsonNode data = execute(TEAM_QUERY, Map.of("key", properties.linear().teamKey()));
         JsonNode nodes = data.path("teams").path("nodes");
         if (!nodes.isArray() || nodes.isEmpty()) {
-            throw new LinearUnavailableException(
+            throw new BacklogUnavailableException(
                     "Linear team '" + properties.linear().teamKey() + "' not found");
         }
         teamId = nodes.get(0).path("id").asText();
@@ -170,7 +176,7 @@ public class LinearClient {
                 return triageStateId;
             }
         }
-        throw new LinearUnavailableException("Linear workflow state '" + TRIAGE_STATE_NAME + "' not found");
+        throw new BacklogUnavailableException("Linear workflow state '" + TRIAGE_STATE_NAME + "' not found");
     }
 
     private Map<String, String> labelIds() {
@@ -189,18 +195,18 @@ public class LinearClient {
     }
 
     private String appLabelId(Map<String, String> labels, FeedbackApp app) {
-        return Optional.ofNullable(labels.get(app.getLinearLabelName()))
+        return Optional.ofNullable(labels.get(app.getBacklogLabelName()))
                 .or(() -> Optional.ofNullable(labels.get(PLATFORM_FALLBACK_LABEL)))
-                .orElseThrow(() -> new LinearUnavailableException(
-                        "Linear App label '" + app.getLinearLabelName() + "' and fallback '"
+                .orElseThrow(() -> new BacklogUnavailableException(
+                        "Linear App label '" + app.getBacklogLabelName() + "' and fallback '"
                                 + PLATFORM_FALLBACK_LABEL + "' not found"));
     }
 
     private String typeLabelId(Map<String, String> labels, FeedbackTicket ticket) {
-        String labelName = ticket.getType().getLinearLabelName();
+        String labelName = ticket.getType().getBacklogLabelName();
 
         return Optional.ofNullable(labels.get(labelName))
-                .orElseThrow(() -> new LinearUnavailableException(
+                .orElseThrow(() -> new BacklogUnavailableException(
                         "Linear Type label '" + labelName + "' not found"));
     }
 
@@ -219,7 +225,7 @@ public class LinearClient {
 
     private JsonNode execute(String query, Map<String, Object> variables) {
         if (!StringUtils.hasText(properties.linear().apiKey())) {
-            throw new LinearUnavailableException("LINEAR_API_KEY is not configured");
+            throw new BacklogUnavailableException("LINEAR_API_KEY is not configured");
         }
         ObjectNode body = objectMapper.createObjectNode();
         body.put("query", query);
@@ -234,16 +240,16 @@ public class LinearClient {
                     .body(String.class);
             JsonNode payload = responseBody == null ? null : objectMapper.readTree(responseBody);
             if (payload == null) {
-                throw new LinearUnavailableException("empty response from Linear");
+                throw new BacklogUnavailableException("empty response from Linear");
             }
             JsonNode errors = payload.get("errors");
             if (errors != null && errors.isArray() && !errors.isEmpty()) {
-                throw new LinearUnavailableException("Linear rejected the request: "
+                throw new BacklogUnavailableException("Linear rejected the request: "
                         + errors.path(0).path("message").asText("unknown error"));
             }
             JsonNode data = payload.path("data");
             if (data.isMissingNode() || data.isNull()) {
-                throw new LinearUnavailableException("Linear returned no data");
+                throw new BacklogUnavailableException("Linear returned no data");
             }
 
             return data;
@@ -252,13 +258,7 @@ public class LinearClient {
             // header, but a body echo is still not worth the risk) and never the key.
             log.warn("Linear request failed: {}", exception.getMessage());
 
-            throw new LinearUnavailableException("Linear request failed: " + exception.getClass().getSimpleName());
+            throw new BacklogUnavailableException("Linear request failed: " + exception.getClass().getSimpleName());
         }
-    }
-
-    /**
-     * The created issue's identity, as stored on the ticket ({@code linear_issue_id} / url).
-     */
-    public record LinearIssue(String id, String url) {
     }
 }

@@ -132,14 +132,14 @@ Co-Authored-By: <the outgoing tool's attribution line>
 Stage only the handover file plus the records from step 2 (never unrelated local changes such as an edited
 `opencode.json`). Push only if the branch already has an upstream, so an open PR stays current.
 
-## 5b. Post one comment on the active Linear issue (only when there is one)
+## 5b. Post one comment on the active Kaneo ticket (only when there is one)
 
-Find the issue key: the branch name first (`jordyswinnen/jor-23-…` gives `JOR-23`), then the subject of the newest
+Find the ticket key: the branch name first (`jordyswinnen/jor-23-…` gives `JOR-23`), then the subject of the newest
 commit **made on this branch** that starts with `JOR-<n>:` (`git log origin/main..HEAD --format=%s`; never look at
-commits that are already on `main`, they belong to other work). If you find **none**, or the `linear` tools are missing or the sign-in expired,
-skip this step silently: no comment, no error, no question. If you find one, post **one** comment on that issue with:
+commits that are already on `main`, they belong to other work). If you find **none**, or the `kaneo` tools are missing or the sign-in expired,
+skip this step silently: no comment, no error, no question. If you find one, post **one** comment (`create_task_comment`) on that ticket with:
 what was done this session, what is next, the path of the handover file, and the branch. No secrets, tokens or personal
-data. The comment is a pointer, the handover file stays the source of truth. Never change the issue's state here.
+data. The comment is a pointer, the handover file stays the source of truth. Never change the ticket's status here.
 
 ## 6. Print the prompt and stop
 

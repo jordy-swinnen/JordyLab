@@ -3,7 +3,7 @@
 #
 # Rule 1 (since 2026-11-02): the subject starts with the ticket key and a colon, `JOR-<n>: <summary>`, e.g.
 #   JOR-55: adding a button
-#   No ticket yet? Create one first (linear-capture skill), then commit.
+#   No ticket yet? Create one first (backlog-capture skill), then commit.
 #   Commits made before the cutoff are not checked: CI passes the commit's timestamp as the second argument.
 #
 # Rule 2 (AGENTS.md → "Commits"): the message's trailer block carries a `Refs:` line.
@@ -18,6 +18,9 @@
 #   HANDOFF-##  DEPLOY-##  Q-##   campaign IDs from docs/testing/e2e-test-plan.md
 #   NO-CODE
 #
+#   Rule 3 (owner decision): a `chore:` subject carries no ticket and no `Refs:` trailer, and is exempt.
+#   The weekly Skills Sync bot uses it. Keep it for genuinely ticketless chores, not for feature work.
+#
 # Installed per clone with: git config core.hooksPath .githooks
 # Also run by CI on every pull-request commit (.github/workflows/commit-refs.yml).
 
@@ -29,12 +32,13 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 subject="$(grep -v '^#' "$message_file" | sed -n '/./{p;q;}')"
 case "$subject" in
   "Merge "*|"fixup! "*|"squash! "*|"amend! "*|"Revert \""*) exit 0 ;;
+  chore:*|chore\(*|chore!:*) exit 0 ;;
 esac
 
 if [ -z "$commit_time" ] || [ "$commit_time" -ge "$ticket_rule_cutoff" ]; then
   if ! printf '%s' "$subject" | grep -Eq '^JOR-[1-9][0-9]{0,5}: .*[^ ]'; then
     echo "commit-msg: the subject must start with the Linear ticket and a colon, e.g. 'JOR-55: adding a button'." >&2
-    echo "  No ticket yet? Create one first (linear-capture skill: 'make a ticket for ...'), then commit." >&2
+    echo "  No ticket yet? Create one first (backlog-capture skill: 'make a ticket for ...'), then commit." >&2
     echo "  See .github/instructions/commits-and-pull-requests.instructions.md." >&2
     exit 1
   fi

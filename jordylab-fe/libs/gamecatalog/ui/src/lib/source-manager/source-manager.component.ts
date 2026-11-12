@@ -10,7 +10,7 @@ import {
 } from '@jordylab-fe/gamecatalog/api';
 import { ExclusionsPanelComponent } from './exclusions-panel.component';
 import { RefreshPanelComponent } from './refresh-panel.component';
-import { ScanClientType, SourceManagerViewComponent } from './source-manager-view.component';
+import { SourceManagerViewComponent } from './source-manager-view.component';
 
 @Component({
   selector: 'lib-source-manager',
@@ -43,7 +43,6 @@ export class SourceManagerComponent {
   readonly editingSourceId = this.#store.editingSourceId;
   readonly renamingHostId = this.#store.renamingHostId;
   readonly hostNameProblem = this.#store.hostNameProblem;
-  readonly downloading = this.#store.downloading;
   readonly dataRun = this.#refreshRuns.dataRun;
   readonly aiRun = this.#refreshRuns.aiRun;
   readonly refreshStarting = this.#refreshRuns.starting;
@@ -129,20 +128,4 @@ export class SourceManagerComponent {
     this.#store.load();
   }
 
-  onDownloadClient(libraryType: ScanClientType): void {
-    this.#store.downloadClient(libraryType, (blob) =>
-      triggerBrowserDownload(blob, `jordylab-scan-${libraryType}.py`)
-    );
-  }
-}
-
-function triggerBrowserDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }

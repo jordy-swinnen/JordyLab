@@ -36,8 +36,6 @@ import {
   LibrarySyncRun,
   RefreshRun,
   RefreshRunKind,
-  ScanLibraryType,
-  ScanSource,
   SourcesOverview,
 } from './gamecatalog.models';
 
@@ -196,12 +194,6 @@ export class GameCatalogApiService {
 
   getLibraryStatus(): Observable<LibraryStatus> {
     return this.#http.get<LibraryStatus>('/api/gamecatalog/library/status');
-  }
-
-  getScanClient(libraryType: ScanLibraryType): Observable<Blob> {
-    return this.#http.get(`/api/gamecatalog/ingest/client?libraryType=${libraryType}`, {
-      responseType: 'blob',
-    });
   }
 
   /** Asks LibBot; emits stage events, then one answer or error (see {@link askLibBot}). */

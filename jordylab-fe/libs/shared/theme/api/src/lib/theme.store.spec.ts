@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { HttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 // The colour file is a workspace-root file, not a library, so it has no alias to import through.
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { themes as themeFile } from '../../../../../../themes.js';
@@ -127,6 +129,63 @@ describe('ThemeStore', () => {
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('hsl(240 3% 8%)');
   });
 
+});
+
+describe('ThemeStore account preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.matchMedia = vi.fn(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  });
+
+  function createStoreWith(http: unknown): ThemeStore {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [{ provide: HttpClient, useValue: http }] });
+
+    return TestBed.inject(ThemeStore);
+  }
+
+  it('applies the theme stored on the account', () => {
+    const http = { get: vi.fn(() => of({ theme: 'heather' })), put: vi.fn(() => of({})) };
+    const store = createStoreWith(http);
+
+    store.syncAccountPreference();
+
+    expect(store.preference()).toBe('heather');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('heather');
+  });
+
+  it('migrates a device-only choice to the account on the first read', () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'oxblood');
+    const http = { get: vi.fn(() => of({ theme: 'system' })), put: vi.fn(() => of({})) };
+    const store = createStoreWith(http);
+
+    store.syncAccountPreference();
+
+    expect(store.preference()).toBe('oxblood');
+    expect(http.put).toHaveBeenCalledWith('/api/identity/me/preferences', { theme: 'oxblood' });
+  });
+
+  it('writes a chosen theme to the account', () => {
+    const http = { get: vi.fn(() => of({ theme: 'system' })), put: vi.fn(() => of({})) };
+    const store = createStoreWith(http);
+
+    store.choose('flare');
+
+    expect(http.put).toHaveBeenCalledWith('/api/identity/me/preferences', { theme: 'flare' });
+  });
+
+  it('keeps the stored choice when the account read fails', () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'glasshouse');
+    const http = { get: vi.fn(() => throwError(() => new Error('offline'))), put: vi.fn(() => of({})) };
+    const store = createStoreWith(http);
+
+    store.syncAccountPreference();
+
+    expect(store.preference()).toBe('glasshouse');
+  });
 });
 
 describe('ThemeStore browser tab icon', () => {

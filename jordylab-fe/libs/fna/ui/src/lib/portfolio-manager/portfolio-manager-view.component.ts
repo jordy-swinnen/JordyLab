@@ -1,18 +1,29 @@
-import { Component, computed, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
-import { PortfolioPositionRow, WishlistItem } from '@jordylab-fe/fna/api';
-import { EmptyStateComponent, PageHeaderComponent } from '@jordylab-fe/shared/layout';
+import { DecimalPipe } from '@angular/common';
+import {
+  PortfolioPositionRow,
+  PriceHistory,
+  PriceHistoryPeriod,
+  WishlistItem,
+} from '@jordylab-fe/fna/api';
+import {
+  EmptyStateComponent,
+  PageHeaderComponent,
+} from '@jordylab-fe/shared/layout';
 import { HlmButtonDirective } from '@spartan-ng/ui-button-helm';
-
-/** Swatch colours, assigned by row position so the allocation bar and the table agree. */
-const SWATCHES = [
-  'bg-series-1',
-  'bg-series-2',
-  'bg-series-3',
-  'bg-series-4',
-  'bg-muted-foreground',
-];
+import {
+  HoldingsTableComponent,
+  swatchFor,
+  WishlistTableComponent,
+} from '../positions-table';
 
 interface AllocationSegment {
   ticker: string;
@@ -23,7 +34,15 @@ interface AllocationSegment {
 @Component({
   selector: 'lib-portfolio-manager-view',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, HlmButtonDirective, EmptyStateComponent, PageHeaderComponent],
+  imports: [
+    FormsModule,
+    DecimalPipe,
+    HlmButtonDirective,
+    EmptyStateComponent,
+    PageHeaderComponent,
+    HoldingsTableComponent,
+    WishlistTableComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './portfolio-manager-view.component.html',
 })
@@ -33,14 +52,20 @@ export class PortfolioManagerViewComponent {
   wishlistError = input<string | null>(null);
   totalWorth = input.required<number>();
   hasAnyPrices = input.required<boolean>();
+  openedPositionId = input<string | null>(null);
+  history = input<PriceHistory | null>(null);
+  historyLoading = input(false);
+  historyError = input<string | null>(null);
+  historyPeriod = input<PriceHistoryPeriod>('ONE_YEAR');
 
   addPosition = output<{ ticker: string; shares: number }>();
   deletePosition = output<string>();
   addWishlistItem = output<string>();
   deleteWishlistItem = output<string>();
-
-  protected readonly swatch = (index: number): string =>
-    SWATCHES[index % SWATCHES.length];
+  openHistory = output<string>();
+  closeHistory = output<void>();
+  historyPeriodSelected = output<PriceHistoryPeriod>();
+  historyRetry = output<void>();
 
   /** Share of total value per priced position; positions without a price have no slice. */
   protected readonly allocation = computed<AllocationSegment[]>(() => {
@@ -54,7 +79,7 @@ export class PortfolioManagerViewComponent {
 
     return priced.map(({ position, index }) => ({
       ticker: position.ticker,
-      swatch: this.swatch(index),
+      swatch: swatchFor(index),
       percent: total === 0 ? 0 : ((position.value ?? 0) / total) * 100,
     }));
   });
@@ -62,8 +87,6 @@ export class PortfolioManagerViewComponent {
   newTicker = signal('');
   newShares = signal<number | null>(null);
   newWishlistTicker = signal('');
-  promotingId = signal<string | null>(null);
-  promoteShares = signal<number | null>(null);
 
   onAddPosition(): void {
     const ticker = this.newTicker();
@@ -81,24 +104,5 @@ export class PortfolioManagerViewComponent {
 
     this.addWishlistItem.emit(ticker);
     this.newWishlistTicker.set('');
-  }
-
-  startPromoting(item: WishlistItem): void {
-    this.promotingId.set(item.id);
-    this.promoteShares.set(null);
-  }
-
-  cancelPromoting(): void {
-    this.promotingId.set(null);
-    this.promoteShares.set(null);
-  }
-
-  /** Moves a wishlist ticker into held positions, keeping the row (and its cached price) in place. */
-  confirmPromoting(item: WishlistItem): void {
-    const shares = this.promoteShares();
-    if (shares === null || shares <= 0) return;
-
-    this.addPosition.emit({ ticker: item.ticker, shares });
-    this.cancelPromoting();
   }
 }

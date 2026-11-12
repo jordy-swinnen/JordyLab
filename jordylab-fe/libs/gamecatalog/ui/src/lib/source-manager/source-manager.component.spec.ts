@@ -15,7 +15,6 @@ import {
   LibraryHealth,
   LibraryStatus,
   LibrarySyncRun,
-  ScanLibraryType,
   ScanSource,
   RefreshRun,
   RefreshRunKind,
@@ -48,7 +47,6 @@ describe('SourceManagerComponent', () => {
   const editingSourceId = signal<string | null>(null);
   const renamingHostId = signal<string | null>(null);
   const hostNameProblem = signal<string | null>(null);
-  const downloading = signal<ScanLibraryType | null>(null);
   const libraryStatus = signal<LibraryStatus | null>(null);
   const librarySyncing = signal<'OWNED' | 'FAMILY' | null>(null);
   const lastLibraryRun = signal<LibrarySyncRun | null>(null);
@@ -60,7 +58,6 @@ describe('SourceManagerComponent', () => {
   const startEditingHostName = vi.fn<ScanSourceStore['startEditingHostName']>();
   const stopEditingHostName = vi.fn<ScanSourceStore['stopEditingHostName']>();
   const renameHost = vi.fn<ScanSourceStore['renameHost']>();
-  const downloadClient = vi.fn<ScanSourceStore['downloadClient']>();
   const syncOwnedLibrary = vi.fn<ScanSourceStore['syncOwnedLibrary']>();
   const syncFamilyLibrary = vi.fn<ScanSourceStore['syncFamilyLibrary']>();
 
@@ -83,7 +80,6 @@ describe('SourceManagerComponent', () => {
     editingSourceId: editingSourceId.asReadonly(),
     renamingHostId: renamingHostId.asReadonly(),
     hostNameProblem: hostNameProblem.asReadonly(),
-    downloading: downloading.asReadonly(),
     libraryStatus: libraryStatus.asReadonly(),
     librarySyncing: librarySyncing.asReadonly(),
     lastLibraryRun: lastLibraryRun.asReadonly(),
@@ -94,7 +90,6 @@ describe('SourceManagerComponent', () => {
     startEditingHostName,
     stopEditingHostName,
     renameHost,
-    downloadClient,
     syncOwnedLibrary,
     syncFamilyLibrary,
   };
@@ -159,7 +154,6 @@ describe('SourceManagerComponent', () => {
     startEditingHostName.mockReset();
     stopEditingHostName.mockReset();
     renameHost.mockReset();
-    downloading.set(null);
     libraryStatus.set(null);
     librarySyncing.set(null);
     lastLibraryRun.set(null);
@@ -173,7 +167,6 @@ describe('SourceManagerComponent', () => {
     aiCostQuote.set(null);
     refreshError.set(null);
     [startData, requestAi, confirmAi, cancelAi, stopRun, dismissRefreshError].forEach((mock) => mock.mockReset());
-    downloadClient.mockReset();
     syncOwnedLibrary.mockReset();
     syncFamilyLibrary.mockReset();
     spectator = createComponent();
@@ -371,15 +364,12 @@ describe('SourceManagerComponent', () => {
     });
   });
 
-  it('exposes Steam and EmuDeck download buttons', () => {
+  it('points to the sync app download instead of the retired script', () => {
     populate([]);
 
-    expect(
-      spectator.query('[data-testid="download-steam-client"]'),
-    ).not.toBeNull();
-    expect(
-      spectator.query('[data-testid="download-emudeck-client"]'),
-    ).not.toBeNull();
+    const links = spectator.queryAll<HTMLAnchorElement>('[data-testid="download-sync-app"]');
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.every((link) => link.getAttribute('href') === '/settings/downloads')).toBe(true);
   });
 
   it('shows an empty state when no sources exist', () => {
@@ -464,49 +454,6 @@ describe('SourceManagerComponent', () => {
 
     expect(spectator.query('[data-testid="refresh-pending-data"]')).toBeNull();
     expect(spectator.element).not.toHaveText('Refresh pending data');
-  });
-
-  describe('download', () => {
-    const createObjectURL = vi.fn(() => 'blob:script');
-    const revokeObjectURL = vi.fn();
-    let anchorClick: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      // jsdom does not implement the object-URL API
-      Object.assign(URL, { createObjectURL, revokeObjectURL });
-      createObjectURL.mockClear();
-      revokeObjectURL.mockClear();
-      anchorClick = vi
-        .spyOn(HTMLAnchorElement.prototype, 'click')
-        .mockImplementation(() => undefined);
-      populate([]);
-    });
-
-    afterEach(() => {
-      anchorClick.mockRestore();
-      Reflect.deleteProperty(URL, 'createObjectURL');
-      Reflect.deleteProperty(URL, 'revokeObjectURL');
-    });
-
-    it('requests the Steam client from the store', () => {
-      spectator.click('[data-testid="download-steam-client"]');
-
-      expect(downloadClient).toHaveBeenCalledWith(
-        'steam',
-        expect.any(Function),
-      );
-    });
-
-    it('saves the generated client as a file named after the library', () => {
-      spectator.click('[data-testid="download-emudeck-client"]');
-      const onReady = downloadClient.mock.calls[0][1];
-
-      onReady(new Blob(['print("hi")']));
-
-      const link = anchorClick.mock.contexts[0] as HTMLAnchorElement;
-      expect(link.download).toBe('jordylab-scan-emudeck.py');
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:script');
-    });
   });
 
   describe('library', () => {

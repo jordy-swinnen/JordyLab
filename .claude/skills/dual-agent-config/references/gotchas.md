@@ -5,27 +5,39 @@ Config problems in both tools overwhelmingly fail without an error message. This
 ## OpenCode
 
 **Instruction loading**
-- If both `AGENTS.md` and `CLAUDE.md` exist, only `AGENTS.md` is used — first match wins per category. Same for `~/.config/opencode/AGENTS.md` over `~/.claude/CLAUDE.md`.
-- Claude Code compatibility can be switched off by environment variable, at which point shared `.claude` files silently stop loading: `OPENCODE_DISABLE_CLAUDE_CODE=1` (all `.claude` support), `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` (only `~/.claude/CLAUDE.md`), `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` (only `.claude/skills`). Check the environment before debugging further.
+- OpenCode 2 reads `AGENTS.md` only. `CLAUDE.md`, project or global, is never read; V1's fallback is gone. Rules that only live in `CLAUDE.md` are invisible to OpenCode.
+- Nested `AGENTS.md` files load when the agent first reads or lists something in their directory, not at start. After compaction drops that entry, they reload on the next read there.
+- `OPENCODE_DISABLE_PROJECT_CONFIG=1` skips project `AGENTS.md` and config. V1's `OPENCODE_DISABLE_CLAUDE_CODE` (and `_PROMPT` / `_SKILLS`) switched off `.claude` support; the V2 docs no longer mention them, so check the environment for both before debugging further.
 
 **Skills**
-- Only `name`, `description`, `license`, `compatibility`, `metadata` are recognized. Every other frontmatter key is dropped without warning.
-- Missing `name` or `description` means the skill is never advertised to the model.
-- `SKILL.md` must be uppercase; `name` must match the directory name; names must be unique across all discovery locations or one silently wins.
+- The folder is the skill ID; `name` is only a display label, and V2 enforces neither the name pattern nor a match with the folder. Unknown frontmatter keys are dropped without warning.
+- Missing `description` means the skill is never advertised to the model. `metadata.opencode/autoinvoke: false` or `disable-model-invocation: true` hides it on purpose.
+- The same ID in two places: the source registered last wins, and `.opencode/skills/` comes after `.claude/skills/`, so a stray copy there overrides the shared one.
 
 **Agents**
-- A markdown agent file that fails to parse simply doesn't appear in the agent list — no error.
-- `maxSteps` is deprecated in favor of `steps`; the boolean `tools` config is deprecated in favor of `permission` (still honored for back-compat).
+- A new custom agent defaults to `mode: primary` in V2 (V1: `all`). Without `mode: subagent` it is never offered for delegation.
+- A file with any of `permissions`, `request`, `system`, `disabled` is read as V2, and V1 fields in it (`name`, `tools`, `permission`, `temperature`) are ignored with only a log warning. Convert a file's frontmatter all at once.
+- A markdown agent file that fails to parse simply doesn't appear in the agent list — no error. `opencode debug agents` shows what loaded.
 
 **Permissions**
-- Last matching rule wins, so a specific rule placed *before* `"*"` is silently overridden by the catch-all. Always put `"*"` first.
-- Known issues: path-scoped `read` permissions not enforced when a catch-all is present (#13646); `edit` uses relative paths while `external_directory` uses absolute, breaking some agent-level path rules (#20045).
+- The `permissions` array is ordered and the last match wins, so an exception placed *before* the broad rule is silently overridden. Broad rule first, exceptions after.
+- `*` matches across `/`, so `Assets/*.unity` covers every depth. Edit resources are project-relative paths; `external_directory` uses absolute ones.
+- V2 allows `external_directory` by default (V1 asked). Add `{ "action": "external_directory", "resource": "*", "effect": "ask" }` to get the old prompt back.
+- V1 names (`bash`, `task`) are not V2 actions. In a native `permissions` array, write `shell` and `subagent`.
+
+**Plugins**
+- V1 plugin code does not run in V2, which has a new plugin API. A V1-only plugin loads nothing, and its hooks never fire.
+- A local plugin entry must name a directory; a path to a single file is skipped.
 
 **MCP**
+- V2 servers sit under `mcp.servers`; a name directly under `mcp` is V1 syntax. An entry without a `type` is ignored with a warning.
 - Servers add to every request's context. Large ones (GitHub's, for instance) can push a session past the context limit. Be deliberate about which are enabled.
 
+**LSP**
+- V2 accepts `lsp` config but runs no language servers. Workflows that relied on LSP diagnostics need the project's lint or compile command instead.
+
 **Directory naming**
-- Plural (`agents/`, `commands/`, `skills/`, `plugins/`) is canonical; singular is accepted for backward compatibility. Both work — don't "fix" a working singular setup.
+- Plural (`agents/`, `commands/`, `skills/`, `plugins/`) is canonical; singular is accepted for backward compatibility. Both work — don't "fix" a working singular setup. Files under `mode/` are primary agents.
 
 ## Claude Code
 

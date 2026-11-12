@@ -98,7 +98,7 @@ class FeedbackTicketControllerTest {
                 .andExpect(jsonPath("$.state").value("NEW"))
                 .andExpect(jsonPath("$.title").value(TITLE))
                 .andExpect(content().string(not(containsString("privateNote"))))
-                .andExpect(content().string(not(containsString("linearIssueUrl"))))
+                .andExpect(content().string(not(containsString("backlogTicketUrl"))))
                 .andExpect(content().string(not(containsString("acceptError"))))
                 .andExpect(content().string(not(containsString("\"sender\""))));
     }

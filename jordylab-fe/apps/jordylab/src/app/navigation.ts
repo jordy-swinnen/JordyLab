@@ -36,6 +36,7 @@ export const ICONS = {
   spark: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
   phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.65a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.04z',
+  download: 'M12 3v12m0 0l-4-4m4 4l4-4M4 19h16',
 } as const;
 
 const startsWith = (prefix: string) => (url: string) => url.startsWith(prefix);
@@ -129,6 +130,14 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         path: '/settings/machines',
         icon: ICONS.gear,
         isActive: startsWith('/settings/machines'),
+        requiredRole: 'admin',
+      },
+      {
+        // The desktop sync app's installers (spec 024 FR-008).
+        label: 'Downloads',
+        path: '/settings/downloads',
+        icon: ICONS.download,
+        isActive: startsWith('/settings/downloads'),
         requiredRole: 'admin',
       },
       {

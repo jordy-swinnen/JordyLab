@@ -11,7 +11,6 @@ import {
   LibraryHealth,
   LibraryStatus,
   LibrarySyncRun,
-  ScanLibraryType,
   ScanSource,
 } from './gamecatalog.models';
 import { librarySyncFailureMessage } from './library-sync-failure';
@@ -34,7 +33,6 @@ export class ScanSourceStore {
   readonly #editingSourceId = signal<string | null>(null);
   readonly #renamingHostId = signal<string | null>(null);
   readonly #hostNameProblem = signal<string | null>(null);
-  readonly #downloading = signal<ScanLibraryType | null>(null);
   readonly #libraryStatus = signal<LibraryStatus | null>(null);
   readonly #librarySyncing = signal<'OWNED' | 'FAMILY' | null>(null);
   readonly #lastLibraryRun = signal<LibrarySyncRun | null>(null);
@@ -56,7 +54,6 @@ export class ScanSourceStore {
   readonly editingSourceId = this.#editingSourceId.asReadonly();
   readonly renamingHostId = this.#renamingHostId.asReadonly();
   readonly hostNameProblem = this.#hostNameProblem.asReadonly();
-  readonly downloading = this.#downloading.asReadonly();
   readonly libraryStatus = this.#libraryStatus.asReadonly();
   readonly librarySyncing = this.#librarySyncing.asReadonly();
   readonly lastLibraryRun = this.#lastLibraryRun.asReadonly();
@@ -231,31 +228,6 @@ export class ScanSourceStore {
           this.#sources.update((list) =>
             list.map((item) => (item.id === response.id ? { ...item, enabled: response.enabled } : item))
           );
-        }
-      });
-  }
-
-  /** Generating the client is state; saving it is a browser side effect, so the blob is handed to `onReady`. */
-  downloadClient(libraryType: ScanLibraryType, onReady: (blob: Blob) => void): void {
-    if (this.#downloading()) {
-      return;
-    }
-    this.#downloading.set(libraryType);
-    this.#error.set(null);
-
-    this.#api
-      .getScanClient(libraryType)
-      .pipe(
-        catchError(() => {
-          this.#error.set(`Failed to generate the ${libraryType} scan client.`);
-
-          return of(null);
-        })
-      )
-      .subscribe((blob) => {
-        this.#downloading.set(null);
-        if (blob) {
-          onReady(blob);
         }
       });
   }

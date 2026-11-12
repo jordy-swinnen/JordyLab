@@ -239,9 +239,23 @@ jordylab:
     # 017: the idea box. Five tickets per guest per day, reset at midnight in this zone.
     daily-ticket-limit: ${JORDYLAB_FEEDBACK_DAILY_LIMIT:5}
     daily-limit-zone: Europe/Brussels
+    backlog:
+      # 022: the backlog accepted tickets go to. kaneo is the default; production keeps linear until the cutover
+      # (a GitHub repository variable, passed by the deploy workflow). A value other than kaneo or linear fails at start-up.
+      provider: ${BACKLOG_PROVIDER:kaneo}
+    kaneo:
+      # The instance and the backend's own API key (SOPS secret in prod). An unset key means Accept fails fast with BACKLOG_UNAVAILABLE.
+      base-url: ${KANEO_BASE_URL:}
+      api-key: ${KANEO_API_KEY:}
+      workspace-id: ${KANEO_WORKSPACE_ID:}
+      project-key: ${KANEO_PROJECT_KEY:JOR}
+      triage-column: ${KANEO_TRIAGE_COLUMN:triage}
+      ticket-url-template: ${KANEO_TICKET_URL_TEMPLATE:}
+      connect-timeout-ms: 5000
+      read-timeout-ms: 15000
     linear:
       base-url: https://api.linear.app/graphql
-      # Jordy's personal API key (SOPS secret in prod). Unset means Accept fails fast with LINEAR_UNAVAILABLE.
+      # Jordy's personal API key (SOPS secret in prod). Unset means Accept fails fast with BACKLOG_UNAVAILABLE while linear is selected.
       api-key: ${LINEAR_API_KEY:}
       team-key: JOR
       connect-timeout-ms: 5000

@@ -23,8 +23,9 @@ Co-Authored-By: …
   what the commit does (imperative or "adding …", no full stop, 72 characters or fewer in total). Example:
   `JOR-55: adding a button`. A conventional-commit type after the colon (`JOR-55: fix(ui): …`) is allowed but not needed.
 - **One ticket per commit.** A commit that serves two tickets is two commits.
-- **No ticket yet?** Create it first (skill `linear-capture`: "make a ticket for …"), then commit. Never invent a key and
-  never leave it out. Exempt: merge commits, `fixup!`/`squash!`/`amend!` and `git revert` commits.
+- **No ticket yet?** Create it first (skill `backlog-capture`: "make a ticket for …"), then commit. Never invent a key and
+  never leave it out. Exempt: merge commits, `fixup!`/`squash!`/`amend!`, `git revert` commits, and any `chore:` subject
+  (owner decision: automated upkeep such as the weekly `Skills Sync` has no owning ticket, so it needs no `Refs:` either).
 - **Body** (for anything that is not trivial): why, then how it was verified. Say what you did not verify.
 - **`Refs:` trailer** in the last paragraph (next to `Co-Authored-By:`): the SpecKit artefact the commit serves.
 

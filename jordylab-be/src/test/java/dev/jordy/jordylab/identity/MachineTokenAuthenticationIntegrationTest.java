@@ -118,6 +118,18 @@ class MachineTokenAuthenticationIntegrationTest {
     }
 
     @Test
+    void aMachineReadsTheThemeOfTheAccountThatCreatedIt() throws Exception {
+        String token = machineTokenService.create(ADMIN_ID, "JordyBox").plaintext();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/identity/machines/preferences")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.theme").value("system"));
+    }
+
+    @Test
     void aMalformedBearerHeaderIsRefused() throws Exception {
         mockMvc.perform(post("/api/gamecatalog/ingest/check")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-machine-token")

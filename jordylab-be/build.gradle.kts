@@ -94,6 +94,10 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Gradle's default test heap is 512 MB. The full suite caches many Spring contexts in one JVM, and CI ran out of
+    // memory while building one (WebAuthnEndpointsIntegrationTest failed with OutOfMemoryError, then its Postgres
+    // connections were refused). 2 GB keeps the whole suite inside the heap.
+    maxHeapSize = "2g"
     // Tests that boot a Spring context (JordylabApplicationTests, @ApplicationModuleTest) need a valid
     // profile active or EnvironmentProfileGuard fails them
     // fast, per FR-002. "local" matches how the app actually runs outside prod.

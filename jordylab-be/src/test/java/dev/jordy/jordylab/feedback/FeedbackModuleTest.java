@@ -5,12 +5,12 @@ import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketState;
 import dev.jordy.jordylab.feedback.domain.FeedbackType;
 import dev.jordy.jordylab.feedback.domain.repository.FeedbackTicketRepository;
-import dev.jordy.jordylab.feedback.rest.client.LinearClient;
+import dev.jordy.jordylab.feedback.rest.client.BacklogClient;
 import dev.jordy.jordylab.feedback.service.AcceptTicketService;
 import dev.jordy.jordylab.feedback.service.FeedbackLimitReachedException;
 import dev.jordy.jordylab.feedback.service.FeedbackSubmissionService;
 import dev.jordy.jordylab.feedback.service.FeedbackTriageService;
-import dev.jordy.jordylab.feedback.service.LinearUnavailableException;
+import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import dev.jordy.jordylab.identity.CurrentUserResolver;
 import dev.jordy.jordylab.identity.UserAccountLookup;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,7 +79,7 @@ class FeedbackModuleTest {
     private UserAccountLookup userAccountLookup;
 
     @MockitoBean
-    private LinearClient linearClient;
+    private BacklogClient backlogClient;
 
     @MockitoBean
     private NtfyClient ntfyClient;
@@ -149,32 +149,32 @@ class FeedbackModuleTest {
     void acceptingTwiceCreatesExactlyOneIssue() {
         FeedbackTicket ticket = submit(SENDER);
         ArgumentCaptor<FeedbackTicket> attemptedCaptor = ArgumentCaptor.forClass(FeedbackTicket.class);
-        when(linearClient.createIssue(attemptedCaptor.capture(), eq("Repro'd on CachyOS too.")))
-                .thenReturn(new LinearClient.LinearIssue("issue-1", "https://linear.app/jordylab/issue/JOR-101"));
+        when(backlogClient.createTicket(attemptedCaptor.capture(), eq("Repro'd on CachyOS too.")))
+                .thenReturn(new BacklogClient.BacklogTicket("issue-1", "https://linear.app/jordylab/issue/JOR-101"));
 
         FeedbackTicket accepted = acceptTicketService.accept(ticket.getId(), "Repro'd on CachyOS too.");
         FeedbackTicket secondClick = acceptTicketService.accept(ticket.getId(), null);
 
         assertSoftly(softly -> {
             softly.assertThat(accepted.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
-            softly.assertThat(accepted.getLinearIssueId()).isEqualTo("issue-1");
-            softly.assertThat(accepted.getLinearIssueUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-101");
+            softly.assertThat(accepted.getBacklogTicketId()).isEqualTo("issue-1");
+            softly.assertThat(accepted.getBacklogTicketUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-101");
             softly.assertThat(accepted.getPrivateNote()).isEqualTo("Repro'd on CachyOS too.");
             softly.assertThat(secondClick.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
-            softly.assertThat(secondClick.getLinearIssueId()).isEqualTo("issue-1");
+            softly.assertThat(secondClick.getBacklogTicketId()).isEqualTo("issue-1");
         });
-        verify(linearClient, times(1)).createIssue(attemptedCaptor.capture(), eq("Repro'd on CachyOS too."));
+        verify(backlogClient, times(1)).createTicket(attemptedCaptor.capture(), eq("Repro'd on CachyOS too."));
     }
 
     @Test
     void aFailedAcceptKeepsTheTicketRetryableAndTheRetryAdoptsTheCreatedIssue() {
         FeedbackTicket ticket = submit(SENDER);
         ArgumentCaptor<FeedbackTicket> attemptedCaptor = ArgumentCaptor.forClass(FeedbackTicket.class);
-        when(linearClient.createIssue(attemptedCaptor.capture(), isNull()))
-                .thenThrow(new LinearUnavailableException("Linear is unreachable"));
+        when(backlogClient.createTicket(attemptedCaptor.capture(), isNull()))
+                .thenThrow(new BacklogUnavailableException("Linear is unreachable"));
 
         assertThatThrownBy(() -> acceptTicketService.accept(ticket.getId(), null))
-                .isInstanceOf(LinearUnavailableException.class);
+                .isInstanceOf(BacklogUnavailableException.class);
 
         FeedbackTicket afterFailure = ticketRepository.findById(ticket.getId()).orElseThrow();
         assertSoftly(softly -> {
@@ -182,18 +182,18 @@ class FeedbackModuleTest {
             softly.assertThat(afterFailure.getAcceptError()).isEqualTo("Linear is unreachable");
         });
 
-        when(linearClient.findIssue(ticket.getTitle())).thenReturn(
-                Optional.of(new LinearClient.LinearIssue("issue-2", "https://linear.app/jordylab/issue/JOR-102")));
+        when(backlogClient.findTicket(ticket)).thenReturn(
+                Optional.of(new BacklogClient.BacklogTicket("issue-2", "https://linear.app/jordylab/issue/JOR-102")));
 
         FeedbackTicket retried = acceptTicketService.accept(ticket.getId(), null);
 
         assertSoftly(softly -> {
             softly.assertThat(retried.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
-            softly.assertThat(retried.getLinearIssueId()).isEqualTo("issue-2");
+            softly.assertThat(retried.getBacklogTicketId()).isEqualTo("issue-2");
             softly.assertThat(retried.getAcceptError()).isNull();
         });
-        verify(linearClient).findIssue(ticket.getTitle());
-        verify(linearClient, times(1)).createIssue(attemptedCaptor.capture(), isNull());
+        verify(backlogClient).findTicket(ticket);
+        verify(backlogClient, times(1)).createTicket(attemptedCaptor.capture(), isNull());
     }
 
     private FeedbackTicket submit(String sender) {

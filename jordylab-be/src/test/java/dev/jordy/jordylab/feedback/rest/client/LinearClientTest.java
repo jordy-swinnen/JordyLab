@@ -8,7 +8,7 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import dev.jordy.jordylab.feedback.FeedbackProperties;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicket;
 import dev.jordy.jordylab.feedback.domain.FeedbackTicketTestBuilder;
-import dev.jordy.jordylab.feedback.service.LinearUnavailableException;
+import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +32,7 @@ import static org.assertj.core.api.SoftAssertions.assertSoftly;
 /**
  * The Linear GraphQL contract (contracts/linear-client.md): the exact mutation body and label ids,
  * the guest-marked description with the source line last, cached lookups, the adopt-on-retry
- * search, and every failure becoming {@link LinearUnavailableException}.
+ * search, and every failure becoming {@link BacklogUnavailableException}.
  */
 @WireMockTest(httpPort = 9990)
 class LinearClientTest {
@@ -56,7 +56,7 @@ class LinearClientTest {
         stubCreateIssue();
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
 
-        LinearClient.LinearIssue issue = client.createIssue(ticket, "Repro'd on CachyOS too.");
+        BacklogClient.BacklogTicket issue = client.createTicket(ticket, "Repro'd on CachyOS too.");
 
         assertSoftly(softly -> {
             softly.assertThat(issue.id()).isEqualTo("issue-1");
@@ -87,7 +87,7 @@ class LinearClientTest {
         stubLookups();
         stubCreateIssue();
 
-        client.createIssue(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null);
+        client.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null);
 
         String description = lastRequestDescription().asText();
         assertSoftly(softly -> {
@@ -101,8 +101,8 @@ class LinearClientTest {
         stubLookups();
         stubCreateIssue();
 
-        client.createIssue(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null);
-        client.createIssue(FeedbackTicketTestBuilder.aFeedbackTicket().id(null).title("Second ticket").build(), null);
+        client.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null);
+        client.createTicket(FeedbackTicketTestBuilder.aFeedbackTicket().id(null).title("Second ticket").build(), null);
 
         verify(1, postRequestedFor(urlEqualTo("/graphql"))
                 .withRequestBody(matchingJsonPath("$.query", containing("teams("))));
@@ -121,7 +121,7 @@ class LinearClientTest {
                         """)));
         stubCreateIssue();
 
-        client.createIssue(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null);
+        client.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null);
 
         verify(postRequestedFor(urlEqualTo("/graphql"))
                 .withRequestBody(matchingJsonPath("$.variables.input.labelIds[0]", equalTo("label-platform"))));
@@ -132,8 +132,8 @@ class LinearClientTest {
         LinearClient unconfigured = new LinearClient(properties(""), objectMapper);
         unconfigured.init();
 
-        assertThatThrownBy(() -> unconfigured.createIssue(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
-                .isInstanceOf(LinearUnavailableException.class)
+        assertThatThrownBy(() -> unconfigured.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
+                .isInstanceOf(BacklogUnavailableException.class)
                 .hasMessageContaining("LINEAR_API_KEY");
         verify(0, postRequestedFor(urlEqualTo("/graphql")));
     }
@@ -148,8 +148,8 @@ class LinearClientTest {
                         {"errors":[{"message":"Field 'title' is required"}]}
                         """)));
 
-        assertThatThrownBy(() -> client.createIssue(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
-                .isInstanceOf(LinearUnavailableException.class)
+        assertThatThrownBy(() -> client.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
+                .isInstanceOf(BacklogUnavailableException.class)
                 .hasMessageContaining("Field 'title' is required");
     }
 
@@ -163,8 +163,8 @@ class LinearClientTest {
                         """)));
         stubLabels();
 
-        assertThatThrownBy(() -> client.createIssue(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
-                .isInstanceOf(LinearUnavailableException.class)
+        assertThatThrownBy(() -> client.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
+                .isInstanceOf(BacklogUnavailableException.class)
                 .hasMessageContaining("Triage");
     }
 
@@ -177,9 +177,9 @@ class LinearClientTest {
                         {"data":{"issues":{"nodes":[{"id":"issue-2","url":"https://linear.app/jordylab/issue/JOR-102"}]}}}
                         """)));
 
-        Optional<LinearClient.LinearIssue> found = client.findIssue(FeedbackTicketTestBuilder.DEFAULT_TITLE);
+        Optional<BacklogClient.BacklogTicket> found = client.findTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket());
 
-        assertThat(found).contains(new LinearClient.LinearIssue("issue-2",
+        assertThat(found).contains(new BacklogClient.BacklogTicket("issue-2",
                 "https://linear.app/jordylab/issue/JOR-102"));
         verify(postRequestedFor(urlEqualTo("/graphql"))
                 .withRequestBody(matchingJsonPath("$.query", containing("Source: idea box")))
@@ -195,7 +195,7 @@ class LinearClientTest {
                         {"data":{"issues":{"nodes":[]}}}
                         """)));
 
-        assertThat(client.findIssue(FeedbackTicketTestBuilder.DEFAULT_TITLE)).isEmpty();
+        assertThat(client.findTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket())).isEmpty();
     }
 
     private void stubLookups() {
@@ -256,7 +256,7 @@ class LinearClientTest {
     }
 
     private static FeedbackProperties properties(String apiKey) {
-        return new FeedbackProperties(5, "Europe/Brussels",
-                new FeedbackProperties.Linear(GRAPHQL_URL, apiKey, "JOR", 2000, 5000));
+        return new FeedbackProperties(5, "Europe/Brussels", null,
+                new FeedbackProperties.Linear(GRAPHQL_URL, apiKey, "JOR", 2000, 5000), null);
     }
 }

@@ -201,6 +201,30 @@ class UserAccountTest {
         });
     }
 
+    @Test
+    void changeThemeStoresTheAccountPreference() {
+        UserAccount account = aDefaultUserAccount();
+
+        account.changeTheme(UserTheme.HEATHER);
+
+        assertThat(account.getTheme()).isEqualTo(UserTheme.HEATHER);
+    }
+
+    @Test
+    void changeThemeWithNullFallsBackToSystem() {
+        UserAccount account = aDefaultUserAccount();
+
+        account.changeTheme(null);
+
+        assertThat(account.getTheme()).isEqualTo(UserTheme.SYSTEM);
+    }
+
+    @Test
+    void newAccountFollowsTheDeviceByDefault() {
+        assertThat(UserAccount.builder().username("new.person").build().getTheme())
+                .isEqualTo(UserTheme.SYSTEM);
+    }
+
     private static Collection<Object> eventsOf(UserAccount account) {
         return ReflectionTestUtils.invokeMethod(account, "domainEvents");
     }

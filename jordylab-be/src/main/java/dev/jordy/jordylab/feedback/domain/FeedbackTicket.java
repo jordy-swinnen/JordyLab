@@ -64,11 +64,11 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
     @Column(name = "private_note")
     private String privateNote;
 
-    @Column(name = "linear_issue_id")
-    private String linearIssueId;
+    @Column(name = "backlog_ticket_id")
+    private String backlogTicketId;
 
-    @Column(name = "linear_issue_url")
-    private String linearIssueUrl;
+    @Column(name = "backlog_ticket_url")
+    private String backlogTicketUrl;
 
     @Column(name = "accept_error")
     private String acceptError;
@@ -97,8 +97,8 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
     public void markAccepted(String issueId, String issueUrl) {
         Preconditions.checkState(state == FeedbackTicketState.NEW || state == FeedbackTicketState.BACKLOG,
                 "only a NEW or BACKLOG ticket can be accepted");
-        this.linearIssueId = issueId;
-        this.linearIssueUrl = issueUrl;
+        this.backlogTicketId = issueId;
+        this.backlogTicketUrl = issueUrl;
         this.acceptError = null;
         this.state = FeedbackTicketState.ACCEPTED;
     }
@@ -152,7 +152,7 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
             title = title.trim();
             description = description.trim();
             return new FeedbackTicket(id, app, type, title, description, senderSubject, senderDisplayName,
-                    state, reply, privateNote, linearIssueId, linearIssueUrl, acceptError);
+                    state, reply, privateNote, backlogTicketId, backlogTicketUrl, acceptError);
         }
     }
 }

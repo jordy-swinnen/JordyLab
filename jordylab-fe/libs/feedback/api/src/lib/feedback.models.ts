@@ -1,6 +1,6 @@
 /**
  * Wire types for the feedback idea box (contracts/rest-api.md). The guest view and the admin view
- * share the ticket shape; the admin view adds the sender, the private note, the Linear link and the
+ * share the ticket shape; the admin view adds the sender, the private note, the backlog link and the
  * last accept error — fields a guest response never carries.
  */
 export type FeedbackAppId = 'GAME_CATALOG';
@@ -28,7 +28,7 @@ export interface FeedbackTicket {
 export interface InboxTicket extends FeedbackTicket {
   privateNote: string | null;
   sender: string | null;
-  linearIssueUrl: string | null;
+  backlogTicketUrl: string | null;
   acceptError: string | null;
 }
 

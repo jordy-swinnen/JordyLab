@@ -4,30 +4,26 @@ import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanCheckResponse;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanRequest;
 import dev.jordy.jordylab.gamecatalog.rest.controller.model.ScanResponse;
-import dev.jordy.jordylab.gamecatalog.service.ClientService;
 import dev.jordy.jordylab.gamecatalog.service.ScanService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
-
+/**
+ * The scan client's endpoints (spec 003): the desktop sync app asks whether a scan is needed and uploads the payload.
+ * The script download endpoint was removed with the script client (spec 024).
+ */
 @RestController
 @RequestMapping("/api/gamecatalog/ingest")
 @RequiredArgsConstructor
 public class IngestController {
 
     private final ScanService scanService;
-    private final ClientService clientService;
 
     @PostMapping(path = "/scan", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ScanResponse> submitScan(@Valid @RequestBody ScanRequest request) {
@@ -37,18 +33,5 @@ public class IngestController {
     @PostMapping(path = "/check", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ScanCheckResponse> check(@Valid @RequestBody ScanCheckRequest request) {
         return ResponseEntity.ok(scanService.submitCheck(request));
-    }
-
-    @GetMapping(path = "/client", produces = "text/x-python")
-    public ResponseEntity<byte[]> downloadClient(@RequestParam("libraryType") String libraryType,
-            HttpServletRequest httpRequest) {
-        String client = clientService.generateClient(libraryType, httpRequest);
-        byte[] body = client.getBytes(StandardCharsets.UTF_8);
-
-        return ResponseEntity.status(HttpStatus.OK)
-                .header("Content-Disposition",
-                        "attachment; filename=\"jordylab-scan-" + libraryType.toLowerCase() + ".py\"")
-                .contentType(MediaType.parseMediaType("text/x-python"))
-                .body(body);
     }
 }

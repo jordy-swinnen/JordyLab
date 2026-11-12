@@ -31,8 +31,6 @@ import { ConfirmDialogComponent } from '../dialogs/confirm-dialog.component';
 import { HostNameEditorComponent } from './host-name-editor.component';
 import { readSteamToken } from './steam-token';
 
-export type ScanClientType = 'steam' | 'emudeck';
-
 @Component({
   selector: 'lib-source-manager-view',
   standalone: true,
@@ -69,7 +67,6 @@ export class SourceManagerViewComponent {
   editingSourceId = input<string | null>(null);
   renamingHostId = input<string | null>(null);
   hostNameProblem = input<string | null>(null);
-  downloading = input.required<ScanClientType | null>();
   libraryStatus = input.required<LibraryStatus | null>();
   librarySyncing = input.required<'OWNED' | 'FAMILY' | null>();
   lastLibraryRun = input.required<LibrarySyncRun | null>();
@@ -84,7 +81,6 @@ export class SourceManagerViewComponent {
   showExceptions = output<HealthKind>();
   showPlayerCountGames = output<PlayerCountReason>();
   hideExceptions = output<void>();
-  downloadClient = output<ScanClientType>();
   reload = output<void>();
   syncOwnedLibrary = output<void>();
   syncFamilyLibrary = output<string>();

@@ -6,6 +6,8 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.jordy.jordylab.fna.domain.PortfolioPosition;
 import dev.jordy.jordylab.fna.domain.PortfolioPositionTestBuilder;
 import dev.jordy.jordylab.fna.domain.repository.PortfolioPositionRepository;
+import dev.jordy.jordylab.fna.rest.client.PriceSourceRateLimitedException;
+import dev.jordy.jordylab.fna.rest.client.YahooFinanceChartClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,13 +32,16 @@ class StockPriceServiceTest {
     @Mock
     private PortfolioPositionRepository positionRepository;
 
+    @Mock
+    private PriceHistoryService priceHistoryService;
+
     private StockPriceService stockPriceService;
 
     @BeforeEach
     void setUp() {
-        RestClient restClient = RestClient.builder().build();
-        stockPriceService = new StockPriceService(restClient, positionRepository, new ObjectMapper());
-        stockPriceService.yahooFinanceBaseUrl = "http://localhost:9999";
+        YahooFinanceChartClient chartClient = new YahooFinanceChartClient(RestClient.builder().build(), new ObjectMapper());
+        chartClient.setYahooFinanceBaseUrl("http://localhost:9999");
+        stockPriceService = new StockPriceService(chartClient, positionRepository, priceHistoryService);
     }
 
     @Test
@@ -256,5 +262,83 @@ class StockPriceServiceTest {
                 .willReturn(aResponse().withStatus(429)));
 
         assertThat(stockPriceService.fetchPrice("UA.PA")).hasValueSatisfying(price -> assertThat(price).isEqualByComparingTo("5"));
+    }
+
+    @Test
+    void recordsTodaysPriceWhenARefreshPricesAHeldPosition() {
+        stubChart("KBC.BR", "65.50", "EUR");
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .ticker("KBC.BR")
+                .priceSymbol("KBC.BR")
+                .build();
+
+        stockPriceService.refresh(held);
+
+        verify(priceHistoryService).recordTodaysPrice(held);
+    }
+
+    @Test
+    void backfillsHeldPositionsAndRepairsStaleHistoryAfterPricingThem() {
+        stubChart("KBC.BR", "65.50", "EUR");
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .ticker("KBC.BR")
+                .priceSymbol("KBC.BR")
+                .build();
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(held));
+
+        stockPriceService.refreshAllPrices();
+
+        verify(priceHistoryService).backfillIfMissing(held);
+        verify(priceHistoryService).repairStaleSymbols();
+    }
+
+    @Test
+    void stopsTheHistoryWorkForThisCycleWhenThePriceSourceRateLimitsIt() {
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .ticker("KBC.BR")
+                .priceSymbol("KBC.BR")
+                .build();
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(held));
+        doThrow(new PriceSourceRateLimitedException("KBC.BR", null)).when(priceHistoryService).backfillIfMissing(held);
+
+        stockPriceService.refreshAllPrices();
+
+        verify(priceHistoryService, never()).repairStaleSymbols();
+    }
+
+    @Test
+    void aFailingSymbolDoesNotStopTheBackfillOfTheOtherPositions() {
+        PortfolioPosition failing = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .id(UUID.fromString("66666666-0000-0000-0000-000000000001"))
+                .ticker("AAA")
+                .priceSymbol("AAA")
+                .build();
+        PortfolioPosition healthy = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .id(UUID.fromString("66666666-0000-0000-0000-000000000002"))
+                .ticker("BBB")
+                .priceSymbol("BBB")
+                .build();
+        when(positionRepository.findAllByOrderByTickerAsc()).thenReturn(List.of(failing, healthy));
+        doThrow(new IllegalStateException("value rejected by the database")).when(priceHistoryService).backfillIfMissing(failing);
+
+        stockPriceService.refreshAllPrices();
+
+        verify(priceHistoryService).backfillIfMissing(healthy);
+        verify(priceHistoryService).repairStaleSymbols();
+    }
+
+    @Test
+    void aFailedHistoryWriteDoesNotStopThePriceRefresh() {
+        stubChart("KBC.BR", "65.50", "EUR");
+        PortfolioPosition held = PortfolioPositionTestBuilder.aPortfolioPosition()
+                .ticker("KBC.BR")
+                .priceSymbol("KBC.BR")
+                .build();
+        doThrow(new IllegalStateException("value rejected by the database")).when(priceHistoryService).recordTodaysPrice(held);
+
+        stockPriceService.refresh(held);
+
+        verify(positionRepository).save(held);
+        assertThat(held.getLastPrice()).isEqualByComparingTo("65.50");
     }
 }

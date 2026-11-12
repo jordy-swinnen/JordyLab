@@ -58,7 +58,7 @@ class FeedbackSubmissionServiceTest {
 
     @BeforeEach
     void setUp() {
-        FeedbackProperties properties = new FeedbackProperties(5, "Europe/Brussels", null);
+        FeedbackProperties properties = new FeedbackProperties(5, "Europe/Brussels", null, null, null);
         Clock clock = Clock.fixed(Instant.parse("2026-11-02T23:30:00Z"), ZoneOffset.UTC);
         service = new FeedbackSubmissionService(ticketRepository, ntfyClient, new FeedbackAppAccessService(), properties, clock);
     }

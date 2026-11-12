@@ -58,29 +58,29 @@ lost and I don't switch tools.
 scatter (bug log, chat, drafts) continues.
 
 **Independent Test**: in a coding agent say "log an idea: show playtime per console in the Game Catalog". An issue
-appears in Triage of team `JOR` with App = Game Catalog and Type = Idea, and the agent replies with its link. Do the
+appears in Backlog of team `JOR` with App = Game Catalog and Type = Idea, and the agent replies with its link. Do the
 same in Claude on the phone: the same kind of issue appears. Saying the first idea again finds the existing issue and
 offers to add to it instead of creating a duplicate.
 
 **Acceptance Scenarios**:
 
-1. **Given** a coding-agent session about a spec, **When** Jordy says "log this as a bug: …", **Then** a Triage issue
+1. **Given** a coding-agent session about a spec, **When** Jordy says "log this as a bug: …", **Then** a Backlog issue
    is created with Type = Bug, the matching App label, the matching project when one exists, the session's context
    (file, error, spec) in the description, and the reply contains the link.
 2. **Given** Claude on the web, desktop or phone with the Linear connector enabled, **When** Jordy asks it to log an
-   idea, **Then** an issue is created in Triage with App and Type labels, without the coding tools.
+   idea, **Then** an issue is created in Backlog with App and Type labels, without the coding tools.
 3. **Given** an issue about the same thing already exists, **When** Jordy logs it again, **Then** the agent shows the
    existing issue and asks whether to add to it; nothing is created without that answer.
 4. **Given** Linear is unreachable or the login has expired, **When** Jordy logs an idea, **Then** the agent says so and
    repeats the idea in its reply so it is not lost; nothing else is blocked.
 5. **Given** a conversation or a plan that implies several pieces of work, **When** Jordy says "turn this into
    tickets", **Then** Claude proposes the list (title, type, app, project per ticket), creates nothing until Jordy
-   approves it (all, or a chosen subset), then creates them in Triage and replies with every link; related tickets are
+   approves it (all, or a chosen subset), then creates them in Backlog and replies with every link; related tickets are
    linked to each other.
 6. **Given** a ticket that is a feature or chore rather than an idea or bug, **When** Jordy asks Claude to create it,
    **Then** it gets the matching Type label and the same shape as any other ticket.
 7. **Given** Claude on the web, desktop or phone (no repository open), **When** a ticket is created, **Then** it has
-   the same shape as one created from a coding agent (Triage, one App and one Type label, source line), because the
+   the same shape as one created from a coding agent (Backlog, one App and one Type label, source line), because the
    conventions are given to those apps in their own settings, not only in repository skills.
 8. **Given** a new Claude Code or OpenCode session, **When** it starts, **Then** both the Linear and the GitHub
    connections show as connected; if `gh` is not signed in, the message says to sign in with `gh` instead of a generic
@@ -321,13 +321,13 @@ file path; without an active issue, no comment is posted and no error appears.
   clear message saying to sign in with `gh`, not a generic "badly formatted" error. The setup documentation MUST say
   how the connection obtains its sign-in.
 - **FR-006**: A skill shared by both coding agents MUST let Jordy create a ticket of any type (idea, bug,
-  improvement, feature, chore): search for duplicates first, create the issue in Triage, set the App and Type labels,
+  improvement, feature, chore): search for duplicates first, create the issue in Backlog (Triage only when Jordy asks), set the App and Type labels,
   link the project when known, put the session's context in the description, and reply with the issue link.
 - **FR-006a**: The same skill MUST create several tickets from one conversation, plan or list on request: it proposes
   the list first, creates only what Jordy approves, links related tickets, and reports every link. It MUST NOT create
   tickets from a spec's `tasks.md` task by task (that stays a user-story-level step, FR-019).
 - **FR-006b**: Claude on the web, desktop and phone MUST create tickets of the same shape. The setup documentation MUST
-  contain a short block of ticket conventions (Triage state, one App and one Type label, source line, duplicate check,
+  contain a short block of ticket conventions (Backlog state, one App and one Type label, source line, duplicate check,
   preview before creating) that Jordy puts in those apps' own instructions, because repository skills are not
   available there.
 - **FR-007**: New bugs MUST be logged in Linear. Existing bug-log entries MUST stay in git as history and stay valid

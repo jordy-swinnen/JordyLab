@@ -4,7 +4,7 @@ name: Deploy to Production (Compose)
 # FR-001 and FR-014 for the target rules). The target is a full commit sha or a release tag vX.Y.Z[-rcN]; it maps
 # to the image tag sha-<sha> or <tag>, so a sha deploy runs exactly the images its Build published (no retag), and
 # an older target is how a rollback works. All three images must exist in GHCR before the host is touched.
-# Run it by hand; automatic deploys are off since the k3s to Compose cutover (T062 decides when they return).
+# Runs by hand, and from build.yml on a green main while the repository variable AUTO_DEPLOY is 'true' (spec 020 T062).
 #
 # The host side is scripts/deploy-release.sh (T009): it pulls and starts only backend and frontend,
 # checks the site through Caddy on the host, and restores the live release itself when its own

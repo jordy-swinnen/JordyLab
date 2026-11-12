@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -9,6 +9,7 @@ import { PendingCountBadgeComponent } from '@jordylab-fe/settings/nav';
 import { NAVIGATION_GROUPS, SETTINGS_GROUP_LABEL, NavGroup, visibleNavigationGroups } from './navigation';
 import { InstallPromptStore, PlatformService } from '@jordylab-fe/shared/platform/api';
 import { AndroidAppQrEntryComponent, InstallPromptComponent } from '@jordylab-fe/shared/platform/ui';
+import { ThemeStore } from '@jordylab-fe/shared/theme/api';
 
 @Component({
   selector: 'app-root',
@@ -30,6 +31,7 @@ import { AndroidAppQrEntryComponent, InstallPromptComponent } from '@jordylab-fe
 export class App {
   #auth = inject(AuthService);
   #router = inject(Router);
+  #theme = inject(ThemeStore);
   protected readonly platform = inject(PlatformService);
   protected readonly installPrompt = inject(InstallPromptStore);
 
@@ -43,6 +45,14 @@ export class App {
   constructor() {
     // Captures the browser's install event once; the one-time sheet and Settings → App card both use it (spec 018).
     this.installPrompt.captureInstallPrompt();
+    // The theme follows the account (spec 024); read it once the person is signed in.
+    let themeSynced = false;
+    effect(() => {
+      if (!themeSynced && this.#auth.isAuthenticated()) {
+        themeSynced = true;
+        this.#theme.syncAccountPreference();
+      }
+    });
   }
 
   protected readonly isSettingsGroup = (group: NavGroup): boolean =>

@@ -14,6 +14,6 @@ public enum FeedbackApp {
     GAME_CATALOG("Game Catalog", "Game Catalog", "app-gamecatalog");
 
     private final String displayName;
-    private final String linearLabelName;
+    private final String backlogLabelName;
     private final String grantRoleName;
 }

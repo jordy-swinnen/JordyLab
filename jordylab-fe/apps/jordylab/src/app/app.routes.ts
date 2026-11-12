@@ -10,6 +10,8 @@ import { ShareLandingComponent } from '@jordylab-fe/shared/platform/ui';
 import { AppSettingsPageComponent } from './app-settings/app-settings-page.component';
 import { AccountPageComponent } from './account/account-page.component';
 import { AwaitingApprovalComponent } from './awaiting-approval/awaiting-approval.component';
+import { ConnectDesktopComponent } from './connect-desktop/connect-desktop.component';
+import { DownloadsPageComponent } from './downloads/downloads-page.component';
 import { legacyCallbackRedirect, legacyScreenRedirect } from './legacy-mobile-redirect';
 import { NoAppsComponent } from './no-apps/no-apps.component';
 import { SettingsHomeComponent } from './settings-home/settings-home.component';
@@ -19,6 +21,12 @@ export const appRoutes: Route[] = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
+  {
+    // The desktop app's connect page (spec 024): the app opens it in the browser with its loopback callback.
+    path: 'connect/desktop',
+    canActivate: [authGuard, roleGuard('admin')],
+    component: ConnectDesktopComponent,
+  },
   {
     path: 'account',
     canActivate: [authGuard],
@@ -73,6 +81,11 @@ export const appRoutes: Route[] = [
     children: [
       { path: '', pathMatch: 'full', component: SettingsHomeComponent },
       ...settingsAdminRoutes,
+      {
+        path: 'downloads',
+        canActivate: [roleGuard('admin')],
+        component: DownloadsPageComponent,
+      },
       {
         path: 'feedback',
         canActivate: [roleGuard('guest')],

@@ -1,4 +1,5 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { brandIconDataUri } from './brand-icon';
 import {
   DEFAULT_DARK_THEME_ID,
@@ -11,14 +12,31 @@ import {
 
 const LIGHT_DEVICE_QUERY = '(prefers-color-scheme: light)';
 
+interface DeviceLightQuery {
+  readonly matches: boolean;
+  addEventListener: (eventName: string, listener: (event: { matches: boolean }) => void) => void;
+}
+
+/** Some test environments have no `matchMedia`; a dark device is the app's default look. */
+function deviceLightQuery(): DeviceLightQuery {
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia(LIGHT_DEVICE_QUERY);
+  }
+
+  return { matches: false, addEventListener: () => undefined };
+}
+
 /**
- * Which theme the app shows, chosen per device. The preference is kept in the browser's local storage; the theme itself is a
- * `data-theme` attribute on the root element, so changing it re-colours every screen without re-rendering anything. The boot script
+ * Which theme the app shows, chosen per account (spec 024): the choice follows the signed-in account across devices, so
+ * the desktop app shows the same theme. The device's local storage is kept as a fallback for a signed-out browser and is
+ * migrated to the account on the first authenticated read. The theme itself is a `data-theme` attribute on the root
+ * element, so changing it re-colours every screen without re-rendering anything. The boot script
  * (`theme-boot.js`) sets the same attribute before the first paint; this store takes over once the app has started.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeStore {
-  readonly #deviceLightQuery = window.matchMedia(LIGHT_DEVICE_QUERY);
+  readonly #http = inject(HttpClient, { optional: true });
+  readonly #deviceLightQuery = deviceLightQuery();
   readonly #preference = signal<ThemePreference>(this.#readStoredPreference());
   readonly #deviceIsLight = signal(this.#deviceLightQuery.matches);
 
@@ -45,6 +63,45 @@ export class ThemeStore {
     this.#preference.set(preference);
     this.#store(preference);
     this.#apply();
+    this.#http
+      ?.put<{ theme: ThemePreference }>('/api/identity/me/preferences', { theme: preference })
+      .subscribe({ error: () => undefined });
+  }
+
+  /**
+   * Reads the account's theme once the person is signed in. The first read migrates a device-only choice to the account,
+   * so an existing user keeps the theme they had. A signed-out or offline read leaves the stored choice untouched.
+   */
+  syncAccountPreference(): void {
+    if (!this.#http) {
+      return;
+    }
+    this.#http.get<{ theme: ThemePreference }>('/api/identity/me/preferences').subscribe({
+      next: ({ theme }) => {
+        if (!this.#isKnown(theme)) {
+          return;
+        }
+        if (theme === 'system') {
+          const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+          if (this.#isKnown(stored) && stored !== 'system') {
+            this.#preference.set(stored as ThemePreference);
+            this.#apply();
+            this.#http
+              ?.put<{ theme: ThemePreference }>('/api/identity/me/preferences', { theme: stored })
+              .subscribe({ error: () => undefined });
+
+            return;
+          }
+        }
+        this.#preference.set(theme);
+        this.#apply();
+      },
+      error: () => undefined,
+    });
+  }
+
+  #isKnown(value: string | null): boolean {
+    return value === 'system' || THEME_DEFINITIONS.some((definition) => definition.id === value);
   }
 
   #readStoredPreference(): ThemePreference {
