@@ -418,13 +418,31 @@ def test_deferred_description_is_fetched_from_the_task_detail(tmp_path, monkeypa
     fake.defer_descriptions = True
     httpd, base = start(fake)
     try:
-        export = export_file(tmp_path, [issue("JOR-1", "Todo", project={"number": "022"})])
+        export = export_file(tmp_path, [issue("JOR-1", "Todo", project={"description": "Spec: specs/022-kaneo-backlog/"})])
         code, _, _ = run_script(monkeypatch, capsys, base, export, apply=True, inventory=inventory_file(tmp_path))
     finally:
         httpd.shutdown()
     assert code == 0
     assert fake.tasks["JOR-1"]["description"] == "Spec: specs/022-kaneo-backlog/\n\nLong body."
     assert ("GET", "/api/task/t1") in [(m, p) for m, p, _ in fake.requests]
+
+
+def test_spec_references_resolve_by_folder_number_slug_or_title():
+    index = fixup.index_inventory([
+        {
+            "kind": "spec",
+            "key": "specs/022-kaneo-backlog",
+            "name": "kaneo-backlog",
+            "number": "022",
+            "title": "Self-Hosted Kaneo as the Backlog",
+        },
+        {"kind": "draft", "key": "specs/_drafts/some-draft"},
+    ])
+    for reference in ("specs/022-kaneo-backlog", "specs/022-kaneo-backlog/", "022", "kaneo-backlog",
+                      "Self-Hosted Kaneo as the Backlog"):
+        assert fixup.resolve_spec(reference, index) == "specs/022-kaneo-backlog", reference
+    assert fixup.resolve_spec("specs/999-nope", index) is None
+    assert fixup.resolve_spec("", index) is None
 
 
 def test_spec_reference_needs_the_inventory_when_the_export_has_one(tmp_path, monkeypatch, capsys):
