@@ -16,13 +16,19 @@ const INSTALLERS: readonly Installer[] = [
     name: 'macOS',
     platform: 'Apple silicon',
     file: 'jordylab-desktop-macos-aarch64.zip',
-    note: 'First launch: right-click the app and choose Open once.',
+    note: 'Unzip, then run jordylab-desktop/jordylab-desktop. The first launch needs a right-click → Open.',
   },
   {
     name: 'Linux',
     platform: 'x86_64',
-    file: 'jordylab-desktop-linux-x86_64',
-    note: 'Make the file executable, then run it.',
+    file: 'jordylab-desktop-linux-x86_64.tar.gz',
+    note: 'Extract, then run jordylab-desktop/jordylab-desktop.',
+  },
+  {
+    name: 'Windows',
+    platform: 'x64',
+    file: 'jordylab-desktop-windows-x64.zip',
+    note: 'Unzip, then run jordylab-desktop.exe.',
   },
 ];
 
