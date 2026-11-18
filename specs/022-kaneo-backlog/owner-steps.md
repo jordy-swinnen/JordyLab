@@ -6,8 +6,40 @@ holds. Status is updated here, with the date.
 
 ## Remaining steps, in order (2026-11-18)
 
-The build is done and reviewed; this is what is left, in the order the steps gate each other. Each line names its task
-in `tasks.md` and the handoff above it where one exists.
+### Confirmed live state (read-only checks, 2026-11-18)
+
+- Production runs `75e7da7` (the Build deploy job succeeded), `https://kaneo.jordylab.be/api/health` answers, the MCP
+  endpoint is live and refuses a request without a token (401). T025 is done.
+- The workspace `JordyLab` has one member (Jordy, owner) and two projects: `JOR` (93 tasks, numbers up to `JOR-123`, 59%
+  done, columns ideas/refinement/todo/in-progress/in-review/done/canceled) and `RA` (Roblox AI, 0 tasks, private).
+- The Linear import already ran in production: the Linear-era tickets (`JOR-8`, `JOR-14`, `JOR-35`, ...) are there. What
+  is missing is the `Spec:` first line on the spec tickets (the fix-up has not run); `JOR-85`'s first line is still the
+  original text.
+- `JOR` was readable without signing in through the public-board route; it is now private (the public route answers 403),
+  so the lock-down check T027 holds.
+- Repository variables: `BACKLOG_PROVIDER=linear` (cutover pending), `KANEO_DISABLE_REGISTRATION=true`,
+  `KANEO_MEM_LIMIT=768m`, `AUTO_DEPLOY=true`; workspace creation stays at its `true` default. Production environment
+  secrets: no `KANEO_API_KEY` yet, so the idea box is not wired to Kaneo.
+- GitHub sign-in is configured on the instance. The GitHub App itself cannot be checked from outside (its API needs App
+  credentials), and `GITHUB_APP_NAME` is not set in `compose.yaml`.
+- The SOPS keys are present by name and the deployed instance uses them; the owner still confirms the values are the
+  intended ones.
+
+### Then what is left
+
+1. `Spec:` links: run the fix-up. It currently creates Triage, Drafted and Specified (the pre-JOR-111 layout); with the
+   board already on JOR-111, change its mapping to Linear Triage/Drafted -> `ideas` and Specified -> `todo` (no column
+   creation) before `--apply`, or run it dry first and review.
+2. Saved views or filter recipes (T038).
+3. The backend API key (HANDOFF-04) and the live client check (T052, T053).
+4. The GitHub App (HANDOFF-03), `GITHUB_APP_NAME`, the repository connection and automations (T069, T070), then the
+   matrix on a scratch repository (T010, T071).
+5. Claude Code and Claude app MCP sign-in (T009).
+6. Capacity record and restore drill (T028, T029).
+7. Relink (T054), `BACKLOG_PROVIDER=kaneo` and a redeploy (T072), Linear off (T073), the cutover record (T074), then the
+   30-day follow-up (T076-T079).
+
+The ordered checklist below is the original plan, kept for the reasoning.
 
 **Before the merge**
 1. Confirm the Kaneo secrets in the encrypted file are the live ones (HANDOFF-02). The local patch saved on 2026-11-12
