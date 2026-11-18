@@ -4,6 +4,40 @@ Only Jordy can do these: they need the OVH account, the GitHub account settings,
 The agent never opens decrypted secret content. Each step is a HANDOFF block; a step is done when its "Done when" line
 holds. Status is updated here, with the date.
 
+## Remaining steps, in order (2026-11-18)
+
+The build is done and reviewed; this is what is left, in the order the steps gate each other. Each line names its task
+in `tasks.md` and the handoff above it where one exists.
+
+**Before the merge**
+1. Confirm the Kaneo secrets in the encrypted file are the live ones (HANDOFF-02). The local patch saved on 2026-11-12
+   was superseded by the merged keys; nothing to apply.
+2. Create the GitHub App and add its three values (HANDOFF-03).
+3. Confirm `BACKLOG_PROVIDER=linear` and `KANEO_DISABLE_REGISTRATION=true` (HANDOFF-05), then merge the pull request and
+   let the deploy run (T025).
+
+**After the first deploy**
+4. Open the board and create the owner account; check that a second sign-up is refused (T026, T027).
+5. Generate the GitHub OAuth client secret, add the two OAuth keys (HANDOFF-06), and sign in with GitHub.
+6. Install the GitHub App on `jordy-swinnen/JordyLab`, connect the repository to project `JOR`, set the branch regex and
+   the automations with merged -> Don't move (T069, T070).
+7. Sign in from Claude Code (`/mcp`) and from the Claude app custom connector (T009); run the GitHub App matrix on a
+   scratch repository (T010) and fix the written rules if it differs (T071).
+8. Capacity record, lock-down check and restore drill (T028, T029, T027).
+
+**Import (after the freeze)**
+9. Announce the freeze (T033) and take the full Linear export off the VPS (T034).
+10. Import Linear once in Kaneo (T035). Probe the description write once, then run the fix-up dry run and `--apply`
+    (HANDOFF-04, T036), and fold Triage/Drafted/Specified into `ideas`/`todo`.
+11. Run the verification checklist (T037), create the saved views (T038), create the backend API key and run the live
+    client check (T052, T053).
+
+**Cutover**
+12. Relink the stored idea-box links (T054), set `BACKLOG_PROVIDER=kaneo` and redeploy, then run the ten accepted ideas
+    (T072).
+13. Switch Linear off, revoke the keys and announce it (T073); record the cutover (T074).
+14. At the 30-day mark, confirm and open the follow-up pull request that removes Linear (T076-T079).
+
 ## HANDOFF-01: DNS record for kaneo.jordylab.be
 
 - **Where:** OVH control panel, domain `jordylab.be`, DNS zone.
@@ -32,9 +66,8 @@ holds. Status is updated here, with the date.
   ```
 
 - **Done when:** the keys above exist in the encrypted file and `DECRYPT_OK` prints.
-- **Status:** on hold until the deployment code is in the PR (2026-11-07). Nothing reads these keys yet: the repository has
-  no Kaneo service, Caddy site or deploy step. The render step fails on a missing required value, so add the two keys
-  just before the merge. The GitHub values can wait for HANDOFF-03.
+- **Status:** done: the keys are in the encrypted file (merged 2026-11-07/08). The owner's local edit saved on 2026-11-12
+  was superseded by those merged values and does not apply; nothing else to add. Confirm the values are the live ones.
 
 ## HANDOFF-03: GitHub App for Kaneo
 

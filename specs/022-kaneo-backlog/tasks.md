@@ -131,8 +131,11 @@ restore drill brings the `kaneo` database back, and the application services are
       best-effort Kaneo step after the application deploy and smoke check: `ensure-kaneo-database.sh`, `docker compose up -d
       kaneo`, health wait, Kaneo smoke check; every failure is a `::warning::` plus a job-summary line and never changes the job
       result or touches the release state files.
-- [ ] T021 [US2] Validate locally: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml — partly done (2026-11-07): every related suite passes and the compose file and Caddyfile validate; shellcheck is not installed here, so it was not run.
+- [X] T021 [US2] Validate locally: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml
       config -q`, `shellcheck` on the new scripts, `bash deploy/scripts/tests/*-cases.sh`, `bash scripts/mcp/tests/*` unaffected.
+      Done 2026-11-18: compose config validates; shellcheck 0 findings (0.11.0); the deploy fixture suites pass (9, 14,
+      8, 18 and 28 cases) and the GitHub MCP cases pass (23). The render-env suite needs a `python3` with PyYAML: without
+      one it fails on every case, which is the environment, not the script.
 - [X] T022 [US2] Add a "Kaneo" section to `docs/runbook.md` (and its Contents): deploy, first-user bootstrap per the trial, closing
       registration with `gh variable set KANEO_DISABLE_REGISTRATION --body true`, the manual closed-registration check after
       every deploy that touches Kaneo's configuration (if there is no automatic probe), upgrade procedure
