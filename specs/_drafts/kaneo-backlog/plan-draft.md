@@ -1,5 +1,7 @@
 # Plan Draft: Move the Backlog from Linear to a Self-Hosted Kaneo
 
+> **History.** This draft is superseded by `specs/022-kaneo-backlog/`; it stays for the research it records.
+
 Date: 2026-11-07. Order: this comes first; the Langfuse self-hosting draft follows it. Facts come from the Kaneo docs
 (kaneo.app/docs, installation, API, MCP, Linear migration, GitHub integration) and the repo as of `main`.
 

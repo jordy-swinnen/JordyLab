@@ -25,7 +25,7 @@ Tickets are addressed by key (`JOR-123`). Resolve a key with `get_task_by_ticket
 
 ```
 /kaneo-idea ──▶ ideas ──▶ refinement ──▶ todo ──▶ in-progress ──▶ in-review ──▶ done
-                 (raw)    /kaneo-refinement   (ready for        (SpecKit,        (PR)     (merged)
+                 (raw)    /kaneo-refinement   (ready for        (SpecKit,        (PR)     (owner)
                           /kaneo-design        /speckit-specify)  branch)
                           (optional)                            └─▶ canceled (from any column)
 ```
@@ -37,7 +37,7 @@ Tickets are addressed by key (`JOR-123`). Resolve a key with `get_task_by_ticket
 | `todo` | Ready: it meets the Definition of Ready below and can go straight into `/speckit-specify`. | `kaneo-refinement` or `kaneo-design` (on finish, after the owner confirms) |
 | `in-progress` | SpecKit is running (specify, clarify, plan, tasks, implement, converge). | the start of `/speckit-specify` or the start-ticket step |
 | `in-review` | A PR is open. | the PR flow |
-| `done` | Merged (and deployed when auto-deploy is on). | the PR flow |
+| `done` | Finished. The owner sets it: a merged pull request does not close the ticket (owner decision, 2026-11-08). | the owner, by hand |
 | `canceled` | Duplicate, superseded or not worth doing. Always leave a comment saying why. | whichever skill found out, after the owner confirms |
 
 Legacy: Kaneo's built-in backlog uses status `planned` and shows it as "Planned". That bucket is retired; all tickets that were in it were moved to `ideas`. If a ticket still has status `planned`, treat it as `ideas`. A `triage` column may appear later; `kaneo-refinement` accepts tickets from it the same way as from `ideas`.

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Draft
+**Status**: Implemented (2026-11-12); polish and the staged owner steps (merge, import, cutover) are open, see `tasks.md`.
 
 **Module**: repository tooling (agent skills and connectors, commit and pull-request conventions), the `feedback` module
 (idea box), production deployment on the OVH VPS, docs. Langfuse is **not** part of this feature: it stays on Langfuse
@@ -15,8 +15,8 @@ stay, with a Triage column, App and Type fields, a Linear import, the GitHub App
 module's Linear client replaced by a Kaneo client, the Linear skills and MCP config rewritten, docs, and Linear retired."
 
 **Background**: `specs/_drafts/kaneo-backlog/plan-draft.md` (researched facts, phases, risks). This spec supersedes the
-draft's scope; the draft folder stays as history. The Linear setup being replaced is described in `docs/linear.md` and
-`specs/015-linear-backlog/`; the idea box in `specs/017-guest-feedback/`.
+draft's scope; the draft folder stays as history. The Linear setup being replaced is described in
+`specs/015-linear-backlog/` (the old `docs/linear.md`, now `docs/kaneo.md`); the idea box in `specs/017-guest-feedback/`.
 
 ## Overview
 
@@ -187,16 +187,17 @@ words finish a ticket and which do not, so that status stays right without manua
 **Why this priority**: today's rules were learned from mistakes (a key alone in a title completed a ticket); they must be
 re-learned on Kaneo, but the board is usable meanwhile.
 
-**Independent Test**: Open a pull request whose branch and title carry a key and whose description says "Part of", merge
-it, and check the ticket did not finish; do the same with the finishing word and check it did.
+**Independent Test**: Open a pull request whose branch and title carry a key, merge it, and check the ticket moved to In
+Review but did not finish (Done is the owner's); repeat with `Part of JOR-n` in the description and check it linked the
+same way.
 
 **Acceptance Scenarios**:
 
-1. **Given** the repository is connected to the `JOR` project, **When** a branch with a key is pushed, a pull request is
-   opened and it is merged, **Then** the ticket moves to In Progress, In Review and Done as configured.
+1. **Given** the repository is connected to the `JOR` project, **When** a branch with a key is pushed and a pull request
+   is opened and merged, **Then** the ticket moves to In Progress and In Review as configured, and Done stays the owner's
+   (owner decision, 2026-11-08, JOR-111).
 2. **Given** the observed linking behaviour from the trial, **When** the written rules are read, **Then** they state
-   exactly which words, title patterns and branch names link, which finish a ticket, and which do not, including the old
-   "a key alone completes the ticket" trap if it still exists.
+   exactly which words, title patterns and branch names link, and which column each moves the ticket to.
 3. **Given** a commit whose subject starts with `JOR-n:`, **When** it is committed or checked in CI, **Then** the existing
    commit rules still pass unchanged, and the commit message is either linked on the ticket or the rules say it is not.
 4. **Given** the instruction files, pull-request template and hook messages, **When** read, **Then** none says "Linear"
@@ -371,8 +372,9 @@ sign-ins and upgrade steps, so that I can rebuild or repair it without rememberi
 - **Workspace and project**: one workspace owned by Jordy; one project with the key `JOR`; membership is the owner only.
 - **Ticket**: a numbered item (`JOR-n`) with title, description, column, app, type, priority, comments, relations, a spec
   link where one exists, and an optional source marker (idea box, Claude app, agent).
-- **Column**: a named stage of the board, one of Triage, Drafted, Specified, Backlog, Todo, In Progress, In Review, Done,
-  Canceled; Done and Canceled are finished.
+- **Column**: a named stage of the board — `ideas`, `refinement`, `todo`, `in-progress`, `in-review`, `done` or
+  `canceled` (the JOR-111 flow; the import adds Triage, Drafted and Specified first); `done` and `canceled` are finished,
+  and `done` is set by the owner.
 - **App and type**: the two classifications every ticket carries.
 - **API key and connector sign-in**: the credentials by which the backend, the agents and the Claude apps act on the
   board; all revocable.

@@ -43,7 +43,9 @@ jobs:
 
       - name: Install APM
         run: |
-          curl -sSL https://aka.ms/apm-unix | sh
+          # Pinned to the version apm.lock.yaml records (apm_version). APM 0.36 refuses to redeploy over the
+          # committed skills without a local deployment baseline, which a fresh CI checkout never has.
+          curl -sSL https://aka.ms/apm-unix | VERSION=v0.35.0 sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Point apm.yml at the newest released tag
