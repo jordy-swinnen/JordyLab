@@ -333,11 +333,12 @@ no key answers "backlog unavailable".
 - [X] T067 [P] [US6] Update `.github/pull_request_template.md` and `.github/copilot-instructions.md` to match T066. [B]
 - [X] T068 [P] [US6] Update message text only in `.githooks/commit-msg` and `.github/workflows/commit-refs.yml` (ticket creation points to
       `backlog-capture`, no Linear wording); run the hook's own tests and `bash .githooks` cases if present. [B]
-- [ ] T069 [US6] OWNER [B] before the merge: create the GitHub App for Kaneo with the permissions, name and webhook URL
+- [X] T069 [US6] OWNER [B] before the merge: create the GitHub App for Kaneo with the permissions, name and webhook URL
       (`https://kaneo.jordylab.be` + the trial's path) the trial recorded, and add `KANEO_GITHUB_APP_ID`,
       `KANEO_GITHUB_WEBHOOK_SECRET`, `KANEO_GITHUB_PRIVATE_KEY_BASE64` to the SOPS file on the branch with the IntelliJ `sops`
       command; set `GITHUB_APP_NAME` in `compose.yaml` (T017). After the merge's deploy [C], install the App on
-      `jordy-swinnen/JordyLab`.
+      `jordy-swinnen/JordyLab`. Done 2026-11-24: the App `kaneo-jordylab` (ID 5659276) exists with an active webhook,
+      is installed on all repositories, `GITHUB_APP_NAME` is set, and the three secret names are in the encrypted file.
 - [ ] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
       In Progress, PR opened -> In Review, merged -> Don't move (Done is set by the owner; owner decision 2026-11-08,
       JOR-111).

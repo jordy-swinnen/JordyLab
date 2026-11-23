@@ -126,7 +126,8 @@ use the Kaneo connector with these rules:
 ## GitHub App
 
 The board connects to the repository `jordy-swinnen/JordyLab` through its own GitHub App (setup: `owner-steps.md`
-HANDOFF-03):
+HANDOFF-03). The App is **Kaneo JordyLab** (slug `kaneo-jordylab`, App ID `5659276`), installed on all repositories of
+`jordy-swinnen`; `GITHUB_APP_NAME` in `compose.yaml` carries the slug. Settings:
 
 - Webhook URL `https://kaneo.jordylab.be/api/github-integration/webhook`, with a secret kept in the encrypted file.
 - Repository permissions: Issues read and write; Pull requests read; Contents read; Metadata read.
@@ -156,7 +157,7 @@ against a scratch repository (spec 022, T010 and T071).
 |---|---|---|
 | H-01 | OVH DNS `A` record `kaneo.jordylab.be` → `57.129.163.110`. | 2026-11-07 |
 | H-02 | Kaneo secrets in the encrypted file (IntelliJ + `sops`). | done: the keys are in the file; the owner's local edit was superseded by the merged values |
-| H-03 | GitHub App (name, webhook, permissions, private key) and its installation. | open, after the first deploy |
+| H-03 | GitHub App (name, webhook, permissions, private key) and its installation. | done 2026-11-24: App `kaneo-jordylab` (ID 5659276), webhook active, installed on all repositories |
 | H-04 | Kaneo API key → `gh secret set KANEO_API_KEY --env production`. | open, after the deploy |
 | H-05 | Repository variables. | done 2026-11-07 |
 | H-06 | GitHub sign-in OAuth app: generate the client secret and add the two OAuth keys. | open |

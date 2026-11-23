@@ -170,6 +170,8 @@ services:
       DISABLE_WORKSPACE_CREATION: ${KANEO_DISABLE_WORKSPACE_CREATION:-true}
       DISABLE_GUEST_ACCESS: "true"
       GITHUB_APP_ID: ${KANEO_GITHUB_APP_ID:-}
+      # The App's slug, not a secret: it is the same value the owner sees on the App's page (task T069).
+      GITHUB_APP_NAME: kaneo-jordylab
       GITHUB_WEBHOOK_SECRET: ${KANEO_GITHUB_WEBHOOK_SECRET:-}
       GITHUB_PRIVATE_KEY_BASE64: ${KANEO_GITHUB_PRIVATE_KEY_BASE64:-}
       # GitHub sign-in (spec 022): a GitHub OAuth App, separate from the GitHub App above. Empty means no GitHub button.

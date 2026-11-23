@@ -121,8 +121,11 @@ The ordered checklist below is the original plan, kept for the reasoning.
   the App's settings page, then encode the PEM as base64 in your terminal (`base64 -i key.pem`) and add it with HANDOFF-02.
   Do not paste any of them into chat.
 - **Done when:** the App is installed on the repository and its three values are in the encrypted file.
-- **Status:** after the first deploy (2026-11-07). It is needed for the GitHub check (T010), not for the deploy. Confirm
-  when the compose service is written that Kaneo starts without these values.
+- **Status:** done (2026-11-24): the App **Kaneo JordyLab** exists (App ID `5659276`, slug `kaneo-jordylab`), its webhook
+  is active at `https://kaneo.jordylab.be/api/github-integration/webhook`, and it is installed on all repositories of
+  `jordy-swinnen` with Issues, Issue comments, Pull requests, Pull request review and Push events. `GITHUB_APP_NAME` is
+  set in `compose.yaml`. The three values are in the encrypted file by name; the owner confirms they are the App's
+  current private key and webhook secret.
 
 ## HANDOFF-04: Kaneo API key for the backend (after the first deploy)
 
