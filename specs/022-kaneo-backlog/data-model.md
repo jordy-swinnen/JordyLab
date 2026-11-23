@@ -53,17 +53,20 @@ The existing `jordylab.feedback.linear.*` properties stay until the follow-up pu
 
 ### Linear -> Kaneo state mapping (after the fix-up step)
 
+The fix-up targets the JOR-111 columns (ideas, refinement, todo, in-progress, in-review, done, canceled) and never
+creates columns. The importer's older buckets are folded into them.
+
 | Linear state (type) | Importer puts it in | Fix-up moves it to |
 |---|---|---|
-| Triage (triage) | Backlog view | Triage |
-| Backlog (backlog) | Backlog view | stays in Backlog |
-| Drafted (backlog) | Backlog view | Drafted |
-| Specified (backlog) | Backlog view | Specified |
-| Todo (unstarted) | Todo column | stays |
-| In Progress (started) | In Progress column | stays |
-| In Review (started) | In Review column | stays |
-| Done (completed) | Done (final) | stays |
-| Canceled / Duplicate (canceled) | Canceled / Duplicate (final) | stays; Duplicate tickets are moved to Canceled |
+| Triage (triage) | Backlog view | `ideas` |
+| Backlog (backlog) | Backlog view | `ideas` |
+| Drafted (backlog) | Backlog view | `ideas` |
+| Specified (backlog) | Backlog view | `todo` |
+| Todo (unstarted) | Todo column | stays (`todo`) |
+| In Progress (started) | In Progress column | stays (`in-progress`) |
+| In Review (started) | In Review column | stays (`in-review`) |
+| Done (completed) | Done (final) | stays (`done`) |
+| Canceled / Duplicate (canceled) | Canceled / Duplicate (final) | stays; Duplicate tickets are moved to `canceled` |
 
 Labels carry over by name; Linear's App/Type groups become plain labels, so the names must stay unique across both sets
 (they are). Not transferred: projects, milestones, cycles, estimates, attachments, archived issues.

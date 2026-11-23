@@ -29,10 +29,9 @@ history of the move from Linear.
 
 The `kaneo-board` skill is the single place where the layout, the Ready template and the Definition of Ready live.
 
-**Import-time columns.** The import fix-up creates **Triage**, **Drafted** and **Specified** so Linear's states survive
-the import (Kaneo's importer flattens them into the Backlog view). A one-time pass then folds them into the current
-columns: Triage and Drafted → `ideas`, Specified → `todo`. The legacy `planned` bucket is retired; treat any ticket still
-in it as `ideas`.
+**Import-time mapping.** The fix-up maps Linear's states directly onto the current columns: Triage, Backlog and Drafted →
+`ideas`, Specified and Todo → `todo`, In Progress/In Review/Done/Canceled unchanged. It creates no columns. The legacy
+`planned` bucket is retired; treat any ticket still in it as `ideas`.
 
 ## Labels
 

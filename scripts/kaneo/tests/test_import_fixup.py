@@ -26,7 +26,7 @@ API_KEY = "test-key-not-real"
 class FakeKaneo:
     """Holds a small JOR project and records every request."""
 
-    def __init__(self, tasks, columns=("todo", "in-progress", "in-review", "done", "canceled", "planned")):
+    def __init__(self, tasks, columns=("ideas", "refinement", "todo", "in-progress", "in-review", "done", "canceled")):
         self.tasks = {key: {"description": "", **task} for key, task in tasks.items()}
         self.columns = {slug: f"col-{slug}" for slug in columns}
         self.requests = []  # (method, path, body)
@@ -196,7 +196,10 @@ def test_mapping_covers_every_linear_state_and_duplicates_are_canceled():
     for state in ["Triage", "Backlog", "Drafted", "Specified", "Todo", "In Progress", "In Review", "Done", "Canceled"]:
         assert fixup.target_status(state) is not None, state
     assert fixup.target_status("Duplicate") == "canceled"
-    assert fixup.target_status("Backlog") == "planned"
+    assert fixup.target_status("Triage") == "ideas"
+    assert fixup.target_status("Backlog") == "ideas"
+    assert fixup.target_status("Drafted") == "ideas"
+    assert fixup.target_status("Specified") == "todo"
     assert fixup.target_status("Something new") is None
 
 
@@ -224,12 +227,11 @@ def test_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
         httpd.shutdown()
     assert code == 0
     assert fake.writes() == []
-    assert "would create column triage" in out
-    assert "JOR-1 | Triage | planned | triage" in out
+    assert "JOR-1 | Triage | planned | ideas" in out
     assert "dry run, nothing written" in out
 
 
-def test_apply_creates_columns_moves_tickets_and_a_second_run_changes_nothing(tmp_path, monkeypatch, capsys):
+def test_apply_moves_tickets_into_the_jor_111_columns_and_a_second_run_changes_nothing(tmp_path, monkeypatch, capsys):
     fake = FakeKaneo({
         "JOR-1": {"id": "t1", "number": 1, "status": "planned"},
         "JOR-2": {"id": "t2", "number": 2, "status": "planned"},
@@ -246,15 +248,14 @@ def test_apply_creates_columns_moves_tickets_and_a_second_run_changes_nothing(tm
         ])
         code, _, _ = run_script(monkeypatch, capsys, base, export, apply=True)
         assert code == 0
-        assert "triage" in fake.columns  # the one column these tickets need was created
-        assert fake.tasks["JOR-1"]["status"] == "triage"  # out of the Backlog view
-        assert fake.tasks["JOR-2"]["status"] == "planned"  # Backlog stays in the Backlog view
+        assert fake.tasks["JOR-1"]["status"] == "ideas"  # out of the retired planned bucket
+        assert fake.tasks["JOR-2"]["status"] == "ideas"
         assert fake.tasks["JOR-3"]["status"] == "todo"
-        assert fake.tasks["JOR-4"]["status"] == "planned"  # into the Backlog view
-        # One column create (triage) and two moves (JOR-1 out, JOR-4 into the Backlog view).
+        assert fake.tasks["JOR-4"]["status"] == "ideas"
+        # No column is created; only the three tickets that were in the wrong column are moved.
         assert [(m, p) for m, p, _ in fake.writes()] == [
-            ("POST", "/api/column/p1"),
             ("PUT", "/api/task/status/t1"),
+            ("PUT", "/api/task/status/t2"),
             ("PUT", "/api/task/status/t4"),
         ]
 
@@ -264,6 +265,20 @@ def test_apply_creates_columns_moves_tickets_and_a_second_run_changes_nothing(tm
         assert "already in place: 4" in out
     finally:
         httpd.shutdown()
+
+
+def test_a_missing_target_column_stops_the_run(tmp_path, monkeypatch, capsys):
+    fake = FakeKaneo({"JOR-1": {"id": "t1", "number": 1, "status": "todo"}}, columns=("todo", "done"))
+    httpd, base = start(fake)
+    try:
+        code, _, err = run_script(
+            monkeypatch, capsys, base, export_file(tmp_path, [issue("JOR-1", "Triage")]), apply=True
+        )
+    finally:
+        httpd.shutdown()
+    assert code == 1
+    assert "no column(s) ideas" in err
+    assert fake.writes() == []
 
 
 def test_missing_ticket_is_reported_not_written(tmp_path, monkeypatch, capsys):

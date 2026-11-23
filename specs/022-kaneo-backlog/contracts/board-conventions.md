@@ -20,7 +20,7 @@
 |---|---|
 | Inputs | the Linear export file (JSON, the full export stored off-host under FR-018), `KANEO_BASE_URL` and `KANEO_API_KEY` (env); never printed or logged. **No Linear key is used** (decided 2026-11-07: the key is revoked after the import, and the export holds the same data) |
 | Default | `--dry-run`: prints a table `JOR-n | Linear state | Kaneo column now | target column` and counts; no write |
-| Writes | create missing columns by slug; move tasks with the status-change endpoint the trial recorded (including into and out of the Backlog view); write `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (mapping from `repo_inventory.sh`); all idempotent (already in place = skip) |
+| Writes | move tasks with the status-change endpoint the trial recorded (into the JOR-111 columns: Triage, Backlog and Drafted -> `ideas`; Specified and Todo -> `todo`); never create columns (stop with a clear message when a target column is missing); write `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (mapping from `repo_inventory.sh`); all idempotent (already in place = skip) |
 | Keys | the owner's Kaneo key only for this one run (short-lived, revoked afterwards); the backend's own key (least privilege if the trial shows scopes) is never used here |
 | Limits | at most 40 writes a minute; stops on the first 401/403; on 429 waits `Retry-After` |
 | Output | a count per target column and a list of tickets without an App or a Type label |
@@ -38,10 +38,9 @@
 ## Columns and labels
 
 The board follows the workflow settled in JOR-111: **ideas -> refinement -> todo -> in-progress -> in-review -> done**,
-plus canceled from any column (the `kaneo-board` skill holds the slugs and who moves a ticket). The import fix-up
-creates **Triage**, **Drafted** and **Specified** so Linear's states survive the import; a one-time pass then folds
-them into the current columns: Triage and Drafted -> `ideas`, Specified -> `todo`. The legacy `planned` bucket is retired
-(treat it as `ideas`).
+plus canceled from any column (the `kaneo-board` skill holds the slugs and who moves a ticket). The fix-up maps Linear's
+states onto those columns (Triage, Backlog and Drafted -> `ideas`; Specified and Todo -> `todo`; In Progress, In Review,
+Done and Canceled unchanged) and never creates columns. The legacy `planned` bucket is retired (treat it as `ideas`).
 Labels: the seven App and five Type names exactly as in `data-model.md`; created by the importer; the fix-up creates any
 that are missing. The design flags (`needs-design`, `needs-ui-design`) are working markers, not categories.
 

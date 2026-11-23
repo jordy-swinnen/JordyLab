@@ -191,10 +191,10 @@ the VPS (`import-report.md`).
 - [ ] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
       project. Save the importer's summary into `specs/022-kaneo-backlog/import-report.md`.
 - [ ] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
-      review the table with the owner, run it for real, append the output counts to `import-report.md`. Then fold the
-      import columns into the current board (Triage and Drafted -> `ideas`, Specified -> `todo`; owner decision
-      2026-11-12, JOR-111). The owner deferred this step on 2026-11-13: the dry run and the `--apply` stay with the
-      owner before the import, and the pre-import description probe in `owner-steps.md` HANDOFF-04 comes first.
+      review the table with the owner, run it for real, append the output counts to `import-report.md`. The fix-up maps
+      Linear's states straight onto the JOR-111 columns (Triage, Backlog and Drafted -> `ideas`; Specified -> `todo`) and
+      creates no columns. The owner deferred this step on 2026-11-13; the dry run and the `--apply` stay with the owner,
+      and the pre-import description probe in `owner-steps.md` HANDOFF-04 comes first.
 - [ ] T037 [US3] OPERATIONS [D]: run the verification checklist in `contracts/board-conventions.md` (counts per state, every key and the
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.

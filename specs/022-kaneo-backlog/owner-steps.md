@@ -27,9 +27,9 @@ holds. Status is updated here, with the date.
 
 ### Then what is left
 
-1. `Spec:` links: run the fix-up. It currently creates Triage, Drafted and Specified (the pre-JOR-111 layout); with the
-   board already on JOR-111, change its mapping to Linear Triage/Drafted -> `ideas` and Specified -> `todo` (no column
-   creation) before `--apply`, or run it dry first and review.
+1. `Spec:` links: run the fix-up. Its mapping now targets the JOR-111 columns directly (Triage, Backlog and Drafted ->
+   `ideas`; Specified -> `todo`) and it creates no columns, so a dry run is safe to review and `--apply` only moves
+   tickets and writes the `Spec:` first lines.
 2. Saved views or filter recipes (T038).
 3. The backend API key (HANDOFF-04) and the live client check (T052, T053).
 4. The GitHub App (HANDOFF-03), `GITHUB_APP_NAME`, the repository connection and automations (T069, T070), then the

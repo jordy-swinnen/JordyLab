@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fix-up after the one-time Linear import into Kaneo (spec 022, data-model "Linear -> Kaneo state mapping").
 
-The Kaneo importer puts Linear's Triage, Drafted and Specified tickets in the Backlog view, and it does not create
-those columns. This script reads Linear's JSON export (not the Linear API, so no Linear key is needed) and:
+The Kaneo importer puts Linear's Triage, Drafted and Specified tickets in the Backlog view. This script reads Linear's
+JSON export (not the Linear API, so no Linear key is needed) and:
 
-- creates the missing columns triage, drafted and specified in the JOR project;
-- moves each ticket to the column its Linear state implies, when it is not there already;
+- moves each ticket to the JOR-111 column its Linear state implies (Triage, Backlog and Drafted -> ideas; Specified and
+  Todo -> todo; In Progress, In Review, Done and Canceled unchanged). It never creates columns;
 - writes `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (the folder comes from
   `repo_inventory.sh`, run from the repository root, or from a saved copy passed with --inventory);
 - reports tickets whose labels do not give exactly one App and one Type label.
@@ -40,13 +40,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-# Linear state name (lower case) -> Kaneo status. "planned" is the Backlog view, which holds Backlog and Drafted
-# until the fix-up moves Drafted and Specified to their own columns (data-model.md).
+# Linear state name (lower case) -> the JOR-111 Kaneo column (ideas, refinement, todo, in-progress, in-review, done,
+# canceled). The retired `planned` bucket and the pre-JOR-111 import columns are folded into these, so the fix-up never
+# creates columns: Triage, Backlog and Drafted land in `ideas`, Specified and Todo in `todo`.
 STATE_TO_STATUS = {
-    "triage": "triage",
-    "backlog": "planned",
-    "drafted": "drafted",
-    "specified": "specified",
+    "triage": "ideas",
+    "backlog": "ideas",
+    "drafted": "ideas",
+    "specified": "todo",
     "todo": "todo",
     "in progress": "in-progress",
     "in review": "in-review",
@@ -55,9 +56,6 @@ STATE_TO_STATUS = {
     "cancelled": "canceled",
     "duplicate": "canceled",
 }
-
-# Columns the fix-up must create when they are missing (slug -> display name).
-COLUMNS_TO_CREATE = {"triage": "Triage", "drafted": "Drafted", "specified": "Specified"}
 
 APP_LABELS = {"Game Catalog", "Finance News", "Garmin", "Mobile", "Recipe", "Trading", "Platform"}
 TYPE_LABELS = {"Bug", "Feature", "Improvement", "Idea", "Chore"}
@@ -370,22 +368,15 @@ def column_ids(client, project_id):
     return {column["slug"]: column["id"] for column in columns if column.get("slug")}
 
 
-def ensure_columns(client, project_id, needed, apply):
-    """Create the missing columns this run needs. Returns the slugs that exist after the run (dry run: planned)."""
+def require_columns(client, project_id, needed):
+    """The fix-up never creates columns; it checks the target columns exist and stops with a clear message if not."""
     existing = column_ids(client, project_id)
-    missing = [slug for slug in COLUMNS_TO_CREATE if slug in needed and slug not in existing]
-    for slug in missing:
-        if apply:
-            client.request("POST", f"/column/{project_id}", {"name": COLUMNS_TO_CREATE[slug]})
-            print(f"created column {slug}")
-        else:
-            print(f"would create column {slug}")
-    if apply and missing:
-        existing = column_ids(client, project_id)
-        still_missing = [slug for slug in missing if slug not in existing]
-        if still_missing:
-            raise KaneoError(f"columns still missing after create: {', '.join(still_missing)}")
-    return existing, missing
+    missing = sorted(slug for slug in needed if slug not in existing)
+    if missing:
+        raise KaneoError(
+            "the project has no column(s) " + ", ".join(missing) + "; create them in the project first"
+        )
+    return existing
 
 
 def run(args):
@@ -417,7 +408,7 @@ def run(args):
     client = Kaneo(base_url, api_key, min_interval)
     project_id = resolve_project(client, project_key, workspace_id)
     needed = {item["target"] for item in plan}
-    existing_columns, _ = ensure_columns(client, project_id, needed, args.apply)
+    require_columns(client, project_id, needed)
 
     spec_links, unresolved = {}, []
     references = {item["identifier"]: spec_references(item) for item in plan}
