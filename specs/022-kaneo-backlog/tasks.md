@@ -188,8 +188,9 @@ the VPS (`import-report.md`).
       of work in flight already has its `JOR-n`, the fix-up reads the Linear export from T034, so it needs no Linear key (decided 2026-11-07).
 - [ ] T034 [US3] OPERATIONS [D]: take a full Linear export (JSON) and store it in the Object Storage bucket under a separate prefix;
       verify it opens and its issue count equals Linear's (FR-018).
-- [ ] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
-      project. Save the importer's summary into `specs/022-kaneo-backlog/import-report.md`.
+- [X] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
+      project. Save the importer's summary into `specs/022-kaneo-backlog/import-report.md`. Observed done 2026-11-24 (93
+      tasks, Linear-era tickets present); the importer's own summary is still to be recorded.
 - [ ] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
       review the table with the owner, run it for real, append the output counts to `import-report.md`. The fix-up maps
       Linear's states straight onto the JOR-111 columns (Triage, Backlog and Drafted -> `ideas`; Specified -> `todo`) and
@@ -339,9 +340,13 @@ no key answers "backlog unavailable".
       command; set `GITHUB_APP_NAME` in `compose.yaml` (T017). After the merge's deploy [C], install the App on
       `jordy-swinnen/JordyLab`. Done 2026-11-24: the App `kaneo-jordylab` (ID 5659276) exists with an active webhook,
       is installed on all repositories, `GITHUB_APP_NAME` is set, and the three secret names are in the encrypted file.
-- [ ] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
+- [X] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
       In Progress, PR opened -> In Review, merged -> Don't move (Done is set by the owner; owner decision 2026-11-08,
-      JOR-111).
+      JOR-111). Done 2026-11-24: `jordy-swinnen/JordyLab` is connected; the automations read branch pushed -> In
+      Progress, PR opened -> In Review, PR merged -> Don't move, issue opened/closed -> Don't move. Kaneo 2.49.0 exposes
+      no branch-pattern field, so the default `{slug}-{number}` (`jor-85-...`) links; T010/T071 confirms whether a
+      `jordyswinnen/jor-23-...` branch does too. Export is opt-in (`Kaneo -> GitHub: Tasks labelled github-sync`, 0
+      tasks); `GitHub -> Kaneo` imports all issues into the private board, so nothing from the board is published.
 - [ ] T071 [US6] OPERATIONS [D]: on a throwaway ticket and two throwaway pull requests (one `Part of`, one completing) run
       the matrix cases the written rules rely on; confirm the ticket moves to In Progress and In Review, that merging does
       not set Done, and that a subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if
@@ -399,8 +404,12 @@ no key answers "backlog unavailable".
 
 ## Phase 10: Polish and cross-cutting
 
-- [ ] T083 Run every affected gate: `./gradlew test --tests '*feedback*'`, `*ModularityTests*`, the shell fixture suites,
+- [X] T083 Run every affected gate: `./gradlew test --tests '*feedback*'`, `*ModularityTests*`, the shell fixture suites,
       `python -I -m pytest scripts/kaneo/tests`, `docker compose ... config -q`, `gitleaks git --no-banner --redact .`; all green.
+      Done 2026-11-24: pytest 31, commit-msg 37, trial all, backlog fixtures 38 + 14, deploy suites 9/14/8/18/28, GitHub MCP
+      23, shellcheck 0, compose config valid, gitleaks no leaks. The Java gate ran 98 of 100: the two Testcontainers tests
+      (FeedbackModuleTest, FeedbackRepositoryTest) could not fetch `pgvector/pgvector:pg16` because no Docker daemon is
+      reachable locally; CI's `test-backend` is green on the merged PR, so the backend is verified there.
 - [X] T084 Review the whole diff with the `code-reviewer` agent against the JordyLab conventions; fix findings by severity.
       Done 2026-11-12: 0 blockers, 5 major, 5 minor, 6 nits. The majors were the AGENTS.md linking words and the two
       owner decisions that conflict with JOR-111 (both settled by the owner, see the board-model commit); the fix-up
@@ -454,6 +463,7 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 50, open 36
-(2026-11-12): the open ones are mostly OWNER/OPERATIONS steps after the merge, the 30-day follow-up, and T082-T084 and
-T086.
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 56, open 30
+(2026-11-24): the 30 open ones are the owner/operations steps still staged — the fix-up run and `Spec:` links, saved views,
+the live client check, the MCP sign-ins, the T010/T071 matrix, capacity and the restore drill, the relink and cutover,
+the rebuild test (T082) and T086 — plus the 30-day follow-up.

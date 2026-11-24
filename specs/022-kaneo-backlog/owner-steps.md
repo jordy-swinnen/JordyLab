@@ -31,9 +31,13 @@ holds. Status is updated here, with the date.
    `ideas`; Specified -> `todo`) and it creates no columns, so a dry run is safe to review and `--apply` only moves
    tickets and writes the `Spec:` first lines.
 2. Saved views or filter recipes (T038).
-3. The backend API key (HANDOFF-04) and the live client check (T052, T053).
-4. The GitHub App (HANDOFF-03), `GITHUB_APP_NAME`, the repository connection and automations (T069, T070), then the
-   matrix on a scratch repository (T010, T071).
+3. The backend API key: **done** (production secret `KANEO_API_KEY`, 2026-11-23); the live client check (T052, T053) is
+   still open.
+4. GitHub App, `GITHUB_APP_NAME`, the repository connection and automations: **done 2026-11-24** (App `kaneo-jordylab`,
+   installed, webhook active; `jordy-swinnen/JordyLab` connected; automations push -> In Progress, PR -> In Review,
+   merged -> Don't move, issues -> Don't move; export opt-in via the `github-sync` label). The branch pattern is the
+   default `{slug}-{number}` because this version exposes no custom regex. Still open: the matrix on a scratch
+   repository (T010, T071).
 5. Claude Code and Claude app MCP sign-in (T009).
 6. Capacity record and restore drill (T028, T029).
 7. Relink (T054), `BACKLOG_PROVIDER=kaneo` and a redeploy (T072), Linear off (T073), the cutover record (T074), then the
