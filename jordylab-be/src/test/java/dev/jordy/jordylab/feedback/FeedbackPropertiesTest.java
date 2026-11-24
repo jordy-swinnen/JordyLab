@@ -22,9 +22,9 @@ class FeedbackPropertiesTest {
             softly.assertThat(properties.linear().baseUrl()).isEqualTo("https://api.linear.app/graphql");
             softly.assertThat(properties.linear().teamKey()).isEqualTo("JOR");
             softly.assertThat(properties.kaneo().projectKey()).isEqualTo("JOR");
-            softly.assertThat(properties.kaneo().triageColumn()).isEqualTo("triage");
+            softly.assertThat(properties.kaneo().ticketColumn()).isEqualTo("ideas");
             softly.assertThat(properties.kaneo().ticketUrlTemplate())
-                    .isEqualTo("{baseUrl}/dashboard/workspace/{workspaceId}/project/{projectId}/board");
+                    .isEqualTo("{baseUrl}/dashboard/workspace/{workspaceId}/project/{projectId}/task/{taskId}");
             softly.assertThat(properties.kaneo().connectTimeoutMs()).isEqualTo(5000);
             softly.assertThat(properties.kaneo().readTimeoutMs()).isEqualTo(15000);
         });
@@ -44,7 +44,7 @@ class FeedbackPropertiesTest {
             softly.assertThat(properties.kaneo().baseUrl()).isEqualTo("https://kaneo.example");
             softly.assertThat(properties.kaneo().workspaceId()).isEqualTo("ws-1");
             softly.assertThat(properties.kaneo().projectKey()).isEqualTo("OPS");
-            softly.assertThat(properties.kaneo().triageColumn()).isEqualTo("triage");
+            softly.assertThat(properties.kaneo().ticketColumn()).isEqualTo("ideas");
             softly.assertThat(properties.kaneo().connectTimeoutMs()).isEqualTo(1000);
             softly.assertThat(properties.kaneo().readTimeoutMs()).isEqualTo(2000);
         });

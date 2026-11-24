@@ -33,7 +33,7 @@ Both methods throw `BacklogUnavailableException` (renamed from `LinearUnavailabl
 |---|---|---|
 | Workspace id | `KANEO_WORKSPACE_ID`, else `GET /workspace` and match the single workspace | project and label lookups |
 | Project id | `GET /project?workspaceId=<id>`; match `slug == KANEO_PROJECT_KEY` | create and search |
-| Triage column | `GET /column/<projectId>`; the column whose slug is `KANEO_TRIAGE_COLUMN` | `status` on create |
+| Ticket column | `GET /column/<projectId>`; the column whose slug is `KANEO_TICKET_COLUMN` (default `ideas`, the JOR-111 inbox) | `status` on create |
 | Labels | `GET /label/workspace/<workspaceId>` -> name -> id | attach |
 
 A missing project, Triage column or Type label = workspace drift = `BacklogUnavailableException` (do not create an

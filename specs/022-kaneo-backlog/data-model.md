@@ -32,7 +32,7 @@ Java names follow: `FeedbackTicket.backlogTicketId` / `backlogTicketUrl`, `markA
 | `jordylab.feedback.kaneo.api-key` | `KANEO_API_KEY` | empty | secret; empty means "unconfigured" |
 | `jordylab.feedback.kaneo.workspace-id` | `KANEO_WORKSPACE_ID` | empty | resolved by name at first use if empty |
 | `jordylab.feedback.kaneo.project-key` | `KANEO_PROJECT_KEY` | `JOR` | the project key |
-| `jordylab.feedback.kaneo.triage-column` | `KANEO_TRIAGE_COLUMN` | `triage` | column slug that receives new tickets |
+| `jordylab.feedback.kaneo.ticket-column` | `KANEO_TICKET_COLUMN` | `ideas` | column slug that receives new tickets (JOR-111 inbox) |
 | `jordylab.feedback.kaneo.ticket-url-template` | `KANEO_TICKET_URL_TEMPLATE` | from the trial | builds the admin link |
 | `jordylab.feedback.kaneo.connect-timeout-ms` / `read-timeout-ms` | | 5000 / 15000 | same as the Linear client |
 

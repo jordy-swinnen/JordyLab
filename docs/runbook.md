@@ -809,6 +809,15 @@ service. It is not part of the application release: a Kaneo outage never blocks 
 5. To roll back, restore the previous pin through a deploy of the previous commit. If the new version changed the
    schema in a way the old one cannot read, restore the `kaneo` database from the backup taken in step 2.
 
+**Capacity record (2026-11-25, read-only)**
+- Load average 0.29 / 0.08 / 0.02; memory 7,745 MB total, 1,869 MB used, 5,876 MB available (76% headroom); disk `/` 72 GB
+  with 54 GB used and 19 GB free (26%).
+- Per container (docker stats --no-stream): backend 768 MiB / 1.5 GiB, frontend 5.2 MiB / 64 MiB, **kaneo 214 MiB / 768 MiB**,
+  caddy 23.1 MiB / 128 MiB, postgres 123.2 MiB / 1 GiB, ntfy 13.8 MiB / 128 MiB; all six report healthy (up 2 weeks, the
+  backend and frontend 5 hours).
+- Response: `https://jordylab.be/` 200 in 0.155 s, `https://kaneo.jordylab.be/api/health` 200 in 0.125 s.
+- Well above the 25% headroom FR-010 asks for; repeat in a week.
+
 **Open points (not yet verified on production)**
 - `TRUSTED_PROXIES` is not set. The stack's network is `172.28.0.0/16`; set it only after checking how Kaneo parses it.
 - `DISABLE_WORKSPACE_CREATION` is the repository variable `KANEO_DISABLE_WORKSPACE_CREATION` (default `true`). Whether
