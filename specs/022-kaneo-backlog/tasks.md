@@ -202,7 +202,8 @@ the VPS (`import-report.md`).
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.
 - [ ] T038 [US3] OWNER [D]: create the four saved views (or the filter recipes if Kaneo has no saved views); record in
-      `import-report.md`.
+      `import-report.md`. The four recipes are already in `docs/kaneo.md`; the trial never confirmed that this version
+      stores named views, so recording the recipes covers the intent unless the owner wants the UI views.
 
 **Checkpoint**: board verified; Linear still intact and frozen.
 
