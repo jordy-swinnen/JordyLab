@@ -47,7 +47,7 @@ flowchart LR
 | Tasks to issues | `speckit-taskstoissues` | worker | One ticket per user story and phase |
 | Implement | `speckit-implement` | worker | Unchanged (In progress) |
 | Check | `speckit-analyze`, `speckit-converge` | reviewer | Unchanged |
-| Merge | pull request | none | In review when opened (once Kaneo is connected to the repository); Done is the owner's move |
+| Merge | pull request | none | In review while open; a merge does not move it, and Done is the owner's move |
 | Keep in step | `backlog-sync-drafts` | none | Matches folders and task lists |
 
 ## Ticket flow (Kaneo)
@@ -62,7 +62,7 @@ holds the column slugs, labels, the Ready template and the Definition of Ready.
 | Refine into a Ready ticket (the owner confirms the summary) | `/kaneo-refinement JOR-<n>` | `todo` |
 | Settle design first, if flagged (optional) | `/kaneo-design JOR-<n>` | `todo` once settled |
 | Start the specification | `/speckit-specify JOR-<n>`; `kaneo-start-ticket` runs first | `in-progress` |
-| Open the pull request | pull request | `in-review` once Kaneo is connected to the repository |
+| Open the pull request | pull request | `in-review` |
 | Finish | owner | `done` |
 
 - Design is a label (`needs-design`, `needs-ui-design`), not a column. A ticket in `todo` never carries one.

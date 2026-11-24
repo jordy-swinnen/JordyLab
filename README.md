@@ -35,6 +35,7 @@ flowchart LR
         caddy["Caddy<br/>TLS · only public ports 80, 443"]
         fe["frontend<br/>nginx · Angular"]
         be["backend<br/>Spring Boot 4 · Java 25"]
+        kaneo["Kaneo<br/>backlog · kaneo.jordylab.be"]
         ntfy["ntfy<br/>push notifications"]
         pg[("Postgres 16 + pgvector<br/>app data, identity, price history")]
         art[("artwork volume")]
@@ -47,7 +48,7 @@ flowchart LR
         ai["OpenRouter, Anthropic fallback<br/>AI calls"]
         games["Steam · IGDB · TheGamesDB"]
         yahoo["Yahoo Finance chart API<br/>quotes, FX, daily closes"]
-        linear["Linear<br/>feedback → issue"]
+        linear["Linear<br/>feedback → issue (until the Kaneo cutover)"]
         lf["Langfuse<br/>AI traces"]
     end
 
@@ -57,6 +58,8 @@ flowchart LR
     caddy -- "/" --> fe
     caddy -- "/api, /webauthn, /mcp, /oauth2" --> be
     caddy -- "/ntfy" --> ntfy
+    caddy -- "kaneo.jordylab.be" --> kaneo
+    kaneo --> pg
     be --> pg
     be --> art
     be -- "publish" --> ntfy
