@@ -249,7 +249,7 @@ jordylab:
       api-key: ${KANEO_API_KEY:}
       workspace-id: ${KANEO_WORKSPACE_ID:}
       project-key: ${KANEO_PROJECT_KEY:JOR}
-      triage-column: ${KANEO_TRIAGE_COLUMN:triage}
+      ticket-column: ${KANEO_TICKET_COLUMN:ideas}
       ticket-url-template: ${KANEO_TICKET_URL_TEMPLATE:}
       connect-timeout-ms: 5000
       read-timeout-ms: 15000

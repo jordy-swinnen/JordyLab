@@ -74,7 +74,7 @@ public record FeedbackProperties(
             String apiKey,
             String workspaceId,
             String projectKey,
-            String triageColumn,
+            String ticketColumn,
             String ticketUrlTemplate,
             int connectTimeoutMs,
             int readTimeoutMs) {
@@ -82,11 +82,11 @@ public record FeedbackProperties(
             if (projectKey == null || projectKey.isBlank()) {
                 projectKey = "JOR";
             }
-            if (triageColumn == null || triageColumn.isBlank()) {
-                triageColumn = "triage";
+            if (ticketColumn == null || ticketColumn.isBlank()) {
+                ticketColumn = "ideas";
             }
             if (ticketUrlTemplate == null || ticketUrlTemplate.isBlank()) {
-                ticketUrlTemplate = "{baseUrl}/dashboard/workspace/{workspaceId}/project/{projectId}/board";
+                ticketUrlTemplate = "{baseUrl}/dashboard/workspace/{workspaceId}/project/{projectId}/task/{taskId}";
             }
             if (connectTimeoutMs <= 0) {
                 connectTimeoutMs = 5000;

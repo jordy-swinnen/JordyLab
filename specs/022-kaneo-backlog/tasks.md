@@ -156,11 +156,16 @@ restore drill brings the `kaneo` database back, and the application services are
       application smoke checks green.
 - [ ] T026 [US2] OWNER [C]: create the owner account following the trial's finding (T011); if registration had to be open, run
       `gh variable set KANEO_DISABLE_REGISTRATION --body true`, redeploy, and check the instance status shows the user exists.
-- [ ] T027 [US2] OPERATIONS: lock-down check (SC-005): the sign-up page, the register call and workspace creation are refused and an
-      unauthenticated request lists no tickets. Record in `docs/runbook.md`.
-- [ ] T028 [US2] OPERATIONS: read-only capacity record now and one week later (`free -m`, `docker stats --no-stream`, `df -h /`) plus a
+- [X] T027 [US2] OPERATIONS: lock-down check (SC-005): the sign-up page, the register call and workspace creation are refused and an
+      unauthenticated request lists no tickets. Record in `docs/runbook.md`. Done 2026-11-25: registration and workspace
+      creation are closed in `/api/config`; the JOR project was publicly readable and is now private (the public route
+      answers 403); every other read needs a session. The register call itself was not re-tested (the trial showed it
+      refused); testing it now could create an account if the gate were broken.
+- [X] T028 [US2] OPERATIONS: read-only capacity record now and one week later (`free -m`, `docker stats --no-stream`, `df -h /`) plus a
       before/after `curl` timing of `https://jordylab.be/` (SC-007); confirm at least 25% headroom (FR-010); write them in
-      `docs/runbook.md`; resize with `gh variable set KANEO_MEM_LIMIT` and a redeploy if needed (no pull request).
+      `docs/runbook.md`; resize with `gh variable set KANEO_MEM_LIMIT` and a redeploy if needed (no pull request). Done
+      2026-11-25 (first reading): 76% memory headroom, 26% disk, Kaneo 214 MiB of its 768 MiB, all six services healthy,
+      app 200 in 0.155 s and Kaneo 200 in 0.125 s; recorded in runbook §28. The one-week reading remains.
 - [ ] T029 [US2] OPERATIONS: restore drill (SC-006): `pgbackrest --stanza=jordylab --type=diff backup`, follow `docs/runbook.md` §15 into
       a throwaway volume, confirm the `kaneo` database and its tickets; record the date and result.
 
@@ -191,13 +196,15 @@ the VPS (`import-report.md`).
 - [X] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
       project. Save the importer's summary into `specs/022-kaneo-backlog/import-report.md`. Observed done 2026-11-24 (93
       tasks, Linear-era tickets present); the importer's own summary is still to be recorded.
-- [ ] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
+- [X] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
       review the table with the owner, run it for real, append the output counts to `import-report.md`. The fix-up maps
       Linear's states straight onto the JOR-111 columns (Triage, Backlog and Drafted -> `ideas`; Specified -> `todo`) and
       creates no columns. The owner deferred this step on 2026-11-13. Partly done 2026-11-24: the `Spec:` first lines were
       written through the connected Kaneo account for the 24 tickets that map unambiguously (numbered spec titles,
       JOR-61..70 for spec 010, JOR-85 for spec 022; see `import-report.md`). The script run with the export, for the
-      remaining tickets and the state check, stays with the owner.
+      remaining tickets and the state check, stays with the owner. Completed 2026-11-25: all 34 spec tickets now carry
+      their `Spec:` line (the 10 remaining ones matched by spec title, e.g. JOR-39 for 014-user-management), and the state
+      moves would be no-ops because the board already uses the JOR-111 columns.
 - [ ] T037 [US3] OPERATIONS [D]: run the verification checklist in `contracts/board-conventions.md` (counts per state, every key and the
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.
@@ -274,9 +281,11 @@ no key answers "backlog unavailable".
       and the production base URL and key from the shell, create one throwaway ticket through `KaneoClient`, confirm it is in
       Triage with the two labels and the template, adopt-search finds it, then delete the ticket by hand. Record the result and
       any shape surprises in `import-report.md` and fix the client if needed.
-- [ ] T054 [US5] OPERATIONS [E] (Jordy's yes): run the read-only `select id, backlog_ticket_url from feedback.feedback_ticket where
+- [X] T054 [US5] OPERATIONS [E] (Jordy's yes): run the read-only `select id, backlog_ticket_url from feedback.feedback_ticket where
       backlog_ticket_id is not null` on the production database, pipe it to `relink-feedback.py`, review the statements with the
       owner, run them once, and confirm every stored link now opens the Kaneo ticket with the same number (spec FR-027).
+      Done 2026-11-25: the production `feedback.feedback_ticket` table has 0 rows, so there is nothing to relink; the query
+      returned no rows and no UPDATE was needed.
 
 **Checkpoint**: idea box ready, off until cutover.
 
@@ -372,6 +381,8 @@ no key answers "backlog unavailable".
 - [ ] T073 [US7] OWNER [E]: switch off the Linear GitHub integration and commit webhook, disconnect every Linear connector except
       the owner's own browser login, lock the workspace read-only if Linear's plan allows it (T011 recorded whether), otherwise
       nothing writes to it by agreement; announce the end of the freeze and note the 30-day date in `docs/kaneo.md`.
+      Partly done 2026-11-25: the repository's Linear commit webhook (id 706201758) is deactivated; the Linear-side GitHub
+      integration, the connectors and the announcement are still the owner's.
 - [ ] T074 [US7] [E] Record the cutover (date, result of T072, rollback not needed) in `specs/022-kaneo-backlog/import-report.md` and in
       `spec.md` Status.
 - [X] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
@@ -468,7 +479,5 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 59, open 27
-(2026-11-24): the 27 open ones are the owner/operations steps still staged — the remaining `Spec:` links for the
-unnumbered spec tickets (no export available), the live client check, the MCP sign-ins, capacity and the restore drill,
-the relink and the cutover acceptance test, the rebuild test (T082) and T086 — plus the 30-day follow-up.
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 63, open 23
+(2026-11-25): the 23 open ones are the owner-only steps: the trial sign-off (T011), the restore drill (T029), the freeze/export (T033/T034), the verification against the export (T037), the live client check (T053), the Claude-app sign-ins (T064/T065), the cutover acceptance test (T072), Linear off (T073), the rebuild test (T082) and T086 — plus the 30-day follow-up (T076-T079) and the MCP checks (T009).

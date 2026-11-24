@@ -46,13 +46,14 @@ class KaneoClientTest {
 
     private static final String BASE_URL = "http://localhost:9991";
     private static final String API_KEY = "test-kaneo-key";
-    private static final String BOARD_URL = BASE_URL + "/dashboard/workspace/ws-1/project/proj-1/board";
+    private static final String TASK_URL = BASE_URL + "/dashboard/workspace/ws-1/project/proj-1/task/task-1";
+    private static final String ADOPTED_URL = BASE_URL + "/dashboard/workspace/ws-1/project/proj-1/task/task-9";
     private static final String PROJECT_PATH = "/api/project";
     private static final String TASK_PATH = "/api/task/proj-1";
     private static final String APP_ATTACH_PATH = "/api/label/label-app/task";
     private static final String TYPE_ATTACH_PATH = "/api/label/label-bug/task";
     private static final String COLUMNS_BODY = """
-            [{"id":"col-1","slug":"todo","name":"Todo"},{"id":"col-2","slug":"triage","name":"Triage"}]
+            [{"id":"col-1","slug":"todo","name":"Todo"},{"id":"col-2","slug":"ideas","name":"Ideas"}]
             """;
     private static final String LABELS_BODY = """
             [{"id":"label-app","name":"Game Catalog"},{"id":"label-bug","name":"Bug"},
@@ -76,7 +77,7 @@ class KaneoClientTest {
     }
 
     @Test
-    void createsTheTriageTaskWithItsTwoLabelsAndTheGuestMarkedDescription() throws Exception {
+    void createsTheIdeaTaskWithItsTwoLabelsAndTheGuestMarkedDescription() throws Exception {
         stubLookups();
         stubFor(post(urlEqualTo(TASK_PATH)).willReturn(okJson("{\"id\":\"task-1\",\"number\":124}")));
         stubFor(put(urlEqualTo(APP_ATTACH_PATH)).willReturn(okJson("{\"id\":\"row-1\"}")));
@@ -87,13 +88,13 @@ class KaneoClientTest {
 
         assertSoftly(softly -> {
             softly.assertThat(created.id()).isEqualTo("task-1");
-            softly.assertThat(created.url()).isEqualTo(BOARD_URL);
+            softly.assertThat(created.url()).isEqualTo(TASK_URL);
         });
         JsonNode body = requestBody(findAll(postRequestedFor(urlEqualTo(TASK_PATH))));
         assertSoftly(softly -> {
             softly.assertThat(body.path("title").asText()).isEqualTo(FeedbackTicketTestBuilder.DEFAULT_TITLE);
             softly.assertThat(body.path("priority").asText()).isEqualTo("no-priority");
-            softly.assertThat(body.path("status").asText()).isEqualTo("triage");
+            softly.assertThat(body.path("status").asText()).isEqualTo("ideas");
             softly.assertThat(body.path("description").asText())
                     .contains("Note from Jordy: Repro'd on CachyOS too.")
                     .endsWith("\n\nSource: idea box");
@@ -192,13 +193,13 @@ class KaneoClientTest {
     }
 
     @Test
-    void aMissingTriageColumnIsUnavailableBeforeAnyWrite() {
+    void aMissingTicketColumnIsUnavailableBeforeAnyWrite() {
         stubFor(get(urlPathEqualTo(PROJECT_PATH)).willReturn(okJson("[{\"id\":\"proj-1\",\"slug\":\"JOR\"}]")));
         stubFor(get(urlEqualTo("/api/column/proj-1")).willReturn(okJson("[{\"id\":\"col-1\",\"slug\":\"todo\"}]")));
 
         assertThatThrownBy(() -> client.createTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket(), null))
                 .isInstanceOf(BacklogUnavailableException.class)
-                .hasMessageContaining("triage");
+                .hasMessageContaining("ideas");
         verify(0, postRequestedFor(urlEqualTo(TASK_PATH)));
     }
 
@@ -224,7 +225,7 @@ class KaneoClientTest {
         Optional<BacklogClient.BacklogTicket> found =
                 client.findTicket(FeedbackTicketTestBuilder.aDefaultFeedbackTicket());
 
-        assertThat(found).contains(new BacklogClient.BacklogTicket("task-9", BOARD_URL));
+        assertThat(found).contains(new BacklogClient.BacklogTicket("task-9", ADOPTED_URL));
         verify(putRequestedFor(urlEqualTo(APP_ATTACH_PATH)).withRequestBody(equalToJson("{\"taskId\":\"task-9\"}")));
         verify(putRequestedFor(urlEqualTo(TYPE_ATTACH_PATH)).withRequestBody(equalToJson("{\"taskId\":\"task-9\"}")));
     }
@@ -274,6 +275,6 @@ class KaneoClientTest {
 
     private static FeedbackProperties properties(String apiKey) {
         return new FeedbackProperties(5, "Europe/Brussels", null, null,
-                new FeedbackProperties.Kaneo(BASE_URL, apiKey, "ws-1", "JOR", "triage", null, 2000, 300));
+                new FeedbackProperties.Kaneo(BASE_URL, apiKey, "ws-1", "JOR", "ideas", null, 2000, 300));
     }
 }

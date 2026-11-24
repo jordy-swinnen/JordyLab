@@ -58,7 +58,7 @@ public class KaneoClient implements BacklogClient {
     private volatile String cachedTriageStatus;
 
     /**
-     * Creates the one Triage task for an accepted ticket: the task first, then the App and Type labels. Every
+     * Creates the one idea task for an accepted ticket: the task first, then the App and Type labels. Every
      * label and lookup is resolved before the task is written, so a missing Type label or column creates nothing.
      * If an attach fails after the task exists, the ticket keeps its {@code acceptError} and the retry adopts it.
      */
@@ -66,7 +66,7 @@ public class KaneoClient implements BacklogClient {
     public BacklogTicket createTicket(FeedbackTicket ticket, String privateNote) {
         String workspace = workspaceId();
         String project = projectId(workspace);
-        String triageStatus = triageStatus(project);
+        String ticketStatus = ticketStatus(project);
         List<JsonNode> labelRows = labelRows(workspace);
         LabelChoice appLabel = appLabel(labelRows, ticket.getApp());
         LabelChoice typeLabel = requiredLabel(labelRows, ticket.getType().getBacklogLabelName(), "Type");
@@ -74,7 +74,7 @@ public class KaneoClient implements BacklogClient {
         body.put("title", ticket.getTitle());
         body.put("description", description(ticket, privateNote));
         body.put("priority", NO_PRIORITY);
-        body.put("status", triageStatus);
+        body.put("status", ticketStatus);
         JsonNode created = execute(HttpMethod.POST, "/task/{projectId}", body, project);
         String taskId = textOf(created, "id");
         String number = textOf(created, "number");
@@ -176,21 +176,21 @@ public class KaneoClient implements BacklogClient {
      * The Triage column's slug, which is also the task status sent on create. A missing column is workspace drift,
      * so no task is written into an unknown status.
      */
-    private String triageStatus(String project) {
+    private String ticketStatus(String project) {
         String cached = cachedTriageStatus;
         if (cached != null) {
             return cached;
         }
         JsonNode columns = execute(HttpMethod.GET, "/column/{projectId}", null, project);
         for (JsonNode column : elementsOf(columns, "column list")) {
-            if (properties.kaneo().triageColumn().equals(textOf(column, "slug"))) {
+            if (properties.kaneo().ticketColumn().equals(textOf(column, "slug"))) {
                 cachedTriageStatus = textOf(column, "slug");
 
                 return cachedTriageStatus;
             }
         }
 
-        throw new BacklogUnavailableException("Kaneo column '" + properties.kaneo().triageColumn() + "' not found");
+        throw new BacklogUnavailableException("Kaneo column '" + properties.kaneo().ticketColumn() + "' not found");
     }
 
     private List<JsonNode> labelRows(String workspace) {
