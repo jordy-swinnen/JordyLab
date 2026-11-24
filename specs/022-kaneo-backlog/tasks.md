@@ -458,6 +458,7 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 50, open 36
-(2026-11-12): the open ones are mostly OWNER/OPERATIONS steps after the merge, the 30-day follow-up, and T082-T084 and
-T086.
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 54, open 32
+(2026-11-24): the open ones are the owner/operations steps still staged — the fix-up run and `Spec:` links, saved views,
+the live client check, the MCP sign-ins, the T010/T071 matrix, capacity and the restore drill, the relink and cutover,
+the rebuild test (T082), the gate rerun (T083) and T086 — plus the 30-day follow-up.
