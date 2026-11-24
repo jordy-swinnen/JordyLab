@@ -52,10 +52,11 @@ Otherwise `docs/kaneo.md` carries the same four as filter recipes.
 
 ## GitHub App and linking (trial matrix -> rules)
 
-Connect the repository `jordy-swinnen/JordyLab` to the project `JOR`. Branch pattern: a custom regex accepting both
-`jordyswinnen/jor-23-some-title` and `jor-23-some-title`, case-insensitive. Automations: push -> In Progress, pull request
-opened -> In Review, merged -> **Don't move** (owner decision, 2026-11-08: a merged pull request does not close its
-ticket; Done is set by the owner).
+Connect the repository `jordy-swinnen/JordyLab` to the project `JOR`. Kaneo 2.49.0 has no branch-pattern field; the
+default `{slug}-{number}` (`jor-85-...`) links. Automations (confirmed on the live project, 2026-11-24): push -> In
+Progress, pull request opened -> In Review, merged -> **Don't move** (owner decision, 2026-11-08: a merged pull request
+does not close its ticket; Done is set by the owner), issues -> Don't move. Issue export is opt-in via the `github-sync`
+label so the public repository never receives board tickets.
 
 The trial fills this table on a scratch repository (observed result, not assumed); the written commit/PR rules
 (`.github/instructions/commits-and-pull-requests.instructions.md`, the PR template, `commit-msg` hook text,

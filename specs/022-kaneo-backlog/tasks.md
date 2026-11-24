@@ -339,9 +339,13 @@ no key answers "backlog unavailable".
       command; set `GITHUB_APP_NAME` in `compose.yaml` (T017). After the merge's deploy [C], install the App on
       `jordy-swinnen/JordyLab`. Done 2026-11-24: the App `kaneo-jordylab` (ID 5659276) exists with an active webhook,
       is installed on all repositories, `GITHUB_APP_NAME` is set, and the three secret names are in the encrypted file.
-- [ ] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
+- [X] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
       In Progress, PR opened -> In Review, merged -> Don't move (Done is set by the owner; owner decision 2026-11-08,
-      JOR-111).
+      JOR-111). Done 2026-11-24: `jordy-swinnen/JordyLab` is connected; the automations read branch pushed -> In
+      Progress, PR opened -> In Review, PR merged -> Don't move, issue opened/closed -> Don't move. Kaneo 2.49.0 exposes
+      no branch-pattern field, so the default `{slug}-{number}` (`jor-85-...`) links; T010/T071 confirms whether a
+      `jordyswinnen/jor-23-...` branch does too. Export is opt-in (`Kaneo -> GitHub: Tasks labelled github-sync`, 0
+      tasks); `GitHub -> Kaneo` imports all issues into the private board, so nothing from the board is published.
 - [ ] T071 [US6] OPERATIONS [D]: on a throwaway ticket and two throwaway pull requests (one `Part of`, one completing) run
       the matrix cases the written rules rely on; confirm the ticket moves to In Progress and In Review, that merging does
       not set Done, and that a subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if

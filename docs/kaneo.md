@@ -135,8 +135,11 @@ HANDOFF-03). The App is **Kaneo JordyLab** (slug `kaneo-jordylab`, App ID `56592
 - Project `JOR` → Settings → Integrations → GitHub: connect `jordy-swinnen/JordyLab`. The owner's GitHub sign-in is a
   separate OAuth app (HANDOFF-06).
 - Workflow → Automations: branch push → In Progress, pull request opened → In Review, **merged → Don't move** (a merged
-  pull request does not close its ticket; the owner sets Done).
-- Branch pattern: a custom regex accepting `jor-23-some-title` and `jordyswinnen/jor-23-some-title`, case-insensitive.
+  pull request does not close its ticket; the owner sets Done), issue opened/closed → Don't move.
+- Branch pattern: this version (2.49.0) has no field for a custom pattern; the default `{slug}-{number}` (`jor-85-…`)
+  links. T010/T071 confirms whether a `jordyswinnen/jor-23-…` branch links as well.
+- Issue sync: **export is opt-in** — only tasks labelled `github-sync` are exported (none today), so nothing from the
+  private board becomes a public GitHub issue; `GitHub → Kaneo` imports all issues into the private board.
 
 Which branch names, title patterns and words link, and which columns they move, is in
 `.github/instructions/commits-and-pull-requests.instructions.md`. The matrix that confirms each case runs on production
