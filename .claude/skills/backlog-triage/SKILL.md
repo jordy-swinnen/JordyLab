@@ -18,7 +18,7 @@ confirmation at a time. Label names and the spec link: `specs/022-kaneo-backlog/
 - Never put secrets or personal data in anything you write. Never delete a ticket.
 - Use the `kaneo` connector. If its tools are missing or the sign-in expired, say so (Claude Code `/mcp`, OpenCode
   `opencode mcp auth kaneo`) and stop.
-- Writes follow the write budget in `backlog-sync-drafts`: at most 40 a minute and 150 a run. A tool result that reports
+- Writes: at most 40 a minute and 150 a run. A tool result that reports
   an error is a failure, even when the call returned normally.
 
 ## Steps

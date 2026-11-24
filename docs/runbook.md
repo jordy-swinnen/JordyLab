@@ -45,11 +45,11 @@ See `docs/learn/` for the concept explanations behind each procedure here, and `
 **(operator step — billable OVH resource, do this yourself)**
 
 1. At [ovhcloud.com](https://www.ovhcloud.com), order one **VPS-2** (4 vCores / 8 GB RAM / 75 GB NVMe).
-2. Choose a **monthly, no-commitment** billing term (per `/speckit-clarify` — flexibility over the cheaper
+2. Choose a **monthly, no-commitment** billing term (owner decision, 2026-11-08 — flexibility over the cheaper
    12-month upfront rate). Confirm the exact monthly price at checkout; it should stay near the quoted
    from-€7.21/mo figure but wasn't separately confirmed during research.
 3. Pick the closest EU datacenter to where you'll put the Object Storage bucket (§8) — any EU region works
-   identically; this is a checkout-time convenience choice, not an architectural one (spec.md Assumptions).
+   identically; this is a checkout-time convenience choice, not an architectural one.
 4. Choose a current Ubuntu LTS or Debian stable image.
 5. Add your SSH public key at order time so root password login is never enabled in the first place.
 6. Note the VPS's public IPv4 — you'll need it for DNS (§6) and the firewall (§2).

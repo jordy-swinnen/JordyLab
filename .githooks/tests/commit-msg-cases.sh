@@ -38,6 +38,12 @@ check pass  "${BODY}Refs: 011, BUG-001"$'\n'"${COAUTHOR}"
 check pass  "${BODY}Refs: 009/T039"
 check pass  "${BODY}Refs: HANDOFF-02 DEPLOY-03 Q-07"
 check pass  "${BODY}Refs: NO-CODE"$'\n'"${COAUTHOR}"
+# the ticket, its decisions and its requirements (since JOR-122)
+check pass  "${BODY}Refs: JOR-122"
+check pass  "${BODY}Refs: JOR-78/D3"
+check pass  "${BODY}Refs: JOR-122/FR-004"
+check pass  "${BODY}Refs: JOR-122 JOR-94 BUG-001"
+check pass  "${BODY}Refs: JOR-78/D3, JOR-78/D4"
 check pass  $'Merge pull request #30 from jordy-swinnen/fix/x\n\nfix(x): y'
 check pass  $'fixup! JOR-12: something'
 check pass  $'Revert "fix(settings): something"\n\nThis reverts commit abc.'
@@ -51,6 +57,14 @@ check block "${BODY}Refs: BUG-999"
 check block "${BODY}Refs: NO-CODE 011"
 check block "${BODY}Refs: TICKET-12"
 check block "${BODY}Refs: 11"
+check block "${BODY}Refs: JOR-0"
+check block "${BODY}Refs: JOR-122/D0"
+check block "${BODY}Refs: JOR-122/D"
+check block "${BODY}Refs: JOR-122X"
+check block "${BODY}Refs: jor-122"
+check block "${BODY}Refs: JOR-122/T004"
+check block "${BODY}Refs: JOR-1234567"
+check block "${BODY}Refs: NO-CODE JOR-122"
 
 # ticket first (rule 1)
 check pass  $'JOR-55: adding a button\n\nWhy.\n\nRefs: NO-CODE'

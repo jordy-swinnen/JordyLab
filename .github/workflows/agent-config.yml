@@ -96,7 +96,7 @@ jobs:
           apm install --frozen
           apm audit --ci
 
-      # Report-only for now: check_config.py also reports the pre-existing CLAUDE.md and SpecKit frontmatter
+      # Report-only for now: check_config.py also reports the pre-existing CLAUDE.md shape
       # drift, tracked separately in docs/ai-workflow.md → "Known drift". Drop continue-on-error once fixed.
       - name: Full agent config check (report only)
         continue-on-error: true

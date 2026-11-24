@@ -15,7 +15,7 @@ JOR-55: adding a button
 
 Why the change was needed, in a sentence or two, and how it was verified (the command or check you ran).
 
-Refs: 015/T004
+Refs: JOR-55
 Co-Authored-By: …
 ```
 
@@ -27,18 +27,21 @@ Co-Authored-By: …
   never leave it out. Exempt: merge commits, `fixup!`/`squash!`/`amend!`, `git revert` commits, and any `chore:` subject
   (owner decision: automated upkeep such as the weekly `Skills Sync` has no owning ticket, so it needs no `Refs:` either).
 - **Body** (for anything that is not trivial): why, then how it was verified. Say what you did not verify.
-- **`Refs:` trailer** in the last paragraph (next to `Co-Authored-By:`): the SpecKit artefact the commit serves.
+- **`Refs:` trailer** in the last paragraph (next to `Co-Authored-By:`): what the commit serves.
 
 | Token | Meaning | Checked |
 |-------|---------|---------|
-| `NNN` | spec number, e.g. `015` | `specs/NNN-*` exists |
-| `NNN/T###` | a task of that spec, e.g. `015/T004` | spec exists |
+| `JOR-<n>` | the ticket the commit serves, e.g. `JOR-55` | format only (the hook cannot reach the board) |
+| `JOR-<n>/D<k>` | decision D<k> recorded on that ticket in `docs/decisions.md`, e.g. `JOR-78/D3` | format |
+| `JOR-<n>/FR-<m>` | requirement FR-<m> of that ticket, e.g. `JOR-122/FR-004` | format |
+| `NNN` | frozen spec number, `001`–`024` only, e.g. `015` | `specs/NNN-*` exists |
+| `NNN/T###` | a task of a frozen spec, e.g. `015/T004` | spec exists |
 | `BUG-###` | campaign bug | already logged in `docs/testing/bug-log.md` (log first, then fix) |
 | `HANDOFF-##`, `DEPLOY-##`, `Q-##` | campaign handoff / deployment / question (`docs/testing/e2e-test-plan.md`) | format |
-| `NO-CODE` | config, tooling or docs work with no SpecKit artefact; must stand alone | — |
+| `NO-CODE` | config, tooling or docs work with no ticket; must stand alone | — |
 
-Combine tokens freely (`Refs: 011 BUG-020 BUG-026`). Commits made before 2026-11-02T00:30Z are not required to start
-with a ticket.
+Combine tokens freely (`Refs: JOR-122 JOR-78/D3 BUG-020`). Commits made before 2026-11-02T00:30Z are not required to
+start with a ticket.
 
 ## Pull requests
 
@@ -59,8 +62,8 @@ moves it to *In Progress*, opening the pull request to *In Review* (the project'
   1. **What**: two to five lines on the change and why it exists.
   2. **How it was verified**: commands run and results, and what was *not* checked.
   3. **Tickets**: `JOR-<n>` when the PR completes the ticket, `Part of JOR-<n>` for partial work, one line per ticket.
-  4. **Refs**: the spec and tasks, as in the commit trailer.
-- **One pull request per spec** (spec, plan, tasks and implementation on one branch), several tickets allowed.
+  4. **Refs**: the same token as in the commit trailer (`JOR-55`, `JOR-78/D3`, or `NO-CODE`).
+- **One pull request per ticket**, with several tickets allowed on one pull request when they ship together.
 - Never put secrets or personal data in a message or description.
 - An agent ends its PR description with the attribution line its host gives it.
 
