@@ -27,6 +27,37 @@ worth keeping here, under the ticket's heading. A decision settled mid-build is 
 
 ---
 
+## JOR-124 — OpenSpec as the technical plan layer (2026-11-24)
+
+### JOR-124 D1 — OpenSpec plans a ticket, it does not specify the product
+- **Decision:** An OpenSpec change folder (`proposal.md`, `design.md`, `tasks.md`, `specs/` delta) is the technical plan
+  for one Kaneo ticket, named `jor-<n>-<slug>` to match the branch. `openspec/specs/` stays empty and archiving always
+  passes `--skip-specs`, so the ticket stays the only requirements source (JOR-122 D1 untouched).
+- **Why:** SpecKit failed on volume and on drift, not on the idea of writing a plan down. OpenSpec is three skills and
+  one folder instead of eight passes and six files, which is cheap enough to use per ticket — but its living specs and
+  its `tasks.md` are a second requirements source and a second progress ledger, and that is exactly what drifted before.
+  Using it as the plan layer keeps the speed without the drift.
+- **Rejected:** full OpenSpec, with `openspec/specs/` as the durable requirements truth (would undo JOR-122 D1 and need
+  specs 001–024 distilled first — still on the table if the trial shows the ticket is too thin for requirements).
+  SpecKit's model with a lighter template (the phase gates were the problem, not only the file count).
+- **Consequences:** Two places can describe the same change, so the rule is strict: the ticket says *what and why*, the
+  change folder says *how*, and `docs/decisions.md` says *why that way and not the other*. A decision that meets the
+  bar is written once, there, and the change folder points at its `D<k>`. The trial is provisional: revert by deleting
+  `openspec/`.
+
+### JOR-124 D2 — OpenSpec's skills live on the machine, not in the repo
+- **Decision:** `openspec init` runs at its default scope: `~/.agents/skills/`, with `~/.claude/skills/` links. The
+  repository commits only `openspec/`.
+- **Why:** `.claude/skills/` in this repository is owned by APM (`apm.yml`, `apm.lock.yaml`) and checked by the `Agent
+  Config` workflow for a single copy. A project-scope install would add six unmanaged skill trees plus symlinks to that
+  folder. Both harnesses still load the skills, because OpenCode reads the same global tree.
+- **Rejected:** `--scope project` (breaks the APM invariant and doubles the skills into `HEAD`). Vendoring the skills by
+  hand (six generated files that `openspec update` overwrites).
+- **Consequences:** A fresh clone has no `/openspec-*` skills until `openspec init` runs once on that machine. That is
+  acceptable for a project with one owner and one Mac; revisit if a second machine or CI ever needs to plan.
+
+---
+
 ## JOR-122 — Retire SpecKit: Kaneo as spec, Plan Mode to build, decisions in git (2026-11-12)
 
 ### JOR-122 D1 — The Kaneo ticket is the only specification

@@ -1,0 +1,43 @@
+schema: spec-driven
+
+# Project context. Only what an agent cannot infer from reading the code.
+context: |
+  JordyLab is a personal platform in four parts: `jordylab-be` (Spring Boot 4 modular monolith, one Flyway
+  schema per module), `jordylab-fe` (Nx Angular 22 PWA), `jordylab-desktop` (Qt/PySide6 sync app) and
+  `garmin-sync-service` (Python sidecar). Read `AGENTS.md` at the root and the `AGENTS.md` of every
+  sub-project you touch before planning anything.
+
+  The Kaneo ticket (`JOR-<n>`) is the requirements source and the only status. An OpenSpec change is the
+  technical plan for one ticket — never a second specification. Name the change folder after its ticket:
+  `jor-<n>-<slug>`, the same slug as the git branch.
+
+rules:
+  proposal:
+    - "Open with the ticket key (`JOR-<n>`) and what the ticket asks for, quoting its requirement IDs (`FR-003`)."
+    - "Do not restate the user stories or rewrite the requirements: the ticket owns them. Summarise, then link."
+    - "State what is out of scope, in one line."
+    - "Keep it under 400 words."
+  specs:
+    - "Write acceptance criteria for this change only. Do not copy the ticket's requirement text."
+    - "Every requirement needs at least one scenario with observable behaviour: a status code, a message, a row, a state."
+    - "Never add a technology choice here; that belongs in design.md."
+  design:
+    - "Record the approach and the alternatives that lost, one line each on why they lost."
+    - "A decision a future reader could not re-derive also goes into `docs/decisions.md` (see JOR-122 D3 there). Name its `D<k>` here so the two point at each other."
+    - "Do not restate a standing rule from `AGENTS.md`; name the rule instead."
+    - "Frontend work states whether the Claude Design canvas needs an update, and why."
+  tasks:
+    - "Group by component or file, not by phase."
+    - "Each task must be checkable in the diff and small enough to finish in one sitting."
+    - "This list is the branch checklist, not a status view: the Kaneo board owns status. Never add a progress section."
+
+operations:
+  apply:
+    guidance:
+      - "Work from the ticket and this plan, following AGENTS.md for the area you touch."
+      - "Commit with the ticket in the subject (`JOR-<n>`) and a `Refs: JOR-<n>` trailer."
+      - "Run the tests for what changed, not the whole suite, and say what you did not verify."
+  archive:
+    guidance:
+      - "Always archive with `--skip-specs`: `openspec/specs/` stays empty because the ticket owns the requirements."
+      - "Before archiving, append any decision that meets the `docs/decisions.md` bar, and clear the branch checklist."
