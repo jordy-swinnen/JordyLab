@@ -78,7 +78,7 @@ and `quickstart.md` steps 1-3, ends in "go" or "no-go", and `run.sh verify` show
 - [ ] T009 [US1] Connect Claude Code (`/mcp`), OpenCode (`opencode mcp auth`) and a Claude app custom connector (via a tunnel) — partly done (2026-11-07): OpenCode connected and checked; Claude Code and the Claude app are verified after the merge against https://kaneo.jordylab.be (see trial-results.md, T009).
       to the trial's `/api/mcp`. Per tool record how it signed in and that list, create, update, comment and
       `get_task_by_ticket_id` work. If the Claude apps cannot authorise it, record "no-go".
-- [ ] T010 [US1] On a scratch GitHub repository install a GitHub App for the trial and run cases A-G of the matrix in — moved after the merge (owner decision, 2026-11-07): run on production against a scratch repository, see trial-results.md. Owner question 2026-11-24: is it needed? Recommendation: no — the observed PR events on the live project confirm the linking and the Done rule, and the switch would break the live repository link.
+- [X] T010 [US1] (dropped 2026-11-24: the observed PR events on the live project confirm the linking and the Done rule; the matrix would break the live repository link.) On a scratch GitHub repository install a GitHub App for the trial and run cases A-G of the matrix in — moved after the merge (owner decision, 2026-11-07): run on production against a scratch repository, see trial-results.md. Owner question 2026-11-24: is it needed? Recommendation: no — the observed PR events on the live project confirm the linking and the Done rule, and the switch would break the live repository link.
       `contracts/board-conventions.md` (branch push, PR open, merge). Record the webhook path, whether commit messages
       link, the branch regex that accepts `jordyswinnen/jor-23-x` and `jor-23-x`, and which cases finish a ticket.
 - [ ] T011 [US1] Write `specs/022-kaneo-backlog/trial-results.md` (observed answers, importer losses, go/no-go). Update the
@@ -201,9 +201,9 @@ the VPS (`import-report.md`).
 - [ ] T037 [US3] OPERATIONS [D]: run the verification checklist in `contracts/board-conventions.md` (counts per state, every key and the
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.
-- [ ] T038 [US3] OWNER [D]: create the four saved views (or the filter recipes if Kaneo has no saved views); record in
-      `import-report.md`. The four recipes are already in `docs/kaneo.md`; the trial never confirmed that this version
-      stores named views, so recording the recipes covers the intent unless the owner wants the UI views.
+- [X] T038 [US3] OWNER [D]: create the four saved views (or the filter recipes if Kaneo has no saved views); record in
+      `import-report.md`. Done 2026-11-24: this Kaneo version stores no named views (the app has no saved-view feature),
+      so the four recipes in `docs/kaneo.md` are the deliverable.
 
 **Checkpoint**: board verified; Linear still intact and frozen.
 
@@ -347,10 +347,10 @@ no key answers "backlog unavailable".
       In Progress, PR opened -> In Review, merged -> Don't move (Done is set by the owner; owner decision 2026-11-08,
       JOR-111). Done 2026-11-24: `jordy-swinnen/JordyLab` is connected; the automations read branch pushed -> In
       Progress, PR opened -> In Review, PR merged -> Don't move, issue opened/closed -> Don't move. Kaneo 2.49.0 exposes
-      no branch-pattern field, so the default `{slug}-{number}` (`jor-85-...`) links; T010/T071 confirms whether a
-      `jordyswinnen/jor-23-...` branch does too. Export is opt-in (`Kaneo -> GitHub: Tasks labelled github-sync`, 0
+      no branch-pattern field, so the default `{slug}-{number}` (`jor-85-...`) links; the `jordyswinnen/jor-23-...` form is
+      untested (T010/T071 dropped). Export is opt-in (`Kaneo -> GitHub: Tasks labelled github-sync`, 0
       tasks); `GitHub -> Kaneo` imports all issues into the private board, so nothing from the board is published.
-- [ ] T071 [US6] OPERATIONS [D] (owner question 2026-11-24: not needed — the observed PR events on the live project confirm the rules; left open in case the owner wants the matrix): on a throwaway ticket and two throwaway pull requests (one `Part of`, one completing) run
+- [X] T071 [US6] OPERATIONS [D] (dropped 2026-11-24: not needed — the observed PR events on the live project confirm the rules; the matrix would break the live repository link): on a throwaway ticket and two throwaway pull requests (one `Part of`, one completing) run
       the matrix cases the written rules rely on; confirm the ticket moves to In Progress and In Review, that merging does
       not set Done, and that a subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if
       reality differs.
@@ -367,6 +367,8 @@ no key answers "backlog unavailable".
       BACKLOG_PROVIDER --body kaneo` and redeploy (no code change), and run `quickstart.md` step 8: ten accepted ideas (exactly
       one Triage ticket each), a forced failure and retry (no duplicate), blank key (503 "backlog unavailable", guest ticket
       stays open). Roll back with `gh variable set BACKLOG_PROVIDER --body linear` and a redeploy if anything fails.
+      Partly done 2026-11-24: `BACKLOG_PROVIDER=kaneo` is set and the release was redeployed; the relink and the
+      ten-accepted-ideas test remain.
 - [ ] T073 [US7] OWNER [E]: switch off the Linear GitHub integration and commit webhook, disconnect every Linear connector except
       the owner's own browser login, lock the workspace read-only if Linear's plan allows it (T011 recorded whether), otherwise
       nothing writes to it by agreement; announce the end of the freeze and note the 30-day date in `docs/kaneo.md`.
@@ -466,7 +468,7 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 56, open 30
-(2026-11-24): the 30 open ones are the owner/operations steps still staged — the fix-up run and `Spec:` links, saved views,
-the live client check, the MCP sign-ins, the T010/T071 matrix, capacity and the restore drill, the relink and cutover,
-the rebuild test (T082) and T086 — plus the 30-day follow-up.
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 59, open 27
+(2026-11-24): the 27 open ones are the owner/operations steps still staged — the remaining `Spec:` links for the
+unnumbered spec tickets (no export available), the live client check, the MCP sign-ins, capacity and the restore drill,
+the relink and the cutover acceptance test, the rebuild test (T082) and T086 — plus the 30-day follow-up.

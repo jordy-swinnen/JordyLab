@@ -46,9 +46,9 @@ that are missing. The design flags (`needs-design`, `needs-ui-design`) are worki
 
 ## Saved views (User Story 3, scenario 5)
 
-If Kaneo has named filters, create: **Open work by app** (not Done/Canceled, grouped or filtered by App label), **Open
-ideas** (Type Idea, not Done/Canceled), **Open bugs** (Type Bug, not Done/Canceled), **Ready queue** (column `todo`).
-Otherwise `docs/kaneo.md` carries the same four as filter recipes.
+This version stores no named views, so the four filters are recipes in `docs/kaneo.md`: **Open work by app** (not
+Done/Canceled, filtered by App label), **Open ideas** (Type Idea, not Done/Canceled), **Open bugs** (Type Bug, not
+Done/Canceled), **Ready queue** (column `todo`).
 
 ## GitHub App and linking (trial matrix -> rules)
 

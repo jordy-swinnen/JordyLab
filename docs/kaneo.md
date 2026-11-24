@@ -65,8 +65,8 @@ recipes applied in two clicks:
 | Open bugs | Type Bug, not Done/Canceled |
 | Ready queue | column `todo` |
 
-Whether this Kaneo version saves named views was not settled in the trial; if it does not, these stay recipes. Task T038
-records the result.
+This Kaneo version stores no named views (checked 2026-11-24: the app has no saved-view feature), so these are recipes
+applied in two clicks. T038 records the result.
 
 ## Who does what
 
