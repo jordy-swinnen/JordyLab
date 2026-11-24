@@ -54,9 +54,10 @@ moves it to *In Progress*, opening the pull request to *In Review* (the project'
 - **Merging does not finish a ticket.** The owner decided this (2026-11-08): the merged-to-*Done* automation stays off,
   and *Done* is set by the owner after the merge. So a pull request can carry the key whether or not it finishes the
   ticket: `JOR-23` in the title when it completes it, `Part of JOR-23` in the description for partial work.
-- **Provisional until the matrix runs.** Which branch names, titles and words link follows Kaneo's documentation. The
-  GitHub App matrix (spec 022, T010) runs on production against a scratch repository before the import; T071 confirms
-  each case and this section is fixed if reality differs.
+- **Confirmed on the live project (2026-11-24).** Opening a pull request that names the key moved the ticket to In
+  Review, and merging did not finish it (Done was set by hand) — seen on spec 022's own ticket. The branch-name forms
+  follow Kaneo's documentation; the case matrix (T010/T071) was not run because it would require breaking the
+  repository link.
 - **Title**: the same shape as a commit subject, with the ticket the PR serves: `JOR-85: moving the backlog to Kaneo`.
 - **Description** (the template in `.github/pull_request_template.md` has the headings):
   1. **What**: two to five lines on the change and why it exists.

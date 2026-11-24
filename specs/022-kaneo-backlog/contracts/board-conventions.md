@@ -58,9 +58,11 @@ Progress, pull request opened -> In Review, merged -> **Don't move** (owner deci
 does not close its ticket; Done is set by the owner), issues -> Don't move. Issue export is opt-in via the `github-sync`
 label so the public repository never receives board tickets.
 
-The trial fills this table on a scratch repository (observed result, not assumed); the written commit/PR rules
-(`.github/instructions/commits-and-pull-requests.instructions.md`, the PR template, `commit-msg` hook text,
-`commit-refs.yml` messages, `AGENTS.md`, `CLAUDE.md`) are rewritten from it.
+The case matrix was not run (owner question, 2026-11-24: it would require switching the project's repository link to a
+scratch repo and breaking the live one). The observed behaviour on the live project confirms the core rules: opening a
+pull request that names the key moved the ticket to In Review, and merging did not finish it. The written commit/PR
+rules (`.github/instructions/commits-and-pull-requests.instructions.md`, the PR template, `commit-msg` hook text,
+`commit-refs.yml` messages, `AGENTS.md`, `CLAUDE.md`) follow that.
 
 | Case | Branch | PR title | PR description | Linked? | Moved to | Done on merge? |
 |---|---|---|---|---|---|---|
