@@ -51,6 +51,11 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
   [docs/decisions.md](docs/decisions.md) under its ticket (`### JOR-<n> D<k>`), in the pull request that builds the
   ticket. A decision that changes a standing rule also goes into `AGENTS.md` (root or sub-project) in that same change.
   Status, progress and checklists stay on the board only: one ledger, so nothing can drift.
+- Optional, on trial (JOR-124): `/openspec-propose` writes the technical plan for one ticket into
+  `openspec/changes/jor-<n>-<slug>/` (`proposal.md`, `design.md`, `tasks.md`, a `specs/` delta). It is not a second
+  specification: `openspec/specs/` stays empty, archive with `--skip-specs`, and its `tasks.md` is the branch checklist
+  rather than a status view. The board still owns status, the ticket owns the requirements, and `docs/decisions.md`
+  owns the decisions.
 - Switching between Claude Code and OpenCode mid-work: use the `agent-handover` skill (`/agent-handover` in both tools). The outgoing agent wraps up, comments the state on the ticket (plus `docs/handoff/HANDOFF-JOR-<n>.md` when a comment is not enough) and prints a prompt for the other tool; the incoming agent takes over from that record.
 - An idea that is not ready for the board yet goes into `ideas` as a rough ticket, not into a file. `specs/_drafts/` is frozen with the rest of `specs/`; do not add to it. Name other features by what they are, never by a number.
 - **Keeping the drawing and status current.** When a feature's last task is checked, or something is replaced, dropped or deployed differently, the same change updates: the architecture drawing in `README.md` (the Mermaid block, edited as text); the matching row and end-goal entry in `docs/status.md`; and `docs/ai-workflow.md` if the agent tooling, models or pipeline changed. Do it in the same change as the work, not later. Claude Code reads this file through `CLAUDE.md` and OpenCode reads it directly, so the rule holds in both tools.

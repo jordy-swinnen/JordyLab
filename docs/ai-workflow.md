@@ -26,7 +26,7 @@ decision is written once.
 flowchart LR
     idea["Idea or bug"] -->|kaneo-idea| ideas["Ideas"]
     ideas -->|kaneo-refinement, kaneo-design if flagged| todo["Todo: Ready ticket<br/>stories, FR-n, D1..Dn"]
-    todo -->|kaneo-start-ticket · branch, In progress| plan["Plan Mode in chat<br/>(not a file)"]
+    todo -->|kaneo-start-ticket · branch, In progress| plan["Plan Mode in chat<br/>(not a file)<br/>optional: /openspec-propose"]
     plan -->|worker| code["Code and commits"]
     code -->|reviewer, then pull request| review["In review<br/>+ decisions.md when a D# is worth keeping"]
     review -->|merge| finished["Merged, owner sets Done"]
@@ -38,8 +38,9 @@ flowchart LR
 | Capture an idea or bug | `kaneo-idea` | none | Ticket in Ideas |
 | Refine, design if flagged | `kaneo-refinement`, `kaneo-design` | planner | Ticket in Todo, with `D1..Dn` in Design notes |
 | Start the build | `kaneo-start-ticket JOR-<n>` | none | Branch `jor-<n>-<slug>`, ticket In progress |
-| Plan | Plan Mode in the session | planner | Nothing committed; the plan is the conversation |
+| Plan | Plan Mode in the session, or `/openspec-propose` for a ticket with real design work | planner | Nothing, or `openspec/changes/jor-<n>-<slug>/` |
 | Build | the build agent, from the ticket | worker | Commits with `Refs: JOR-<n>` |
+| Close an OpenSpec change | `/openspec-archive-change` (`--skip-specs`) | worker | Change moved to `openspec/changes/archive/` |
 | Review | the reviewer agent, then the PR review workflow | reviewer | Comments on the diff |
 | Record a decision | append to `docs/decisions.md` in the PR | worker | `### JOR-<n> D<k>` under the ticket's heading |
 | Merge | pull request | none | In review when opened; Done is the owner's move |
@@ -50,6 +51,15 @@ ticket, and `tasks.md` was a second ledger for progress the board already tracks
 folders, 173 files, about 32 200 lines, ~600–1 000 generated lines per feature, and 8 agent passes before the first
 line of code. `specs/001`–`024` stay as frozen history because 198 `FR-###` comments in the backend and 18 test files
 cite them. The reasoning is recorded as `JOR-122` D1–D6 in [decisions.md](decisions.md).
+
+**OpenSpec, on trial (JOR-124).** For a ticket whose plan is worth more than a conversation — a new module boundary, a
+data model, a dependency, a screen — `/openspec-propose` writes `openspec/changes/jor-<n>-<slug>/` with `proposal.md`,
+`design.md`, `tasks.md` and a `specs/` delta, then `/openspec-apply-change` works through it. It is optional per ticket
+and it is **not** a second specification: `openspec/specs/` stays empty, archiving always passes `--skip-specs`, and the
+`tasks.md` is the branch checklist rather than a status view. The board still owns status, the ticket still owns the
+requirements, and `docs/decisions.md` still owns the decisions. Why it is scoped that way, and what would make it
+change: `JOR-124` D1–D2 in [decisions.md](decisions.md). The skills are installed per machine (JOR-124 D2), so a fresh
+clone runs `openspec init` once.
 
 ## Ticket flow (Kaneo)
 
@@ -127,6 +137,7 @@ tool. The incoming agent starts from that record. Steps only the owner can do ar
 | `docs/decisions.md` | Every decision worth keeping, keyed `JOR-<n> D<k>`, with what it rejected. Read it before reshaping a module, an auth flow or a deployment path. |
 | `specs/` | Frozen history, `001`–`024` plus `_drafts/`. Read-only; see [specs/README.md](../specs/README.md). |
 | `docs/handoff/` | Handover files when a ticket comment is not enough. |
+| `openspec/` | The optional technical plan for a ticket: `changes/jor-<n>-<slug>/` while it is open, `changes/archive/` after. `specs/` stays empty on purpose. |
 | `.mcp.json`, `opencode.json` | MCP servers: nx, GitHub (through the `gh` login), Kaneo, JordyLab and Linear (until the cutover). |
 | `docs/kaneo.md` | The backlog: workspace facts, columns, labels, connector sign-in, the GitHub App and the handoff log. The old `docs/linear.md` is its git history. |
 | `docs/design/JOR-<n>/` | Exported design images for Kaneo tickets. |
