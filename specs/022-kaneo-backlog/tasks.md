@@ -194,8 +194,10 @@ the VPS (`import-report.md`).
 - [ ] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
       review the table with the owner, run it for real, append the output counts to `import-report.md`. The fix-up maps
       Linear's states straight onto the JOR-111 columns (Triage, Backlog and Drafted -> `ideas`; Specified -> `todo`) and
-      creates no columns. The owner deferred this step on 2026-11-13; the dry run and the `--apply` stay with the owner,
-      and the pre-import description probe in `owner-steps.md` HANDOFF-04 comes first.
+      creates no columns. The owner deferred this step on 2026-11-13. Partly done 2026-11-24: the `Spec:` first lines were
+      written through the connected Kaneo account for the 24 tickets that map unambiguously (numbered spec titles,
+      JOR-61..70 for spec 010, JOR-85 for spec 022; see `import-report.md`). The script run with the export, for the
+      remaining tickets and the state check, stays with the owner.
 - [ ] T037 [US3] OPERATIONS [D]: run the verification checklist in `contracts/board-conventions.md` (counts per state, every key and the
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.
