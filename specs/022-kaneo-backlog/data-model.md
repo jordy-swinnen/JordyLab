@@ -44,7 +44,7 @@ The existing `jordylab.feedback.linear.*` properties stay until the follow-up pu
 |---|---|---|
 | Workspace | one, owned by Jordy | no other members; guest access, registration and extra workspaces closed |
 | Project | key `JOR` | created by the importer; ticket id = `JOR-<number>` |
-| Columns | Triage, Drafted, Specified, Todo, In Progress, In Review, Done, Canceled; plus Kaneo's Backlog view | Done and Canceled are final; slugs are the lower-case names (`triage`, `in-progress`, ...) |
+| Columns | `ideas`, `refinement`, `todo`, `in-progress`, `in-review`, `done`, `canceled` (the JOR-111 flow); the import fix-up first creates Triage, Drafted and Specified for Linear's states, then a one-time pass folds them into `ideas` and `todo` | `done` is set by the owner, not by a merge; slugs are the lower-case names |
 | Priority | Urgent, High, Medium, Low, none | new tickets from the idea box use none |
 | App label | exactly one of 7 | Game Catalog, Finance News, Garmin, Mobile, Recipe, Trading, Platform |
 | Type label | exactly one of 5 | Bug, Feature, Improvement, Idea, Chore |
@@ -53,17 +53,20 @@ The existing `jordylab.feedback.linear.*` properties stay until the follow-up pu
 
 ### Linear -> Kaneo state mapping (after the fix-up step)
 
+The fix-up targets the JOR-111 columns (ideas, refinement, todo, in-progress, in-review, done, canceled) and never
+creates columns. The importer's older buckets are folded into them.
+
 | Linear state (type) | Importer puts it in | Fix-up moves it to |
 |---|---|---|
-| Triage (triage) | Backlog view | Triage |
-| Backlog (backlog) | Backlog view | stays in Backlog |
-| Drafted (backlog) | Backlog view | Drafted |
-| Specified (backlog) | Backlog view | Specified |
-| Todo (unstarted) | Todo column | stays |
-| In Progress (started) | In Progress column | stays |
-| In Review (started) | In Review column | stays |
-| Done (completed) | Done (final) | stays |
-| Canceled / Duplicate (canceled) | Canceled / Duplicate (final) | stays; Duplicate tickets are moved to Canceled |
+| Triage (triage) | Backlog view | `ideas` |
+| Backlog (backlog) | Backlog view | `ideas` |
+| Drafted (backlog) | Backlog view | `ideas` |
+| Specified (backlog) | Backlog view | `todo` |
+| Todo (unstarted) | Todo column | stays (`todo`) |
+| In Progress (started) | In Progress column | stays (`in-progress`) |
+| In Review (started) | In Review column | stays (`in-review`) |
+| Done (completed) | Done (final) | stays (`done`) |
+| Canceled / Duplicate (canceled) | Canceled / Duplicate (final) | stays; Duplicate tickets are moved to `canceled` |
 
 Labels carry over by name; Linear's App/Type groups become plain labels, so the names must stay unique across both sets
 (they are). Not transferred: projects, milestones, cycles, estimates, attachments, archived issues.

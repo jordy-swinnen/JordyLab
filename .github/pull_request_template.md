@@ -10,7 +10,7 @@
 
 ## Tickets
 
-<!-- Fixes JOR-<n>  (finishes the ticket)   |   Part of JOR-<n>  (partial work: a key alone in the title or branch completes the ticket on merge) -->
+<!-- JOR-<n> when this PR completes the ticket   |   Part of JOR-<n> for partial work. Merging does not set Done: the owner does. -->
 
 ## Refs
 

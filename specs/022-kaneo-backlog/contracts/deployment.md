@@ -23,7 +23,7 @@ kaneo:
     DISABLE_GUEST_ACCESS: "true"
     TRUSTED_PROXIES: <Compose network range>   # read on the host (docker network inspect) before the first deploy, task T017
     GITHUB_APP_ID: ${KANEO_GITHUB_APP_ID}
-    GITHUB_APP_NAME: <app name>                 # chosen when the owner creates the GitHub App (task T069)
+    GITHUB_APP_NAME: kaneo-jordylab             # the App's slug (not a secret); task T069
     GITHUB_WEBHOOK_SECRET: ${KANEO_GITHUB_WEBHOOK_SECRET}
     GITHUB_PRIVATE_KEY_BASE64: ${KANEO_GITHUB_PRIVATE_KEY_BASE64}
   depends_on:

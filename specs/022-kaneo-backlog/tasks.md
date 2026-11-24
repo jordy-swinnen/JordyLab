@@ -131,8 +131,11 @@ restore drill brings the `kaneo` database back, and the application services are
       best-effort Kaneo step after the application deploy and smoke check: `ensure-kaneo-database.sh`, `docker compose up -d
       kaneo`, health wait, Kaneo smoke check; every failure is a `::warning::` plus a job-summary line and never changes the job
       result or touches the release state files.
-- [ ] T021 [US2] Validate locally: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml — partly done (2026-11-07): every related suite passes and the compose file and Caddyfile validate; shellcheck is not installed here, so it was not run.
+- [X] T021 [US2] Validate locally: `docker compose --env-file deploy/compose/env/prod.env.example -f deploy/compose/compose.yaml
       config -q`, `shellcheck` on the new scripts, `bash deploy/scripts/tests/*-cases.sh`, `bash scripts/mcp/tests/*` unaffected.
+      Done 2026-11-18: compose config validates; shellcheck 0 findings (0.11.0); the deploy fixture suites pass (9, 14,
+      8, 18 and 28 cases) and the GitHub MCP cases pass (23). The render-env suite needs a `python3` with PyYAML: without
+      one it fails on every case, which is the environment, not the script.
 - [X] T022 [US2] Add a "Kaneo" section to `docs/runbook.md` (and its Contents): deploy, first-user bootstrap per the trial, closing
       registration with `gh variable set KANEO_DISABLE_REGISTRATION --body true`, the manual closed-registration check after
       every deploy that touches Kaneo's configuration (if there is no automatic probe), upgrade procedure
@@ -172,12 +175,12 @@ restore drill brings the `kaneo` database back, and the application services are
 **Independent Test**: counts per state equal Linear's, every key exists, ten spot checks pass, a Linear export is stored off
 the VPS (`import-report.md`).
 
-- [ ] T030 [P] [US3] Write `scripts/kaneo/tests/test_import_fixup.py` first, with a fake Kaneo and fake Linear HTTP server: state
+- [X] T030 [P] [US3] Write `scripts/kaneo/tests/test_import_fixup.py` first, with a fake Kaneo and fake Linear HTTP server: state
       -> column mapping (Triage, Drafted, Specified; Duplicate -> Canceled), moves into and out of Backlog, the `Spec:` first
       line written once for spec tickets (and not duplicated on a second run), dry run writes nothing, a run is idempotent,
       pacing stays at or below 40 writes a minute (inject a fake clock), a 429 waits `Retry-After`, a 401 stops, tickets
       lacking an App or Type label are listed.
-- [ ] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
+- [X] T031 [US3] Implement `scripts/kaneo/import-fixup.py` per `contracts/board-conventions.md` "Fix-up script contract" (reads Linear's JSON export, not a Linear key: decided 2026-11-07)
       (`--dry-run` default, keys only from the environment, nothing printed but counts and ticket keys; spec link mapping
       from `repo_inventory.sh`); T030 passes.
 - [X] T032 [US3] Add `scripts/kaneo/tests` to `.github/workflows/hook-tests.yml` (path trigger and a `python -I -m pytest` step).
@@ -188,7 +191,10 @@ the VPS (`import-report.md`).
 - [ ] T035 [US3] OWNER [D]: run the Linear import once in production Kaneo (Settings -> Workspace -> Import). Do not pre-create a
       project. Save the importer's summary into `specs/022-kaneo-backlog/import-report.md`.
 - [ ] T036 [US3] OPERATIONS [D]: `import-fixup.py --dry-run` (the owner's short-lived Kaneo key in the shell, revoked afterwards),
-      review the table with the owner, run it for real, append the output counts to `import-report.md`.
+      review the table with the owner, run it for real, append the output counts to `import-report.md`. The fix-up maps
+      Linear's states straight onto the JOR-111 columns (Triage, Backlog and Drafted -> `ideas`; Specified -> `todo`) and
+      creates no columns. The owner deferred this step on 2026-11-13; the dry run and the `--apply` stay with the owner,
+      and the pre-import description probe in `owner-steps.md` HANDOFF-04 comes first.
 - [ ] T037 [US3] OPERATIONS [D]: run the verification checklist in `contracts/board-conventions.md` (counts per state, every key and the
       highest number, a new test ticket's number, ten spot checks, tickets missing an App or Type label fixed); write the results
       and every difference into `import-report.md`.
@@ -321,22 +327,25 @@ no key answers "backlog unavailable".
 
 **Independent Test**: `quickstart.md` step 10 with the production App and a throwaway ticket.
 
-- [ ] T066 [US6] Rewrite `.github/instructions/commits-and-pull-requests.instructions.md` from the trial's matrix (T010/T011): which
+- [X] T066 [US6] Rewrite `.github/instructions/commits-and-pull-requests.instructions.md` from the trial's matrix (T010/T011): which
       branch names, title patterns and words link, which finish a ticket, and the commit-linking statement; keep the
       `JOR-n:` subject rule and the `Refs:` table unchanged. [B]
-- [ ] T067 [P] [US6] Update `.github/pull_request_template.md` and `.github/copilot-instructions.md` to match T066. [B]
-- [ ] T068 [P] [US6] Update message text only in `.githooks/commit-msg` and `.github/workflows/commit-refs.yml` (ticket creation points to
+- [X] T067 [P] [US6] Update `.github/pull_request_template.md` and `.github/copilot-instructions.md` to match T066. [B]
+- [X] T068 [P] [US6] Update message text only in `.githooks/commit-msg` and `.github/workflows/commit-refs.yml` (ticket creation points to
       `backlog-capture`, no Linear wording); run the hook's own tests and `bash .githooks` cases if present. [B]
-- [ ] T069 [US6] OWNER [B] before the merge: create the GitHub App for Kaneo with the permissions, name and webhook URL
+- [X] T069 [US6] OWNER [B] before the merge: create the GitHub App for Kaneo with the permissions, name and webhook URL
       (`https://kaneo.jordylab.be` + the trial's path) the trial recorded, and add `KANEO_GITHUB_APP_ID`,
       `KANEO_GITHUB_WEBHOOK_SECRET`, `KANEO_GITHUB_PRIVATE_KEY_BASE64` to the SOPS file on the branch with the IntelliJ `sops`
       command; set `GITHUB_APP_NAME` in `compose.yaml` (T017). After the merge's deploy [C], install the App on
-      `jordy-swinnen/JordyLab`.
+      `jordy-swinnen/JordyLab`. Done 2026-11-24: the App `kaneo-jordylab` (ID 5659276) exists with an active webhook,
+      is installed on all repositories, `GITHUB_APP_NAME` is set, and the three secret names are in the encrypted file.
 - [ ] T070 [US6] OWNER [D]: in Kaneo connect the repository to project `JOR`, set the branch regex from the trial, map push ->
-      In Progress, PR opened -> In Review, merged -> Done.
-- [ ] T071 [US6] OPERATIONS [D]: on a throwaway ticket and two throwaway pull requests (one `Part of`, one finishing word) run
-      the matrix cases the written rules rely on; confirm the ticket moves and the open/finish behaviour matches T066; a
-      subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if reality differs.
+      In Progress, PR opened -> In Review, merged -> Don't move (Done is set by the owner; owner decision 2026-11-08,
+      JOR-111).
+- [ ] T071 [US6] OPERATIONS [D]: on a throwaway ticket and two throwaway pull requests (one `Part of`, one completing) run
+      the matrix cases the written rules rely on; confirm the ticket moves to In Progress and In Review, that merging does
+      not set Done, and that a subject without a key is refused by the hook. Record in `import-report.md`; fix T066 if
+      reality differs.
 
 ---
 
@@ -355,7 +364,7 @@ no key answers "backlog unavailable".
       nothing writes to it by agreement; announce the end of the freeze and note the 30-day date in `docs/kaneo.md`.
 - [ ] T074 [US7] [E] Record the cutover (date, result of T072, rollback not needed) in `specs/022-kaneo-backlog/import-report.md` and in
       `spec.md` Status.
-- [ ] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
+- [X] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
       renamed skills, MCP list) and `specs/_drafts/README.md` (tracking in Kaneo, `backlog-sync-drafts`). [B]
 - [ ] T076 [US7] [E] At the 30-day mark, with no rollback needed: OWNER confirms; the Linear export from T034 is re-checked as stored.
 
@@ -376,12 +385,12 @@ no key answers "backlog unavailable".
 
 ## Phase 9: User Story 8 - Operate and rebuild from the docs (Priority: P3)
 
-- [ ] T080 [US8] `git mv docs/linear.md docs/kaneo.md` and rewrite: workspace facts, terms (a ticket is what Kaneo calls a task; the
+- [X] T080 [US8] `git mv docs/linear.md docs/kaneo.md` and rewrite: workspace facts, terms (a ticket is what Kaneo calls a task; the
       Triage inbox is the Triage column), columns, labels, which steps are manual and which an agent does, connector sign-in for
       each tool, GitHub App setup, saved views or filter recipes, secret and variable rotation, upgrade, backup and restore
       pointers, owner handoffs log (H-01 ...), the Claude apps' conventions block (`contracts/board-conventions.md` "Ticket
       text conventions"), the Linear history pointer (`specs/015-linear-backlog/`), and the rebuild checklist. [B]
-- [ ] T081 [P] [US8] Update any other doc that names Linear: `docs/learn/` and `docs/runbooks/` if `grep -il linear` finds one; add a
+- [X] T081 [P] [US8] Update any other doc that names Linear: `docs/learn/` and `docs/runbooks/` if `grep -il linear` finds one; add a
       Kaneo row to the Reference Docs table in `AGENTS.md` only if useful.
 - [ ] T082 [US8] Rebuild test (SC-010): a reviewer follows the rebuild checklist on a clean `scripts/kaneo/trial/run.sh up` and ends with
       columns, labels and one ticket in under two hours; record time and gaps, fix the doc.
@@ -392,9 +401,14 @@ no key answers "backlog unavailable".
 
 - [ ] T083 Run every affected gate: `./gradlew test --tests '*feedback*'`, `*ModularityTests*`, the shell fixture suites,
       `python -I -m pytest scripts/kaneo/tests`, `docker compose ... config -q`, `gitleaks git --no-banner --redact .`; all green.
-- [ ] T084 Review the whole diff with the `code-reviewer` agent against the JordyLab conventions; fix findings by severity.
-- [ ] T085 Mark the Kaneo draft as history (a one-line note at the top of `specs/_drafts/kaneo-backlog/plan-draft.md` pointing to spec 022) and
-      leave `specs/_drafts/langfuse-self-hosting/` untouched.
+- [X] T084 Review the whole diff with the `code-reviewer` agent against the JordyLab conventions; fix findings by severity.
+      Done 2026-11-12: 0 blockers, 5 major, 5 minor, 6 nits. The majors were the AGENTS.md linking words and the two
+      owner decisions that conflict with JOR-111 (both settled by the owner, see the board-model commit); the fix-up
+      findings (deferred description, stale fallback, inventory path) were fixed with tests; the unverified
+      description write is now a pre-import probe in `owner-steps.md`.
+- [X] T085 Mark the Kaneo draft as history (a one-line note at the top of `specs/_drafts/kaneo-backlog/plan-draft.md` pointing to spec 022) and
+      leave `specs/_drafts/langfuse-self-hosting/` untouched. That folder was never created and will not be developed
+      (owner decision, 2026-11-12: storage limits), so there is nothing to leave alone.
 - [ ] T086 Update `tasks.md` counts, `spec.md` Status, and open the pull request only when the owner asks, using
       `.github/pull_request_template.md` (`Refs JOR-<n>` until the work is finished, `Part of` for the staged parts).
 
@@ -440,4 +454,6 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4.
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 50, open 36
+(2026-11-12): the open ones are mostly OWNER/OPERATIONS steps after the merge, the 30-day follow-up, and T082-T084 and
+T086.

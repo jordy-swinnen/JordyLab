@@ -20,7 +20,7 @@
 |---|---|
 | Inputs | the Linear export file (JSON, the full export stored off-host under FR-018), `KANEO_BASE_URL` and `KANEO_API_KEY` (env); never printed or logged. **No Linear key is used** (decided 2026-11-07: the key is revoked after the import, and the export holds the same data) |
 | Default | `--dry-run`: prints a table `JOR-n | Linear state | Kaneo column now | target column` and counts; no write |
-| Writes | create missing columns by slug; move tasks with the status-change endpoint the trial recorded (including into and out of the Backlog view); write `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (mapping from `repo_inventory.sh`); all idempotent (already in place = skip) |
+| Writes | move tasks with the status-change endpoint the trial recorded (into the JOR-111 columns: Triage, Backlog and Drafted -> `ideas`; Specified and Todo -> `todo`); never create columns (stop with a clear message when a target column is missing); write `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (mapping from `repo_inventory.sh`); all idempotent (already in place = skip) |
 | Keys | the owner's Kaneo key only for this one run (short-lived, revoked afterwards); the backend's own key (least privilege if the trial shows scopes) is never used here |
 | Limits | at most 40 writes a minute; stops on the first 401/403; on 429 waits `Retry-After` |
 | Output | a count per target column and a list of tickets without an App or a Type label |
@@ -37,21 +37,25 @@
 
 ## Columns and labels
 
-Columns: Triage, Drafted, Specified, Todo, In Progress, In Review, Done, Canceled (+ Backlog view). Final: Done, Canceled.
+The board follows the workflow settled in JOR-111: **ideas -> refinement -> todo -> in-progress -> in-review -> done**,
+plus canceled from any column (the `kaneo-board` skill holds the slugs and who moves a ticket). The fix-up maps Linear's
+states onto those columns (Triage, Backlog and Drafted -> `ideas`; Specified and Todo -> `todo`; In Progress, In Review,
+Done and Canceled unchanged) and never creates columns. The legacy `planned` bucket is retired (treat it as `ideas`).
 Labels: the seven App and five Type names exactly as in `data-model.md`; created by the importer; the fix-up creates any
-that are missing.
+that are missing. The design flags (`needs-design`, `needs-ui-design`) are working markers, not categories.
 
 ## Saved views (User Story 3, scenario 5)
 
 If Kaneo has named filters, create: **Open work by app** (not Done/Canceled, grouped or filtered by App label), **Open
-ideas** (Type Idea, not Done/Canceled), **Open bugs** (Type Bug, not Done/Canceled), **Specified & Todo** (columns
-Specified or Todo). Otherwise `docs/kaneo.md` carries the same four as filter recipes.
+ideas** (Type Idea, not Done/Canceled), **Open bugs** (Type Bug, not Done/Canceled), **Ready queue** (column `todo`).
+Otherwise `docs/kaneo.md` carries the same four as filter recipes.
 
 ## GitHub App and linking (trial matrix -> rules)
 
 Connect the repository `jordy-swinnen/JordyLab` to the project `JOR`. Branch pattern: a custom regex accepting both
 `jordyswinnen/jor-23-some-title` and `jor-23-some-title`, case-insensitive. Automations: push -> In Progress, pull request
-opened -> In Review, merged -> Done.
+opened -> In Review, merged -> **Don't move** (owner decision, 2026-11-08: a merged pull request does not close its
+ticket; Done is set by the owner).
 
 The trial fills this table on a scratch repository (observed result, not assumed); the written commit/PR rules
 (`.github/instructions/commits-and-pull-requests.instructions.md`, the PR template, `commit-msg` hook text,
@@ -59,16 +63,17 @@ The trial fills this table on a scratch repository (observed result, not assumed
 
 | Case | Branch | PR title | PR description | Linked? | Moved to | Done on merge? |
 |---|---|---|---|---|---|---|
-| A | key | none | none | | | |
-| B | none | `JOR-1: x` | none | | | |
-| C | none | none | `Fixes JOR-1` | | | |
-| D | none | none | `Part of JOR-1` | | | |
-| E | key | `JOR-1: x` | `Part of JOR-1` | | | |
-| F | none | none | none; commit `JOR-1: x` only | | | |
-| G | key | `JOR-1: x` | `Skip JOR-1` | | | |
+| A | key | none | none | | | no (the owner sets Done) |
+| B | none | `JOR-1: x` | none | | | no |
+| C | none | none | `Fixes JOR-1` | | | no |
+| D | none | none | `Part of JOR-1` | | | no |
+| E | key | `JOR-1: x` | `Part of JOR-1` | | | no |
+| F | none | none | none; commit `JOR-1: x` only | | | no |
+| G | key | `JOR-1: x` | `Skip JOR-1` | | | no |
 
-Rules that must hold whatever the matrix shows: the `JOR-n:` commit-subject rule and `Refs:` trailer are unchanged; the
-instructions state which case finishes a ticket; if every link finishes a ticket, partial work links by branch only.
+Rules that must hold whatever the matrix shows: the `JOR-n:` commit-subject rule and `Refs:` trailer are unchanged; a
+merged pull request never sets Done (the owner does), so partial work may link with `Part of JOR-n`; the instructions
+state which cases link and which column each moves a ticket to.
 
 ## Ticket text conventions (agents and the Claude apps)
 

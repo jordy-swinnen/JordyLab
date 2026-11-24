@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """Fix-up after the one-time Linear import into Kaneo (spec 022, data-model "Linear -> Kaneo state mapping").
 
-The Kaneo importer puts Linear's Triage, Drafted and Specified tickets in the Backlog view, and it does not create
-those columns. This script reads Linear's JSON export (not the Linear API, so no Linear key is needed) and:
+The Kaneo importer puts Linear's Triage, Drafted and Specified tickets in the Backlog view. This script reads Linear's
+JSON export (not the Linear API, so no Linear key is needed) and:
 
-- creates the missing columns triage, drafted and specified in the JOR project;
-- moves each ticket to the column its Linear state implies, when it is not there already;
+- moves each ticket to the JOR-111 column its Linear state implies (Triage, Backlog and Drafted -> ideas; Specified and
+  Todo -> todo; In Progress, In Review, Done and Canceled unchanged). It never creates columns;
+- writes `Spec: specs/<nnn-name>/` as the first description line of each spec ticket (the folder comes from
+  `repo_inventory.sh`, run from the repository root, or from a saved copy passed with --inventory);
 - reports tickets whose labels do not give exactly one App and one Type label.
 
-It is a dry run unless --apply is passed. Writes are idempotent: a ticket already in its target status is skipped,
-so a second run changes nothing. It paces its requests to stay under Kaneo's limit of 100 requests a minute per key,
-stops on the first 401 or 403, and waits Retry-After on a 429.
+It is a dry run unless --apply is passed. Writes are idempotent: a ticket already in its target status or already
+carrying its spec line is skipped, so a second run changes nothing. It paces its requests to stay under Kaneo's
+limit of 100 requests a minute per key, stops on the first 401 or 403, and waits Retry-After on a 429.
 
 Environment (never printed, never written to a file):
     KANEO_API_KEY        the API key for this one run (required)
     KANEO_BASE_URL       default https://kaneo.jordylab.be
     KANEO_PROJECT_KEY    default JOR
     KANEO_WORKSPACE_ID   optional; otherwise the single workspace is used
+    KANEO_FIXUP_INVENTORY_SCRIPT  optional; repo_inventory.sh to run (default: the one in this repository)
 
 Usage (run with -I, because the export is data):
     python3 -I scripts/kaneo/import-fixup.py --export linear-export.json            # dry run
@@ -29,6 +32,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -36,13 +40,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-# Linear state name (lower case) -> Kaneo status. "planned" is the Backlog view, which holds Backlog and Drafted
-# until the fix-up moves Drafted and Specified to their own columns (data-model.md).
+# Linear state name (lower case) -> the JOR-111 Kaneo column (ideas, refinement, todo, in-progress, in-review, done,
+# canceled). The retired `planned` bucket and the pre-JOR-111 import columns are folded into these, so the fix-up never
+# creates columns: Triage, Backlog and Drafted land in `ideas`, Specified and Todo in `todo`.
 STATE_TO_STATUS = {
-    "triage": "triage",
-    "backlog": "planned",
-    "drafted": "drafted",
-    "specified": "specified",
+    "triage": "ideas",
+    "backlog": "ideas",
+    "drafted": "ideas",
+    "specified": "todo",
     "todo": "todo",
     "in progress": "in-progress",
     "in review": "in-review",
@@ -52,15 +57,18 @@ STATE_TO_STATUS = {
     "duplicate": "canceled",
 }
 
-# Columns the fix-up must create when they are missing (slug -> display name).
-COLUMNS_TO_CREATE = {"triage": "Triage", "drafted": "Drafted", "specified": "Specified"}
-
 APP_LABELS = {"Game Catalog", "Finance News", "Garmin", "Mobile", "Recipe", "Trading", "Platform"}
 TYPE_LABELS = {"Bug", "Feature", "Improvement", "Idea", "Chore"}
 
 IDENTIFIER = re.compile(r"^[A-Z][A-Z0-9]*-\d+$")
 MAX_WRITES_PER_MINUTE = 40
 DEFAULT_MIN_INTERVAL = 0.7  # seconds between requests: about 85 a minute, under the 100 limit
+SPEC_LINE = re.compile(r"^Spec:\s*(specs/[A-Za-z0-9._/-]+?)/?\s*$")
+PROJECT_SPEC = re.compile(r"Spec:\s*(specs/[A-Za-z0-9._/-]+?)/?(?:\s|$)")
+INVENTORY_SCRIPT_ENV = "KANEO_FIXUP_INVENTORY_SCRIPT"
+DEFAULT_INVENTORY_SCRIPT = (
+    Path(__file__).resolve().parents[2] / ".claude/skills/backlog-sync-drafts/scripts/repo_inventory.sh"
+)
 
 
 class ExportError(Exception):
@@ -108,7 +116,7 @@ def label_names(raw_labels):
 
 
 def load_export(path):
-    """Return one record per issue: identifier, Linear state name, and label names. No titles are kept."""
+    """Return one record per issue: identifier, Linear state, labels, description and project. No titles are kept."""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -122,11 +130,20 @@ def load_export(path):
             continue
         state = raw.get("state")
         state_name = state.get("name") if isinstance(state, dict) else state
+        description = raw.get("description")
+        project = raw.get("project")
+        if isinstance(project, dict):
+            project = {"name": project.get("name"), "description": project.get("description"),
+                       "number": project.get("number"), "key": project.get("key")}
+        elif project is not None:
+            project = {"name": str(project)}
         records.append(
             {
                 "identifier": str(identifier),
                 "state": str(state_name or ""),
                 "labels": label_names(raw.get("labels")),
+                "description": description if isinstance(description, str) else "",
+                "project": project,
             }
         )
     if skipped:
@@ -145,6 +162,135 @@ def label_problem(labels):
     if len(apps) == 1 and len(types) == 1:
         return None
     return f"App labels {len(apps)}, Type labels {len(types)}"
+
+
+def first_line(text):
+    """The first non-blank line of a description, stripped."""
+    if not isinstance(text, str):
+        return ""
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
+
+
+def spec_references(record):
+    """Spec references for a ticket, best first: its own first line, then its Linear project."""
+    references = []
+    match = SPEC_LINE.match(first_line(record.get("description")))
+    if match:
+        references.append(match.group(1))
+    project = record.get("project")
+    if isinstance(project, str):
+        project = {"name": project}
+    if isinstance(project, dict):
+        description = project.get("description")
+        if isinstance(description, str):
+            match = PROJECT_SPEC.search(description)
+            if match:
+                references.append(match.group(1))
+        for field in ("name", "key", "number"):
+            value = str(project.get(field) or "").strip()
+            if value:
+                references.append(value)
+                break
+    return references
+
+
+def index_inventory(data):
+    """Index `repo_inventory.sh` items so a reference matches by folder, number, slug or title."""
+    index = {"by_key": {}, "by_number": {}, "by_slug": {}, "by_title": {}}
+    for item in data if isinstance(data, list) else []:
+        if not isinstance(item, dict) or item.get("kind") != "spec":
+            continue
+        key = str(item.get("key") or "").strip().rstrip("/")
+        if not key.startswith("specs/"):
+            continue
+        index["by_key"][key] = key
+        for field, bucket in (("number", "by_number"), ("name", "by_slug"), ("title", "by_title")):
+            value = str(item.get(field) or "").strip()
+            if value:
+                index[bucket][value.lower()] = key
+    return index
+
+
+def load_inventory(args):
+    """The spec folders from `repo_inventory.sh`: a saved JSON copy, or the script run from the repository root."""
+    if args.inventory:
+        try:
+            data = json.loads(Path(args.inventory).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ExportError(f"cannot read the inventory {args.inventory}: {exc}") from exc
+        return index_inventory(data)
+
+    custom = os.environ.get(INVENTORY_SCRIPT_ENV)
+    script = Path(custom or DEFAULT_INVENTORY_SCRIPT).resolve()
+    if not script.is_file():
+        raise ExportError(
+            "no spec inventory: pass --inventory with the JSON that repo_inventory.sh prints, or run from the "
+            f"repository root (looked for {script})"
+        )
+    # The script wants the repository root as its working directory; a custom one is run where the caller stands.
+    repo_root = Path.cwd() if custom or len(script.parents) < 5 else script.parents[4]
+    try:
+        completed = subprocess.run(
+            ["sh", str(script)], cwd=repo_root, capture_output=True, text=True, timeout=120, check=False
+        )
+    except OSError as exc:
+        raise ExportError(f"cannot run {script}: {exc}") from exc
+    if completed.returncode != 0:
+        raise ExportError(f"repo_inventory.sh failed: {completed.stderr.strip() or completed.returncode}")
+    try:
+        data = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ExportError(f"repo_inventory.sh printed no JSON: {exc}") from exc
+    return index_inventory(data)
+
+
+def resolve_spec(reference, index):
+    """The inventory folder for a reference (folder, number, slug or title), or None."""
+    ref = str(reference or "").strip().strip("/")
+    if not ref:
+        return None
+    full = ref if ref.startswith("specs/") else "specs/" + ref
+    if full in index["by_key"]:
+        return index["by_key"][full]
+    bare = full[len("specs/"):]
+    number = bare.split("-", 1)[0]
+    for value in (bare.lower(), number.lower()):
+        for bucket in ("by_number", "by_slug", "by_title"):
+            hit = index[bucket].get(value)
+            if hit:
+                return hit
+    return None
+
+
+def ensure_spec_line(client, identifier, task, link, apply):
+    """Make `Spec: <link>/` the first description line. Returns "in place", "would write" or "written"."""
+    if "id" not in task:
+        raise KaneoError(f"{identifier}: the by-ticket-id reply has no task id")
+    description = task.get("description")
+    if description is None:
+        # The list reply may omit a large description; never replace stored text with a null summary.
+        detail = client.request("GET", f"/task/{task['id']}") or {}
+        description = detail.get("description")
+    description = description or ""
+    target = f"Spec: {link}/"
+    lines = description.splitlines()
+    first_index = next((i for i, line in enumerate(lines) if line.strip()), None)
+    if first_index is not None and lines[first_index].strip() == target:
+        return "in place"
+    if not apply:
+        print(f"would link {identifier} to {link}/")
+        return "would write"
+    if first_index is not None and SPEC_LINE.match(lines[first_index].strip()):
+        lines[first_index] = target
+        new_description = "\n".join(lines) + ("\n" if description.endswith("\n") else "")
+    else:
+        new_description = target + ("\n\n" + description if description.strip() else "")
+    client.request("PUT", f"/task/description/{task['id']}", {"description": new_description})
+    print(f"linked {identifier} to {link}/")
+    return "written"
 
 
 class Kaneo:
@@ -222,22 +368,15 @@ def column_ids(client, project_id):
     return {column["slug"]: column["id"] for column in columns if column.get("slug")}
 
 
-def ensure_columns(client, project_id, needed, apply):
-    """Create the missing columns this run needs. Returns the slugs that exist after the run (dry run: planned)."""
+def require_columns(client, project_id, needed):
+    """The fix-up never creates columns; it checks the target columns exist and stops with a clear message if not."""
     existing = column_ids(client, project_id)
-    missing = [slug for slug in COLUMNS_TO_CREATE if slug in needed and slug not in existing]
-    for slug in missing:
-        if apply:
-            client.request("POST", f"/column/{project_id}", {"name": COLUMNS_TO_CREATE[slug]})
-            print(f"created column {slug}")
-        else:
-            print(f"would create column {slug}")
-    if apply and missing:
-        existing = column_ids(client, project_id)
-        still_missing = [slug for slug in missing if slug not in existing]
-        if still_missing:
-            raise KaneoError(f"columns still missing after create: {', '.join(still_missing)}")
-    return existing, missing
+    missing = sorted(slug for slug in needed if slug not in existing)
+    if missing:
+        raise KaneoError(
+            "the project has no column(s) " + ", ".join(missing) + "; create them in the project first"
+        )
+    return existing
 
 
 def run(args):
@@ -269,9 +408,26 @@ def run(args):
     client = Kaneo(base_url, api_key, min_interval)
     project_id = resolve_project(client, project_key, workspace_id)
     needed = {item["target"] for item in plan}
-    existing_columns, _ = ensure_columns(client, project_id, needed, args.apply)
+    require_columns(client, project_id, needed)
+
+    spec_links, unresolved = {}, []
+    references = {item["identifier"]: spec_references(item) for item in plan}
+    if any(references.values()):
+        inventory = load_inventory(args)
+        for identifier, refs in references.items():
+            link = None
+            for reference in refs:
+                link = resolve_spec(reference, inventory)
+                if link:
+                    break
+            if link:
+                spec_links[identifier] = link
+            elif refs:
+                unresolved.append(f"{identifier} ({refs[0]})")
 
     counts = {"already in place": 0, "moved": 0, "would move": 0, "not in Kaneo": 0}
+    spec_counts = {"in place": 0, "would write": 0, "written": 0}
+    spec_not_in_kaneo = 0
     per_target = {}
     print("\nIDENTIFIER | Linear state | Kaneo now | target")
     for item in plan:
@@ -280,6 +436,8 @@ def run(args):
         except KaneoError as exc:
             if "HTTP 404" in str(exc):
                 counts["not in Kaneo"] += 1
+                if item["identifier"] in spec_links:
+                    spec_not_in_kaneo += 1
                 print(f"{item['identifier']} | {item['state']} | not in Kaneo | {item['target']}")
                 continue
             raise
@@ -288,19 +446,31 @@ def run(args):
         per_target[item["target"]] = per_target.get(item["target"], 0) + 1
         if current == item["target"]:
             counts["already in place"] += 1
-            continue
-        if not args.apply:
+        elif not args.apply:
             counts["would move"] += 1
-            continue
-        if "id" not in task:
-            raise KaneoError(f"{item['identifier']}: the by-ticket-id reply has no task id")
-        client.request("PUT", f"/task/status/{task['id']}", {"status": item["target"]})
-        counts["moved"] += 1
+        else:
+            if "id" not in task:
+                raise KaneoError(f"{item['identifier']}: the by-ticket-id reply has no task id")
+            client.request("PUT", f"/task/status/{task['id']}", {"status": item["target"]})
+            counts["moved"] += 1
+        link = spec_links.get(item["identifier"])
+        if link:
+            spec_counts[ensure_spec_line(client, item["identifier"], task, link, args.apply)] += 1
 
     print("\n--- summary (" + ("applied" if args.apply else "dry run, nothing written") + ")")
     for label, value in counts.items():
         print(f"{label}: {value}")
     print("tickets per target status: " + (", ".join(f"{k}={v}" for k, v in sorted(per_target.items())) or "none"))
+    if spec_links or unresolved:
+        print(f"spec links already in place: {spec_counts['in place']}")
+        if args.apply:
+            print(f"spec links written: {spec_counts['written']}")
+        else:
+            print(f"spec links would be written: {spec_counts['would write']}")
+    if spec_not_in_kaneo:
+        print(f"spec links not written because the ticket is not in Kaneo: {spec_not_in_kaneo}")
+    if unresolved:
+        print(f"spec links not resolved ({len(unresolved)}): " + ", ".join(unresolved))
     if unknown_states:
         print(f"Linear states this script does not map ({len(unknown_states)}): " + ", ".join(unknown_states))
     if label_problems:
@@ -315,6 +485,13 @@ def main():
     parser = argparse.ArgumentParser(description="Fix the Kaneo board after the Linear import (spec 022).")
     parser.add_argument("--export", required=True, help="path to Linear's JSON export (kept off the server)")
     parser.add_argument("--apply", action="store_true", help="write changes; without this the run is a dry run")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="explicit dry run (the default; kept for the runbook and quickstart)"
+    )
+    parser.add_argument(
+        "--inventory",
+        help="saved JSON from repo_inventory.sh; without it the script in this repository is run",
+    )
     args = parser.parse_args()
     try:
         return run(args)

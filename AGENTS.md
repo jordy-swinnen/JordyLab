@@ -21,7 +21,7 @@ Sub-project conventions live in `<subdir>/AGENTS.md` (jordylab-be, jordylab-fe, 
 | `fna` | `finance` | Financial news aggregation, RSS ingestion, AI investment briefings |
 | `gamecatalog` | `gamecatalog` | ROM/Steam/console game catalog — ingestion, grid/detail, filters, marks, auto-filled covers/facts/descriptions, LibBot (grounded AI chat), consoles, source management (**built**) |
 | `garmin` | `garmin` | Health/fitness data from Garmin Connect (written by Python sidecar) |
-| `feedback` | `feedback` | Guest feedback tickets triaged in an admin idea box; accepting creates a Linear issue (see `specs/017-guest-feedback/`) |
+| `feedback` | `feedback` | Guest feedback tickets triaged in an admin idea box; accepting creates a backlog ticket (Linear until the cutover, then Kaneo — see `specs/017-guest-feedback/` and `specs/022-kaneo-backlog/`) |
 | `mcp` | `mcp` | Read-only MCP connector for Claude Desktop and mobile: nine tools over the game catalog and finance, admin only, with the backend's own OAuth 2.1 authorization server (see `specs/021-jordylab-mcp-server/`) |
 | `recipe` | `recipe` | Self-hosted recipe management (planned) |
 | `trading` | — | AI trade signals with mandatory human-in-the-loop approval |
@@ -57,15 +57,16 @@ decisions for tickets with a design label (`needs-design`, `needs-ui-design`; de
 `in-progress`. A merged pull request does not close its ticket: `done` is set by the owner. The full flow is in
 [docs/ai-workflow.md](docs/ai-workflow.md#ticket-flow-kaneo). `docs/testing/bug-log.md` stays as history and the
 campaign's log-first rule; `BUG-###` references stay valid. Specs, plans and tasks stay in git. Linear is history
-(`docs/linear.md`, `specs/015-linear-backlog/`); the production idea box still writes to Linear until the cutover in
-spec 022.
+(`specs/015-linear-backlog/`; `docs/kaneo.md` replaces `docs/linear.md`); the production idea box still writes to Linear
+until the cutover in spec 022.
 
 ## Commits
 
 Every commit subject starts with its Kaneo ticket and a colon: `JOR-55: adding a button`. The last paragraph carries a
 `Refs:` trailer naming the SpecKit artefact (`Refs: 015/T004`, `Refs: 011 BUG-020`, or `Refs: NO-CODE`). No ticket yet?
-Create one first with the `backlog-capture` skill. Pull requests use `.github/pull_request_template.md` and a linking
-word (`Fixes JOR-23` finishes the ticket, `Refs JOR-23` does not). The full rules, the `Refs:` token table and examples
+Create one first with the `backlog-capture` skill. Pull requests use `.github/pull_request_template.md` and name the
+ticket (`JOR-23` when the PR completes it, `Part of JOR-23` for partial work); a linked pull request moves to In Review,
+and Done is set by the owner. The full rules, the `Refs:` token table and examples
 are in `.github/instructions/commits-and-pull-requests.instructions.md`, loaded by Claude Code (`CLAUDE.md`) and OpenCode
 (`opencode.json`). Enforced by `.githooks/commit-msg` locally (enable once per clone:
 `git config core.hooksPath .githooks`) and by the `Commit References` workflow on every pull-request commit. Never
@@ -132,6 +133,7 @@ Read these on-demand when working on related tasks — do not load all at once.
 | `docs/research/spring-ai-architecture.md` | Designing or reviewing an AI feature in depth (the short rules are in `jordylab-be/src/main/java/dev/jordy/jordylab/shared/ai/AGENTS.md`) |
 | `docs/status.md` | Asked what is built, replaced or planned, or after a feature ships or is replaced |
 | `docs/ai-workflow.md` | Changing agents, skills, models or the pipeline, or asked how work moves from idea to production |
+| `docs/kaneo.md` | Working on the backlog: columns, labels, the MCP sign-in per tool, the GitHub App, saved views, or a rebuild |
 
 Other reference docs (infrastructure guide, project setup, project overview) are planned but not
 yet written — do not cite them as if they exist. Add a row here only once the file is actually
