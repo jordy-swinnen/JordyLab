@@ -381,6 +381,8 @@ no key answers "backlog unavailable".
 - [ ] T073 [US7] OWNER [E]: switch off the Linear GitHub integration and commit webhook, disconnect every Linear connector except
       the owner's own browser login, lock the workspace read-only if Linear's plan allows it (T011 recorded whether), otherwise
       nothing writes to it by agreement; announce the end of the freeze and note the 30-day date in `docs/kaneo.md`.
+      Partly done 2026-11-25: the repository's Linear commit webhook (id 706201758) is deactivated; the Linear-side GitHub
+      integration, the connectors and the announcement are still the owner's.
 - [ ] T074 [US7] [E] Record the cutover (date, result of T072, rollback not needed) in `specs/022-kaneo-backlog/import-report.md` and in
       `spec.md` Status.
 - [X] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
