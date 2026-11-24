@@ -164,7 +164,7 @@ against a scratch repository (spec 022, T010 and T071).
 | H-04 | Kaneo API key → `gh secret set KANEO_API_KEY --env production`. | open, after the deploy |
 | H-05 | Repository variables. | done 2026-11-07 |
 | H-06 | GitHub sign-in OAuth app: generate the client secret and add the two OAuth keys. | open |
-| H-07 | The owner account, the saved views and the repository connection. | open, after the deploy |
+| H-07 | The owner account, the saved views and the repository connection. | owner account and repository connection done 2026-11-24; the saved views are open |
 
 Details and exact commands: `specs/022-kaneo-backlog/owner-steps.md`.
 
