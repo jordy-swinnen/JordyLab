@@ -39,3 +39,11 @@ whose titles carry no number) keep their text as it was; the owner's script run 
 - The remaining fix-up results with the export, and the state check (T036).
 - The verification checklist results and every difference (T037).
 - The four saved views or the filter recipes (T038).
+
+## Cutover (2026-11-25)
+
+`BACKLOG_PROVIDER=kaneo` was set and the release redeployed; the running backend is `sha-54fc975...` with
+`BACKLOG_PROVIDER=kaneo`, `KANEO_BASE_URL=https://kaneo.jordylab.be`, `KANEO_PROJECT_KEY=JOR` and the task-page URL
+template. The deploy was green on the second attempt (the first was stopped by a flaky live-model golden test). No
+rollback was needed. The repository's Linear commit webhook is deactivated. The ten-accepted-ideas check and the
+Linear-side switch-off remain.

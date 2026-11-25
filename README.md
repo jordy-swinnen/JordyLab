@@ -48,7 +48,6 @@ flowchart LR
         ai["OpenRouter, Anthropic fallback<br/>AI calls"]
         games["Steam · IGDB · TheGamesDB"]
         yahoo["Yahoo Finance chart API<br/>quotes, FX, daily closes"]
-        linear["Linear<br/>feedback → issue (until the Kaneo cutover)"]
         lf["Langfuse<br/>AI traces"]
     end
 
@@ -66,7 +65,6 @@ flowchart LR
     be --> ai
     be --> games
     be -- "prices and history" --> yahoo
-    be --> linear
     be --> lf
     pg -- "WAL + base backups" --> s3
     deploy -- "SSH as tag:ci over Tailscale" --> host
