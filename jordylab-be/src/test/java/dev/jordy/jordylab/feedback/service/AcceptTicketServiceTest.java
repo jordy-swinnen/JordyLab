@@ -24,15 +24,15 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * US3 at the service level: idempotency (a stored issue id never calls Linear again), the terminal
- * guard running before any Linear call, the recorded failure that keeps a ticket retryable, and the
+ * US3 at the service level: idempotency (a stored ticket id never calls the backlog again), the terminal
+ * guard running before any backlog call, the recorded failure that keeps a ticket retryable, and the
  * adopt-on-retry path. The full persistence flow lives in {@code FeedbackModuleTest}.
  */
 @ExtendWith(MockitoExtension.class)
 class AcceptTicketServiceTest {
 
     private static final BacklogClient.BacklogTicket ISSUE =
-            new BacklogClient.BacklogTicket("issue-1", "https://linear.app/jordylab/issue/JOR-101");
+            new BacklogClient.BacklogTicket("issue-1", "https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101");
 
     @Mock
     private FeedbackTicketRepository ticketRepository;
@@ -48,11 +48,11 @@ class AcceptTicketServiceTest {
     }
 
     @Test
-    void anAlreadyAcceptedTicketShortCircuitsWithoutCallingLinearAgain() {
+    void anAlreadyAcceptedTicketShortCircuitsWithoutCallingTheBacklogAgain() {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.ACCEPTED)
                 .backlogTicketId("issue-1")
-                .backlogTicketUrl("https://linear.app/jordylab/issue/JOR-101")
+                .backlogTicketUrl("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101")
                 .build();
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
@@ -64,7 +64,7 @@ class AcceptTicketServiceTest {
     }
 
     @Test
-    void aRejectedTicketIsRefusedBeforeAnyLinearCall() {
+    void aRejectedTicketIsRefusedBeforeAnyBacklogCall() {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.REJECTED)
                 .build();
@@ -77,7 +77,7 @@ class AcceptTicketServiceTest {
     }
 
     @Test
-    void refusesAnOverlongAcceptNoteBeforeTouchingLinear() {
+    void refusesAnOverlongAcceptNoteBeforeTouchingTheBacklog() {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
@@ -109,32 +109,32 @@ class AcceptTicketServiceTest {
         assertSoftly(softly -> {
             softly.assertThat(result.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
             softly.assertThat(result.getBacklogTicketId()).isEqualTo("issue-1");
-            softly.assertThat(result.getBacklogTicketUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-101");
+            softly.assertThat(result.getBacklogTicketUrl()).isEqualTo("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101");
             softly.assertThat(result.getPrivateNote()).isEqualTo("Repro'd on CachyOS too.");
         });
         verify(backlogClient).createTicket(ticket, "Repro'd on CachyOS too.");
     }
 
     @Test
-    void aLinearFailureIsRecordedOnTheTicketAndRethrown() {
+    void aBacklogFailureIsRecordedOnTheTicketAndRethrown() {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
         when(backlogClient.createTicket(ticket, null))
-                .thenThrow(new BacklogUnavailableException("Linear is unreachable"));
+                .thenThrow(new BacklogUnavailableException("The backlog is unreachable"));
 
         assertThatThrownBy(() -> service.accept(FeedbackTicketTestBuilder.DEFAULT_ID, null))
                 .isInstanceOf(BacklogUnavailableException.class);
         assertSoftly(softly -> {
             softly.assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.NEW);
-            softly.assertThat(ticket.getAcceptError()).isEqualTo("Linear is unreachable");
+            softly.assertThat(ticket.getAcceptError()).isEqualTo("The backlog is unreachable");
         });
     }
 
     @Test
     void aRetryAfterAFailureAdoptsTheIssueInsteadOfCreatingASecondOne() {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aDefaultFeedbackTicket();
-        ticket.recordAcceptError("timed out after Linear accepted");
+        ticket.recordAcceptError("timed out after the backlog accepted");
         when(ticketRepository.findByIdForAccept(FeedbackTicketTestBuilder.DEFAULT_ID))
                 .thenReturn(Optional.of(ticket));
         when(backlogClient.findTicket(ticket)).thenReturn(Optional.of(ISSUE));

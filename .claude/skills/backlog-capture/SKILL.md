@@ -1,6 +1,6 @@
 ---
 name: backlog-capture
-description: Log ideas, bugs, improvements, features or chores as Kaneo tickets in project JOR, in Triage, with a duplicate check and a preview first. Use whenever the user asks to log an idea, log a bug, make a ticket, add something to the backlog, create a ticket, or turn a conversation or plan into tickets, even when Kaneo or Linear is not named.
+description: Log ideas, bugs, improvements, features or chores as Kaneo tickets in project JOR, in Triage, with a duplicate check and a preview first. Use whenever the user asks to log an idea, log a bug, make a ticket, add something to the backlog, create a ticket, or turn a conversation or plan into tickets, even when Kaneo is not named.
 ---
 
 # Backlog capture (Kaneo)

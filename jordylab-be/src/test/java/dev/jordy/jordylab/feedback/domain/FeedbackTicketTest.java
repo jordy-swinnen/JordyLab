@@ -122,7 +122,7 @@ class FeedbackTicketTest {
         FeedbackTicket ticket = aNewTicket().build();
         ticket.moveToBacklog();
 
-        ticket.markAccepted("issue-id", "https://linear.app/jordylab/issue/JOR-99");
+        ticket.markAccepted("issue-id", "https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-99");
 
         assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
     }
@@ -160,7 +160,7 @@ class FeedbackTicketTest {
     @Test
     void acceptedIsFinal() {
         FeedbackTicket ticket = aNewTicket().build();
-        ticket.markAccepted("issue-id", "https://linear.app/jordylab/issue/JOR-99");
+        ticket.markAccepted("issue-id", "https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-99");
 
         assertThatIllegalStateException().isThrownBy(ticket::moveToBacklog);
         assertThatIllegalStateException().isThrownBy(ticket::reject);
@@ -170,14 +170,14 @@ class FeedbackTicketTest {
     @Test
     void acceptingStoresTheIssueAndClearsAPreviousError() {
         FeedbackTicket ticket = aNewTicket().build();
-        ticket.recordAcceptError("Linear timed out");
+        ticket.recordAcceptError("The backlog timed out");
 
-        ticket.markAccepted("issue-id", "https://linear.app/jordylab/issue/JOR-99");
+        ticket.markAccepted("issue-id", "https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-99");
 
         assertSoftly(softly -> {
             softly.assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
             softly.assertThat(ticket.getBacklogTicketId()).isEqualTo("issue-id");
-            softly.assertThat(ticket.getBacklogTicketUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-99");
+            softly.assertThat(ticket.getBacklogTicketUrl()).isEqualTo("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-99");
             softly.assertThat(ticket.getAcceptError()).isNull();
         });
     }
@@ -186,10 +186,10 @@ class FeedbackTicketTest {
     void recordsAnAcceptErrorWithoutMovingTheState() {
         FeedbackTicket ticket = aNewTicket().build();
 
-        ticket.recordAcceptError("Linear is unreachable");
+        ticket.recordAcceptError("The backlog is unreachable");
 
         assertSoftly(softly -> {
-            softly.assertThat(ticket.getAcceptError()).isEqualTo("Linear is unreachable");
+            softly.assertThat(ticket.getAcceptError()).isEqualTo("The backlog is unreachable");
             softly.assertThat(ticket.getState()).isEqualTo(FeedbackTicketState.NEW);
         });
     }

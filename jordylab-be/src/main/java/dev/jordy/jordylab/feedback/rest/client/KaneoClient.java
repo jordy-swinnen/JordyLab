@@ -11,7 +11,6 @@ import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -36,7 +35,6 @@ import java.util.Set;
  * task, so a label id is not stable to cache (trial-results.md). Never logs or rethrows response bodies.
  */
 @Component
-@ConditionalOnProperty(name = "jordylab.feedback.backlog.provider", havingValue = "kaneo", matchIfMissing = true)
 @Slf4j
 @RequiredArgsConstructor
 public class KaneoClient implements BacklogClient {

@@ -6,10 +6,8 @@ import dev.jordy.jordylab.feedback.service.BacklogUnavailableException;
 import java.util.Optional;
 
 /**
- * The backlog an accepted idea-box ticket lands in (spec 022, contracts/kaneo-client.md). Two
- * implementations sit behind {@code jordylab.feedback.backlog.provider}: {@link KaneoClient} (the
- * default) and {@link LinearClient}, kept until the follow-up pull request that removes Linear.
- * Every failure is a {@link BacklogUnavailableException}.
+ * The backlog an accepted idea-box ticket lands in (spec 022, contracts/kaneo-client.md).
+ * {@link KaneoClient} is the only implementation. Every failure is a {@link BacklogUnavailableException}.
  */
 public interface BacklogClient {
 

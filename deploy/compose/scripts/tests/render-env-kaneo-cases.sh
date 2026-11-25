@@ -76,6 +76,7 @@ check() {
 }
 
 has_line() { grep -qxF -- "$1" <<<"$output"; }
+lacks_line() { ! has_line "$1"; }
 ok() { [ "$code" -eq 0 ]; }
 failed() { [ "$code" -ne 0 ]; }
 
@@ -122,17 +123,14 @@ check "a missing required key still fails the render" failed
 # 5. Settings from repository variables: defaults when unset, the variable when set.
 build_fixture all
 render
-check "BACKLOG_PROVIDER defaults to linear" has_line "BACKLOG_PROVIDER='linear'"
 check "KANEO_DISABLE_REGISTRATION defaults to true" has_line "KANEO_DISABLE_REGISTRATION='true'"
 check "KANEO_MEM_LIMIT defaults to 768m" has_line "KANEO_MEM_LIMIT='768m'"
 check "KANEO_DISABLE_WORKSPACE_CREATION defaults to true" has_line "KANEO_DISABLE_WORKSPACE_CREATION='true'"
-render BACKLOG_PROVIDER=kaneo KANEO_MEM_LIMIT=1g
-check "BACKLOG_PROVIDER follows the repository variable" has_line "BACKLOG_PROVIDER='kaneo'"
+check "no BACKLOG_PROVIDER is rendered after the cutover" lacks_line "BACKLOG_PROVIDER="
+render KANEO_MEM_LIMIT=1g
 check "KANEO_MEM_LIMIT follows the repository variable" has_line "KANEO_MEM_LIMIT='1g'"
 render KANEO_DISABLE_WORKSPACE_CREATION=false
 check "KANEO_DISABLE_WORKSPACE_CREATION follows the repository variable" has_line "KANEO_DISABLE_WORKSPACE_CREATION='false'"
-render BACKLOG_PROVIDER=
-check "an empty repository variable takes the default" has_line "BACKLOG_PROVIDER='linear'"
 
 echo
 echo "$pass_count passed, $fail_count failed"

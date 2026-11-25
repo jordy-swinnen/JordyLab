@@ -39,7 +39,7 @@ public interface FeedbackTicketRepository extends JpaRepository<FeedbackTicket, 
 
     /**
      * Loads one ticket under a pessimistic write lock: the accept flow holds it while talking to
-     * Linear, so a double click serialises on the row instead of creating a second issue (FR-009).
+     * the backlog, so a double click serialises on the row instead of creating a second ticket (FR-009).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select ticket from FeedbackTicket ticket where ticket.id = :id")

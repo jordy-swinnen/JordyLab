@@ -7,7 +7,7 @@ history of the move from Linear.
 
 ## Workspace and project
 
-- Board: `https://kaneo.jordylab.be`, project `JOR`; a ticket is `JOR-<number>`, the same keys Linear used.
+- Board: `https://kaneo.jordylab.be`, project `JOR`; a ticket is `JOR-<number>`.
 - A ticket is what Kaneo calls a **task**. The Triage inbox is the Triage column (only during the import, see below).
 - The board is private: registration is closed and the owner created the only account. The service, the registration
   switch, secret rotation, upgrades, backups and restores are in `docs/runbook.md` §28.
@@ -21,8 +21,8 @@ history of the move from Linear.
 |---|---|---|
 | `ideas` | Raw idea: a title and a few sentences. | `kaneo-idea` |
 | `refinement` | Being turned into a Ready ticket; also where a ticket waits for the owner's answers. | `kaneo-refinement` (on start) |
-| `todo` | Ready: it meets the Definition of Ready and can go straight into `/speckit-specify`. | `kaneo-refinement` or `kaneo-design`, after the owner confirms |
-| `in-progress` | SpecKit is running. | the start of `/speckit-specify` (the `kaneo-start-ticket` hook) |
+| `todo` | Ready: it meets the Definition of Ready and can be started with `/kaneo-start-ticket`. | `kaneo-refinement` or `kaneo-design`, after the owner confirms |
+| `in-progress` | Being built (Plan Mode, then the branch). | `/kaneo-start-ticket` |
 | `in-review` | A pull request is open. | the PR flow |
 | `done` | Finished. **The owner sets it:** a merged pull request does not close its ticket (owner decision, 2026-11-08). | the owner, by hand |
 | `canceled` | Duplicate, superseded or not worth doing; always with a comment saying why. | whichever skill found out, after the owner confirms |
@@ -48,10 +48,9 @@ Priority uses Kaneo's own field: No priority, Low, Medium, High, Urgent. Priorit
 
 ## Spec links
 
-Kaneo has no Linear-style project per spec. Each spec ticket's **first description line** is `Spec: specs/<nnn-name>/`:
-the import fix-up (`scripts/kaneo/import-fixup.py`) writes it from Linear's projects, and `speckit-taskstoissues` and the
-`backlog-sync-drafts` skill keep it. That line and the ticket title are how the tooling matches a ticket to the
-repository.
+Kaneo has no per-spec project. Each spec ticket's **first description line** is `Spec: specs/<nnn-name>/`, written by
+the import and kept by the tooling (the connector). That line and the ticket title are how a
+ticket is matched to the repository.
 
 ## Saved views or filter recipes
 
@@ -71,9 +70,9 @@ applied in two clicks. T038 records the result.
 ## Who does what
 
 - **Agents** (Claude Code, OpenCode, the Claude apps): capture an idea (`kaneo-idea`), refine it into a Ready ticket
-  (`kaneo-refinement`), settle design when flagged (`kaneo-design`), start the spec (`kaneo-start-ticket`), mirror drafts
-  and specs (`backlog-sync-drafts`), turn a spec's tasks into tickets (`speckit-taskstoissues`), and comment on the ticket
-  during a handover (`agent-handover`). The older `backlog-capture` and `backlog-triage` skills work on the Triage inbox.
+  (`kaneo-refinement`), settle design when flagged (`kaneo-design`), start the build (`kaneo-start-ticket`), and comment
+  during a handover (`agent-handover`). The older `backlog-capture` and `backlog-triage` skills still work on the Triage
+  inbox.
 - **The owner, by hand**: the account and sign-ins, the GitHub App and its installation, connecting the repository to
   project `JOR`, the saved views, the secrets and repository variables, and every ticket's move to Done.
 
@@ -150,8 +149,8 @@ against a scratch repository (spec 022, T010 and T071).
 - Secrets (SOPS, edited by the owner in IntelliJ): `KANEO_AUTH_SECRET`, `KANEO_DB_PASSWORD`, `KANEO_GITHUB_APP_ID`,
   `KANEO_GITHUB_WEBHOOK_SECRET`, `KANEO_GITHUB_PRIVATE_KEY_BASE64`, `KANEO_GITHUB_OAUTH_CLIENT_ID` and
   `KANEO_GITHUB_OAUTH_CLIENT_SECRET`. Production environment secret: `KANEO_API_KEY` (the backend's idea box).
-- Repository variables: `BACKLOG_PROVIDER` (`linear` until the cutover, then `kaneo`), `KANEO_DISABLE_REGISTRATION`
-  (`true`), `KANEO_MEM_LIMIT` (`768m`), `KANEO_DISABLE_WORKSPACE_CREATION` (`true`).
+- Repository variables: `KANEO_DISABLE_REGISTRATION` (`true`), `KANEO_MEM_LIMIT` (`768m`),
+  `KANEO_DISABLE_WORKSPACE_CREATION` (`true`).
 - Rotation, upgrade, backup and restore steps: `docs/runbook.md` §28.
 
 ## Owner handoffs log
@@ -168,14 +167,14 @@ against a scratch repository (spec 022, T010 and T071).
 
 Details and exact commands: `specs/022-kaneo-backlog/owner-steps.md`.
 
-## The move from Linear
+## History: the move from Linear (2026-11-07 to 2026-11-25)
 
 - Linear is history: its setup is described in `specs/015-linear-backlog/`, and the old `docs/linear.md` content is in
   that file's git history.
-- The full Linear export (JSON) is stored outside the VPS (spec 022, T034) and is the archive for what the importer does
-  not carry: projects, milestones, cycles, estimates, attachments and archived issues.
-- Until the cutover, `BACKLOG_PROVIDER=linear` keeps the production idea box writing to Linear; switching it to
-  `kaneo` is the cutover (spec 022, T072).
+- The full export was not taken: the owner skipped the archive and the remaining checks on 2026-11-25 to move on. The
+  board itself is the record of what the importer carried; projects, milestones, cycles, estimates, attachments and
+  archived issues were not copied.
+- The idea box writes to Kaneo now; the Linear client, the provider switch and the Linear MCP entries are removed.
 
 ## Rebuild checklist
 

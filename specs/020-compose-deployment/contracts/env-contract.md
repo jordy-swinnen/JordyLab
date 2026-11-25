@@ -22,7 +22,7 @@ Sources:
 | `JORDYLAB_APP_BASE_URL` | `https://jordylab.be` | **new on main**: literal in `backend-config` |
 | `NTFY_BASE_URL` | `https://jordylab.be/ntfy` | no |
 | `NTFY_TOPIC` | `jordylab-secrets` → `NTFY_TOPIC` | no |
-| `NTFY_TOKEN`, `LINEAR_API_KEY`, `LANGFUSE_BASE_URL` | `jordylab-secrets` (same key names) | no (optional; the k3s backend read them through its `envFrom`, so the first draft of this table missed them) |
+| `NTFY_TOKEN`, `LANGFUSE_BASE_URL` | `jordylab-secrets` (same key names) | no (optional; the k3s backend read them through its `envFrom`, so the first draft of this table missed them) |
 | `LANGFUSE_ENVIRONMENT` | `production` | no |
 | `LANGFUSE_CAPTURE_CONTENT` | `true` | no |
 | `SPRINGDOC_API_DOCS_ENABLED` | `false` | no |
@@ -90,6 +90,5 @@ Kaneo is not part of the application release: `deploy-release.sh` starts only `b
 | `KANEO_DISABLE_REGISTRATION` | repository variable | default `true` |
 | `KANEO_DISABLE_WORKSPACE_CREATION` | repository variable | default `true`: no extra workspaces on the Kaneo instance |
 | `KANEO_MEM_LIMIT` | repository variable | default `768m` |
-| `BACKLOG_PROVIDER` | repository variable | default `linear` until the cutover; read by the backend once the Kaneo client exists |
 
 An unset or empty repository variable takes the default. Soft secrets never make the render fail; every other secret keeps the strict rule above.

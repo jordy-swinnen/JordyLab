@@ -65,7 +65,7 @@ for every new ticket, and the open-task counts still shown for older features co
 | Capacitor Android app (APK) | Progressive web app | Built |
 | Local model inference (Ollama) | OpenRouter, with Anthropic as fallback | Removed on 2026-09-30 |
 | Home Assistant prototype for Eufy | Custom Android widget | Planned |
-| Linear as the ticket tracker | Self-hosted Kaneo | Built. The board, the idea box and the GitHub App run on Kaneo; Linear is a read-only archive until the 30-day follow-up removes it. |
+| Linear as the ticket tracker | Self-hosted Kaneo | Built. The board, the idea box and the GitHub App run on Kaneo; Linear is no longer used and the workspace can be cancelled. |
 | AI prompts kept in code | Prompts managed in Langfuse | Planned |
 | SpecKit pipeline (`specs/NNN-*`: spec, plan, tasks) | Kaneo ticket as the spec, Plan Mode for the plan, `docs/decisions.md` for decisions | Built on 2026-11-12 (JOR-122). `specs/001`–`024` are frozen history. |
 

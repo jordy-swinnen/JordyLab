@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * The feedback module's Spring wiring. The module declares no beans of its own beyond the
- * configuration binding; services, the Linear client and the listener are plain components.
+ * configuration binding; the services, the Kaneo client and the listener are plain components.
  */
 @Configuration
 @EnableConfigurationProperties(FeedbackProperties.class)

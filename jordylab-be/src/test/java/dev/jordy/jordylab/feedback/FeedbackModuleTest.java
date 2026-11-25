@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * The module integration test (US1–US3): real persistence, the real services, and only the
- * outbound Linear client mocked. Proves the daily budget against actual rows, sender isolation,
+ * outbound backlog client mocked. Proves the daily budget against actual rows, sender isolation,
  * the triage state machine, accept idempotency (double accept → one issue) and the retry path that
  * adopts an issue a failed attempt already created (FR-009/FR-019, SC-002).
  */
@@ -150,7 +150,7 @@ class FeedbackModuleTest {
         FeedbackTicket ticket = submit(SENDER);
         ArgumentCaptor<FeedbackTicket> attemptedCaptor = ArgumentCaptor.forClass(FeedbackTicket.class);
         when(backlogClient.createTicket(attemptedCaptor.capture(), eq("Repro'd on CachyOS too.")))
-                .thenReturn(new BacklogClient.BacklogTicket("issue-1", "https://linear.app/jordylab/issue/JOR-101"));
+                .thenReturn(new BacklogClient.BacklogTicket("issue-1", "https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101"));
 
         FeedbackTicket accepted = acceptTicketService.accept(ticket.getId(), "Repro'd on CachyOS too.");
         FeedbackTicket secondClick = acceptTicketService.accept(ticket.getId(), null);
@@ -158,7 +158,7 @@ class FeedbackModuleTest {
         assertSoftly(softly -> {
             softly.assertThat(accepted.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
             softly.assertThat(accepted.getBacklogTicketId()).isEqualTo("issue-1");
-            softly.assertThat(accepted.getBacklogTicketUrl()).isEqualTo("https://linear.app/jordylab/issue/JOR-101");
+            softly.assertThat(accepted.getBacklogTicketUrl()).isEqualTo("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101");
             softly.assertThat(accepted.getPrivateNote()).isEqualTo("Repro'd on CachyOS too.");
             softly.assertThat(secondClick.getState()).isEqualTo(FeedbackTicketState.ACCEPTED);
             softly.assertThat(secondClick.getBacklogTicketId()).isEqualTo("issue-1");
@@ -171,7 +171,7 @@ class FeedbackModuleTest {
         FeedbackTicket ticket = submit(SENDER);
         ArgumentCaptor<FeedbackTicket> attemptedCaptor = ArgumentCaptor.forClass(FeedbackTicket.class);
         when(backlogClient.createTicket(attemptedCaptor.capture(), isNull()))
-                .thenThrow(new BacklogUnavailableException("Linear is unreachable"));
+                .thenThrow(new BacklogUnavailableException("The backlog is unreachable"));
 
         assertThatThrownBy(() -> acceptTicketService.accept(ticket.getId(), null))
                 .isInstanceOf(BacklogUnavailableException.class);
@@ -179,11 +179,11 @@ class FeedbackModuleTest {
         FeedbackTicket afterFailure = ticketRepository.findById(ticket.getId()).orElseThrow();
         assertSoftly(softly -> {
             softly.assertThat(afterFailure.getState()).isEqualTo(FeedbackTicketState.NEW);
-            softly.assertThat(afterFailure.getAcceptError()).isEqualTo("Linear is unreachable");
+            softly.assertThat(afterFailure.getAcceptError()).isEqualTo("The backlog is unreachable");
         });
 
         when(backlogClient.findTicket(ticket)).thenReturn(
-                Optional.of(new BacklogClient.BacklogTicket("issue-2", "https://linear.app/jordylab/issue/JOR-102")));
+                Optional.of(new BacklogClient.BacklogTicket("issue-2", "https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-102")));
 
         FeedbackTicket retried = acceptTicketService.accept(ticket.getId(), null);
 

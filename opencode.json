@@ -28,11 +28,6 @@
       "command": ["sh", "scripts/mcp/github-mcp.sh"],
       "enabled": true
     },
-    "linear": {
-      "type": "remote",
-      "url": "https://mcp.linear.app/mcp",
-      "enabled": true
-    },
     "jordylab": {
       "type": "remote",
       "url": "https://jordylab.be/mcp",

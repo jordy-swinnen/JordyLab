@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * The guest view of a ticket — the whole surface a guest may ever see (spec 017 FR-013/014/018).
- * Deliberately absent: the sender, the private note, the Linear link and any Linear-side state.
+ * Deliberately absent: the sender, the private note, the backlog link and any backlog-side state.
  */
 public record GuestTicketView(
         UUID id,

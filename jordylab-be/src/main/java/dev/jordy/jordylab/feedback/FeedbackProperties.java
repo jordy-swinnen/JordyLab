@@ -3,16 +3,13 @@ package dev.jordy.jordylab.feedback;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration for the feedback module (spec 017): the per-guest daily submission budget, the
- * backlog that accepted tickets go to (spec 022: Kaneo, or Linear until the cutover), and the
- * settings of each backlog client.
+ * Configuration for the feedback module (spec 017): the per-guest daily submission budget and the
+ * settings of the Kaneo backlog client (spec 022; Kaneo only since the cutover).
  */
 @ConfigurationProperties(prefix = "jordylab.feedback")
 public record FeedbackProperties(
         int dailyTicketLimit,
         String dailyLimitZone,
-        Backlog backlog,
-        Linear linear,
         Kaneo kaneo) {
 
     public FeedbackProperties {
@@ -22,44 +19,7 @@ public record FeedbackProperties(
         if (dailyLimitZone == null || dailyLimitZone.isBlank()) {
             dailyLimitZone = "Europe/Brussels";
         }
-        backlog = backlog == null ? new Backlog(null) : backlog;
-        linear = linear == null ? new Linear(null, null, null, 0, 0) : linear;
         kaneo = kaneo == null ? new Kaneo(null, null, null, null, null, null, 0, 0) : kaneo;
-    }
-
-    /**
-     * Which backlog an accepted ticket goes to: {@code kaneo} (the default) or {@code linear}. The
-     * client selection reads {@code jordylab.feedback.backlog.provider} directly
-     * ({@code @ConditionalOnProperty}); this record carries the same value for the rest of the module.
-     */
-    public record Backlog(String provider) {
-        public Backlog {
-            if (provider == null || provider.isBlank()) {
-                provider = "kaneo";
-            }
-        }
-    }
-
-    /**
-     * The Linear workspace settings: a personal API key (SOPS secret in prod, never sent to the
-     * browser), the team key whose backlog receives accepted tickets, and the short timeouts that
-     * keep a hanging Linear from holding the accept flow for long.
-     */
-    public record Linear(String baseUrl, String apiKey, String teamKey, int connectTimeoutMs, int readTimeoutMs) {
-        public Linear {
-            if (baseUrl == null || baseUrl.isBlank()) {
-                baseUrl = "https://api.linear.app/graphql";
-            }
-            if (teamKey == null || teamKey.isBlank()) {
-                teamKey = "JOR";
-            }
-            if (connectTimeoutMs <= 0) {
-                connectTimeoutMs = 5000;
-            }
-            if (readTimeoutMs <= 0) {
-                readTimeoutMs = 15000;
-            }
-        }
     }
 
     /**

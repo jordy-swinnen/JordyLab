@@ -274,7 +274,7 @@ class KaneoClientTest {
     }
 
     private static FeedbackProperties properties(String apiKey) {
-        return new FeedbackProperties(5, "Europe/Brussels", null, null,
+        return new FeedbackProperties(5, "Europe/Brussels",
                 new FeedbackProperties.Kaneo(BASE_URL, apiKey, "ws-1", "JOR", "ideas", null, 2000, 300));
     }
 }

@@ -33,9 +33,8 @@ Scripts for the move from Linear to a self-hosted Kaneo (spec `specs/022-kaneo-b
 
 The script stops with exit code 2 if the key is refused. Exit code 1 means the export or a Kaneo call failed; read the
 message and run the dry run again. Set `KANEO_BASE_URL`, `KANEO_PROJECT_KEY` or `KANEO_WORKSPACE_ID` only if they differ
-from the defaults. The spec folders come from `.claude/skills/backlog-sync-drafts/scripts/repo_inventory.sh`, run from the
-repository root; pass `--inventory <file>` to use a saved copy of its JSON instead (set `KANEO_FIXUP_INVENTORY_SCRIPT` to
-point at a different script).
+from the defaults. The spec folders came from the (now frozen and removed) `repo_inventory.sh`; pass `--inventory <file>`
+with a saved copy of its JSON (set `KANEO_FIXUP_INVENTORY_SCRIPT` to point at a different script).
 
 ## Rules for everything in this folder
 
