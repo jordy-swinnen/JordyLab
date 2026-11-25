@@ -188,6 +188,16 @@ test.describe('No sideways scrolling on a phone', () => {
         }
       });
 
+      // iOS Safari zooms the page when a field under 16 px is focused, so the library's search field must be 16 px on a phone too.
+      test('the library search field is 16 px or larger, so iOS does not zoom when it is focused', async ({ page }) => {
+        await page.goto('/games/grid');
+        const search = page.getByRole('searchbox', { name: 'Search games by title', exact: true });
+        await expect(search).toBeVisible();
+
+        const fontSizeInPixels = await search.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+        expect(fontSizeInPixels).toBeGreaterThanOrEqual(16);
+      });
+
       // Phones have no hover, and Remove is hidden until hover only from 640 px up, so it must show here without hover.
       test('the Remove button of a holding shows without hover', async ({ page }) => {
         const holdingTicker = { 360: 'NFLX', 390: 'ORCL', 430: 'AMZN' }[width];
