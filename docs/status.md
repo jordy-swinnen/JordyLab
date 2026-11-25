@@ -1,8 +1,9 @@
 # Status: what is built, what is replaced, where it ends
 
-Last reviewed: 2026-11-12. Statuses are plain words derived from each item's work tracker (Done counts as
-**Built**, in progress as **In progress**, everything not started as **Planned**). Open-task counts come from each
-feature's task list in `specs/`. The rule that keeps this page current is in
+Last reviewed: 2026-11-12. Statuses are plain words derived from the work tracker (Done counts as **Built**, in
+progress as **In progress**, everything not started as **Planned**). Since 2026-11-12 the tracker is the Kaneo board
+for every new ticket, and the open-task counts still shown for older features come from their frozen task list in
+`specs/` (see [specs/README.md](../specs/README.md)). The rule that keeps this page current is in
 [AGENTS.md](../AGENTS.md#workflow), under "Keeping the drawing and status current".
 
 ## Built
@@ -52,7 +53,8 @@ feature's task list in `specs/`. The rule that keeps this page current is in
 | Trading signals with human approval | Planned | Module not built. No spec yet. |
 | Garmin health data | Planned | Sidecar code is in the repository, but it is not in the production stack. No spec yet. |
 
-Drafts that have no spec yet are in [`specs/_drafts/`](../specs/_drafts/).
+`specs/_drafts/` is frozen with the rest of `specs/`; anything still worth doing there becomes a ticket in Kaneo
+`ideas`.
 
 ## Replaced
 
@@ -65,12 +67,13 @@ Drafts that have no spec yet are in [`specs/_drafts/`](../specs/_drafts/).
 | Home Assistant prototype for Eufy | Custom Android widget | Planned |
 | Linear as the ticket tracker | Self-hosted Kaneo | Built. The board, the idea box and the GitHub App run on Kaneo; Linear is no longer used and the workspace can be cancelled. |
 | AI prompts kept in code | Prompts managed in Langfuse | Planned |
+| SpecKit pipeline (`specs/NNN-*`: spec, plan, tasks) | Kaneo ticket as the spec, Plan Mode for the plan, `docs/decisions.md` for decisions | Built on 2026-11-12 (JOR-122). `specs/001`–`024` are frozen history. |
 
 ## End goal
 
 The end state is reached when all of these hold:
 
-1. Every built feature has all its tasks checked. The open items above are either finished or dropped.
+1. Every built feature is finished on the board. The open items above are either finished or dropped.
 2. Nothing in the Replaced table still runs in production: the Keycloak cleanup is finished, Kaneo replaces Linear,
    and the prompts are managed in Langfuse.
 3. Every planned module either has a spec and is built, or is dropped with a note on this page.
@@ -79,8 +82,8 @@ The end state is reached when all of these hold:
 
 ## Known gaps
 
-- Many spec headers still say Draft. The task lists are the source of truth, not the headers.
+- The frozen spec headers still say Draft; they carry no live status, and the board is the only status.
 - Spec numbers 014, 016 and 019 are each used by two features, so features are named here by what they are.
-- Three features are marked Built, but their task lists still have open items (see the Built table). Each needs
-  checking: either the tasks are done, or they are dropped.
+- Three features are marked Built, but their frozen task lists still have open items (see the Built table). Each needs
+  checking: either the work is done, or it is dropped.
 - Garmin health data is in the repository but not in the production stack, and nothing is planned for it yet.

@@ -1,6 +1,6 @@
 ---
 name: kaneo-board
-description: Shared conventions for the JordyLab Kaneo board (kaneo.jordylab.be, project JOR) — column slugs, who moves a ticket where, labels, the Ready ticket template and the Definition of Ready. Read this whenever you create, read, edit, label or move a JOR ticket, whenever kaneo-idea, kaneo-refinement or kaneo-design is running, or when the user asks how the ticket workflow, columns or "ready for speckit-specify" work.
+description: Shared conventions for the JordyLab Kaneo board (kaneo.jordylab.be, project JOR) — column slugs, who moves a ticket where, labels, the Ready ticket template and the Definition of Ready. Read this whenever you create, read, edit, label or move a JOR ticket, whenever kaneo-idea, kaneo-refinement, kaneo-design or kaneo-start-ticket is running, or when the user asks how the ticket workflow, columns or the trip from ticket to merged pull request work.
 ---
 
 # Kaneo board conventions
@@ -25,17 +25,17 @@ Tickets are addressed by key (`JOR-123`). Resolve a key with `get_task_by_ticket
 
 ```
 /kaneo-idea ──▶ ideas ──▶ refinement ──▶ todo ──▶ in-progress ──▶ in-review ──▶ done
-                 (raw)    /kaneo-refinement   (ready for        (SpecKit,        (PR)     (owner)
-                          /kaneo-design        /speckit-specify)  branch)
-                          (optional)                            └─▶ canceled (from any column)
+                 (raw)    /kaneo-refinement  (Ready:      /kaneo-start-ticket  (PR)     (owner)
+                          /kaneo-design       build from   + Plan Mode
+                          (optional)          here)        └─▶ canceled (from any column)
 ```
 
 | Column slug | Meaning | Who moves a ticket in |
 |---|---|---|
 | `ideas` | Raw idea. A title and a few sentences, nothing more is required. | `kaneo-idea` |
 | `refinement` | Being turned into a Ready ticket: functional questions and, when flagged, design decisions. Also where a ticket waits for the owner's answers. | `kaneo-refinement` (on start) |
-| `todo` | Ready: it meets the Definition of Ready below and can go straight into `/speckit-specify`. | `kaneo-refinement` or `kaneo-design` (on finish, after the owner confirms) |
-| `in-progress` | SpecKit is running (specify, clarify, plan, tasks, implement, converge). | the start of `/speckit-specify` or the start-ticket step |
+| `todo` | Ready: it meets the Definition of Ready below, so it can be built as it stands. The ticket is the only specification. | `kaneo-refinement` or `kaneo-design` (on finish, after the owner confirms) |
+| `in-progress` | A branch exists and the build is running (Plan Mode, then code). | `kaneo-start-ticket` |
 | `in-review` | A PR is open. | the PR flow |
 | `done` | Finished. The owner sets it: a merged pull request does not close the ticket (owner decision, 2026-11-08). | the owner, by hand |
 | `canceled` | Duplicate, superseded or not worth doing. Always leave a comment saying why. | whichever skill found out, after the owner confirms |
@@ -58,7 +58,7 @@ Attach labels with `attach_label_to_task(labelId, taskId)` using the ids below. 
 | | Finance News | `k6ezsv7ur6da3ogbjmcwa2ry` | FNA module |
 | | Mobile | `kxmuic1ocr20t2z5rvem1yx9` | Android / PWA shell |
 | | Platform | `y0fb6o6oc8d4yetu9264drel` | infra, tooling, cross-cutting |
-| Design flags | needs-design | `svi5c8v9yplms7geprv50exm` | architecture decisions needed before SpecKit |
+| Design flags | needs-design | `svi5c8v9yplms7geprv50exm` | architecture decisions needed before the build |
 | | needs-ui-design | `it0j1gvbbu6bqa9vyni3f9vq` | the UI design (Claude Design) must be updated first |
 
 The design flags are working markers, not categories: set them during refinement, remove them when the matching design work is recorded in the ticket. A ticket in `todo` never carries a design flag. To remove a label, `detach_label_from_task` needs the id of the label copy on that ticket, not the template id. `get_task` and `get_task_by_ticket_id` do not return labels; `list_tasks` does. Call `list_tasks(projectId, status=<the ticket's current column>, limit=20)` (the `refinement` and `todo` columns are small), find the ticket, and read the copy id from its `labels`. Do not use `list_workspace_labels` for this.
@@ -83,7 +83,9 @@ Tested on this instance on 2026-11-08: images given as `data:` URIs render insid
 
 ## The Ready ticket template
 
-A ticket in `todo` follows this shape. It mirrors GitHub Spec Kit's `spec-template.md` on purpose: `/speckit-specify` is the next consumer, so it can lift stories, requirements and criteria across without translating them. Stable IDs (`US1`, `FR-001`, `SC-001`) let later steps, tests and reviews refer to one line.
+A ticket in `todo` follows this shape. It is the only specification of the feature: the agent that builds it reads this
+ticket, and nothing re-writes it into a spec, a plan or a task list. Stable IDs (`US1`, `FR-001`, `SC-001`) let code,
+tests, decisions and reviews refer to one line.
 
 Write for readers who cannot ask you anything: an agent starting cold, or the owner in three weeks.
 
@@ -126,7 +128,7 @@ As a <role>, I want <capability> so that <benefit>.
 ## Assumptions
 - <default chosen where the owner did not decide, so it can be challenged>
 
-## Design notes            *(only if needs-design applied; input for /speckit-plan, not /speckit-specify)*
+## Design notes            *(only if needs-design applied; input for the plan, not for the stories)*
 ### D1 — <decision> 
 **Decision:** ... **Why:** ... **Rejected:** ... **Consequences:** ...
 
@@ -146,7 +148,7 @@ Source: <harness> session, <YYYY-MM-DD>
 
 Rules that keep the template useful to agents:
 
-- **What and why before how.** Stories, requirements and success criteria say nothing about frameworks, tables, endpoints or libraries. Those belong in Design notes and later in `/speckit-plan`. A requirement that names a technology is a decision someone has not made yet.
+- **What and why before how.** Stories, requirements and success criteria say nothing about frameworks, tables, endpoints or libraries. Those belong in Design notes as numbered decisions. A requirement that names a technology is a decision someone has not made yet.
 - **Two readers, one verdict.** An acceptance scenario passes if two different people (or agents) could not disagree about whether it passed. Replace "quickly", "gracefully", "friendly" with exact messages, thresholds, states.
 - **Priorities slice the work.** P1 must be shippable alone. If there are more than about three stories that each could ship alone, the ticket is two features: split it.
 - **Everything uncertain is visible.** An unresolved point is written as `[NEEDS CLARIFICATION: ...]` inside the story or requirement it affects and listed under Open questions. The section must read `None.` before the ticket goes to `todo`.
@@ -167,9 +169,12 @@ A ticket may move to `todo` only when all of these are true. Check them yourself
 8. Related tickets and specs are linked, and duplicates were searched for.
 9. Facts taken from the ticket or its sources were checked, or are marked as unverified.
 10. Design is settled: no `needs-design` or `needs-ui-design` label left, and UI design impact is filled in.
-11. The scope fits one SpecKit feature.
+11. The scope fits what one branch and one pull request can carry.
 12. The owner confirmed the summary in the conversation.
 
-## Handing over to SpecKit
+## Handing over to the build
 
-When a ticket reaches `todo`, finish with the next command and nothing else: `/speckit-specify JOR-<n>`, noting that the ticket text is the feature description (the Context, stories, requirements and criteria carry over; Design notes feed `/speckit-plan`). The skill that started SpecKit moves the ticket to `in-progress`.
+When a ticket reaches `todo`, say so in one line and name the next command: `/kaneo-start-ticket JOR-<n>`. The ticket
+text is the specification from there on — Context, stories, requirements and criteria are the scope, Design notes are
+the constraints, and the plan is agreed in the harness's Plan Mode after the branch exists. Nothing is written into a
+`specs/` folder.

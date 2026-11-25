@@ -82,7 +82,7 @@ jobs:
           apm install --frozen
           apm audit --ci
 
-      # Report-only: check_config.py also reports this repository's pre-existing CLAUDE.md and SpecKit
+      # Report-only: check_config.py also reports this repository's pre-existing CLAUDE.md
       # frontmatter drift (docs/ai-workflow.md → "Known drift"), which a tag bump must not be blocked by.
       - name: Full agent config check (report only)
         continue-on-error: true

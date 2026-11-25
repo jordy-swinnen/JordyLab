@@ -1,6 +1,6 @@
 ---
 name: model-harness-recommendations
-description: Recommend a model for each harness (OpenCode Go Plus or Claude Code) for Plan steps (constitution, specify, clarify, plan, tasks, analyze, converge) and Build steps (implement, checklist, taskstoissues) at budget, balanced and performance cost levels. Each cost level sets its own quality line. Use when the user asks which model or harness to use for a SpecKit step, wants to compare or refresh models, asks for a cheaper or better option, or pastes an OpenCode usage table.
+description: Recommend a model for each harness (OpenCode Go Plus or Claude Code) for Plan steps (ticket refinement and design, then the Plan Mode before a build) and Build steps (implementation, tests, review of a diff, a pull request) at budget, balanced and performance cost levels. Each cost level sets its own quality line. Use when the user asks which model or harness to use for a planning or build step, wants to compare or refresh models, asks for a cheaper or better option, or pastes an OpenCode usage table.
 ---
 
 # Model and harness recommendations
@@ -19,7 +19,7 @@ Give one model per harness, mode and cost level. Read the sources below before a
 - https://claude.com/pricing and the usage-limits help article: plan prices and relative allowances.
 - https://artificialanalysis.ai/leaderboards/models and the model pages: Intelligence Index, Cost per Task, First Answer Token.
 
-Artificial Analysis is the only source that scores both the Claude models and the OpenCode Go models on one scale. Its limits: some models are deprecated there with no current index, and some are unscored. Check each model's page, not only the leaderboard. Other benchmark sites (BenchLM SWE-bench Verified and Terminal-Bench, tbench.ai) may not cover these models, so do not swap in a coding leaderboard for them without checking coverage first. Say so when relevant, and offer a short local trial of one SpecKit step with two or three candidates.
+Artificial Analysis is the only source that scores both the Claude models and the OpenCode Go models on one scale. Its limits: some models are deprecated there with no current index, and some are unscored. Check each model's page, not only the leaderboard. Other benchmark sites (BenchLM SWE-bench Verified and Terminal-Bench, tbench.ai) may not cover these models, so do not swap in a coding leaderboard for them without checking coverage first. Say so when relevant, and offer a short local trial of one planning or build step with two or three candidates.
 
 ## Measure the real cost per request on OpenCode Go
 

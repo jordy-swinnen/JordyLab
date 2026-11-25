@@ -6,14 +6,20 @@
 #   No ticket yet? Create one first (backlog-capture skill), then commit.
 #   Commits made before the cutoff are not checked: CI passes the commit's timestamp as the second argument.
 #
-# Rule 2 (AGENTS.md → "Commits"): the message's trailer block carries a `Refs:` line.
-#   Refs: 011 BUG-033          spec number and/or campaign IDs
-#   Refs: 009/T039             a task of a spec
-#   Refs: NO-CODE              config/tooling/docs work with no SpecKit artefact (must stand alone)
+# Rule 2 (AGENTS.md → "Commits"): the message's trailer block carries a `Refs:` line naming what the
+# commit serves.
+#   Refs: JOR-122              the ticket itself (the normal token since 2026-11-12, JOR-122)
+#   Refs: JOR-78/D3            decision D3 recorded on ticket JOR-78
+#   Refs: JOR-122/FR-004       requirement FR-004 of ticket JOR-122
+#   Refs: 011 BUG-033          a frozen spec (001-024) and/or campaign IDs
+#   Refs: NO-CODE              config/tooling/docs work with no ticket (must stand alone)
 #
 # Accepted tokens (space- or comma-separated):
-#   NNN            spec number; specs/NNN-* must exist
-#   NNN/T###       task T### of spec NNN
+#   JOR-NNN        a Kaneo ticket; format-checked only, the hook cannot reach the board
+#   JOR-NNN/D#     a decision on that ticket, recorded in docs/decisions.md
+#   JOR-NNN/FR-##  a requirement on that ticket
+#   NNN            frozen spec number; specs/NNN-* must exist (001-024 only, history)
+#   NNN/T###       task T### of a frozen spec
 #   BUG-###        must already be logged in docs/testing/bug-log.md
 #   HANDOFF-##  DEPLOY-##  Q-##   campaign IDs from docs/testing/e2e-test-plan.md
 #   NO-CODE
@@ -47,7 +53,7 @@ fi
 fail() {
   echo "commit-msg: $1" >&2
   echo "  Add a trailer to the last paragraph of the message (next to Co-Authored-By), e.g." >&2
-  echo "    Refs: 011 BUG-033      or      Refs: 009/T039      or      Refs: NO-CODE" >&2
+  echo "    Refs: JOR-122      or      Refs: JOR-78/D3      or      Refs: NO-CODE" >&2
   echo "  See AGENTS.md → Commits." >&2
   exit 1
 }
@@ -59,6 +65,10 @@ token_count=0
 has_no_code=0
 for token in $refs; do
   token_count=$((token_count + 1))
+  # The ticket and its decisions/requirements: the normal answer since JOR-122.
+  if printf '%s' "$token" | grep -Eq '^JOR-[1-9][0-9]{0,5}(/(D[1-9][0-9]{0,2}|FR-[0-9]{1,3}))?$'; then
+    continue
+  fi
   case "$token" in
     NO-CODE)
       has_no_code=1 ;;

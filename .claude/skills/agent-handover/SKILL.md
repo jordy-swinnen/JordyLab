@@ -1,6 +1,6 @@
 ---
 name: agent-handover
-description: Hand JordyLab work over between Claude Code and OpenCode, in either direction. The outgoing agent wraps up its current step, records state in the repo (SpecKit tasks.md, bug log, a HANDOFF-next-agent.md) and prints a ready-to-paste prompt for the other tool, then stops. The incoming agent uses it to take over from that file. Use whenever the owner says hand over, hand off, switch to OpenCode / Claude Code, out of credits or tokens, wrap up for the next agent, write a handoff, or take over from the other agent, even without the word "skill".
+description: Hand JordyLab work over between Claude Code and OpenCode, in either direction. The outgoing agent wraps up its current step, records state (a comment on the Kaneo ticket, the bug log, a handover file when the detail does not fit a comment) and prints a ready-to-paste prompt for the other tool, then stops. The incoming agent uses it to take over from that file. Use whenever the owner says hand over, hand off, switch to OpenCode / Claude Code, out of credits or tokens, wrap up for the next agent, write a handoff, or take over from the other agent, even without the word "skill".
 ---
 
 # Agent handover (Claude Code ⇄ OpenCode)
@@ -27,16 +27,19 @@ safe point. Don't pick up the next task "quickly"; that's how handovers end up i
 - Your own scratch edits (debug prints, marker comments) are reverted, not handed over as "work".
 - Don't merge, tag, deploy or touch the cluster as part of handing over.
 
-## 2. Bring the SpecKit and campaign records up to date
+## 2. Bring the ticket and campaign records up to date
 
-The next agent trusts these files more than anything you say, so make them true before you describe them:
+The next agent trusts these records more than anything you say, so make them true before you describe them:
 
-- `specs/<NNN>-*/tasks.md`: tick `- [x]` every task you finished this session and verified. Leave a task open
-  if it's only partly done, and explain the gap in the handover.
+- The Kaneo ticket (`JOR-<n>`): add one comment saying what moved, what is left and on which branch. If the
+  description carries a checklist or the ticket has subtasks, tick what is finished and verified; leave an item open if
+  it is only partly done, and explain the gap in the handover. A finished review step moves the ticket to
+  `in-review`.
 - `docs/testing/bug-log.md`: update the status of bugs you moved (OPEN → FIXING → FIXED-LOCAL …). A bug found
   but not yet logged gets logged now (the log-first rule).
-- `specs/<NNN>-*/validation-results.md` (when the spec has one): record any measurements you took, and any
-  owner decision that changes what the file says is still open (for example "owner keeps the model").
+- A decision the owner made this session that a future reader could not re-derive from the code goes into
+  `docs/decisions.md` under the ticket, in the same change (see that file's inclusion bar); a decision that changes a
+  standing rule also goes into `AGENTS.md`.
 
 Describe what is actually in the repo, not what you or the owner remember. If they disagree (the owner says the
 fix is in file A, the diff shows it in file B or nowhere), write down what the repo shows and point out the
@@ -44,17 +47,18 @@ difference.
 
 ## 3. Gather the state
 
-Run the bundled read-only script from the repo root. Pass the spec number if you know it; it guesses from the
-branch name and `Refs:` trailers otherwise:
+Run the bundled read-only script from the repo root. Pass the JOR number if you know it; it guesses from the branch
+name and the `Refs:` trailers otherwise, and it also reports a frozen spec when the branch predates JOR-122:
 
 ```bash
 .claude/skills/agent-handover/scripts/handover_state.sh 013
 ```
 
 It prints git state (branch, upstream, commits on top of `main`, uncommitted files, stashes), open PRs and this
-branch's checks, the active spec's open tasks, and bugs that are not yet deployed or verified.
+branch's checks, the active ticket (read it on the board for its stories and decisions), and bugs that are not yet
+deployed or verified.
 
-If the spec already has a `HANDOFF-next-agent.md`, read it before you overwrite it. Every item in it that is
+If the ticket's handover file already exists, read it before you overwrite it. Every item in it that is
 still open moves into the new file. Its STOP section stays a STOP unless you checked that the problem is gone;
 "not checked this session" is a fine thing to write. An item only drops out when it is done or the owner
 dropped it.
@@ -76,8 +80,7 @@ Location, overwritten each time (git history keeps the older ones):
 
 | Work | File |
 |---|---|
-| A numbered spec | `specs/<NNN>-<name>/HANDOFF-next-agent.md` |
-| A draft | `specs/_drafts/<name>/HANDOFF-next-agent.md` |
+| A ticket, when a comment is not enough | `docs/handoff/HANDOFF-JOR-<n>.md` (the ticket comment stays the primary record) |
 | Anything else (`NO-CODE`) | `docs/handoff/HANDOFF-next-agent.md` |
 
 Use this structure. Keep it scannable; a section with nothing in it is left out:

@@ -1,4 +1,4 @@
-# Self-hosted ntfy for mobile app (spec 007) push notifications — resolved in /speckit-clarify:
+# Self-hosted ntfy for mobile app push notifications (spec 007), as decided then:
 # in-cluster, not the public ntfy.sh service (FR-013). Runs from ntfy's own upstream image, not
 # built by this repo's CI (spec.md Key Entities).
 apiVersion: apps/v1

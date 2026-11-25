@@ -2,7 +2,7 @@
 
 ## What
 
-<!-- Two to five lines: the change and why it exists. -->
+<!-- Two to five lines: the change and why it exists. Name the requirement IDs from the ticket it serves. -->
 
 ## How it was verified
 
@@ -12,6 +12,10 @@
 
 <!-- JOR-<n> when this PR completes the ticket   |   Part of JOR-<n> for partial work. Merging does not set Done: the owner does. -->
 
+## Decisions
+
+<!-- The D# entries this PR adds to docs/decisions.md, e.g. JOR-122 D2. "None" when the change had no real alternative. -->
+
 ## Refs
 
-<!-- Spec and tasks as in the commit trailer, e.g. 015 or 015/T004 -->
+<!-- As in the commit trailer, e.g. JOR-122 or JOR-122/D004 -->

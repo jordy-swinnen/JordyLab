@@ -21,8 +21,8 @@ history of the move from Linear.
 |---|---|---|
 | `ideas` | Raw idea: a title and a few sentences. | `kaneo-idea` |
 | `refinement` | Being turned into a Ready ticket; also where a ticket waits for the owner's answers. | `kaneo-refinement` (on start) |
-| `todo` | Ready: it meets the Definition of Ready and can go straight into `/speckit-specify`. | `kaneo-refinement` or `kaneo-design`, after the owner confirms |
-| `in-progress` | SpecKit is running. | the start of `/speckit-specify` (the `kaneo-start-ticket` hook) |
+| `todo` | Ready: it meets the Definition of Ready and can be started with `/kaneo-start-ticket`. | `kaneo-refinement` or `kaneo-design`, after the owner confirms |
+| `in-progress` | Being built (Plan Mode, then the branch). | `/kaneo-start-ticket` |
 | `in-review` | A pull request is open. | the PR flow |
 | `done` | Finished. **The owner sets it:** a merged pull request does not close its ticket (owner decision, 2026-11-08). | the owner, by hand |
 | `canceled` | Duplicate, superseded or not worth doing; always with a comment saying why. | whichever skill found out, after the owner confirms |
@@ -49,7 +49,7 @@ Priority uses Kaneo's own field: No priority, Low, Medium, High, Urgent. Priorit
 ## Spec links
 
 Kaneo has no per-spec project. Each spec ticket's **first description line** is `Spec: specs/<nnn-name>/`, written by
-the import and kept by the tooling (the connector and `speckit-taskstoissues`). That line and the ticket title are how a
+the import and kept by the tooling (the connector). That line and the ticket title are how a
 ticket is matched to the repository.
 
 ## Saved views or filter recipes
@@ -70,9 +70,9 @@ applied in two clicks. T038 records the result.
 ## Who does what
 
 - **Agents** (Claude Code, OpenCode, the Claude apps): capture an idea (`kaneo-idea`), refine it into a Ready ticket
-  (`kaneo-refinement`), settle design when flagged (`kaneo-design`), start the spec (`kaneo-start-ticket`), mirror drafts
-  and specs (`backlog-sync-drafts`), turn a spec's tasks into tickets (`speckit-taskstoissues`), and comment on the ticket
-  during a handover (`agent-handover`). The older `backlog-capture` and `backlog-triage` skills work on the Triage inbox.
+  (`kaneo-refinement`), settle design when flagged (`kaneo-design`), start the build (`kaneo-start-ticket`), and comment
+  during a handover (`agent-handover`). The older `backlog-capture` and `backlog-triage` skills still work on the Triage
+  inbox.
 - **The owner, by hand**: the account and sign-ins, the GitHub App and its installation, connecting the repository to
   project `JOR`, the saved views, the secrets and repository variables, and every ticket's move to Done.
 
