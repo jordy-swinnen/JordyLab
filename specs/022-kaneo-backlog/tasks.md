@@ -383,8 +383,8 @@ no key answers "backlog unavailable".
       nothing writes to it by agreement; announce the end of the freeze and note the 30-day date in `docs/kaneo.md`.
       Partly done 2026-11-25: the repository's Linear commit webhook (id 706201758) is deactivated; the Linear-side GitHub
       integration, the connectors and the announcement are still the owner's.
-- [ ] T074 [US7] [E] Record the cutover (date, result of T072, rollback not needed) in `specs/022-kaneo-backlog/import-report.md` and in
-      `spec.md` Status.
+- [X] T074 [US7] [E] Record the cutover (date, result of T072, rollback not needed) in `specs/022-kaneo-backlog/import-report.md` and in
+      `spec.md` Status. Done 2026-11-25: the cutover is recorded (provider switched, deploy green, no rollback needed) in import-report.md and the spec Status; the ten-accepted-ideas check is T072's.
 - [X] T075 [US7] Update `AGENTS.md` (Backlog and Commits sections, repository references to Linear) and `CLAUDE.md` (skill list with the
       renamed skills, MCP list) and `specs/_drafts/README.md` (tracking in Kaneo, `backlog-sync-drafts`). [B]
 - [ ] T076 [US7] [E] At the 30-day mark, with no rollback needed: OWNER confirms; the Linear export from T034 is re-checked as stored.
@@ -479,5 +479,5 @@ no key answers "backlog unavailable".
 
 ## Counts
 
-86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 63, open 23
-(2026-11-25): the 23 open ones are the owner-only steps: the trial sign-off (T011), the restore drill (T029), the freeze/export (T033/T034), the verification against the export (T037), the live client check (T053), the Claude-app sign-ins (T064/T065), the cutover acceptance test (T072), Linear off (T073), the rebuild test (T082) and T086 — plus the 30-day follow-up (T076-T079) and the MCP checks (T009).
+86 tasks: setup 3, US1 9, US2 17, US3 9, US5 16, US4 11, US6 6, US7 8, US8 3, polish 4. Done 64, open 22
+(2026-11-25): the 22 open ones are the owner-only steps: the trial sign-off (T011), the restore drill (T029), the freeze/export (T033/T034), the verification against the export (T037), the live client check (T053), the Claude-app sign-ins (T064/T065), the cutover acceptance test (T072), the Linear-side switch-off and announcement (T073), the rebuild test (T082) and the remaining T086 bookkeeping — plus the 30-day follow-up (T076-T079) and the MCP checks (T009).
