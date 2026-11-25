@@ -54,7 +54,6 @@ SECRET_VALUES = [
     ("PGBACKREST_REPO1_S3_KEY_SECRET", "jordylab-secrets", "S3_SECRET_KEY", True),
     ("NTFY_TOPIC", "jordylab-secrets", "NTFY_TOPIC", True),
     ("NTFY_TOKEN", "jordylab-secrets", "NTFY_TOKEN", False),
-    ("LINEAR_API_KEY", "jordylab-secrets", "LINEAR_API_KEY", False),
     ("LANGFUSE_BASE_URL", "jordylab-secrets", "LANGFUSE_BASE_URL", False),
     ("LANGFUSE_PUBLIC_KEY", "jordylab-secrets", "LANGFUSE_PUBLIC_KEY", False),
     ("LANGFUSE_SECRET_KEY", "jordylab-secrets", "LANGFUSE_SECRET_KEY", False),
@@ -86,7 +85,6 @@ SOFT_SECRET_VALUES = [
 # Settings that are not secret and come from GitHub repository variables, passed in by the workflow. An unset or empty
 # variable takes the default, so the first deploy after this change renders the same values as before.
 ENVIRONMENT_SETTINGS = [
-    ("BACKLOG_PROVIDER", "linear"),
     ("KANEO_DISABLE_REGISTRATION", "true"),
     ("KANEO_DISABLE_WORKSPACE_CREATION", "true"),
     ("KANEO_MEM_LIMIT", "768m"),

@@ -22,7 +22,7 @@ import java.util.UUID;
  * {@code NEW} → {@code ACCEPTED}, {@code BACKLOG} or {@code REJECTED}; {@code BACKLOG} may still
  * become {@code ACCEPTED} or {@code REJECTED}; {@code ACCEPTED} and {@code REJECTED} are terminal
  * (FR-007). A ticket carries exactly two admin texts — the guest-visible reply and the private
- * note that is included in the Linear issue when the ticket is accepted with one set (FR-008/009).
+ * note that is included in the backlog ticket when the ticket is accepted with one set (FR-008/009).
  */
 @Entity
 @Table(schema = "feedback", name = "feedback_ticket")
@@ -91,8 +91,8 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
     }
 
     /**
-     * Records the one Linear issue created for this ticket. Terminal, and the idempotency anchor:
-     * a ticket with an issue id never calls Linear again (FR-009).
+     * Records the one backlog ticket created for this ticket. Terminal, and the idempotency anchor:
+     * a ticket with a backlog id never calls the backlog again (FR-009).
      */
     public void markAccepted(String issueId, String issueUrl) {
         Preconditions.checkState(state == FeedbackTicketState.NEW || state == FeedbackTicketState.BACKLOG,
@@ -112,7 +112,7 @@ public class FeedbackTicket extends BaseEntity<FeedbackTicket> {
     }
 
     /**
-     * Stores the last Linear failure so the admin can see why Accept failed; the state stays put
+     * Stores the last backlog failure so the admin can see why Accept failed; the state stays put
      * and the accept remains retryable (FR-019).
      */
     public void recordAcceptError(String message) {

@@ -63,7 +63,7 @@ Drafts that have no spec yet are in [`specs/_drafts/`](../specs/_drafts/).
 | Capacitor Android app (APK) | Progressive web app | Built |
 | Local model inference (Ollama) | OpenRouter, with Anthropic as fallback | Removed on 2026-09-30 |
 | Home Assistant prototype for Eufy | Custom Android widget | Planned |
-| Linear as the ticket tracker | Self-hosted Kaneo | Built. The board, the idea box and the GitHub App run on Kaneo; Linear is a read-only archive until the 30-day follow-up removes it. |
+| Linear as the ticket tracker | Self-hosted Kaneo | Built. The board, the idea box and the GitHub App run on Kaneo; Linear is no longer used and the workspace can be cancelled. |
 | AI prompts kept in code | Prompts managed in Langfuse | Planned |
 
 ## End goal

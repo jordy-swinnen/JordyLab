@@ -767,7 +767,7 @@ startup fail instead of touching that account.
 
 ## 28. Kaneo, the backlog
 
-Kaneo is the self-hosted backlog that replaces Linear (spec 022). It runs at `https://kaneo.jordylab.be` as its own
+Kaneo is the self-hosted backlog (spec 022). It runs at `https://kaneo.jordylab.be` as its own
 service. It is not part of the application release: a Kaneo outage never blocks or rolls back a deploy.
 
 **What runs where**

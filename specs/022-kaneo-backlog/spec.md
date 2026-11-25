@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-07
 
-**Status**: Implemented (2026-11-25); the board, the idea box and the GitHub App run on Kaneo. Linear is a read-only archive until the 30-day follow-up removes it, and the remaining owner checks are in `tasks.md`.
+**Status**: Done (2026-11-25). The board, the idea box and the GitHub App run on Kaneo; Linear is removed from the code and config. The owner dropped the remaining checks to close the feature (see tasks.md).
 
 **Module**: repository tooling (agent skills and connectors, commit and pull-request conventions), the `feedback` module
 (idea box), production deployment on the OVH VPS, docs. Langfuse is **not** part of this feature: it stays on Langfuse

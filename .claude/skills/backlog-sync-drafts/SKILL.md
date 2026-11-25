@@ -1,6 +1,6 @@
 ---
 name: backlog-sync-drafts
-description: Mirror the repository into the Kaneo backlog (project JOR) and keep it in step. One ticket per numbered spec (status from its tasks.md) and per draft that has no spec yet, plus tickets for open bug-log entries. Shows a proposal table first, creates and updates only after Jordy confirms, and reports orphans (tickets whose folder was removed). Use when Jordy says sync drafts, sync specs to the backlog, import the repo into Kaneo or Linear, update the backlog from the repo, migrate the drafts, a draft was added or removed, or spec progress changed, even when Kaneo or Linear is not named.
+description: Mirror the repository into the Kaneo backlog (project JOR) and keep it in step. One ticket per numbered spec (status from its tasks.md) and per draft that has no spec yet, plus tickets for open bug-log entries. Shows a proposal table first, creates and updates only after Jordy confirms, and reports orphans (tickets whose folder was removed). Use when Jordy says sync drafts, sync specs to the backlog, import the repo into Kaneo, update the backlog from the repo, migrate the drafts, a draft was added or removed, or spec progress changed, even when Kaneo is not named.
 ---
 
 # Backlog sync (drafts, specs, open bugs)

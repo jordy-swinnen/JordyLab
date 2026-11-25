@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * The admin view of a ticket — the guest view plus the sender, the private note, the Linear link
+ * The admin view of a ticket — the guest view plus the sender, the private note, the backlog link
  * and the last accept error (contracts/rest-api.md). None of the additions ever reach a guest.
  */
 public record InboxTicketView(

@@ -11,13 +11,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
- * Accepting a ticket creates exactly one Linear issue (spec 017 US3, FR-009/FR-019).
+ * Accepting a ticket creates exactly one backlog ticket (spec 017 US3, FR-009/FR-019; Kaneo since spec 022).
  *
- * <p>The ticket is loaded under a pessimistic row lock and the lock is held across the Linear
+ * <p>The ticket is loaded under a pessimistic row lock and the lock is held across the backlog
  * call, so a double click serialises: the second request sees the stored issue id and returns it
- * without calling Linear again. The one remaining duplicate window — Linear created the issue but
+ * without calling the backlog again. The one remaining duplicate window — the backlog created the ticket but
  * this transaction never stored the id (a timeout or crash) — is closed by the retry path: when
- * the ticket carries a previous {@code acceptError}, Linear is searched first (team + exact title
+ * the ticket carries a previous {@code acceptError}, the backlog is searched first (project + exact title
  * + the {@code Source: idea box} marker) and a matching issue is adopted instead of created.
  *
  * <p>The transaction deliberately does not roll back on {@link BacklogUnavailableException}: the

@@ -141,11 +141,11 @@ class FeedbackInboxControllerTest {
     }
 
     @Test
-    void acceptReturnsTheAcceptedTicketWithItsLinearLink() throws Exception {
+    void acceptReturnsTheAcceptedTicketWithItsBacklogLink() throws Exception {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.ACCEPTED)
                 .backlogTicketId("issue-1")
-                .backlogTicketUrl("https://linear.app/jordylab/issue/JOR-101")
+                .backlogTicketUrl("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101")
                 .privateNote("Repro'd on CachyOS too.")
                 .build();
         when(acceptTicketService.accept(TICKET_ID, "Repro'd on CachyOS too.")).thenReturn(ticket);
@@ -157,7 +157,7 @@ class FeedbackInboxControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("ACCEPTED"))
-                .andExpect(jsonPath("$.backlogTicketUrl").value("https://linear.app/jordylab/issue/JOR-101"));
+                .andExpect(jsonPath("$.backlogTicketUrl").value("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101"));
     }
 
     @Test
@@ -165,7 +165,7 @@ class FeedbackInboxControllerTest {
         FeedbackTicket ticket = FeedbackTicketTestBuilder.aFeedbackTicket()
                 .state(FeedbackTicketState.ACCEPTED)
                 .backlogTicketId("issue-1")
-                .backlogTicketUrl("https://linear.app/jordylab/issue/JOR-101")
+                .backlogTicketUrl("https://kaneo.jordylab.be/dashboard/workspace/ws/project/p/task/task-101")
                 .build();
         when(acceptTicketService.accept(eq(TICKET_ID), eq(null))).thenReturn(ticket);
 
@@ -175,9 +175,9 @@ class FeedbackInboxControllerTest {
     }
 
     @Test
-    void aLinearFailureMapsToUnavailableAndKeepsTheErrorOnTheTicket() throws Exception {
+    void aBacklogFailureMapsToUnavailableAndKeepsTheErrorOnTheTicket() throws Exception {
         when(acceptTicketService.accept(TICKET_ID, null))
-                .thenThrow(new BacklogUnavailableException("LINEAR_API_KEY is not configured"));
+                .thenThrow(new BacklogUnavailableException("KANEO_API_KEY is not configured"));
 
         mockMvc.perform(post("/api/feedback/inbox/{id}/accept", TICKET_ID))
                 .andExpect(status().isServiceUnavailable())

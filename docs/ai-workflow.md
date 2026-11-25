@@ -15,7 +15,7 @@ in [AGENTS.md](../AGENTS.md#workflow)).
 | OpenCode (desktop app and CLI) | Second agent, same rules. Reads `AGENTS.md` and `opencode.json`. Agents and commands in `.opencode/`, planner, reviewer and worker in `opencode.json`. |
 | Claude apps (web, desktop, phone) | Ideas and bugs from anywhere, through the Kaneo connector. The ticket conventions are in the [kaneo-board skill](../.claude/skills/kaneo-board/SKILL.md). |
 | GitHub | Code, pull requests, CI and deploys. The deploy path is in the [README drawing](../README.md#architecture). |
-| Tracker: self-hosted Kaneo, project `JOR` | Backlog, refinement and status of every item. Linear is history, read-only until the cutover (spec 022). |
+| Tracker: self-hosted Kaneo, project `JOR` | Backlog, refinement and status of every item. Linear is history (`specs/015-linear-backlog/`). |
 
 ## The pipeline
 
@@ -123,7 +123,7 @@ logged as handoffs in [docs/kaneo.md](kaneo.md).
 | `.specify/` | SpecKit templates and scripts. |
 | `.specify/extensions.yml` | SpecKit hooks. `kaneo-start-ticket` runs before `/speckit-specify`. |
 | `specs/`, `specs/_drafts/` | Specs, plans and task lists. Drafts have no number until they are specified. |
-| `.mcp.json`, `opencode.json` | MCP servers: nx, GitHub (through the `gh` login), Kaneo, JordyLab and Linear (until the cutover). |
+| `.mcp.json`, `opencode.json` | MCP servers: nx, GitHub (through the `gh` login), Kaneo and JordyLab. |
 | `docs/kaneo.md` | The backlog: workspace facts, columns, labels, connector sign-in, the GitHub App and the handoff log. The old `docs/linear.md` is its git history. |
 | `docs/design/JOR-<n>/` | Exported design images for Kaneo tickets. |
 | `.github/instructions/commits-and-pull-requests.instructions.md` | Commit and pull request rules. |
@@ -147,7 +147,7 @@ rulebook is hand-written.
 
 ## Planned changes
 
-- Finish the tracker move to self-hosted Kaneo (spec 022): cut the idea box over, then remove Linear.
+- ~~Finish the tracker move to self-hosted Kaneo (spec 022)~~: done 2026-11-25 — the idea box is on Kaneo and Linear is removed from the code and config.
 - Test the workflow skills, and check that the agent files in both tools stay in sync.
 - One source of truth for work status and IDs: task lists decide built status, and new bugs take ticket keys only.
 - A skill that turns a ticket key into a working branch.
